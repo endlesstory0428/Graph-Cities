@@ -481,7 +481,6 @@ int main(int argc, char *argv[]) {
 		t.join();
 		t = std::thread(writeLayerToFile, argv[1], mc, originalIndices, edgeLabels);
 	}
-	t.join();
 	g.EDGENUM /= 2;
 	unsigned int *originalLabels = new unsigned int[g.EDGENUM];
 	if(DEBUG)
@@ -490,6 +489,7 @@ int main(int argc, char *argv[]) {
 		originalLabels[i] = edgeLabels[originalIndices[i]];
 	}
 	long long algorithmTime = getTimeElapsed();
+	t.join();
 	writeToFile(originalIndices, originalLabels);
 	writeMetaData(argv[1], atoi(argv[3]), atoi(argv[2]), preprocessingTime, algorithmTime);
 	remove(tmpFile);
