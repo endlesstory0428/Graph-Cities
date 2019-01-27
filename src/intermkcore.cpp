@@ -91,7 +91,17 @@ void createInMemoryEdgeList(char *fileName) {
 	is.close();
 }
 
-void doubleAndReverseGraph(char *inputFile, char *outputFile) {
+void initNodeMap(char *inputFile, unsigned int *node2label, unsigned int *label2node) {
+	std::ifstream is(inputFile);
+	unsigned int label;
+	for(unsigned int i = 1; i <= g.NODENUM; i++) {
+		is >> label;
+		node2label[i] = label;
+		label2node[label] = i;
+	}
+}
+
+void doubleAndReverseGraph(char *inputFile, char *outputFile, unsigned int *label2node) {
 	std::ifstream is;
 	is.open(inputFile, std::ios::in | std::ios::binary);
 	std::ofstream os;
@@ -101,8 +111,8 @@ void doubleAndReverseGraph(char *inputFile, char *outputFile) {
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		is.read((char *)(&src), sizeof(unsigned int));
 		is.read((char *)(&tgt), sizeof(unsigned int));
-		src = htonl(src);
-		tgt = htonl(tgt);
+		src = label2node[htonl(src)];
+		tgt = label2node[htonl(tgt)];
 		assert(src >= 0 && src <= g.NODENUM);
 		assert(tgt >= 0 && tgt <= g.NODENUM);
 		// Removes self loops
@@ -118,8 +128,8 @@ void doubleAndReverseGraph(char *inputFile, char *outputFile) {
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		is.read((char *)(&src), sizeof(unsigned int));
 		is.read((char *)(&tgt), sizeof(unsigned int));
-		src = htonl(src);
-		tgt = htonl(tgt);
+		src = label2node[htonl(src)];
+		tgt = label2node[htonl(tgt)];
 		assert(src >= 0 && src <= g.NODENUM);
 		assert(tgt >= 0 && tgt <= g.NODENUM);
 		// Removes self loops
@@ -394,22 +404,22 @@ void labelAndDeletePeelOneEdges(float *degree, unsigned int *edgeLabels) {
 	delete [] tmp;
 }
 
-void writeToFile(unsigned int *edgeIndices, unsigned int *edgeLabels) {
+void writeToFile(unsigned int *edgeIndices, unsigned int *edgeLabels, unsigned int *node2label) {
 	std::ofstream outputFile;
 	outputFile.open("graph-decomposition.csv");
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
-		outputFile<<(g.edgeList + edgeIndices[i])->src<<","<<(g.edgeList + edgeIndices[i])->tgt<<","<<edgeLabels[i]<<"\n";
+		outputFile<<node2label[(g.edgeList + edgeIndices[i])->src]<<","<<node2label[(g.edgeList + edgeIndices[i])->tgt]<<","<<edgeLabels[i]<<"\n";
 	}
 	outputFile.close();
 }
 
-void writeLayerToFile(std::string prefix, unsigned int layer, unsigned int *edgeIndices, unsigned int *edgeLabels) {
+void writeLayerToFile(std::string prefix, unsigned int layer, unsigned int *edgeIndices, unsigned int *edgeLabels, unsigned int *node2label) {
 	long long wtime = currentTimeStamp();
 	std::ofstream outputFile;
 	outputFile.open(prefix.substr(0,prefix.length()-4)+"_layers/layer"+std::to_string(layer)+".csv");
 	for(unsigned int i = 0; i < g.EDGENUM/2; i++) {
 		if (edgeLabels[edgeIndices[i]] == layer)
-			outputFile<<(g.edgeList + edgeIndices[i])->src<<","<<(g.edgeList + edgeIndices[i])->tgt<<","<<layer<<"\n";
+			outputFile<<node2label[(g.edgeList + edgeIndices[i])->src]<<","<<node2label[(g.edgeList + edgeIndices[i])->tgt]<<","<<layer<<"\n";
 	}
 	outputFile.close();
 
@@ -432,8 +442,8 @@ void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENU
 }
 
 int main(int argc, char *argv[]) {
-	if (argc < 4) {
-		std::cerr<<argv[0]<<": usage: ./atlas-decomposition <path to edgelist.bin> <# edges> <# nodes>\n";
+	if (argc < 6) {
+		std::cerr<<argv[0]<<": usage: ./atlas-decomposition <path to graph.bin> <# edges> <# nodes> <path to graph.nodemap> <largest node label>\n";
 		exit(1);
 	}
 	char tmpFile[] = "tmp.bin";
@@ -441,7 +451,10 @@ int main(int argc, char *argv[]) {
 	g.EDGENUM = atoi(argv[2]);
 	g.NODENUM = atoi(argv[3]);
 	reset();
-	doubleAndReverseGraph(argv[1], tmpFile);
+	unsigned int *node2label = new unsigned int[g.NODENUM];
+	unsigned int *label2node = new unsigned int[atoi(argv[5])];
+	initNodeMap(argv[4], node2label, label2node);
+	doubleAndReverseGraph(argv[1], tmpFile, label2node);
 	if(DEBUG)
 		std::cout<<"DOUBLED AND REVERSED GRAPH\n";
 	unsigned int *originalIndices = new unsigned int[g.EDGENUM];
@@ -477,9 +490,9 @@ int main(int argc, char *argv[]) {
 		}
 		labelEdgesAndUpdateDegree(mc, isFinalNode, degree, edgeLabels);
 		delete [] isFinalNode;
-		/* writeLayerToFile(argv[1], mc, originalIndices, edgeLabels); */
+		/* writeLayerToFile(argv[1], mc, originalIndices, edgeLabels, node2label); */
 		t.join();
-		t = std::thread(writeLayerToFile, argv[1], mc, originalIndices, edgeLabels);
+		t = std::thread(writeLayerToFile, argv[1], mc, originalIndices, edgeLabels, node2label);
 	}
 	g.EDGENUM /= 2;
 	unsigned int *originalLabels = new unsigned int[g.EDGENUM];
@@ -490,7 +503,7 @@ int main(int argc, char *argv[]) {
 	}
 	long long algorithmTime = getTimeElapsed();
 	t.join();
-	writeToFile(originalIndices, originalLabels);
+	writeToFile(originalIndices, originalLabels, node2label);
 	writeMetaData(argv[1], atoi(argv[3]), atoi(argv[2]), preprocessingTime, algorithmTime);
 	remove(tmpFile);
 	delete [] core;
