@@ -41,6 +41,7 @@ void printArray(T *arr, unsigned int n) {
 }
 
 long long currentTimeMilliS = 0;
+long long ioTime = 0;
 
 long long currentTimeStamp() {
 	struct timeval te;
@@ -402,12 +403,18 @@ void writeToFile(unsigned int *edgeIndices, unsigned int *edgeLabels) {
 }
 
 void writeLayerToFile(std::string prefix, unsigned int layer, unsigned int *edgeIndices, unsigned int *edgeLabels) {
+	long long wtime = currentTimeStamp();
 	std::ofstream outputFile;
-	outputFile.open(prefix.substr(0,prefix.length()-12)+"layers/layer"+std::to_string(layer)+".csv");
+	outputFile.open(prefix.substr(0,prefix.length()-4)+"_layers/layer"+std::to_string(layer)+".csv");
 	for(unsigned int i = 0; i < g.EDGENUM/2; i++) {
 		if (edgeLabels[edgeIndices[i]] == layer)
 			outputFile<<(g.edgeList + edgeIndices[i])->src<<","<<(g.edgeList + edgeIndices[i])->tgt<<","<<layer<<"\n";
 	}
+	outputFile.close();
+
+	outputFile.open(prefix.substr(0,prefix.length()-4)+"_layers/layer"+std::to_string(layer)+"-info.json");
+	outputFile<<"{\n";
+	outputFile<<"\"io-time\":"<<(ioTime += currentTimeStamp()-wtime)<<"\n}";
 	outputFile.close();
 }
 
@@ -418,7 +425,8 @@ void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENU
 	outputFile<<"\"vertices\":"<<NODENUM<<",\n";
 	outputFile<<"\"edges\":"<<EDGENUM<<",\n";
 	outputFile<<"\"preprocessing-time\":"<<preprocessingTime<<",\n";
-	outputFile<<"\"algorithm-time\":"<<algorithmTime<<"\n}";
+	outputFile<<"\"algorithm-time\":"<<algorithmTime<<"\n";
+	outputFile<<"\"io-time\":"<<ioTime<<"\n}";
 	outputFile.close();
 }
 
