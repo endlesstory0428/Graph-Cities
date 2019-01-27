@@ -23,4 +23,10 @@ clean:
 .PHONY: clean
 
 mmap:
-	java -jar mmap.jar Convert $(GRAPH)/edgelist
+	java -jar mmap.jar Convert $(GRAPH)/$(GRAPH)
+
+sanitize:
+	cat $(GRAPH)/$(GRAPH).txt | grep -v '#' | sort -nk 1 | uniq | tr -d '\r' | awk '$$1 != $$2' > $(GRAPH)/$(GRAPH)
+
+decomp:
+	./atlas-decomposition $(GRAPH)/$(GRAPH).bin $$(($$(wc -c $(GRAPH)/$(GRAPH).bin | awk -F ' ' '{print $$1}')/8)) $$(($$(tail -c4 $(GRAPH)/$(GRAPH).bin | ./bindump.sh)))
