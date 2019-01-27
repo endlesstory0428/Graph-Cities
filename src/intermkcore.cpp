@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <omp.h>
+#include <thread>
 #define DEBUG 1
 
 // A struct to represent an edge in the edge list
@@ -460,6 +461,7 @@ int main(int argc, char *argv[]) {
 	float *degree = new float[g.NODENUM + 1];
 	findDegree(edgeLabels, degree);
 	unsigned int *core = new unsigned int[g.NODENUM + 1];
+	std::thread t = std::thread(std::printf, "TEST\n");
 	while(!isGraphEmpty(edgeLabels)) {
 		std::copy(degree, degree + g.NODENUM + 1, core);
 		parKCore(core, edgeLabels);
@@ -475,8 +477,11 @@ int main(int argc, char *argv[]) {
 		}
 		labelEdgesAndUpdateDegree(mc, isFinalNode, degree, edgeLabels);
 		delete [] isFinalNode;
-		writeLayerToFile(argv[1], mc, originalIndices, edgeLabels);
+		/* writeLayerToFile(argv[1], mc, originalIndices, edgeLabels); */
+		t.join();
+		t = std::thread(writeLayerToFile, argv[1], mc, originalIndices, edgeLabels);
 	}
+	t.join();
 	g.EDGENUM /= 2;
 	unsigned int *originalLabels = new unsigned int[g.EDGENUM];
 	if(DEBUG)
