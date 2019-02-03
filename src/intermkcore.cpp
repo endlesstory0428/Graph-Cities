@@ -481,7 +481,7 @@ void writeLayerToFile(std::string prefix, unsigned int layer, unsigned int *edge
 	long long wtime = currentTimeStamp();
 	std::ofstream outputFile;
 	outputFile.open(prefix.substr(0,prefix.length()-4)+"_layers/layer"+std::to_string(layer)+".csv");
-	for(unsigned int i = 0; i < g.EDGENUM/2; i++) {
+	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		if (edgeLabels[edgeIndices[i]] == layer)
 			outputFile<<node2label[(g.edgeList + edgeIndices[i])->src]<<","<<node2label[(g.edgeList + edgeIndices[i])->tgt]<<","<<layer<<"\n";
 	}
@@ -559,7 +559,7 @@ int main(int argc, char *argv[]) {
 		t.join();
 		t = std::thread(writeLayerToFile, argv[1], mc, originalIndices, edgeLabels, node2label);
 	}
-	g.EDGENUM /= 2;
+	/* g.EDGENUM /= 2; */
 	unsigned int *originalLabels = new unsigned int[g.EDGENUM];
 	if(DEBUG)
 		std::cout<<"RECONSTRUCTING ORIGINAL LABELS\n";
