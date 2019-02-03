@@ -107,7 +107,7 @@ void doubleAndReverseGraph(char *inputFile, char *outputFile, unsigned int *labe
 	std::ofstream os;
 	os.open(outputFile, std::ios::out | std::ios::binary | std::ios::app);
 	unsigned int src, tgt;
-	unsigned int updatedEdgeNum = g.EDGENUM;
+	/* unsigned int updatedEdgeNum = g.EDGENUM; */
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		is.read((char *)(&src), sizeof(unsigned int));
 		is.read((char *)(&tgt), sizeof(unsigned int));
@@ -120,26 +120,26 @@ void doubleAndReverseGraph(char *inputFile, char *outputFile, unsigned int *labe
 			os.write((char *)&src, sizeof(unsigned int));
 			os.write((char *)&tgt, sizeof(unsigned int));
 		}
-		else {
-			updatedEdgeNum--;
-		}
+		/* else { */
+		/* 	updatedEdgeNum--; */
+		/* } */
 	}
-	is.seekg(0, std::ios::beg);
-	for(unsigned int i = 0; i < g.EDGENUM; i++) {
-		is.read((char *)(&src), sizeof(unsigned int));
-		is.read((char *)(&tgt), sizeof(unsigned int));
-		src = label2node[htonl(src)];
-		tgt = label2node[htonl(tgt)];
-		assert(src >= 0 && src <= g.NODENUM);
-		assert(tgt >= 0 && tgt <= g.NODENUM);
-		// Removes self loops
-		if(src != tgt) {
-			os.write((char *)(&tgt), sizeof(unsigned int));
-			os.write((char *)(&src), sizeof(unsigned int));
-		}
-	}
-	g.EDGENUM = updatedEdgeNum;
-	g.EDGENUM *= 2;
+	/* is.seekg(0, std::ios::beg); */
+	/* for(unsigned int i = 0; i < g.EDGENUM; i++) { */
+	/* 	is.read((char *)(&src), sizeof(unsigned int)); */
+	/* 	is.read((char *)(&tgt), sizeof(unsigned int)); */
+	/* 	src = label2node[htonl(src)]; */
+	/* 	tgt = label2node[htonl(tgt)]; */
+	/* 	assert(src >= 0 && src <= g.NODENUM); */
+	/* 	assert(tgt >= 0 && tgt <= g.NODENUM); */
+	/* 	// Removes self loops */
+	/* 	if(src != tgt) { */
+	/* 		os.write((char *)(&tgt), sizeof(unsigned int)); */
+	/* 		os.write((char *)(&src), sizeof(unsigned int)); */
+	/* 	} */
+	/* } */
+	/* g.EDGENUM = updatedEdgeNum; */
+	/* g.EDGENUM *= 2; */
 	is.close();
 	os.close();
 }
