@@ -29,8 +29,8 @@ sanitize:
 .PHONY: sanitize
 
 union:
-	mv $(DATA)/$(DATA) $(DATA)/$(DATA)-dir.txt
-	cat $(DATA)/$(DATA)-dir.txt | awk '{print $$0"\n"$$2"\t"$$1}' | sort -nk 1 | uniq > $(DATA)/$(DATA)
+	mv $(GRAPH)/$(GRAPH) $(GRAPH)/$(GRAPH)-dir.txt
+	cat $(GRAPH)/$(GRAPH)-dir.txt | awk '{print $$0"\n"$$2"\t"$$1}' | sort -nk 1 | uniq > $(GRAPH)/$(GRAPH)
 
 .PHONY: union
 
