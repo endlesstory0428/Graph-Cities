@@ -524,7 +524,8 @@ int main(int argc, char *argv[]) {
 	unsigned int *originalIndices = new unsigned int[g.EDGENUM];
 	unsigned int *edgeLabels = new unsigned int[g.EDGENUM];
 	std::fill_n(edgeLabels, g.EDGENUM, -1);
-	createMemoryMap(tmpFile);
+	/* createMemoryMap(tmpFile); */
+	createInMemoryEdgeList(tmpFile);
 	if(DEBUG)
 		std::cout<<"CREATED MEMORY MAP\n";
 	formatGraph(originalIndices);
