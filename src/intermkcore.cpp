@@ -541,8 +541,8 @@ int main(int argc, char *argv[]) {
 	std::thread t = std::thread(std::printf, "TEST\n");
 	while(!isGraphEmpty(edgeLabels)) {
 		std::copy(degree, degree + g.NODENUM + 1, core);
-		/* parKCore(core, edgeLabels); */
-		findKCore(edgeLabels, core);
+		parKCore(core, edgeLabels);
+		/* findKCore(edgeLabels, core); */
 		unsigned int mc = *std::max_element(core, core + g.NODENUM + 1);
 		if(DEBUG)
 			std::cout<<"CURRENT MAXIMUM CORE : "<<mc<<"\n";
