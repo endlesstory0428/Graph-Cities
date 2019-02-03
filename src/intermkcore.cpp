@@ -375,6 +375,70 @@ void parKCore(unsigned int *deg, unsigned int *edgeLabels) {
 
 }
 
+void findKCore(unsigned int *edgeLabels, unsigned int *deg) {
+	unsigned int * vert = new unsigned int[g.NODENUM + 1];
+	unsigned int * pos = new unsigned int[g.NODENUM + 1];
+	std::fill_n(vert, g.NODENUM + 1, 0);
+	std::fill_n(pos, g.NODENUM + 1, 0);
+	unsigned int md = *std::max_element(deg, deg + g.NODENUM + 1);
+	unsigned int * bins = new unsigned int[md + 1];
+	std::fill_n(bins, md + 1, 0);
+	for(unsigned int v = 1; v <= g.NODENUM; v++)
+		bins[deg[v]]++;
+	unsigned int start = 1;
+	for(unsigned int d = 0; d <= md; d++) {
+		unsigned int num = bins[d];
+		bins[d] = start;
+		start += num;
+	}
+	for(unsigned int v = 1; v <= g.NODENUM; v++) {
+		pos[v] = bins[deg[v]];
+		vert[pos[v]] = v;
+		bins[deg[v]]++;
+	}
+	for(unsigned int d = md; d > 0; d--) {
+		bins[d] = bins[d - 1];
+	}
+	bins[0] = 1;
+	//unsigned int old_src = -1, old_tgt = -1;
+	for(unsigned int i = 1; i <= g.NODENUM; i++) {
+		unsigned int v = vert[i];
+		// Do nothing if node doesn't exist in the graph
+		if(g.start_indices[v] == 0 && g.end_indices[v] == 0) {
+			;
+		}
+		else {
+			for(unsigned int j = g.start_indices[v]; j <= g.end_indices[v]; j++) {
+				if(edgeLabels[j] == -1) {
+					//if((edgeList + j)->src != old_src || (edgeList + j)->tgt != old_tgt) {
+						unsigned int u = (g.edgeList + j)->tgt;
+						if(deg[u] > deg[v]) {
+							unsigned int du = deg[u];
+							unsigned int pu = pos[u];
+							unsigned int pw = bins[du];
+							unsigned int w = vert[pw];
+							if(u != w) {
+								pos[u] = pw;
+								pos[w] = pu;
+								vert[pu] = w;
+								vert[pw] = u;
+							}
+							bins[du]++;
+							deg[u]--;
+						}
+					//}
+				}
+				//old_src = (edgeList + j)->src;
+				//old_tgt = (edgeList + j)->tgt;
+			}
+		}
+	}
+	delete [] vert;
+	delete [] pos;
+	delete [] bins;
+}
+
+
 void labelEdgesAndUpdateDegree(unsigned int peel, bool *isFinalNode, float *degree, unsigned int *edgeLabels) {
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + i)->src;
@@ -477,7 +541,8 @@ int main(int argc, char *argv[]) {
 	std::thread t = std::thread(std::printf, "TEST\n");
 	while(!isGraphEmpty(edgeLabels)) {
 		std::copy(degree, degree + g.NODENUM + 1, core);
-		parKCore(core, edgeLabels);
+		/* parKCore(core, edgeLabels); */
+		findKCore(edgeLabels, core);
 		unsigned int mc = *std::max_element(core, core + g.NODENUM + 1);
 		if(DEBUG)
 			std::cout<<"CURRENT MAXIMUM CORE : "<<mc<<"\n";
