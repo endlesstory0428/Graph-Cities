@@ -18,6 +18,8 @@
 #include <thread>
 #define DEBUG 1
 
+#define BUFFER_NUM_EDGES (2^13)
+
 // A struct to represent an edge in the edge list
 struct edge {
 	unsigned int src;
@@ -270,7 +272,7 @@ void scan(unsigned int *deg, unsigned int level, unsigned int* curr, long *currT
 
 
 void processSubLevel(unsigned int *curr, long currTail,
-	unsigned int *deg, unsigned int *edgeLabels, unsigned int level, unsigned int *next, long *nextTailPtr, unsigned int buk) {
+	unsigned int *deg, unsigned int *edgeLabels, unsigned int level, unsigned int *next, long *nextTailPtr) {
 
 	// Size of cache line
 	const long BUFFER_SIZE_BYTES = 2048;
@@ -289,7 +291,7 @@ void processSubLevel(unsigned int *curr, long currTail,
 		else {
 			//For all neighbors of vertex v
 			for (unsigned int j = g.start_indices[v]; j <= g.end_indices[v]; j++) {
-				if(edgeLabels[j] == buk) {
+				if(edgeLabels[j] == -1) {
 					unsigned int u = (g.edgeList + j)->tgt;
 					if (deg[u] > level) {
 						unsigned int du =  __sync_fetch_and_sub(&deg[u], 1);
@@ -330,7 +332,7 @@ void processSubLevel(unsigned int *curr, long currTail,
 }
 
 //ParK to compute k core decomposition in parallel
-void parKCore(unsigned int *deg, unsigned int *edgeLabels, unsigned int buk) {
+void parKCore(unsigned int *deg, unsigned int *edgeLabels) {
 	unsigned int *curr = new unsigned int[g.NODENUM];
 	unsigned int *next = new unsigned int[g.NODENUM];
 
@@ -350,7 +352,7 @@ void parKCore(unsigned int *deg, unsigned int *edgeLabels, unsigned int buk) {
 		while (currTail > 0) {
 			todo = todo - currTail;
 
-			processSubLevel(curr, currTail, deg, edgeLabels, level, next, &nextTail, buk);
+			processSubLevel(curr, currTail, deg, edgeLabels, level, next, &nextTail);
 
 			if (tid == 0) {
 				unsigned int *tempCurr = curr;
@@ -375,7 +377,7 @@ void parKCore(unsigned int *deg, unsigned int *edgeLabels, unsigned int buk) {
 
 }
 
-void findKCore(unsigned int *edgeLabels, unsigned int *deg, unsigned int buk) {
+void findKCore(unsigned int *edgeLabels, unsigned int *deg) {
 	unsigned int * vert = new unsigned int[g.NODENUM + 1];
 	unsigned int * pos = new unsigned int[g.NODENUM + 1];
 	std::fill_n(vert, g.NODENUM + 1, 0);
@@ -409,7 +411,7 @@ void findKCore(unsigned int *edgeLabels, unsigned int *deg, unsigned int buk) {
 		}
 		else {
 			for(unsigned int j = g.start_indices[v]; j <= g.end_indices[v]; j++) {
-				if(edgeLabels[j] == buk) {
+				if(edgeLabels[j] == -1) {
 					//if((edgeList + j)->src != old_src || (edgeList + j)->tgt != old_tgt) {
 						unsigned int u = (g.edgeList + j)->tgt;
 						if(deg[u] > deg[v]) {
@@ -438,25 +440,20 @@ void findKCore(unsigned int *edgeLabels, unsigned int *deg, unsigned int buk) {
 	delete [] bins;
 }
 
-void labelEdgesAndUpdateDegree(unsigned int peel, bool *isFinalNode, float *degree, unsigned int*core, unsigned int *edgeLabels) {
+
+unsigned int labelEdgesAndUpdateDegree(unsigned int peel, bool *isFinalNode, float *degree, unsigned int *edgeLabels) {
+	unsigned int numEdges = 0;
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + i)->src;
 		unsigned int tgt = (g.edgeList + i)->tgt;
-		/* std::cout<<core[src]<<", "<<core[tgt]<<", "<<edgeLabels[i]<<"\n"; */
-		if(edgeLabels[i] == -1) {
-			edgeLabels[i] = std::min(core[src],core[tgt]);
-		}
-		if(isFinalNode[src] && isFinalNode[tgt] && edgeLabels[i] == peel) {
-			edgeLabels[i] = std::min(core[src],core[tgt]);
-			/* std::cout<<core[src]<<", "<<core[tgt]<<":"<<edgeLabels[i]<<"\n"; */
+		if(isFinalNode[src] && isFinalNode[tgt] && edgeLabels[i] == -1) {
+			edgeLabels[i] = peel;
 			degree[src] -= 0.5;
 			degree[tgt] -= 0.5;
+			numEdges++;
 		}
-		if(edgeLabels[i] == peel) {
-			edgeLabels[i] = std::min(core[src],core[tgt]);
-		}
-		/* std::cout<<core[src]<<", "<<core[tgt]<<", "<<edgeLabels[i]<<"\n"; */
 	}
+	return numEdges;
 }
 
 void labelAndDeletePeelOneEdges(float *degree, unsigned int *edgeLabels) {
@@ -485,17 +482,23 @@ void writeToFile(unsigned int *edgeIndices, unsigned int *edgeLabels, unsigned i
 	outputFile.close();
 }
 
-void writeLayerToFile(std::string prefix, unsigned int layer, unsigned int *edgeIndices, unsigned int *edgeLabels, unsigned int *node2label) {
+void writeLayerToFile(std::string prefix, unsigned int prevLayer, unsigned int layer, unsigned int *edgeIndices, unsigned int *edgeLabels, unsigned int *node2label) {
 	long long wtime = currentTimeStamp();
 	std::ofstream outputFile;
-	outputFile.open(prefix.substr(0,prefix.length()-4)+"_layers/layer"+std::to_string(layer)+".csv");
+	std::string prefixx;
+	if (prevLayer > 0 && prevLayer > layer+1) {
+		prefixx = prefix.substr(0,prefix.length()-4)+"_layers/layer"+std::to_string(layer)+"-"+std::to_string(prevLayer-1);
+	} else {
+		prefixx = prefix.substr(0,prefix.length()-4)+"_layers/layer"+std::to_string(layer);
+	}
+	outputFile.open(prefixx+".csv");
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		if (edgeLabels[edgeIndices[i]] == layer)
 			outputFile<<node2label[(g.edgeList + edgeIndices[i])->src]<<","<<node2label[(g.edgeList + edgeIndices[i])->tgt]<<","<<layer<<"\n";
 	}
 	outputFile.close();
 
-	outputFile.open(prefix.substr(0,prefix.length()-4)+"_layers/layer"+std::to_string(layer)+"-info.json");
+	outputFile.open(prefixx+"-info.json");
 	outputFile<<"{\n";
 	outputFile<<"\"io-time\":"<<(ioTime += currentTimeStamp()-wtime)<<"\n}";
 	outputFile.close();
@@ -548,35 +551,32 @@ int main(int argc, char *argv[]) {
 	findDegree(edgeLabels, degree);
 	unsigned int *core = new unsigned int[g.NODENUM + 1];
 	std::thread t = std::thread(std::printf, "TEST\n");
-	unsigned int mc = -1;
-	unsigned int mc2 = -1;
-	while(mc>1) {
+	unsigned int numEdges = 0;
+	unsigned int prevlayerout = 0;
+	unsigned int mc;
+	while(!isGraphEmpty(edgeLabels)) {
 		std::copy(degree, degree + g.NODENUM + 1, core);
-		/* parKCore(core, edgeLabels, mc); */
-		findKCore(edgeLabels, core, mc2);
+		parKCore(core, edgeLabels);
+		/* findKCore(edgeLabels, core); */
 		mc = *std::max_element(core, core + g.NODENUM + 1);
-		mc = std::min(mc,mc2);
 		if(DEBUG)
 			std::cout<<"CURRENT MAXIMUM CORE : "<<mc<<"\n";
 		bool *isFinalNode = new bool[g.NODENUM + 1];
 		std::fill_n(isFinalNode, g.NODENUM + 1, false);
-		mc2 = 0;
 		for(unsigned int i = 0; i <= g.NODENUM; i++) {
-			/* std::cout<<i<<": "<<core[i]<<", deg: "<<degree[i]<<"\n"; */
 			if(core[i] == mc) {
 				isFinalNode[i] = true;
 			}
-			if (mc2 < core[i] && core[i] < mc) {
-				mc2 = core[i];
-			}
 		}
-		if(DEBUG)
-			std::cout<<"NEXT CORE : "<<mc2<<"\n";
-		labelEdgesAndUpdateDegree(mc, isFinalNode, degree, core, edgeLabels);
+		numEdges += labelEdgesAndUpdateDegree(mc, isFinalNode, degree, edgeLabels);
 		delete [] isFinalNode;
 		/* writeLayerToFile(argv[1], mc, originalIndices, edgeLabels, node2label); */
-		t.join();
-		t = std::thread(writeLayerToFile, argv[1], mc, originalIndices, edgeLabels, node2label);
+		if (numEdges >= BUFFER_NUM_EDGES) {
+			t.join();
+			t = std::thread(writeLayerToFile, argv[1], prevlayerout, mc, originalIndices, edgeLabels, node2label);
+			prevlayerout = mc;
+			numEdges = 0;
+		}
 	}
 	/* g.EDGENUM /= 2; */
 	unsigned int *originalLabels = new unsigned int[g.EDGENUM];
@@ -587,7 +587,10 @@ int main(int argc, char *argv[]) {
 	}
 	long long algorithmTime = getTimeElapsed();
 	t.join();
-	writeToFile(originalIndices, originalLabels, node2label);
+	if (numEdges > 0) {
+		writeLayerToFile(argv[1], prevlayerout, mc, originalIndices, edgeLabels, node2label);
+	}
+	/* writeToFile(originalIndices, originalLabels, node2label); */
 	writeMetaData(argv[1], atoi(argv[3]), atoi(argv[2]), preprocessingTime, algorithmTime);
 	remove(tmpFile);
 	delete [] core;

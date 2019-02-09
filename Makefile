@@ -7,7 +7,7 @@ LINKER := g++
 CXXFLAGS := -std=c++11 -Wall -Wextra
 LNKFLAGS := -fopenmp -O3 -pthread
 
-SRCFILES := src/intermkcore.cpp
+SRCFILES := src/buffkcore.cpp
 # SRCFILES := $(wildcard src/*.cpp)
 OBJFILES := $(patsubst %.cpp,%.o,$(SRCFILES))
 
