@@ -18,7 +18,7 @@
 #include <thread>
 #define DEBUG 1
 
-#define BUFFER_NUM_EDGES (2^13)
+#define BUFFER_NUM_EDGES (1<<13)
 
 // A struct to represent an edge in the edge list
 struct edge {
@@ -140,7 +140,7 @@ void doubleAndReverseGraph(char *inputFile, char *outputFile, unsigned int *labe
 	/* 		os.write((char *)(&src), sizeof(unsigned int)); */
 	/* 	} */
 	/* } */
-	/* g.EDGENUM = updatedEdgeNum; */
+	/* /1* g.EDGENUM = updatedEdgeNum; *1/ */
 	/* g.EDGENUM *= 2; */
 	is.close();
 	os.close();
@@ -377,70 +377,6 @@ void parKCore(unsigned int *deg, unsigned int *edgeLabels) {
 
 }
 
-void findKCore(unsigned int *edgeLabels, unsigned int *deg) {
-	unsigned int * vert = new unsigned int[g.NODENUM + 1];
-	unsigned int * pos = new unsigned int[g.NODENUM + 1];
-	std::fill_n(vert, g.NODENUM + 1, 0);
-	std::fill_n(pos, g.NODENUM + 1, 0);
-	unsigned int md = *std::max_element(deg, deg + g.NODENUM + 1);
-	unsigned int * bins = new unsigned int[md + 1];
-	std::fill_n(bins, md + 1, 0);
-	for(unsigned int v = 1; v <= g.NODENUM; v++)
-		bins[deg[v]]++;
-	unsigned int start = 1;
-	for(unsigned int d = 0; d <= md; d++) {
-		unsigned int num = bins[d];
-		bins[d] = start;
-		start += num;
-	}
-	for(unsigned int v = 1; v <= g.NODENUM; v++) {
-		pos[v] = bins[deg[v]];
-		vert[pos[v]] = v;
-		bins[deg[v]]++;
-	}
-	for(unsigned int d = md; d > 0; d--) {
-		bins[d] = bins[d - 1];
-	}
-	bins[0] = 1;
-	//unsigned int old_src = -1, old_tgt = -1;
-	for(unsigned int i = 1; i <= g.NODENUM; i++) {
-		unsigned int v = vert[i];
-		// Do nothing if node doesn't exist in the graph
-		if(g.start_indices[v] == 0 && g.end_indices[v] == 0) {
-			;
-		}
-		else {
-			for(unsigned int j = g.start_indices[v]; j <= g.end_indices[v]; j++) {
-				if(edgeLabels[j] == -1) {
-					//if((edgeList + j)->src != old_src || (edgeList + j)->tgt != old_tgt) {
-						unsigned int u = (g.edgeList + j)->tgt;
-						if(deg[u] > deg[v]) {
-							unsigned int du = deg[u];
-							unsigned int pu = pos[u];
-							unsigned int pw = bins[du];
-							unsigned int w = vert[pw];
-							if(u != w) {
-								pos[u] = pw;
-								pos[w] = pu;
-								vert[pu] = w;
-								vert[pw] = u;
-							}
-							bins[du]++;
-							deg[u]--;
-						}
-					//}
-				}
-				//old_src = (edgeList + j)->src;
-				//old_tgt = (edgeList + j)->tgt;
-			}
-		}
-	}
-	delete [] vert;
-	delete [] pos;
-	delete [] bins;
-}
-
-
 unsigned int labelEdgesAndUpdateDegree(unsigned int peel, bool *isFinalNode, float *degree, unsigned int *edgeLabels) {
 	unsigned int numEdges = 0;
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
@@ -482,19 +418,20 @@ void writeToFile(unsigned int *edgeIndices, unsigned int *edgeLabels, unsigned i
 	outputFile.close();
 }
 
-void writeLayerToFile(std::string prefix, unsigned int prevLayer, unsigned int layer, unsigned int *edgeIndices, unsigned int *edgeLabels, unsigned int *node2label) {
+void writeLayerToFile(std::string prefix, unsigned int topLayer, unsigned int layer, unsigned int *edgeIndices, unsigned int *edgeLabels, unsigned int *node2label) {
 	long long wtime = currentTimeStamp();
 	std::ofstream outputFile;
 	std::string prefixx;
-	if (prevLayer > 0 && prevLayer > layer+1) {
-		prefixx = prefix.substr(0,prefix.length()-4)+"_layers/layer"+std::to_string(layer)+"-"+std::to_string(prevLayer-1);
+	if (topLayer != layer) {
+		prefixx = prefix.substr(0,prefix.length()-4)+"_layers/layer"+std::to_string(layer)+"-"+std::to_string(topLayer);
 	} else {
 		prefixx = prefix.substr(0,prefix.length()-4)+"_layers/layer"+std::to_string(layer);
 	}
 	outputFile.open(prefixx+".csv");
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
-		if (edgeLabels[edgeIndices[i]] == layer)
-			outputFile<<node2label[(g.edgeList + edgeIndices[i])->src]<<","<<node2label[(g.edgeList + edgeIndices[i])->tgt]<<","<<layer<<"\n";
+		unsigned int label = edgeLabels[edgeIndices[i]];
+		if (label >= layer && label <= (topLayer))
+			outputFile<<node2label[(g.edgeList + edgeIndices[i])->src]<<","<<node2label[(g.edgeList + edgeIndices[i])->tgt]<<","<<label<<"\n";
 	}
 	outputFile.close();
 
@@ -552,13 +489,15 @@ int main(int argc, char *argv[]) {
 	unsigned int *core = new unsigned int[g.NODENUM + 1];
 	std::thread t = std::thread(std::printf, "TEST\n");
 	unsigned int numEdges = 0;
-	unsigned int prevlayerout = 0;
+	unsigned int topLayer = 0;
 	unsigned int mc;
 	while(!isGraphEmpty(edgeLabels)) {
 		std::copy(degree, degree + g.NODENUM + 1, core);
 		parKCore(core, edgeLabels);
 		/* findKCore(edgeLabels, core); */
 		mc = *std::max_element(core, core + g.NODENUM + 1);
+		if (topLayer == 0)
+			topLayer = mc;
 		if(DEBUG)
 			std::cout<<"CURRENT MAXIMUM CORE : "<<mc<<"\n";
 		bool *isFinalNode = new bool[g.NODENUM + 1];
@@ -573,22 +512,22 @@ int main(int argc, char *argv[]) {
 		/* writeLayerToFile(argv[1], mc, originalIndices, edgeLabels, node2label); */
 		if (numEdges >= BUFFER_NUM_EDGES) {
 			t.join();
-			t = std::thread(writeLayerToFile, argv[1], prevlayerout, mc, originalIndices, edgeLabels, node2label);
-			prevlayerout = mc;
+			t = std::thread(writeLayerToFile, argv[1], topLayer, mc, originalIndices, edgeLabels, node2label);
+			topLayer = 0;
 			numEdges = 0;
 		}
 	}
 	/* g.EDGENUM /= 2; */
-	unsigned int *originalLabels = new unsigned int[g.EDGENUM];
-	if(DEBUG)
-		std::cout<<"RECONSTRUCTING ORIGINAL LABELS\n";
-	for(unsigned int i = 0; i < g.EDGENUM; i++) {
-		originalLabels[i] = edgeLabels[originalIndices[i]];
-	}
+	/* unsigned int *originalLabels = new unsigned int[g.EDGENUM]; */
+	/* if(DEBUG) */
+	/* 	std::cout<<"RECONSTRUCTING ORIGINAL LABELS\n"; */
+	/* for(unsigned int i = 0; i < g.EDGENUM; i++) { */
+	/* 	originalLabels[i] = edgeLabels[originalIndices[i]]; */
+	/* } */
 	long long algorithmTime = getTimeElapsed();
 	t.join();
 	if (numEdges > 0) {
-		writeLayerToFile(argv[1], prevlayerout, mc, originalIndices, edgeLabels, node2label);
+		writeLayerToFile(argv[1], topLayer, mc, originalIndices, edgeLabels, node2label);
 	}
 	/* writeToFile(originalIndices, originalLabels, node2label); */
 	writeMetaData(argv[1], atoi(argv[3]), atoi(argv[2]), preprocessingTime, algorithmTime);
@@ -598,7 +537,7 @@ int main(int argc, char *argv[]) {
 	delete [] g.start_indices;
 	delete [] g.end_indices;
 	delete [] edgeLabels;
-	delete [] originalLabels;
+	/* delete [] originalLabels; */
 	delete [] originalIndices;
 	return 0;
 }
