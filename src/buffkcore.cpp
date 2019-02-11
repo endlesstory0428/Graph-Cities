@@ -18,7 +18,7 @@
 #include <thread>
 #define DEBUG 1
 
-#define BUFFER_NUM_EDGES (1<<13)
+#define BUFFER_NUM_EDGES ((unsigned int) 1<<31)
 
 // A struct to represent an edge in the edge list
 struct edge {
@@ -77,30 +77,20 @@ void createMemoryMap(char *fileName) {
 
 // In-memory edge list instead of memory mapped file
 void createInMemoryEdgeList(char *fileName) {
-	g.edgeList = new edge[g.EDGENUM];
-	std::ifstream is;
-	is.open(fileName, std::ios::in | std::ios::binary);
-	unsigned int src, tgt;
-	unsigned int updatedEdgeNum = g.EDGENUM;
-	for(unsigned int i = 0; i < g.EDGENUM; i++) {
-		is.read((char *)(&src), sizeof(unsigned int));
-		is.read((char *)(&tgt), sizeof(unsigned int));
-		assert(src >= 0 && src <= g.NODENUM);
-		assert(tgt >= 0 && tgt <= g.NODENUM);
-		(g.edgeList + i)->src = src;
-		(g.edgeList + i)->tgt = tgt;
-	}
-	is.close();
-}
-
-void initNodeMap(char *inputFile, unsigned int *node2label, unsigned int *label2node) {
-	std::ifstream is(inputFile);
-	unsigned int label;
-	for(unsigned int i = 1; i <= g.NODENUM; i++) {
-		is >> label;
-		node2label[i] = label;
-		label2node[label] = i;
-	}
+		g.edgeList = new edge[g.EDGENUM];
+		std::ifstream is;
+		is.open(fileName, std::ios::in | std::ios::binary);
+		unsigned int src, tgt;
+		unsigned int updatedEdgeNum = g.EDGENUM;
+		for(unsigned int i = 0; i < g.EDGENUM; i++) {
+				is.read((char *)(&src), sizeof(unsigned int));
+				is.read((char *)(&tgt), sizeof(unsigned int));
+				assert(src >= 0 && src <= g.NODENUM);
+				assert(tgt >= 0 && tgt <= g.NODENUM);
+				(g.edgeList + i)->src = src;
+				(g.edgeList + i)->tgt = tgt;
+		}
+		is.close();
 }
 
 void doubleAndReverseGraph(char *inputFile, char *outputFile, unsigned int *label2node) {
@@ -109,7 +99,7 @@ void doubleAndReverseGraph(char *inputFile, char *outputFile, unsigned int *labe
 	std::ofstream os;
 	os.open(outputFile, std::ios::out | std::ios::binary | std::ios::app);
 	unsigned int src, tgt;
-	/* unsigned int updatedEdgeNum = g.EDGENUM; */
+	unsigned int updatedEdgeNum = g.EDGENUM;
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		is.read((char *)(&src), sizeof(unsigned int));
 		is.read((char *)(&tgt), sizeof(unsigned int));
@@ -122,25 +112,25 @@ void doubleAndReverseGraph(char *inputFile, char *outputFile, unsigned int *labe
 			os.write((char *)&src, sizeof(unsigned int));
 			os.write((char *)&tgt, sizeof(unsigned int));
 		}
-		/* else { */
-		/* 	updatedEdgeNum--; */
-		/* } */
+		else {
+			updatedEdgeNum--;
+		}
 	}
 	/* is.seekg(0, std::ios::beg); */
 	/* for(unsigned int i = 0; i < g.EDGENUM; i++) { */
-	/* 	is.read((char *)(&src), sizeof(unsigned int)); */
-	/* 	is.read((char *)(&tgt), sizeof(unsigned int)); */
-	/* 	src = label2node[htonl(src)]; */
-	/* 	tgt = label2node[htonl(tgt)]; */
-	/* 	assert(src >= 0 && src <= g.NODENUM); */
-	/* 	assert(tgt >= 0 && tgt <= g.NODENUM); */
-	/* 	// Removes self loops */
-	/* 	if(src != tgt) { */
-	/* 		os.write((char *)(&tgt), sizeof(unsigned int)); */
-	/* 		os.write((char *)(&src), sizeof(unsigned int)); */
-	/* 	} */
+	/*	   is.read((char *)(&src), sizeof(unsigned int)); */
+	/*	   is.read((char *)(&tgt), sizeof(unsigned int)); */
+	/*	   src = htonl(src); */
+	/*	   tgt = htonl(tgt); */
+	/*	   assert(src >= 0 && src <= g.NODENUM); */
+	/*	   assert(tgt >= 0 && tgt <= g.NODENUM); */
+	/*	   // Removes self loops */
+	/*	   if(src != tgt) { */
+	/*		   os.write((char *)(&tgt), sizeof(unsigned int)); */
+	/*		   os.write((char *)(&src), sizeof(unsigned int)); */
+	/*	   } */
 	/* } */
-	/* /1* g.EDGENUM = updatedEdgeNum; *1/ */
+	g.EDGENUM = updatedEdgeNum;
 	/* g.EDGENUM *= 2; */
 	is.close();
 	os.close();
@@ -197,32 +187,32 @@ void findStartAndEndIndices() {
 	unsigned int old = g.edgeList->src;
 	g.start_indices[old] = 0;
 	for(i = 0; i < g.EDGENUM; i++) {
-		if((g.edgeList + i)->src != old) {
-			g.end_indices[old] = i - 1;
-			old = (g.edgeList + i)->src;
-			g.start_indices[old] = i;
-		}
+			if((g.edgeList + i)->src != old) {
+					g.end_indices[old] = i - 1;
+					old = (g.edgeList + i)->src;
+					g.start_indices[old] = i;
+			}
 	}
 	g.end_indices[old] = i - 1;
 }
 
 bool isGraphEmpty(unsigned int *edgeLabels) {
-	for(unsigned int i = 0; i < g.EDGENUM; i++) {
-		if(edgeLabels[i] == -1)
-				return false;
-	}
-	return true;
+		for(unsigned int i = 0; i < g.EDGENUM; i++) {
+				if(edgeLabels[i] == -1)
+						return false;
+		}
+		return true;
 }
 
 // Computes the degree of each node in the graph
-void findDegree(unsigned int *edgeLabels, float *degree) {
+void findDegree(unsigned int *edgeLabels, unsigned int *degree) {
 	std::fill_n(degree, g.NODENUM + 1, 0);
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		// If edge hasn't been deleted yet. An edge is considered deleted
 		// when it has been labeled.
 		if(edgeLabels[i] == -1) {
-			degree[(g.edgeList + i)->src]++;
-			degree[(g.edgeList + i)->tgt]++;
+				degree[(g.edgeList + i)->src]++;
+				degree[(g.edgeList + i)->tgt]++;
 		}
 	}
 	for(unsigned int i = 0; i < g.NODENUM + 1; i++) {
@@ -272,7 +262,7 @@ void scan(unsigned int *deg, unsigned int level, unsigned int* curr, long *currT
 
 
 void processSubLevel(unsigned int *curr, long currTail,
-	unsigned int *deg, unsigned int *edgeLabels, unsigned int level, unsigned int *next, long *nextTailPtr) {
+		unsigned int *deg, unsigned int *edgeLabels, unsigned int level, unsigned int *next, long *nextTailPtr) {
 
 	// Size of cache line
 	const long BUFFER_SIZE_BYTES = 2048;
@@ -377,15 +367,14 @@ void parKCore(unsigned int *deg, unsigned int *edgeLabels) {
 
 }
 
-unsigned int labelEdgesAndUpdateDegree(unsigned int peel, bool *isFinalNode, float *degree, unsigned int *edgeLabels) {
+unsigned int labelEdgesAndUpdateDegree(unsigned int peel, bool *isFinalNode, unsigned int *degree, unsigned int *edgeLabels) {
 	unsigned int numEdges = 0;
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + i)->src;
 		unsigned int tgt = (g.edgeList + i)->tgt;
 		if(isFinalNode[src] && isFinalNode[tgt] && edgeLabels[i] == -1) {
 			edgeLabels[i] = peel;
-			degree[src] -= 0.5;
-			degree[tgt] -= 0.5;
+			degree[src] -= 1;
 			numEdges++;
 		}
 	}
@@ -399,26 +388,48 @@ void labelAndDeletePeelOneEdges(float *degree, unsigned int *edgeLabels) {
 		unsigned int src = (g.edgeList + i)->src;
 		unsigned int tgt = (g.edgeList + i)->tgt;
 		if(edgeLabels[i] == -1) {
-			if(tmp[src] == 1 || tmp[tgt] == 1) {
-				edgeLabels[i] = 1;
-				degree[src] -= 0.5;
-				degree[tgt] -= 0.5;
-			}
+				if(tmp[src] == 1 || tmp[tgt] == 1) {
+						edgeLabels[i] = 1;
+						degree[src] -= 0.5;
+						degree[tgt] -= 0.5;
+				}
 		}
 	}
 	delete [] tmp;
 }
 
-void writeToFile(unsigned int *edgeIndices, unsigned int *edgeLabels, unsigned int *node2label) {
+void writeToFile(unsigned int *edgeIndices, unsigned int *edgeLabels) {
+		std::ofstream outputFile;
+		outputFile.open("graph-decomposition.csv");
+		for(unsigned int i = 0; i < g.EDGENUM; i++) {
+				outputFile<<(g.edgeList + edgeIndices[i])->src<<","<<(g.edgeList + edgeIndices[i])->tgt<<","<<edgeLabels[i]<<"\n";
+		}
+		outputFile.close();
+}
+
+void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENUM, long long preprocessingTime, long long algorithmTime) {
 	std::ofstream outputFile;
-	outputFile.open("graph-decomposition.csv");
-	for(unsigned int i = 0; i < g.EDGENUM; i++) {
-		outputFile<<node2label[(g.edgeList + edgeIndices[i])->src]<<","<<node2label[(g.edgeList + edgeIndices[i])->tgt]<<","<<edgeLabels[i]<<"\n";
-	}
+	outputFile.open(prefix.substr(0,prefix.length()-4)+"-decomposition-info.json");
+	outputFile<<"{\n";
+	outputFile<<"\"vertices\":"<<NODENUM<<",\n";
+	outputFile<<"\"edges\":"<<EDGENUM<<",\n";
+	outputFile<<"\"preprocessing-time\":"<<preprocessingTime<<",\n";
+	outputFile<<"\"algorithm-time\":"<<algorithmTime<<"\n";
+	outputFile<<"\"io-time\":"<<ioTime<<"\n}";
 	outputFile.close();
 }
 
-void writeLayerToFile(std::string prefix, unsigned int topLayer, unsigned int layer, unsigned int *edgeIndices, unsigned int *edgeLabels, unsigned int *node2label) {
+void initNodeMap(char *inputFile, unsigned int *node2label, unsigned int *label2node) {
+	std::ifstream is(inputFile);
+	unsigned int label;
+	for(unsigned int i = 1; i <= g.NODENUM; i++) {
+		is >> label;
+		node2label[i] = label;
+		label2node[label] = i;
+	}
+}
+
+void writeLayerToFile(const std::string &prefix, unsigned int topLayer, unsigned int layer, unsigned int *edgeIndices, unsigned int *edgeLabels, unsigned int *node2label) {
 	long long wtime = currentTimeStamp();
 	std::ofstream outputFile;
 	std::string prefixx;
@@ -441,24 +452,13 @@ void writeLayerToFile(std::string prefix, unsigned int topLayer, unsigned int la
 	outputFile.close();
 }
 
-void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENUM, long long preprocessingTime, long long algorithmTime) {
-	std::ofstream outputFile;
-	outputFile.open(prefix.substr(0,prefix.length()-4)+"-decomposition-info.json");
-	outputFile<<"{\n";
-	outputFile<<"\"vertices\":"<<NODENUM<<",\n";
-	outputFile<<"\"edges\":"<<EDGENUM<<",\n";
-	outputFile<<"\"preprocessing-time\":"<<preprocessingTime<<",\n";
-	outputFile<<"\"algorithm-time\":"<<algorithmTime<<"\n";
-	outputFile<<"\"io-time\":"<<ioTime<<"\n}";
-	outputFile.close();
-}
-
 int main(int argc, char *argv[]) {
+	std::cout<<BUFFER_NUM_EDGES<<"\n";
 	if (argc < 6) {
 		std::cerr<<argv[0]<<": usage: ./atlas-decomposition <path to graph.bin> <# edges> <# nodes> <path to graph.nodemap> <largest node label>\n";
 		exit(1);
 	}
-	char tmpFile[] = "tmp.bin";
+	char *tmpFile = "tmp.bin";
 	remove(tmpFile);
 	g.EDGENUM = atoi(argv[2]);
 	g.NODENUM = atoi(argv[3]);
@@ -484,7 +484,7 @@ int main(int argc, char *argv[]) {
 	findStartAndEndIndices();
 	if(DEBUG)
 		std::cout<<"START AND END INDICES COMPUTED\n";
-	float *degree = new float[g.NODENUM + 1];
+	unsigned int *degree = new unsigned int[g.NODENUM + 1];
 	findDegree(edgeLabels, degree);
 	unsigned int *core = new unsigned int[g.NODENUM + 1];
 	std::thread t = std::thread(std::printf, "TEST\n");
@@ -494,7 +494,6 @@ int main(int argc, char *argv[]) {
 	while(!isGraphEmpty(edgeLabels)) {
 		std::copy(degree, degree + g.NODENUM + 1, core);
 		parKCore(core, edgeLabels);
-		/* findKCore(edgeLabels, core); */
 		mc = *std::max_element(core, core + g.NODENUM + 1);
 		if (topLayer == 0)
 			topLayer = mc;
@@ -509,8 +508,8 @@ int main(int argc, char *argv[]) {
 		}
 		numEdges += labelEdgesAndUpdateDegree(mc, isFinalNode, degree, edgeLabels);
 		delete [] isFinalNode;
-		/* writeLayerToFile(argv[1], mc, originalIndices, edgeLabels, node2label); */
 		if (numEdges >= BUFFER_NUM_EDGES) {
+			/* writeLayerToFile(writeOut, argv[1], topLayer, mc, originalIndices, edgeLabels, node2label); */
 			t.join();
 			t = std::thread(writeLayerToFile, argv[1], topLayer, mc, originalIndices, edgeLabels, node2label);
 			topLayer = 0;
@@ -525,11 +524,10 @@ int main(int argc, char *argv[]) {
 	/* 	originalLabels[i] = edgeLabels[originalIndices[i]]; */
 	/* } */
 	long long algorithmTime = getTimeElapsed();
+	/* writeToFile(originalIndices, originalLabels); */
 	t.join();
-	if (numEdges > 0) {
+	if (numEdges > 0)
 		writeLayerToFile(argv[1], topLayer, mc, originalIndices, edgeLabels, node2label);
-	}
-	/* writeToFile(originalIndices, originalLabels, node2label); */
 	writeMetaData(argv[1], atoi(argv[3]), atoi(argv[2]), preprocessingTime, algorithmTime);
 	remove(tmpFile);
 	delete [] core;

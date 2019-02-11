@@ -4,15 +4,14 @@ PRODUCT := atlas-decomposition
 
 CXX := g++
 LINKER := g++
-CXXFLAGS := -Wall -Wextra
-LNKFLAGS := -g -fopenmp -O3 -pthread
+CXXFLAGS := -Wall -Wextra -fopenmp -O3 -pthread
 
 SRCFILES := src/buffkcore.cpp
 # SRCFILES := $(wildcard src/*.cpp)
 OBJFILES := $(patsubst %.cpp,%.o,$(SRCFILES))
 
 $(PRODUCT): $(OBJFILES)
-	$(LINKER) $(LNKFLAGS) $^ -o $@
+	$(LINKER) $(CXXFLAGS) $^ -o $@
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCDIRS) -c $< -o $@
