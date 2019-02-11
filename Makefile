@@ -4,7 +4,7 @@ PRODUCT := atlas-decomposition
 
 CXX := g++
 LINKER := g++
-CXXFLAGS := -Wall -Wextra -fopenmp -O3 -pthread
+CXXFLAGS := -Wall -Wextra -fopenmp -O3 -pthread -std=c++11
 
 SRCFILES := src/buffkcore.cpp
 # SRCFILES := $(wildcard src/*.cpp)
