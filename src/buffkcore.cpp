@@ -18,7 +18,7 @@
 #include <thread>
 #define DEBUG 1
 
-#define BUFFER_NUM_EDGES ((unsigned int) 1<<31)
+#define BUFFER_NUM_EDGES ((unsigned int) 1<<25)
 
 // A struct to represent an edge in the edge list
 struct edge {
@@ -453,6 +453,9 @@ void writeLayerToFile(const std::string &prefix, unsigned int topLayer, unsigned
 }
 
 int main(int argc, char *argv[]) {
+	int numthreads = omp_get_max_threads();
+	omp_set_num_threads(numthreads-2);
+	std::cout<<numthreads<<"\n";
 	std::cout<<BUFFER_NUM_EDGES<<"\n";
 	if (argc < 6) {
 		std::cerr<<argv[0]<<": usage: ./atlas-decomposition <path to graph.bin> <# edges> <# nodes> <path to graph.nodemap> <largest node label>\n";
