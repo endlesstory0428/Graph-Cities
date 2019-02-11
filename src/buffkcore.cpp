@@ -19,6 +19,7 @@
 #define DEBUG 1
 
 #define BUFFER_NUM_EDGES ((unsigned int) 1<<25)
+#define ENULL ((unsigned int) -1)
 
 // A struct to represent an edge in the edge list
 struct edge {
@@ -76,24 +77,24 @@ void createMemoryMap(char *fileName) {
 }
 
 // In-memory edge list instead of memory mapped file
-void createInMemoryEdgeList(char *fileName) {
+void createInMemoryEdgeList(const char *fileName) {
 		g.edgeList = new edge[g.EDGENUM];
 		std::ifstream is;
 		is.open(fileName, std::ios::in | std::ios::binary);
 		unsigned int src, tgt;
-		unsigned int updatedEdgeNum = g.EDGENUM;
+		/* unsigned int updatedEdgeNum = g.EDGENUM; */
 		for(unsigned int i = 0; i < g.EDGENUM; i++) {
 				is.read((char *)(&src), sizeof(unsigned int));
 				is.read((char *)(&tgt), sizeof(unsigned int));
-				assert(src >= 0 && src <= g.NODENUM);
-				assert(tgt >= 0 && tgt <= g.NODENUM);
+				assert(src != ENULL && src <= g.NODENUM);
+				assert(tgt != ENULL && tgt <= g.NODENUM);
 				(g.edgeList + i)->src = src;
 				(g.edgeList + i)->tgt = tgt;
 		}
 		is.close();
 }
 
-void doubleAndReverseGraph(char *inputFile, char *outputFile, unsigned int *label2node) {
+void doubleAndReverseGraph(char *inputFile, const char *outputFile, unsigned int *label2node) {
 	std::ifstream is;
 	is.open(inputFile, std::ios::in | std::ios::binary);
 	std::ofstream os;
@@ -105,8 +106,8 @@ void doubleAndReverseGraph(char *inputFile, char *outputFile, unsigned int *labe
 		is.read((char *)(&tgt), sizeof(unsigned int));
 		src = label2node[htonl(src)];
 		tgt = label2node[htonl(tgt)];
-		assert(src >= 0 && src <= g.NODENUM);
-		assert(tgt >= 0 && tgt <= g.NODENUM);
+		assert(src != ENULL && src <= g.NODENUM);
+		assert(tgt != ENULL && tgt <= g.NODENUM);
 		// Removes self loops
 		if(src != tgt) {
 			os.write((char *)&src, sizeof(unsigned int));
@@ -160,6 +161,7 @@ int compareByEdges(const void * a, const void * b) {
 	}
 	if ((g.edgeList + *(unsigned int *)a)->src > (g.edgeList + *(unsigned int *)b)->src)
 		return 1;
+	return 0;
 }
 
 // Formats the graph by sorting it and tracing original indices in the graph
@@ -198,7 +200,7 @@ void findStartAndEndIndices() {
 
 bool isGraphEmpty(unsigned int *edgeLabels) {
 		for(unsigned int i = 0; i < g.EDGENUM; i++) {
-				if(edgeLabels[i] == -1)
+				if(edgeLabels[i] == ENULL)
 						return false;
 		}
 		return true;
@@ -210,7 +212,7 @@ void findDegree(unsigned int *edgeLabels, unsigned int *degree) {
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		// If edge hasn't been deleted yet. An edge is considered deleted
 		// when it has been labeled.
-		if(edgeLabels[i] == -1) {
+		if(edgeLabels[i] == ENULL) {
 				degree[(g.edgeList + i)->src]++;
 				degree[(g.edgeList + i)->tgt]++;
 		}
@@ -281,7 +283,7 @@ void processSubLevel(unsigned int *curr, long currTail,
 		else {
 			//For all neighbors of vertex v
 			for (unsigned int j = g.start_indices[v]; j <= g.end_indices[v]; j++) {
-				if(edgeLabels[j] == -1) {
+				if(edgeLabels[j] == ENULL) {
 					unsigned int u = (g.edgeList + j)->tgt;
 					if (deg[u] > level) {
 						unsigned int du =  __sync_fetch_and_sub(&deg[u], 1);
@@ -372,7 +374,7 @@ unsigned int labelEdgesAndUpdateDegree(unsigned int peel, bool *isFinalNode, uns
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + i)->src;
 		unsigned int tgt = (g.edgeList + i)->tgt;
-		if(isFinalNode[src] && isFinalNode[tgt] && edgeLabels[i] == -1) {
+		if(isFinalNode[src] && isFinalNode[tgt] && edgeLabels[i] == ENULL) {
 			edgeLabels[i] = peel;
 			degree[src] -= 1;
 			numEdges++;
@@ -387,7 +389,7 @@ void labelAndDeletePeelOneEdges(float *degree, unsigned int *edgeLabels) {
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + i)->src;
 		unsigned int tgt = (g.edgeList + i)->tgt;
-		if(edgeLabels[i] == -1) {
+		if(edgeLabels[i] == ENULL) {
 				if(tmp[src] == 1 || tmp[tgt] == 1) {
 						edgeLabels[i] = 1;
 						degree[src] -= 0.5;
@@ -463,7 +465,7 @@ int main(int argc, char *argv[]) {
 		std::cout<<numthreads<<"\n";
 		std::cout<<BUFFER_NUM_EDGES<<"\n";
 	}
-	char *tmpFile = "tmp.bin";
+	const char *tmpFile = "tmp.bin";
 	remove(tmpFile);
 	g.EDGENUM = atoi(argv[2]);
 	g.NODENUM = atoi(argv[3]);
@@ -476,7 +478,7 @@ int main(int argc, char *argv[]) {
 		std::cout<<"DOUBLED AND REVERSED GRAPH\n";
 	unsigned int *originalIndices = new unsigned int[g.EDGENUM];
 	unsigned int *edgeLabels = new unsigned int[g.EDGENUM];
-	std::fill_n(edgeLabels, g.EDGENUM, -1);
+	std::fill_n(edgeLabels, g.EDGENUM, ENULL);
 	/* createMemoryMap(tmpFile); */
 	createInMemoryEdgeList(tmpFile);
 	if(DEBUG)

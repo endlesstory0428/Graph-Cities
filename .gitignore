@@ -14,7 +14,7 @@ cit-Patents/
 uk-2005/
 twitter-2010/
 
-.ycm_extra_conf.py
+.ccls
 atlas-decomposition
 simplegraph/
 # Created by https://www.gitignore.io/api/c++,vim,java,python
