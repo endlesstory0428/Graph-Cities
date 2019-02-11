@@ -454,6 +454,15 @@ void writeLayerToFile(const std::string &prefix, unsigned int topLayer, unsigned
 	outputFile.close();
 }
 
+void writeLayerMetaData(std::string prefix, unsigned int layer, unsigned int NODENUM, unsigned int EDGENUM) {
+	std::ofstream outputFile;
+	outputFile.open(prefix.substr(0,prefix.length()-4)+"_layers/layer"+std::to_string(layer)+"-metainfo.json");
+	outputFile<<"{\n";
+	outputFile<<"\"vertices\":"<<NODENUM<<",\n";
+	outputFile<<"\"edges\":"<<EDGENUM<<",\n}";
+	outputFile.close();
+}
+
 int main(int argc, char *argv[]) {
 	if (argc < 6) {
 		std::cerr<<argv[0]<<": usage: ./atlas-decomposition <path to graph.bin> <# edges> <# nodes> <path to graph.nodemap> <largest node label>\n";
@@ -496,6 +505,8 @@ int main(int argc, char *argv[]) {
 	unsigned int *core = new unsigned int[g.NODENUM + 1];
 	std::thread t = std::thread(std::printf, "TEST\n");
 	unsigned int numEdges = 0;
+	unsigned int numtaEdges = 0;
+	unsigned int numVerts = 0;
 	unsigned int topLayer = 0;
 	unsigned int mc;
 	while(!isGraphEmpty(edgeLabels)) {
@@ -508,13 +519,17 @@ int main(int argc, char *argv[]) {
 			std::cout<<"CURRENT MAXIMUM CORE : "<<mc<<"\n";
 		bool *isFinalNode = new bool[g.NODENUM + 1];
 		std::fill_n(isFinalNode, g.NODENUM + 1, false);
+		numVerts = 0;
 		for(unsigned int i = 0; i <= g.NODENUM; i++) {
 			if(core[i] == mc) {
 				isFinalNode[i] = true;
+				numVerts++;
 			}
 		}
-		numEdges += labelEdgesAndUpdateDegree(mc, isFinalNode, degree, edgeLabels);
+		numtaEdges = labelEdgesAndUpdateDegree(mc, isFinalNode, degree, edgeLabels);
 		delete [] isFinalNode;
+		writeLayerMetaData(argv[1], mc, numVerts, numtaEdges);
+		numEdges += numtaEdges;
 		if (numEdges >= BUFFER_NUM_EDGES) {
 			/* writeLayerToFile(writeOut, argv[1], topLayer, mc, originalIndices, edgeLabels, node2label); */
 			t.join();
