@@ -447,20 +447,17 @@ void writeLayerToFile(const std::string &prefix, unsigned int topLayer, unsigned
 			outputFile<<node2label[(g.edgeList + edgeIndices[i])->src]<<","<<node2label[(g.edgeList + edgeIndices[i])->tgt]<<","<<label<<"\n";
 	}
 	outputFile.close();
-
-	outputFile.open(prefixx+"-info.json");
-	outputFile<<"{\n";
-	outputFile<<"\"io-time\":"<<(ioTime += currentTimeStamp()-wtime)<<"\n}";
-	outputFile.close();
+	ioTime += currentTimeStamp()-wtime;
+	/* outputFile.open(prefixx+"-info.json"); */
+	/* outputFile<<"{\n"; */
+	/* outputFile<<"\"io-time\":"<<ioTime<<"\n}"; */
+	/* outputFile.close(); */
 }
 
-void writeLayerMetaData(std::string prefix, unsigned int layer, unsigned int NODENUM, unsigned int EDGENUM) {
-	std::ofstream outputFile;
-	outputFile.open(prefix.substr(0,prefix.length()-4)+"_layers/layer"+std::to_string(layer)+"-metainfo.json");
-	outputFile<<"{\n";
-	outputFile<<"\"vertices\":"<<NODENUM<<",\n";
-	outputFile<<"\"edges\":"<<EDGENUM<<",\n}";
-	outputFile.close();
+void writeLayerMetaData(std::ofstream &outputFile, unsigned int layer, unsigned int NODENUM, unsigned int EDGENUM) {
+	outputFile<<'"'<<layer<<'"'<<": {\n";
+	outputFile<<"\t\"vertices\":"<<NODENUM<<",\n";
+	outputFile<<"\t\"edges\":"<<EDGENUM/2<<"\n},\n";
 }
 
 int main(int argc, char *argv[]) {
@@ -468,6 +465,9 @@ int main(int argc, char *argv[]) {
 		std::cerr<<argv[0]<<": usage: ./atlas-decomposition <path to graph.bin> <# edges> <# nodes> <path to graph.nodemap> <largest node label>\n";
 		exit(1);
 	}
+	std::string prefix = argv[1];
+	std::ofstream outputFile(prefix.substr(0,prefix.length()-4)+"-layer-info.json");
+	outputFile<<"{\n";
 	int numthreads = omp_get_max_threads();
 	omp_set_num_threads(numthreads-2);
 	if (DEBUG) {
@@ -528,12 +528,12 @@ int main(int argc, char *argv[]) {
 		}
 		numtaEdges = labelEdgesAndUpdateDegree(mc, isFinalNode, degree, edgeLabels);
 		delete [] isFinalNode;
-		writeLayerMetaData(argv[1], mc, numVerts, numtaEdges);
+		writeLayerMetaData(outputFile, mc, numVerts, numtaEdges);
 		numEdges += numtaEdges;
 		if (numEdges >= BUFFER_NUM_EDGES) {
-			/* writeLayerToFile(writeOut, argv[1], topLayer, mc, originalIndices, edgeLabels, node2label); */
+			/* writeLayerToFile(writeOut, prefix, topLayer, mc, originalIndices, edgeLabels, node2label); */
 			t.join();
-			t = std::thread(writeLayerToFile, argv[1], topLayer, mc, originalIndices, edgeLabels, node2label);
+			t = std::thread(writeLayerToFile, prefix, topLayer, mc, originalIndices, edgeLabels, node2label);
 			topLayer = 0;
 			numEdges = 0;
 		}
@@ -548,9 +548,11 @@ int main(int argc, char *argv[]) {
 	long long algorithmTime = getTimeElapsed();
 	/* writeToFile(originalIndices, originalLabels); */
 	t.join();
+	outputFile<<"}";
+	outputFile.close();
 	if (numEdges > 0)
-		writeLayerToFile(argv[1], topLayer, mc, originalIndices, edgeLabels, node2label);
-	writeMetaData(argv[1], atoi(argv[3]), atoi(argv[2]), preprocessingTime, algorithmTime);
+		writeLayerToFile(prefix, topLayer, mc, originalIndices, edgeLabels, node2label);
+	writeMetaData(prefix, atoi(argv[3]), atoi(argv[2])/2, preprocessingTime, algorithmTime);
 	remove(tmpFile);
 	delete [] core;
 	delete [] degree;
