@@ -207,8 +207,9 @@ bool isGraphEmpty(unsigned int *edgeLabels) {
 }
 
 // Computes the degree of each node in the graph
-void findDegree(unsigned int *edgeLabels, unsigned int *degree) {
+unsigned int findDegree(unsigned int *edgeLabels, unsigned int *degree) {
 	std::fill_n(degree, g.NODENUM + 1, 0);
+	unsigned int max = 0;
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		// If edge hasn't been deleted yet. An edge is considered deleted
 		// when it has been labeled.
@@ -219,7 +220,10 @@ void findDegree(unsigned int *edgeLabels, unsigned int *degree) {
 	}
 	for(unsigned int i = 0; i < g.NODENUM + 1; i++) {
 		degree[i] /= 2;
+		if (degree[i] > max)
+			max = degree[i];
 	}
+	return max;
 }
 
 void scan(unsigned int *deg, unsigned int level, unsigned int* curr, long *currTailPtr) {
@@ -409,12 +413,13 @@ void writeToFile(unsigned int *edgeIndices, unsigned int *edgeLabels) {
 		outputFile.close();
 }
 
-void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENUM, long long preprocessingTime, long long algorithmTime) {
+void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENUM, unsigned int maxdeg, long long preprocessingTime, long long algorithmTime) {
 	std::ofstream outputFile;
 	outputFile.open(prefix.substr(0,prefix.length()-4)+"-decomposition-info.json");
 	outputFile<<"{\n";
 	outputFile<<"\"vertices\":"<<NODENUM<<",\n";
 	outputFile<<"\"edges\":"<<EDGENUM<<",\n";
+	outputFile<<"\"maxdeg\":"<<maxdeg<<",\n";
 	outputFile<<"\"preprocessing-time\":"<<preprocessingTime<<",\n";
 	outputFile<<"\"algorithm-time\":"<<algorithmTime<<"\n";
 	outputFile<<"\"io-time\":"<<ioTime<<"\n}";
@@ -501,7 +506,7 @@ int main(int argc, char *argv[]) {
 	if(DEBUG)
 		std::cout<<"START AND END INDICES COMPUTED\n";
 	unsigned int *degree = new unsigned int[g.NODENUM + 1];
-	findDegree(edgeLabels, degree);
+	unsigned int maxdeg = findDegree(edgeLabels, degree);
 	unsigned int *core = new unsigned int[g.NODENUM + 1];
 	std::thread t = std::thread(std::printf, "TEST\n");
 	unsigned int numEdges = 0;
@@ -552,7 +557,7 @@ int main(int argc, char *argv[]) {
 	outputFile.close();
 	if (numEdges > 0)
 		writeLayerToFile(prefix, topLayer, mc, originalIndices, edgeLabels, node2label);
-	writeMetaData(prefix, atoi(argv[3]), atoi(argv[2])/2, preprocessingTime, algorithmTime);
+	writeMetaData(prefix, atoi(argv[3]), atoi(argv[2])/2, maxdeg, preprocessingTime, algorithmTime);
 	remove(tmpFile);
 	delete [] core;
 	delete [] degree;
