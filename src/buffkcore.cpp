@@ -11,8 +11,6 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <limits.h>
 #include <omp.h>
 #include <thread>
@@ -459,15 +457,16 @@ void writeLayerToFile(const std::string &prefix, unsigned int topLayer, unsigned
 	/* outputFile.close(); */
 }
 
-void writeLayerMetaData(std::ofstream &outputFile, unsigned int layer, unsigned int NODENUM, unsigned int EDGENUM) {
+void writeLayerMetaData(std::ofstream &outputFile, unsigned int layer, unsigned int prev, unsigned int NODENUM, unsigned int EDGENUM) {
 	outputFile<<'"'<<layer<<'"'<<": {\n";
 	outputFile<<"\t\"vertices\":"<<NODENUM<<",\n";
-	outputFile<<"\t\"edges\":"<<EDGENUM/2<<"\n},\n";
+	outputFile<<"\t\"edges\":"<<EDGENUM/2<<",\n";
+	outputFile<<"\t\"file_suffix\":"<<prev<<"\n},\n";
 }
 
 int main(int argc, char *argv[]) {
 	if (argc < 6) {
-		std::cerr<<argv[0]<<": usage: ./atlas-decomposition <path to graph.bin> <# edges> <# nodes> <path to graph.nodemap> <largest node label>\n";
+		std::cerr<<argv[0]<<": usage: ./buffkcore <path to graph.bin> <# edges> <# nodes> <path to graph.nodemap> <largest node label>\n";
 		exit(1);
 	}
 	std::string prefix = argv[1];
@@ -533,7 +532,7 @@ int main(int argc, char *argv[]) {
 		}
 		numtaEdges = labelEdgesAndUpdateDegree(mc, isFinalNode, degree, edgeLabels);
 		delete [] isFinalNode;
-		writeLayerMetaData(outputFile, mc, numVerts, numtaEdges);
+		writeLayerMetaData(outputFile, mc, topLayer, numVerts, numtaEdges);
 		numEdges += numtaEdges;
 		if (numEdges >= BUFFER_NUM_EDGES) {
 			/* writeLayerToFile(writeOut, prefix, topLayer, mc, originalIndices, edgeLabels, node2label); */
@@ -553,7 +552,7 @@ int main(int argc, char *argv[]) {
 	long long algorithmTime = getTimeElapsed();
 	/* writeToFile(originalIndices, originalLabels); */
 	t.join();
-	outputFile<<"}";
+	outputFile<<"\"0\":{}\n}";
 	outputFile.close();
 	if (numEdges > 0)
 		writeLayerToFile(prefix, topLayer, mc, originalIndices, edgeLabels, node2label);
