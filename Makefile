@@ -1,16 +1,19 @@
 GRAPH := simplegraph
+LAYER := 1
 
-PRODUCT := atlas-decomposition
+PRODUCT := buffkcore wave
 
 CXX := g++
 LINKER := g++
-CXXFLAGS := -Wall -Wextra -fopenmp -O3 -pthread -std=c++11
+CXXFLAGS := -Wall -Wextra -fopenmp -O3 -pthread -lboost_system -std=c++11
 
-SRCFILES := src/buffkcore.cpp
-# SRCFILES := $(wildcard src/*.cpp)
+SRCDIR := ./src
+SRCFILES := $(wildcard $(SRCDIR)/*.cpp)
 OBJFILES := $(patsubst %.cpp,%.o,$(SRCFILES))
 
-$(PRODUCT): $(OBJFILES)
+all: $(PRODUCT)
+
+%: $(SRCDIR)/%.o
 	$(LINKER) $(CXXFLAGS) $^ -o $@
 
 %.o: %.cpp
@@ -39,11 +42,34 @@ mmap:
 .PHONY: mmap
 
 decomp:
-	./atlas-decomposition $(GRAPH)/$(GRAPH).bin $$(($$(wc -c < $(GRAPH)/$(GRAPH).bin)/8)) $$(($$(wc -l < $(GRAPH)/$(GRAPH).nodemap))) $(GRAPH)/$(GRAPH).nodemap $$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap)))
+	./buffkcore \
+		$(GRAPH)/$(GRAPH).bin \
+		$$(($$(wc -c < $(GRAPH)/$(GRAPH).bin)/8)) \
+		$$(($$(wc -l < $(GRAPH)/$(GRAPH).nodemap))) \
+		$(GRAPH)/$(GRAPH).nodemap \
+		$$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap)))
+
+.PHONY: decomp
+
+dwave:
+	FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
+	./wave \
+		$(GRAPH)/$(GRAPH)_layers \
+		"$$FILENAME" \
+		$(LAYER) \
+		$$(python -c "import sys, json; x=json.load(sys.stdin)['$(LAYER)']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
+		$$(($$(wc -l < "$$FILENAME")))
 
 .PHONY: decomp
 
 bstats:
 	echo $$(($$(wc -c < $(GRAPH)/$(GRAPH).bin)/8)), $$(($$(wc -l < $(GRAPH)/$(GRAPH).nodemap))), $$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap)))
+
+.PHONY: bstats
+
+lstats:
+	echo \
+		$$(python -c "import sys, json; x=json.load(sys.stdin)['$(LAYER)']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
+		$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json)
 
 .PHONY: bstats
