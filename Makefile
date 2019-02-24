@@ -5,7 +5,7 @@ PRODUCT := buffkcore wave
 
 CXX := g++
 LINKER := g++
-CXXFLAGS := -Wall -Wextra -fopenmp -O3 -pthread -lboost_system -std=c++11
+CXXFLAGS := -Wall -Wextra -fopenmp -O3 -pthread -std=c++11 #-lboost_system
 
 SRCDIR := ./src
 SRCFILES := $(wildcard $(SRCDIR)/*.cpp)
@@ -58,6 +58,9 @@ dwave:
 		"$$FILENAME" \
 		$(LAYER) \
 		$$(python -c "import sys, json; x=json.load(sys.stdin)['$(LAYER)']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
+		$(GRAPH)/$(GRAPH).nodemap \
+		$$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap))) \
+		$$(($$(wc -l < $(GRAPH)/$(GRAPH).nodemap))) \
 		$$(($$(wc -l < "$$FILENAME")))
 
 .PHONY: decomp
