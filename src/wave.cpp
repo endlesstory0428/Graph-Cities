@@ -359,12 +359,6 @@ int main(int argc, char *argv[]) {
 	std::string prefixx = prefix.substr(0,prefix.length()-7)+"_waves/layer"+argv[3];
 	/* std::ofstream outputFile(prefixx+"-waves-info.json"); */
 	/* outputFile<<"{\n"; */
-	int numthreads = omp_get_max_threads();
-	omp_set_num_threads(numthreads-2);
-	if (DEBUG) {
-		std::cout<<numthreads<<"\n";
-		std::cout<<BUFFER_NUM_EDGES<<"\n";
-	}
 	g.EDGENUM = atol(argv[4]);
 	g.NODENUM = atol(argv[5]);
 	reset();
