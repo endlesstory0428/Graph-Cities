@@ -483,8 +483,8 @@ int main(int argc, char *argv[]) {
 	g.EDGENUM = atoi(argv[2]);
 	g.NODENUM = atoi(argv[3]);
 	reset();
-	unsigned int *node2label = new unsigned int[g.NODENUM];
-	unsigned int *label2node = new unsigned int[atoi(argv[5])];
+	unsigned int *node2label = new unsigned int[g.NODENUM+1];
+	unsigned int *label2node = new unsigned int[atoi(argv[5])+1];
 	initNodeMap(argv[4], node2label, label2node);
 	doubleAndReverseGraph(argv[1], tmpFile, label2node);
 	if(DEBUG)
