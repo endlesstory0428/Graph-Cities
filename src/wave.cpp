@@ -384,8 +384,8 @@ int main(int argc, char *argv[]) {
 	g.EDGENUM = atol(argv[4]);
 	g.NODENUM = atol(argv[5]);
 	reset();
-	unsigned int *node2label = new unsigned int[g.NODENUM];
-	unsigned int *label2node = new unsigned int[atol(argv[7])];
+	unsigned int *node2label = new unsigned int[g.NODENUM+1];
+	unsigned int *label2node = new unsigned int[atol(argv[7])+1];
 	std::fill_n(label2node, atol(argv[7])+1, ENULL);
 	/* initNodeMap(argv[6], node2label, label2node, atol(argv[8])); */
 	readLayer(argv[2], label2node, node2label, atol(argv[3]), atol(argv[9]));
