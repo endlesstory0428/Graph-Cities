@@ -43,25 +43,25 @@ mmap:
 
 decomp:
 	./buffkcore \
-		$(GRAPH)/$(GRAPH).bin \
+		"$(GRAPH)/$(GRAPH).bin" \
 		$$(($$(wc -c < $(GRAPH)/$(GRAPH).bin)/8)) \
 		$$(($$(wc -l < $(GRAPH)/$(GRAPH).nodemap))) \
-		$(GRAPH)/$(GRAPH).nodemap \
+		"$(GRAPH)/$(GRAPH).nodemap" \
 		$$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap)))
 
 .PHONY: decomp
 
 dwave:
-	FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
+	FILENAME="$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv)"; \
 	./wave \
 		$(GRAPH)/$(GRAPH)_layers \
-		"$$FILENAME" \
+		$$FILENAME \
 		$(LAYER) \
 		$$(python -c "import sys, json; x=json.load(sys.stdin)['$(LAYER)']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
 		$(GRAPH)/$(GRAPH).nodemap \
 		$$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap))) \
 		$$(($$(wc -l < $(GRAPH)/$(GRAPH).nodemap))) \
-		$$(($$(wc -l < "$$FILENAME")))
+		$$(($$(wc -l < $$FILENAME)))
 
 .PHONY: decomp
 

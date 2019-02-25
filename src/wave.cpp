@@ -12,6 +12,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <unordered_map>
+#include <boost/container_hash/hash.hpp>
 #define DEBUG 1
 
 #define BUFFER_NUM_EDGES ((unsigned int) 1<<25)
@@ -283,17 +285,31 @@ void findKCore(unsigned int *edgeLabels, unsigned int *deg) {
 }
 
 
-void labelEdgesAndCount(unsigned int *degree, unsigned int *edgeLabels, unsigned int *edgefreq, unsigned int *vertfreq, unsigned int numwaves) {
-	/* for (unsigned int j = 1; j <= numwaves; j++) { */
-		for(unsigned int i = 0; i < g.EDGENUM; i++) {
-			unsigned int src = (g.edgeList + i)->src;
-			unsigned int tgt = (g.edgeList + i)->tgt;
-			unsigned int wave = std::min(degree[src],degree[tgt]);
-			edgeLabels[i] = wave;
-			std::cerr<<src<<"-->"<<tgt<<" : "<<degree[src]<<"-->"<<degree[tgt]<<"\n";
+void labelEdgesAndCount(unsigned int *degree, unsigned int *edgeLabels, unsigned int *edgefreq) {
+	std::unordered_map<std::pair<unsigned int, unsigned int>,unsigned int,boost::hash<std::pair<unsigned int, unsigned int>>> map;
+	unsigned int id = 0;
+	for(unsigned int i = 0; i < g.EDGENUM; i++) {
+		unsigned int src = (g.edgeList + i)->src;
+		unsigned int tgt = (g.edgeList + i)->tgt;
+		unsigned int wave = degree[src];
+		/* std::cerr<<src<<"-->"<<tgt<<" : "<<degree[src]<<"-->"<<degree[tgt]<<"\n"; */
+		if (wave == degree[tgt]) {
 			edgefreq[wave]++;
+			continue;
 		}
-	/* } */
+		std::pair<unsigned int, unsigned int> key = std::make_pair(degree[src],degree[tgt]);
+		std::pair<unsigned int, unsigned int> keyU = std::make_pair(degree[tgt],degree[src]);
+		std::unordered_map<std::pair<unsigned int, unsigned int>,unsigned int,boost::hash<std::pair<unsigned int, unsigned int>>>::iterator m = map.find(key);
+		std::unordered_map<std::pair<unsigned int, unsigned int>,unsigned int,boost::hash<std::pair<unsigned int, unsigned int>>>::iterator mU = map.find(keyU);
+		if (m != map.end() && mU != map.end()) {
+			edgeLabels[i] = m->second;
+		} else {
+			map[key] = id;
+			map[keyU] = id;
+			edgeLabels[i] = id;
+			id++;
+		}
+	}
 }
 
 void labelAndDeletePeelOneEdges(float *degree, unsigned int *edgeLabels) {
@@ -313,11 +329,17 @@ void labelAndDeletePeelOneEdges(float *degree, unsigned int *edgeLabels) {
 	delete [] tmp;
 }
 
-void writeToFile(const std::string &prefix, unsigned int *edgeIndices, unsigned int *edgeLabels, unsigned int*node2label) {
+void writeToFile(const std::string &prefix, unsigned int *edgeIndices, unsigned int *edgeLabels, unsigned int*node2label, unsigned int *waves) {
 	std::ofstream outputFile;
-	outputFile.open(prefix+"-waves.csv");
+	outputFile.open(prefix+"-wave-metaedges.csv");
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
-		outputFile<<node2label[(g.edgeList + edgeIndices[i])->src]<<","<<node2label[(g.edgeList + edgeIndices[i])->tgt]<<","<<edgeLabels[i]<<"\n";
+		if (edgeLabels[i] != ENULL)
+			outputFile<<node2label[(g.edgeList + edgeIndices[i])->src]<<","<<node2label[(g.edgeList + edgeIndices[i])->tgt]<<","<<edgeLabels[i]<<"\n";
+	}
+	outputFile.close();
+	outputFile.open(prefix+"-wave-nodes.csv");
+	for(unsigned int i = 1; i <= g.NODENUM; i++) {
+		outputFile<<node2label[i]<<","<<waves[i]<<"\n";
 	}
 	outputFile.close();
 }
@@ -357,8 +379,8 @@ int main(int argc, char *argv[]) {
 	}
 	std::string prefix = argv[1];
 	std::string prefixx = prefix.substr(0,prefix.length()-7)+"_waves/layer"+argv[3];
-	/* std::ofstream outputFile(prefixx+"-waves-info.json"); */
-	/* outputFile<<"{\n"; */
+	std::ofstream outputFile(prefixx+"-waves-info.json");
+	outputFile<<"{\n";
 	g.EDGENUM = atol(argv[4]);
 	g.NODENUM = atol(argv[5]);
 	reset();
@@ -390,7 +412,7 @@ int main(int argc, char *argv[]) {
 	std::fill_n(vertfreq, core[g.NODENUM]+1, 0);
 	unsigned int *edgefreq = new unsigned int[core[g.NODENUM]+1];
 	std::fill_n(edgefreq, core[g.NODENUM]+1, 0);
-	labelEdgesAndCount(degree, edgeLabels, edgefreq, vertfreq, core[g.NODENUM]);
+	labelEdgesAndCount(degree, edgeLabels, edgefreq);
 	unsigned int *originalLabels = new unsigned int[g.EDGENUM];
 	if(DEBUG)
 		std::cout<<"RECONSTRUCTING ORIGINAL LABELS\n";
@@ -398,15 +420,18 @@ int main(int argc, char *argv[]) {
 		originalLabels[i] = edgeLabels[originalIndices[i]];
 	}
 	long long algorithmTime = getTimeElapsed();
-	/* for (unsigned int i = 1; i <= core[g.NODENUM]; i++) { */
-	/* 	if (edgefreq[i] > 0) */
-	/* 		writeWaveMetaData(outputFile, i, vertfreq[i], edgefreq[i]); */
-	/* } */
-	/* outputFile<<"}\n"; */
-	/* outputFile.close(); */
-	/* writeToFile(prefixx,originalIndices, originalLabels, node2label); */
-	/* writeMetaData(prefixx, atol(argv[5]), atol(argv[4])/2, maxdeg, preprocessingTime, algorithmTime); */
-	printArray(degree, g.NODENUM+1);
+	for (unsigned int i = 1; i <= g.NODENUM; i++) {
+		vertfreq[degree[i]]++;
+	}
+	for (unsigned int i = 1; i <= core[g.NODENUM]; i++) {
+		if (edgefreq[i] > 0 || vertfreq[i] > 0)
+			writeWaveMetaData(outputFile, i, vertfreq[i], edgefreq[i]);
+	}
+	outputFile<<"\"0\":{}\n}";
+	outputFile.close();
+	writeToFile(prefixx, originalIndices, originalLabels, node2label, degree);
+	writeMetaData(prefixx, atol(argv[5]), atol(argv[4])/2, maxdeg, preprocessingTime, algorithmTime);
+	/* printArray(degree, g.NODENUM+1); */
 	delete [] core;
 	delete [] degree;
 	delete [] g.start_indices;
