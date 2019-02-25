@@ -439,9 +439,9 @@ void writeLayerToFile(const std::string &prefix, unsigned int topLayer, unsigned
 	std::ofstream outputFile;
 	std::string prefixx;
 	if (topLayer != layer) {
-		prefixx = prefix.substr(0,prefix.length()-4)+"_layers/layer"+std::to_string(layer)+"-"+std::to_string(topLayer);
+		prefixx = prefix.substr(0,prefix.length()-4)+"_layers/layer-"+std::to_string(layer)+"-"+std::to_string(topLayer);
 	} else {
-		prefixx = prefix.substr(0,prefix.length()-4)+"_layers/layer"+std::to_string(layer);
+		prefixx = prefix.substr(0,prefix.length()-4)+"_layers/layer-"+std::to_string(layer);
 	}
 	outputFile.open(prefixx+".csv");
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
