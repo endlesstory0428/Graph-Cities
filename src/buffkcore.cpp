@@ -444,7 +444,7 @@ void writeLayerToFile(const std::string &prefix, unsigned int topLayer, unsigned
 		prefixx = prefix.substr(0,prefix.length()-4)+"_layers/layer-"+std::to_string(layer);
 	}
 	outputFile.open(prefixx+".csv");
-	outputFile<<"source_vertex,target_vertex,layer\n";
+	outputFile<<"# source_vertex,target_vertex,layer\n";
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int label = edgeLabels[edgeIndices[i]];
 		if (label >= layer && label <= (topLayer))

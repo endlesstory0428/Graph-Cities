@@ -360,7 +360,7 @@ void writeToFile(const std::string &prefix, unsigned int *edgeIndices, unsigned 
 	std::ofstream outputFile;
 	/* outputFile.open(prefix+"-wave-metaedges.csv"); */
 	outputFile.open(prefix+"-edgesToWaves.csv");
-	outputFile<<"source_vertex,target_vertex,source_wave,target_wave\n";
+	outputFile<<"# source_vertex,target_vertex,source_wave,target_wave\n";
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + edgeIndices[i])->src;
 		unsigned int tgt = (g.edgeList + edgeIndices[i])->tgt;
