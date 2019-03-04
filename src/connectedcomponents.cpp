@@ -40,12 +40,15 @@ graph_t g;
 void readGraph(const std::string &inputFile) {
 	std::ifstream is;
 	is.open(inputFile);
-	char comma;
 	unsigned int src, tgt;
 	std::string line;
 	while (std::getline(is, line)) {
+		if (line[0] == '#')
+			continue;
+		std::replace(line.begin(), line.end(), ',', ' ');
+		std::cerr<<line;
 		std::istringstream iss(line);
-		assert(iss >> src >> comma >> tgt);
+		assert(iss >> src >> tgt);
 		assert(add_edge(src, tgt, g).second);
 	}
 	is.close();
@@ -55,7 +58,7 @@ void readGraph(const std::string &inputFile) {
 	std::ofstream outputFile;
 	outputFile.open(prefix);
 	outputFile<<"# vertex,connected_component\n";
-	outputFile<<"# #components: "<<num_components<<"\n";
+	/* outputFile<<"# #components: "<<num_components<<"\n"; */
 	for(unsigned int i = 0; i < num_vertices(g); i++) {
 		if (degree(i, g) > 0)
 			outputFile<<i<<","<<components[i]<<"\n";
@@ -76,12 +79,20 @@ void readGraph(const std::string &inputFile) {
 /* } */
 
 int main(int argc, char *argv[]) {
-	if (argc < 2) {
-		std::cerr<<argv[0]<<": usage: ./connectedcomponents <path to graph csv>\n";
+	if (argc < 4) {
+		std::cerr<<argv[0]<<": usage: ./connectedcomponents <path to graph> <layer> <path to layers dir>\n";
 		exit(1);
 	}
 	std::string prefix = argv[1];
-	std::string prefixx = prefix.substr(0,prefix.length()-4)+".cc";
+	int layer = atol(argv[2]);
+	std::string prefixx;
+	if (layer <= 0) {
+		prefixx = prefix+".cc";
+	} else {
+		prefixx = argv[3];
+		prefixx += "/layer-"+std::to_string(layer)+".cc";
+	}
+
 	/* reset(); */
 	readGraph(prefix);
 	if(DEBUG)

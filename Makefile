@@ -1,7 +1,7 @@
 GRAPH := simplegraph
-LAYER := 1
+LAYER := 0
 
-PRODUCT := buffkcore wave
+PRODUCT := buffkcore wave connectedcomponents
 
 CXX := g++
 LINKER := g++
@@ -52,18 +52,24 @@ decomp:
 .PHONY: decomp
 
 dwave:
-	FILENAME="$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv)"; \
+	FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
 	./wave \
 		$(GRAPH)/$(GRAPH)_layers \
-		$$FILENAME \
+		"$$FILENAME" \
 		$(LAYER) \
 		$$(python -c "import sys, json; x=json.load(sys.stdin)['$(LAYER)']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
 		$(GRAPH)/$(GRAPH).nodemap \
 		$$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap))) \
-		$$(($$(wc -l < $(GRAPH)/$(GRAPH).nodemap))) \
-		$$(($$(wc -l < $$FILENAME)))
+		$$(($$(wc -l < $(GRAPH)/$(GRAPH).nodemap)))
 
 .PHONY: decomp
+
+ccs:
+	FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
+	[ -f "$$FILENAME" ] || FILENAME=$(GRAPH)/$(GRAPH); \
+	./connectedcomponents "$$FILENAME" $(LAYER) $(GRAPH)/$(GRAPH)_layers
+
+.PHONY: ccs
 
 bstats:
 	echo $$(($$(wc -c < $(GRAPH)/$(GRAPH).bin)/8)), $$(($$(wc -l < $(GRAPH)/$(GRAPH).nodemap))), $$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap)))

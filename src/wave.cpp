@@ -92,16 +92,20 @@ void createInMemoryEdgeList(const char *fileName) {
 		is.close();
 }
 
-void readLayer(const std::string &inputFile, unsigned int *label2node, unsigned int *node2label, unsigned int tlayer, unsigned int numedges) {
+void readLayer(const std::string &inputFile, unsigned int *label2node, unsigned int *node2label, unsigned int tlayer) {
 	g.edgeList = new edge[g.EDGENUM];
 	std::ifstream is;
 	is.open(inputFile);
-	char comma;
 	unsigned int src, tgt, layer;
 	unsigned int edge = 0;
 	unsigned int node = 0;
-	for(unsigned int i = 0; i < numedges; i++) {
-		is>>src>>comma>>tgt>>comma>>layer;
+	std::string line;
+	while (std::getline(is, line)) {
+		if (line[0] == '#')
+			continue;
+		std::replace(line.begin(), line.end(), ',', ' ');
+		std::istringstream iss(line);
+		assert(iss>>src>>tgt>>layer);
 		if (layer == tlayer) {
 			/* std::cerr<<src<<", "<<tgt<<": "<<layer<<", "<<tlayer<<" | "<<label2node[src]<<", "<<label2node[tgt]<<"\n"; */
 			assert(src != ENULL && node <= g.NODENUM);
@@ -403,8 +407,8 @@ void writeWaveMetaData(std::ofstream &outputFile, unsigned int wave, unsigned in
 }
 
 int main(int argc, char *argv[]) {
-	if (argc < 10) {
-		std::cerr<<argv[0]<<": usage: ./wave <path to layers dir> <layer file> <layer> <# edges> <# nodes> <path to graph.nodemap> <largest node label> <# nodes in nodemap> <# edges in file>\n";
+	if (argc < 9) {
+		std::cerr<<argv[0]<<": usage: ./wave <path to layers dir> <layer file> <layer> <# edges> <# nodes> <path to graph.nodemap> <largest node label> <# nodes in nodemap>\n";
 		exit(1);
 	}
 	std::string prefix = argv[1];
@@ -418,7 +422,7 @@ int main(int argc, char *argv[]) {
 	unsigned int *label2node = new unsigned int[atol(argv[7])+1];
 	std::fill_n(label2node, atol(argv[7])+1, ENULL);
 	/* initNodeMap(argv[6], node2label, label2node, atol(argv[8])); */
-	readLayer(argv[2], label2node, node2label, atol(argv[3]), atol(argv[9]));
+	readLayer(argv[2], label2node, node2label, atol(argv[3]));
 	if(DEBUG)
 		std::cout<<"LOADED GRAPH "<<g.EDGENUM<<", "<<g.NODENUM<<"\n";
 	unsigned int *originalIndices = new unsigned int[g.EDGENUM];
