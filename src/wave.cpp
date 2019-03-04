@@ -193,25 +193,13 @@ void findStartAndEndIndices() {
 	g.end_indices[old] = i - 1;
 }
 
-bool isGraphEmpty(unsigned int *edgeLabels) {
-		for(unsigned int i = 0; i < g.EDGENUM; i++) {
-				if(edgeLabels[i] == ENULL)
-						return false;
-		}
-		return true;
-}
-
 // Computes the degree of each node in the graph
-unsigned int findDegree(unsigned int *edgeLabels, unsigned int *degree) {
+unsigned int findDegree(unsigned int *degree) {
 	std::fill_n(degree, g.NODENUM + 1, 0);
 	unsigned int max = 0;
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
-		// If edge hasn't been deleted yet. An edge is considered deleted
-		// when it has been labeled.
-		if(edgeLabels[i] == ENULL) {
-				degree[(g.edgeList + i)->src]++;
-				degree[(g.edgeList + i)->tgt]++;
-		}
+		degree[(g.edgeList + i)->src]++;
+		degree[(g.edgeList + i)->tgt]++;
 	}
 	for(unsigned int i = 0; i < g.NODENUM + 1; i++) {
 		degree[i] /= 2;
@@ -221,73 +209,129 @@ unsigned int findDegree(unsigned int *edgeLabels, unsigned int *degree) {
 	return max;
 }
 
-void findKCore(unsigned int *edgeLabels, unsigned int *deg) {
+void findWaves(unsigned int *deg, unsigned int *waves) {
+	/* unsigned int * lodeg = new unsigned int[g.NODENUM + 1]; */
+	/* lodeg[0] = 0; */
+
 	unsigned int * vert = new unsigned int[g.NODENUM + 1];
 	unsigned int * pos = new unsigned int[g.NODENUM + 1];
-	std::fill_n(vert, g.NODENUM + 1, 0);
-	std::fill_n(pos, g.NODENUM + 1, 0);
 	unsigned int md = *std::max_element(deg, deg + g.NODENUM + 1);
 	unsigned int * bins = new unsigned int[md + 1];
-	std::fill_n(bins, md + 1, 0);
-	for(unsigned int v = 1; v <= g.NODENUM; v++)
-		bins[deg[v]]++;
-	unsigned int start = 1;
-	for(unsigned int d = 0; d <= md; d++) {
-		unsigned int num = bins[d];
-		bins[d] = start;
-		start += num;
-	}
-	for(unsigned int v = 1; v <= g.NODENUM; v++) {
-		pos[v] = bins[deg[v]];
-		vert[pos[v]] = v;
-		bins[deg[v]]++;
-	}
-	for(unsigned int d = md; d > 0; d--) {
-		bins[d] = bins[d - 1];
-	}
-	bins[0] = 1;
-	//unsigned int old_src = -1, old_tgt = -1;
-	for(unsigned int i = 1; i <= g.NODENUM; i++) {
-		unsigned int v = vert[i];
-		// Do nothing if node doesn't exist in the graph
-		if(g.start_indices[v] == 0 && g.end_indices[v] == 0) {
-			;
+	/* for(unsigned int v = 1; v <= g.NODENUM; v++) { */
+	/* 	freq[deg[v]]++; */
+	/* 	lodeg[v] = deg[v]; */
+	/* } */
+
+
+	auto reSort = [vert, pos, bins, md, deg]() {
+		std::fill_n(vert, g.NODENUM + 1, 0);
+		std::fill_n(pos, g.NODENUM + 1, 0);
+		std::fill_n(bins, md + 1, 0);
+		for(unsigned int v = 1; v <= g.NODENUM; v++) {
+			if (deg[v] != ENULL)
+				bins[deg[v]]++;
 		}
-		else {
-			for(unsigned int j = g.start_indices[v]; j <= g.end_indices[v]; j++) {
-				if(edgeLabels[j] == ENULL) {
-					//if((edgeList + j)->src != old_src || (edgeList + j)->tgt != old_tgt) {
-						unsigned int u = (g.edgeList + j)->tgt;
-						if(deg[u] > deg[v] + 1) {
-							unsigned int du = deg[u];
-							unsigned int pu = pos[u];
-							unsigned int pw = bins[du];
-							unsigned int w = vert[pw];
-							if(u != w) {
-								pos[u] = pw;
-								pos[w] = pu;
-								vert[pu] = w;
-								vert[pw] = u;
-							}
-							bins[du]++;
-							deg[u]--;
-						}
-					//}
-				}
-				//old_src = (edgeList + j)->src;
-				//old_tgt = (edgeList + j)->tgt;
+		unsigned int start = 1;
+		for(unsigned int d = 0; d <= md; d++) {
+			unsigned int num = bins[d];
+			bins[d] = start;
+			start += num;
+		}
+		for(unsigned int v = 1; v <= g.NODENUM; v++) {
+			if (deg[v] != ENULL) {
+				pos[v] = bins[deg[v]];
+				vert[pos[v]] = v;
+				bins[deg[v]]++;
 			}
 		}
-	}
+		for(unsigned int d = md; d > 0; d--) {
+			bins[d] = bins[d - 1];
+		}
+		bins[0] = 1;
+	};
+	reSort();
+	//unsigned int old_src = -1, old_tgt = -1;
+	
+	unsigned int mindeg = deg[vert[1]];
+	unsigned int wave = 0;
+	unsigned int till;
+
+	do {
+		if (deg[vert[1]] == mindeg) {
+			wave++;
+			till = bins[mindeg+1]-1;
+		} else {
+			till = bins[mindeg]-1;
+		}
+		till = till == ENULL ? g.NODENUM + 1 : till;
+		/* std::cerr<<"till: "<<till<<"\n"; */
+		for(unsigned int i = 1; i <= till; i++) {
+			/* std::cerr<<"i: "<<i<<"\n"; */
+			unsigned int v = vert[i];
+			/* std::cerr<<"i2: "<<i<<", "<<deg[v]<<"\n"; */
+			// Do nothing if node doesn't exist in the graph
+			if(g.start_indices[v] == 0 && g.end_indices[v] == 0) {
+				;
+			}
+			else {
+				/* std::cerr<<"i3: "<<i<<"\n"; */
+				/* std::cerr<<v<<": "<<deg[v]<<", "<<waves[v]<<"\n"; */
+				waves[v] = wave;
+				deg[v] = ENULL;
+				/* std::cerr<<v<<": "<<deg[v]<<", "<<waves[v]<<"\n"; */
+				/* std::cerr<<"i4: "<<i<<"\n"; */
+
+				for(unsigned int j = g.start_indices[v]; j <= g.end_indices[v]; j++) {
+						
+					/* std::cerr<<"i5j: "<<j<<"\n"; */
+					unsigned int u = (g.edgeList + j)->tgt;
+					/* std::cerr<<v<<"->"<<u<<": "<<deg[u]<<", "<<waves[u]<<"\n"; */
+
+					if(deg[u] != ENULL) {
+						//if((edgeList + j)->src != old_src || (edgeList + j)->tgt != old_tgt) {
+							/* if(deg[u] > deg[v]) { */
+							/* 	unsigned int du = deg[u]; */
+							/* 	unsigned int pu = pos[u]; */
+							/* 	unsigned int pw = bins[du]; */
+							/* 	unsigned int w = vert[pw]; */
+							/* 	if(u != w) { */
+							/* 		pos[u] = pw; */
+							/* 		pos[w] = pu; */
+							/* 		vert[pu] = w; */
+							/* 		vert[pw] = u; */
+							/* 	} */
+							/* 	bins[du]++; */
+							/* 	deg[u]--; */
+							/* } */
+						//}
+						deg[u]--;
+
+					}
+					/* std::cerr<<v<<"->"<<u<<": "<<deg[u]<<", "<<waves[u]<<"\n"; */
+					//old_src = (edgeList + j)->src;
+					//old_tgt = (edgeList + j)->tgt;
+				}
+			}
+			/* std::cerr<<"i: "<<i<<"\n"; */
+		}
+		/* std::cerr<<"HERE 0\n"; */
+
+		/* printArray(deg, g.NODENUM+1); */
+		if (*std::min_element(deg+1, deg + g.NODENUM + 1) == ENULL)
+			break;
+
+		reSort();
+	} while (true);
+
 	delete [] vert;
 	delete [] pos;
 	delete [] bins;
 }
 
 
-void labelEdgesAndCount(unsigned int *degree, unsigned int *edgeLabels, unsigned int *edgefreq) {
+void labelEdgesAndCount(unsigned int *degree, unsigned int *edgefreq) {
 	std::unordered_map<std::pair<unsigned int, unsigned int>,unsigned int,boost::hash<std::pair<unsigned int, unsigned int>>> map;
-	unsigned int id = 0;
+	/* unsigned int id = 0; */
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + i)->src;
 		unsigned int tgt = (g.edgeList + i)->tgt;
@@ -297,51 +341,37 @@ void labelEdgesAndCount(unsigned int *degree, unsigned int *edgeLabels, unsigned
 			edgefreq[wave]++;
 			continue;
 		}
-		std::pair<unsigned int, unsigned int> key = std::make_pair(degree[src],degree[tgt]);
-		std::pair<unsigned int, unsigned int> keyU = std::make_pair(degree[tgt],degree[src]);
-		std::unordered_map<std::pair<unsigned int, unsigned int>,unsigned int,boost::hash<std::pair<unsigned int, unsigned int>>>::iterator m = map.find(key);
-		std::unordered_map<std::pair<unsigned int, unsigned int>,unsigned int,boost::hash<std::pair<unsigned int, unsigned int>>>::iterator mU = map.find(keyU);
-		if (m != map.end() && mU != map.end()) {
-			edgeLabels[i] = m->second;
-		} else {
-			map[key] = id;
-			map[keyU] = id;
-			edgeLabels[i] = id;
-			id++;
-		}
+		/* std::pair<unsigned int, unsigned int> key = std::make_pair(degree[src],degree[tgt]); */
+		/* std::pair<unsigned int, unsigned int> keyU = std::make_pair(degree[tgt],degree[src]); */
+		/* std::unordered_map<std::pair<unsigned int, unsigned int>,unsigned int,boost::hash<std::pair<unsigned int, unsigned int>>>::iterator m = map.find(key); */
+		/* std::unordered_map<std::pair<unsigned int, unsigned int>,unsigned int,boost::hash<std::pair<unsigned int, unsigned int>>>::iterator mU = map.find(keyU); */
+		/* if (m != map.end() && mU != map.end()) { */
+		/* 	edgeLabels[i] = m->second; */
+		/* } else { */
+		/* 	map[key] = id; */
+		/* 	map[keyU] = id; */
+		/* 	edgeLabels[i] = id; */
+		/* 	id++; */
+		/* } */
 	}
 }
 
-void labelAndDeletePeelOneEdges(float *degree, unsigned int *edgeLabels) {
-	float *tmp = new float[g.NODENUM + 1];
-	std::copy(degree, degree + g.NODENUM + 1, tmp);
-	for(unsigned int i = 0; i < g.EDGENUM; i++) {
-		unsigned int src = (g.edgeList + i)->src;
-		unsigned int tgt = (g.edgeList + i)->tgt;
-		if(edgeLabels[i] == ENULL) {
-				if(tmp[src] == 1 || tmp[tgt] == 1) {
-						edgeLabels[i] = 1;
-						degree[src] -= 0.5;
-						degree[tgt] -= 0.5;
-				}
-		}
-	}
-	delete [] tmp;
-}
-
-void writeToFile(const std::string &prefix, unsigned int *edgeIndices, unsigned int *edgeLabels, unsigned int*node2label, unsigned int *waves) {
+void writeToFile(const std::string &prefix, unsigned int *edgeIndices, unsigned int*node2label, unsigned int *waves) {
 	std::ofstream outputFile;
-	outputFile.open(prefix+"-wave-metaedges.csv");
+	/* outputFile.open(prefix+"-wave-metaedges.csv"); */
+	outputFile.open(prefix+"-edgesToWaves.csv");
+	outputFile<<"source_vertex,target_vertex,source_wave,target_wave\n";
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
-		if (edgeLabels[i] != ENULL)
-			outputFile<<node2label[(g.edgeList + edgeIndices[i])->src]<<","<<node2label[(g.edgeList + edgeIndices[i])->tgt]<<","<<edgeLabels[i]<<"\n";
+		unsigned int src = (g.edgeList + edgeIndices[i])->src;
+		unsigned int tgt = (g.edgeList + edgeIndices[i])->tgt;
+		outputFile<<node2label[src]<<","<<node2label[tgt]<<","<<waves[src]<<","<<waves[tgt]<<"\n";
 	}
 	outputFile.close();
-	outputFile.open(prefix+"-wave-nodes.csv");
-	for(unsigned int i = 1; i <= g.NODENUM; i++) {
-		outputFile<<node2label[i]<<","<<waves[i]<<"\n";
-	}
-	outputFile.close();
+	/* outputFile.open(prefix+"-wave-nodes.csv"); */
+	/* for(unsigned int i = 1; i <= g.NODENUM; i++) { */
+	/* 	outputFile<<node2label[i]<<","<<waves[i]<<"\n"; */
+	/* } */
+	/* outputFile.close(); */
 }
 
 void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENUM, unsigned int maxdeg, long long preprocessingTime, long long algorithmTime) {
@@ -392,8 +422,6 @@ int main(int argc, char *argv[]) {
 	if(DEBUG)
 		std::cout<<"LOADED GRAPH "<<g.EDGENUM<<", "<<g.NODENUM<<"\n";
 	unsigned int *originalIndices = new unsigned int[g.EDGENUM];
-	unsigned int *edgeLabels = new unsigned int[g.EDGENUM];
-	std::fill_n(edgeLabels, g.EDGENUM, ENULL);
 	formatGraph(originalIndices);
 	long long preprocessingTime = getTimeElapsed();
 	reset();
@@ -403,25 +431,23 @@ int main(int argc, char *argv[]) {
 	if(DEBUG)
 		std::cout<<"START AND END INDICES COMPUTED\n";
 	unsigned int *degree = new unsigned int[g.NODENUM + 1];
-	unsigned int maxdeg = findDegree(edgeLabels, degree);
+	unsigned int *waves = new unsigned int[g.NODENUM + 1];
+	std::fill_n(waves, g.NODENUM+1, 0);
+	/* unsigned int *degree = waves; */
+	unsigned int maxdeg = findDegree(degree);
+	/* std::copy(degree, degree + g.NODENUM + 1, waves); */
 	unsigned int *core = new unsigned int[g.NODENUM + 1];
-	findKCore(edgeLabels, degree);
-	std::copy(degree, degree + g.NODENUM + 1, core);
+	findWaves(degree, waves);
+	std::copy(waves, waves + g.NODENUM + 1, core);
 	std::sort(core,core+g.NODENUM+1);
 	unsigned int *vertfreq = new unsigned int[core[g.NODENUM]+1];
 	std::fill_n(vertfreq, core[g.NODENUM]+1, 0);
 	unsigned int *edgefreq = new unsigned int[core[g.NODENUM]+1];
 	std::fill_n(edgefreq, core[g.NODENUM]+1, 0);
-	labelEdgesAndCount(degree, edgeLabels, edgefreq);
-	unsigned int *originalLabels = new unsigned int[g.EDGENUM];
-	if(DEBUG)
-		std::cout<<"RECONSTRUCTING ORIGINAL LABELS\n";
-	for(unsigned int i = 0; i < g.EDGENUM; i++) {
-		originalLabels[i] = edgeLabels[originalIndices[i]];
-	}
+	labelEdgesAndCount(waves, edgefreq);
 	long long algorithmTime = getTimeElapsed();
 	for (unsigned int i = 1; i <= g.NODENUM; i++) {
-		vertfreq[degree[i]]++;
+		vertfreq[waves[i]]++;
 	}
 	for (unsigned int i = 1; i <= core[g.NODENUM]; i++) {
 		if (edgefreq[i] > 0 || vertfreq[i] > 0)
@@ -429,15 +455,13 @@ int main(int argc, char *argv[]) {
 	}
 	outputFile<<"\"0\":{}\n}";
 	outputFile.close();
-	writeToFile(prefixx, originalIndices, originalLabels, node2label, degree);
+	writeToFile(prefixx, originalIndices, node2label, waves);
 	writeMetaData(prefixx, atol(argv[5]), atol(argv[4])/2, maxdeg, preprocessingTime, algorithmTime);
-	/* printArray(degree, g.NODENUM+1); */
+	/* printArray(waves, g.NODENUM+1); */
 	delete [] core;
 	delete [] degree;
+	delete [] waves;
 	delete [] g.start_indices;
 	delete [] g.end_indices;
-	delete [] edgeLabels;
-	/* delete [] originalLabels; */
-	delete [] originalIndices;
 	return 0;
 }
