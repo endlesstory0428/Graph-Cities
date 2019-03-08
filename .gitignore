@@ -14,6 +14,7 @@ roadNet-CA/
 wiki-Talk/
 web-BerkStan/
 cit-Patents/
+protein/
 soc-pokec/
 livejournal/
 orkut/
@@ -22,6 +23,8 @@ orkut/
 buffkcore
 wave
 connectedcomponents
+biconnectedcomponents
+cc-layers-mat
 # Created by https://www.gitignore.io/api/c++,vim,java,python
 # Edit at https://www.gitignore.io/?templates=c++,vim,java,python
 

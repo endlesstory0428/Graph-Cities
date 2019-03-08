@@ -1,7 +1,7 @@
 GRAPH := simplegraph
 LAYER := 0
 
-PRODUCT := buffkcore wave connectedcomponents cc-layers-mat
+PRODUCT := buffkcore wave connectedcomponents biconnectedcomponents cc-layers-mat
 
 CXX := g++
 LINKER := g++
@@ -68,6 +68,13 @@ ccs:
 	FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
 	[ -f "$$FILENAME" ] || FILENAME=$(GRAPH)/$(GRAPH); \
 	./connectedcomponents "$$FILENAME" $(LAYER) $(GRAPH)/$(GRAPH)_layers
+
+.PHONY: ccs
+
+bccs:
+	FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
+	[ -f "$$FILENAME" ] || FILENAME=$(GRAPH)/$(GRAPH); \
+	./biconnectedcomponents "$$FILENAME" $(LAYER) $(GRAPH)/$(GRAPH)_layers
 
 .PHONY: ccs
 
