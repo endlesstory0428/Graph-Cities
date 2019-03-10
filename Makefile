@@ -1,5 +1,6 @@
 GRAPH := simplegraph
 LAYER := 0
+WAVE := 0
 
 PRODUCT := buffkcore wave connectedcomponents biconnectedcomponents cc-layers-mat
 
@@ -74,9 +75,14 @@ ccs:
 bccs:
 	FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
 	[ -f "$$FILENAME" ] || FILENAME=$(GRAPH)/$(GRAPH); \
-	./biconnectedcomponents "$$FILENAME" $(LAYER) $(GRAPH)/$(GRAPH)_layers
+	./biconnectedcomponents \
+		"$$FILENAME" \
+		$(LAYER) \
+		$(GRAPH)/$(GRAPH)_layers \
+		$(WAVE) \
+		$$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap)))
 
-.PHONY: ccs
+.PHONY: bccs
 
 cc-layers:
 	for FILE in $$(ls $(GRAPH)/$(GRAPH)_layers | grep .csv); do \
