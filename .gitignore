@@ -19,7 +19,7 @@ soc-pokec/
 livejournal/
 orkut/
 
-.ccls
+.ccls*
 buffkcore
 wave
 connectedcomponents
