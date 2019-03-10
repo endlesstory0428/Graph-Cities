@@ -17,25 +17,26 @@ typedef graph_traits<graph_t>::edge_descriptor Edge;
 
 std::unordered_map<unsigned int, graph_t> G;
 std::vector<unsigned int> ccs;
-/* long long currentTimeMilliS = 0; */
 
-/* long long currentTimeStamp() { */
-/*	struct timeval te; */
-/*	gettimeofday(&te, NULL); // get current time */
-/*	long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds */
-/*	return milliseconds; */
-/* } */
+long long currentTimeMilliS = 0;
 
-/* void reset() { */
-/*	currentTimeMilliS = currentTimeStamp(); */
-/* } */
+long long currentTimeStamp() {
+	struct timeval te;
+	gettimeofday(&te, NULL); // get current time
+	long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds
+	return milliseconds;
+}
 
-/* long long getTimeElapsed() { */
-/*	long long newTime = currentTimeStamp(); */
-/*	long long timeElapsed = newTime - currentTimeMilliS; */
-/*	currentTimeMilliS = newTime; */
-/*	return timeElapsed; */
-/* } */
+void reset() {
+	currentTimeMilliS = currentTimeStamp();
+}
+
+long long getTimeElapsed() {
+	long long newTime = currentTimeStamp();
+	long long timeElapsed = newTime - currentTimeMilliS;
+	currentTimeMilliS = newTime;
+	return timeElapsed;
+}
 
 void readGraph(const std::string &inputFile, const std::string &ccfile) {
 	std::ifstream is;
@@ -74,7 +75,7 @@ void readGraph(const std::string &inputFile, const std::string &ccfile) {
 	is.close();
 }
 
- void writeToFile(std::ofstream &outputFile, unsigned int layer, std::vector<unsigned int> &components, unsigned int num_components) {
+ void writeToFile(std::ofstream &outputFile, unsigned int layer, std::vector<unsigned int> &components) {
 	graph_t g = G[layer];
 	for(unsigned int i = 0; i < num_vertices(g); i++) {
 		if (degree(i, g) > 0)
@@ -82,17 +83,14 @@ void readGraph(const std::string &inputFile, const std::string &ccfile) {
 	}
 }
 
-/* void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENUM, unsigned int maxdeg, long long preprocessingTime, long long algorithmTime) { */
-/*	std::ofstream outputFile; */
-/*	outputFile.open(prefix+"-decomp-info.json"); */
-/*	outputFile<<"{\n"; */
-/*	outputFile<<"\"vertices\":"<<NODENUM<<",\n"; */
-/*	outputFile<<"\"edges\":"<<EDGENUM<<",\n"; */
-/*	outputFile<<"\"maxdeg\":"<<maxdeg<<",\n"; */
-/*	outputFile<<"\"preprocessing-time\":"<<preprocessingTime<<",\n"; */
-/*	outputFile<<"\"algorithm-time\":"<<algorithmTime<<"\n}"; */
-/*	outputFile.close(); */
-/* } */
+void writeMetaData(std::string prefix, long long preprocessingTime, long long algorithmTime) {
+	std::ofstream outputFile;
+	outputFile.open(prefix+"-info.json");
+	outputFile<<"{\n";
+	outputFile<<"\"preprocessing-time\":"<<preprocessingTime<<",\n";
+	outputFile<<"\"algorithm-time\":"<<algorithmTime<<"\n}";
+	outputFile.close();
+}
 
 int main(int argc, char *argv[]) {
 	if (argc < 3) {
@@ -104,25 +102,27 @@ int main(int argc, char *argv[]) {
 	std::string prefixcc = argv[2];
 	
 	G = std::unordered_map<unsigned int, graph_t>();
-	/* reset(); */
+	reset();
 	readGraph(prefix, prefixcc);
 	if(DEBUG)
 		std::cout<<"LOADED GRAPH\n";
-	/* long long preprocessingTime = getTimeElapsed(); */
-	/* reset(); */
+	long long preprocessingTime = getTimeElapsed();
+	long long algorithmTime = 0;
 	
 	std::ofstream outputFile;
 	outputFile.open(prefixx);
-	outputFile<<"# vertex,connected_component,layer,connected_component_in_layer\n";
+	/* outputFile<<"# vertex,connected_component,layer,connected_component_in_layer\n"; */
 	/* outputFile<<"# #components: "<<num_components<<"\n"; */
 	std::vector<unsigned int> components(10);
 	for (auto g = G.begin(); g != G.end(); g++) {
 		components.resize(num_vertices(g->second));
 		components.clear();
-		unsigned int num = connected_components(g->second, &components[0]);
-		writeToFile(outputFile, g->first, components, num);
+		reset();
+		connected_components(g->second, &components[0]);
+		algorithmTime += getTimeElapsed();
+		writeToFile(outputFile, g->first, components);
 	}
 	outputFile.close();
-	/* long long algorithmTime = getTimeElapsed(); */
+	writeMetaData(prefixx, preprocessingTime, algorithmTime);
 	return 0;
 }

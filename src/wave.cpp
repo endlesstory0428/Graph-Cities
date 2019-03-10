@@ -435,7 +435,7 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 	std::string prefix = argv[1];
-	std::string prefixx = prefix.substr(0,prefix.length()-7)+"_waves/layer"+argv[3];
+	std::string prefixx = prefix.substr(0,prefix.length()-7)+"_waves/layer-"+argv[3];
 	std::ofstream outputFile(prefixx+"-waves-info.json");
 	outputFile<<"{\n";
 	g.EDGENUM = atol(argv[4]);
