@@ -368,7 +368,7 @@ void writeToFile(const std::string &prefix, unsigned int *edgeIndices, unsigned 
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + edgeIndices[i])->src;
 		unsigned int tgt = (g.edgeList + edgeIndices[i])->tgt;
-		outputFile<<node2label[src]<<","<<node2label[tgt]<<","<<waves[src]<<","<<waves[tgt]<<"\n";
+		outputFile << node2label[src] << "," << node2label[tgt] << "," << waves[src] << "," << waves[tgt] << "\n";
 	}
 	outputFile.close();
 	/* outputFile.open(prefix+"-wave-nodes.csv"); */

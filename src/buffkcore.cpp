@@ -417,9 +417,9 @@ void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENU
 	outputFile<<"{\n";
 	outputFile<<"\"vertices\":"<<NODENUM<<",\n";
 	outputFile<<"\"edges\":"<<EDGENUM<<",\n";
-	outputFile<<"\"maxdeg\":"<<maxdeg<<",\n";
 	outputFile<<"\"preprocessing-time\":"<<preprocessingTime<<",\n";
-	outputFile<<"\"algorithm-time\":"<<algorithmTime<<"\n";
+	outputFile<<"\"algorithm-time\":"<<algorithmTime<<",\n";
+	outputFile<<"\"maxdeg\":"<<maxdeg<<",\n";
 	outputFile<<"\"io-time\":"<<ioTime<<"\n}";
 	outputFile.close();
 }
@@ -444,7 +444,7 @@ void writeLayerToFile(const std::string &prefix, unsigned int topLayer, unsigned
 		prefixx = prefix.substr(0,prefix.length()-4)+"_layers/layer-"+std::to_string(layer);
 	}
 	outputFile.open(prefixx+".csv");
-	outputFile<<"# source_vertex,target_vertex,layer\n";
+	/* outputFile<<"# source_vertex,target_vertex,layer\n"; */
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int label = edgeLabels[edgeIndices[i]];
 		if (label >= layer && label <= (topLayer))
