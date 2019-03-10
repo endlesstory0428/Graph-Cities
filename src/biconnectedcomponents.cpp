@@ -22,25 +22,25 @@ typedef graph_traits<graph_t>::edge_descriptor Edge;
 
 graph_t g;
 
-/* long long currentTimeMilliS = 0; */
+long long currentTimeMilliS = 0;
 
-/* long long currentTimeStamp() { */
-/*	struct timeval te; */
-/*	gettimeofday(&te, NULL); // get current time */
-/*	long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds */
-/*	return milliseconds; */
-/* } */
+long long currentTimeStamp() {
+	struct timeval te;
+	gettimeofday(&te, NULL); // get current time
+	long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds
+	return milliseconds;
+}
 
-/* void reset() { */
-/*	currentTimeMilliS = currentTimeStamp(); */
-/* } */
+void reset() {
+	currentTimeMilliS = currentTimeStamp();
+}
 
-/* long long getTimeElapsed() { */
-/*	long long newTime = currentTimeStamp(); */
-/*	long long timeElapsed = newTime - currentTimeMilliS; */
-/*	currentTimeMilliS = newTime; */
-/*	return timeElapsed; */
-/* } */
+long long getTimeElapsed() {
+	long long newTime = currentTimeStamp();
+	long long timeElapsed = newTime - currentTimeMilliS;
+	currentTimeMilliS = newTime;
+	return timeElapsed;
+}
 
 void readGraph(const std::string &inputFile) {
 	std::ifstream is;
@@ -59,29 +59,25 @@ void readGraph(const std::string &inputFile) {
 	is.close();
 }
 
- void writeToFile(const std::string &prefix, property_map <graph_t, edge_component_t>::type components, unsigned int num_components) {
+ void writeToFile(const std::string &prefix, property_map <graph_t, edge_component_t>::type components) {
 	std::ofstream outputFile;
 	outputFile.open(prefix);
 	/* outputFile<<"# source_vertex,target_vertex,biconnected_component\n"; */
-	/* outputFile<<"# #components: "<<num_components<<"\n"; */
-
 	graph_traits < graph_t >::edge_iterator ei, ei_end;
 	for (tie(ei, ei_end) = edges(g); ei != ei_end; ++ei)
 		outputFile << source(*ei, g) << "," << target(*ei, g) << "," << components[*ei] << "\n";
 	outputFile.close();
 }
 
-/* void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENUM, unsigned int maxdeg, long long preprocessingTime, long long algorithmTime) { */
-/*	std::ofstream outputFile; */
-/*	outputFile.open(prefix+"-decomp-info.json"); */
-/*	outputFile<<"{\n"; */
-/*	outputFile<<"\"vertices\":"<<NODENUM<<",\n"; */
-/*	outputFile<<"\"edges\":"<<EDGENUM<<",\n"; */
-/*	outputFile<<"\"maxdeg\":"<<maxdeg<<",\n"; */
-/*	outputFile<<"\"preprocessing-time\":"<<preprocessingTime<<",\n"; */
-/*	outputFile<<"\"algorithm-time\":"<<algorithmTime<<"\n}"; */
-/*	outputFile.close(); */
-/* } */
+void writeMetaData(std::string prefix, unsigned int num_components, long long preprocessingTime, long long algorithmTime) {
+	std::ofstream outputFile;
+	outputFile.open(prefix+"-info.json");
+	outputFile<<"{\n";
+	outputFile<<"\"number-biconnected_components\":"<<num_components<<",\n";
+	outputFile<<"\"preprocessing-time\":"<<preprocessingTime<<",\n";
+	outputFile<<"\"algorithm-time\":"<<algorithmTime<<"\n}";
+	outputFile.close();
+}
 
 int main(int argc, char *argv[]) {
 	if (argc < 4) {
@@ -98,17 +94,18 @@ int main(int argc, char *argv[]) {
 		prefixx += "/layer-"+std::to_string(layer)+".bcc";
 	}
 
-	/* reset(); */
+	reset();
 	readGraph(prefix);
 	if(DEBUG)
 		std::cout<<"LOADED GRAPH "<<num_vertices(g)<<", "<<num_edges(g)<<"\n";
-	/* long long preprocessingTime = getTimeElapsed(); */
-	/* reset(); */
+	long long preprocessingTime = getTimeElapsed();
+	reset();
 
 	property_map <graph_t, edge_component_t>::type components = get(edge_component, g);
 	std::size_t num = biconnected_components(g, components);
 
-	/* long long algorithmTime = getTimeElapsed(); */
-	writeToFile(prefixx, components, num);
+	long long algorithmTime = getTimeElapsed();
+	writeToFile(prefixx, components);
+	writeMetaData(prefixx, num, preprocessingTime, algorithmTime);
 	return 0;
 }
