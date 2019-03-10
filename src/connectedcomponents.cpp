@@ -57,7 +57,7 @@ void readGraph(const std::string &inputFile) {
  void writeToFile(const std::string &prefix, std::vector<unsigned int> components, unsigned int num_components) {
 	std::ofstream outputFile;
 	outputFile.open(prefix);
-	outputFile<<"# vertex,connected_component\n";
+	/* outputFile<<"# vertex,connected_component\n"; */
 	/* outputFile<<"# #components: "<<num_components<<"\n"; */
 	for(unsigned int i = 0; i < num_vertices(g); i++) {
 		if (degree(i, g) > 0)

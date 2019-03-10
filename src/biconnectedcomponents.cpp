@@ -62,7 +62,7 @@ void readGraph(const std::string &inputFile) {
  void writeToFile(const std::string &prefix, property_map <graph_t, edge_component_t>::type components, unsigned int num_components) {
 	std::ofstream outputFile;
 	outputFile.open(prefix);
-	outputFile<<"# source_vertex,target_vertex,biconnected_component\n";
+	/* outputFile<<"# source_vertex,target_vertex,biconnected_component\n"; */
 	/* outputFile<<"# #components: "<<num_components<<"\n"; */
 
 	graph_traits < graph_t >::edge_iterator ei, ei_end;
