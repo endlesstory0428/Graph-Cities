@@ -1,61 +1,180 @@
 # Atlas Edge Decomposition Algorithm
 
 This is the fast, scalable implementation of [edge decomposition based on fixed points of degree peeling][edge-decomp] used in [Atlas][atlas].
-
-For the main Atlas visualization repository, see [github.com/fredhohman/atlas][atlas].
-
+This also includes the implementation for further decompositions of the peel layers into waves.
 
 ## Installation
 
 Download or clone this repository.
 
 ```bash
-git clone https://github.com/fredhohman/atlas-algorithm.git
+git clone https://github.com/DanManN/atlas-algorithm.git
 ```
 
-From the directory, compile the code by 
+From the directory, compile the code by running make.
+
+## Data Directory Structure
+
+For each dataset you want to decompose create a subdirectory with the name of
+the data set and a put an edge list in that subdirectory with the with the same
+name as the directory with a txt extenstion. Also in that same subdirectory
+create two subdirectories with the graph name followed by an underscore '\_',
+one followed by 'layers' and the other by 'waves'.
+
+For example, for a dataset called simplegraph the directory structure should look like:
 
 ```
- g++ -o atlas-decomposition -g -fopenmp -O3 parallelkcore.cpp
+simplegraph/
+simplegraph/simplegraph.txt
+simplegraph/simplegraph_layers
+simplegraph/simplegraph_waves
+src/
+Makefile
 ```
 
+## Data Sanitation
 
-## Usage
+We first convert a plain text edge list file to a `.bin` to use for algorithm.
+Input text files should be tab separated where each row contains a `source` and
+`target` (these must be numbers).
 
-We first convert a plain text edge list file to a `.bin` to use for algorithm. Input text files should be comma (or tab) separated where each row contains a `source` and `target` (these must be numbers).
-
-**Note:** graphs should not have:
+We sanitize the data to remove:
 
 * self-loops / self-edges
 * duplicate edges (multi-graph)
+* edge weights
 
-For example, a graph with three edges would look like:
-
-```
-1, 2
-1, 3
-2, 4
-```
-
-Convert the text edge list to a `.bin` using the mmap.jar file available here: http://poloclub.gatech.edu/mmap/MMap.zip
+To perform the sanititation run:
 
 ```bash
-java -jar mmap.jar Convert <myGraph>
+make GRAPH=dataset_name sanitize
 ```
 
-The algorithm takes in this `.bin` file to perform the decomposition. It outputs a `myGraph-decomposition.csv` file where each row contains three values: the `source`, `target`, and `peel`. The `source` and `target` columns together form the original edge list, and the new column `peel` contains the peel assignment, i.e., what layer an edge belongs to. To run the algorithm, use:
+replacing dataset\_name with the name of your data set as per the directory
+structure.
+
+If the dataset you are analyzing is in an undirected format (meaning each edge
+(u,v) in the edgelist also has an accompanying edge (v,u)) than you can skip to
+the next step. Otherwise run the following command to convert to an undirected
+format:
 
 ```bash
-./atlas-decomposition <myGraph>.bin <# of edges> <# of vertices> 
+make GRAPH=dataset_name union
 ```
 
-It also outputs a `myGraph-decomposition-info.json` file that contains metadata such as the number of vertices in the graph, number of edges in the graph, time taken to preprocess the data, and time taken to run the algorithm.
+Finally convert the text edge list to a `.bin` using the mmap.jar file
+available in this repo as well as from here:
+http://poloclub.gatech.edu/mmap/MMap.zip
 
+```bash
+make GRAPH=dataset_name mmap
+```
 
-## Example
+## Decompositions
 
-For an example of what the output looks like, see [github.com/fredhohman/atlas/data][example]
+Once the dataset is sanitized and converted to the proper format you can run
+the following decompositions.
 
+**Note*:** The wave decomposition requires that the peel layer decomposition
+has already been run first.
+
+# Peel Layers
+
+To decompose the graph into peel layers run:
+
+```bash
+make GRAPH=dataset_name decomp
+```
+
+This will output files named `layer-X-Y.csv` into the layers subdirectory
+containing the edges of layers X through Y whenever the write-out buffer is
+filled up.  If an individual layer is bigger than the write-out buffer than it
+will be written to a file called `layer-X.csv`. The decomposition also outputs
+a `dataset_name-decomposition-info.json` file that contains metadata for the
+running of the decomposition and the graph and a `dataset_name-layer-info.json`
+containing the metadata of each layer.
+
+# Waves
+
+This requires the peel decomposition to have been run as this decomposition is
+applied to layers only.  To run the wave decomposition on layer number X run:
+
+```bash
+make GRAPH=dataset_name LAYER=X
+```
+This will output four files into the waves subdirectory:
+
+- layer-X-waves.csv with the format:
+`vertex_id, level_number, wave_number, wave_connected-component, meta_node_id`
+- layer-X-metaedges.csv with format:
+`source_metanode, target_metanode`
+- layer-X-waves-info.json containing wave metadata
+- layer-X-wavedecomp-info.json containing the decomposition metadata
+
+# Connected Components
+
+To find the connected components of the entire dataset run:
+
+```bash
+make GRAPH=dataset_name ccs
+```
+This will output a file called dataset\_name.cc with a list formated as `vertex,
+connected_component_id`. This will also output a file called
+dataset\_name.cc-info.json containing metadata for this computation.
+
+To find the connected components of a layer run:
+
+```bash
+make GRAPH=dataset_name LAYER=X ccs
+```
+
+This will output files of the same format called layer-X.cc and
+layer-X.cc-info.json in the layers subdirectory.
+
+# Connected Components vs Layers Matrix
+
+This requires that you already ran the connected components command.  To
+compute the matrix run:
+
+```bash
+make GRAPH=dataset_name cc-layers
+```
+
+This will output one file for each peel layers bucket file with the the
+extension of cc-layers. These files contain a list of the format:
+`vertex_id, connected_component, layer, connected_component_in_layer`
+Also this will output a file called layer-X-Y.cc-layers-info.json containing
+metadata for this computation.
+
+# Biconnected Components
+
+To run biconnected components on the entire graph run:
+
+```bash
+make GRAPH=dataset_name bccs
+```
+
+This will output a file called dataset\_name.bcc with a list formated as
+`source,target,biconnected_component_id`. This will also output a file called
+dataset\_name.bcc-info.json containing metadata for this computation.
+
+To run biconnected components on a layer run:
+
+```bash
+make GRAPH=dataset_name LAYER=X bccs
+```
+
+This will output files of the same format called layer-X.bcc and
+layer-X.bcc-info.json in the layers subdirectory.
+
+To run biconnected components on waves run:
+
+```bash
+make GRAPH=dataset_name LAYER=X WAVE=Y bccs
+```
+
+This will output files of the same format called layer-X-wave-Y.bcc and
+layer-X-wave-Y.bcc-info.json in the waves subdirectory.
 
 ## License
 
@@ -64,10 +183,9 @@ MIT License. See [`LICENSE.md`](LICENSE.md).
 
 ## Contact
 
-For questions or support [open an issue][issues] or contact [Fred Hohman][fred].
+For questions or support [open an issue][issues] or contact [Daniel Nakhimovich][dan].
 
 [edge-decomp]: https://link.springer.com/article/10.1007/s13278-014-0191-7
-[atlas]: https://github.com/fredhohman/atlas
-[fred]: http://fredhohman.com
-[example]: https://github.com/fredhohman/atlas/tree/master/data
-[issues]: https://github.com/fredhohman/atlas-algorithm/issues
+[atlas]: https://github.com/DanManN/atlas
+[dan]: dnahimov@gmail.com
+[issues]: https://github.com/DanManN/atlas-algorithm/issues
