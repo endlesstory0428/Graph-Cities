@@ -1,4 +1,4 @@
-# Atlas Edge Decomposition Algorithm
+# Atlas Edge Decomposition Algorithm + Waves decomposition
 
 This is the fast, scalable implementation of [edge decomposition based on fixed points of degree peeling][edge-decomp] used in [Atlas][atlas].
 This also includes the implementation for further decompositions of the peel layers into waves.
@@ -78,7 +78,7 @@ the following decompositions.
 **Note*:** The wave decomposition requires that the peel layer decomposition
 has already been run first.
 
-# Peel Layers
+### Peel Layers
 
 To decompose the graph into peel layers run:
 
@@ -94,7 +94,7 @@ a `dataset_name-decomposition-info.json` file that contains metadata for the
 running of the decomposition and the graph and a `dataset_name-layer-info.json`
 containing the metadata of each layer.
 
-# Waves
+### Waves
 
 This requires the peel decomposition to have been run as this decomposition is
 applied to layers only.  To run the wave decomposition on layer number X run:
@@ -111,7 +111,7 @@ This will output four files into the waves subdirectory:
 - layer-X-waves-info.json containing wave metadata
 - layer-X-wavedecomp-info.json containing the decomposition metadata
 
-# Connected Components
+### Connected Components
 
 To find the connected components of the entire dataset run:
 
@@ -131,7 +131,7 @@ make GRAPH=dataset_name LAYER=X ccs
 This will output files of the same format called layer-X.cc and
 layer-X.cc-info.json in the layers subdirectory.
 
-# Connected Components vs Layers Matrix
+### Connected Components vs Layers Matrix
 
 This requires that you already ran the connected components command.  To
 compute the matrix run:
@@ -146,7 +146,7 @@ extension of cc-layers. These files contain a list of the format:
 Also this will output a file called layer-X-Y.cc-layers-info.json containing
 metadata for this computation.
 
-# Biconnected Components
+### Biconnected Components
 
 To run biconnected components on the entire graph run:
 
