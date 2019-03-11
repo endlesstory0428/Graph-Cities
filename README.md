@@ -187,5 +187,5 @@ For questions or support [open an issue][issues] or contact [Daniel Nakhimovich]
 
 [edge-decomp]: https://link.springer.com/article/10.1007/s13278-014-0191-7
 [atlas]: https://github.com/DanManN/atlas
-[dan]: dnahimov@gmail.com
+[dan]: mailto:dnahimov@gmail.com
 [issues]: https://github.com/DanManN/atlas-algorithm/issues
