@@ -97,8 +97,8 @@ waves:
 		echo $$FILE; \
 		LAYER=$${FILE:6:-13}; \
 		NUM=$$(python -c "import sys, json; x=json.load(sys.stdin); print(x[sorted(x,key=lambda k:x[k].get('vertices',0))[-1]]['vertices'])" < $(GRAPH)/$(GRAPH)_layers/"$$FILE"); \
-		if (($$NUM > 2000)); \
-		then echo $$LAYER; \
+		if (($$NUM > 2000)); then \
+			echo Layer: $$LAYER; \
 			FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$$LAYER']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
 			./wave \
 				$(GRAPH)/$(GRAPH)_layers \
@@ -112,6 +112,26 @@ waves:
 	done
 
 .PHONY: waves
+
+bicntcomps:
+	for FILE in $$(ls $(GRAPH)/$(GRAPH)_waves -v | grep waves-info.json); do \
+		echo $$FILE; \
+		LAYER=$${FILE:6:-16}; \
+		WAVES=$$(python -c "import sys, json; print(' '.join([x[0] for x in filter(lambda y:y[1].get('edges',0)>2**14,json.load(sys.stdin).items())]))" < $(GRAPH)/$(GRAPH)_waves/"$$FILE"); \
+		for WAVE in $$WAVES; do \
+			echo Layer: $$LAYER; \
+			echo Wave: $$WAVE; \
+			FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$$LAYER']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
+			./biconnectedcomponents \
+				"$$FILENAME" \
+				$$LAYER \
+				$(GRAPH)/$(GRAPH)_layers \
+				$$WAVE \
+				$$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap))); \
+		done; \
+	done
+
+.PHONY: bicntcomps
 
 bstats:
 	echo $$(($$(wc -c < $(GRAPH)/$(GRAPH).bin)/8)), $$(($$(wc -l < $(GRAPH)/$(GRAPH).nodemap))), $$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap)))
