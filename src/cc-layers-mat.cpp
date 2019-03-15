@@ -60,8 +60,11 @@ void readGraph(const std::string &inputFile, const std::string &ccfile) {
 	}
 	is.close();
 	is.open(ccfile);
+	is.seekg (0, is.end);
+	int length = is.tellg();
+	is.seekg (0, is.beg);
 	unsigned int vert, cc;
-	ccs = std::vector<unsigned int>();
+	ccs = std::vector<unsigned int>(length);
 	while (std::getline(is, line)) {
 		if (line[0] == '#')
 			continue;
@@ -75,15 +78,14 @@ void readGraph(const std::string &inputFile, const std::string &ccfile) {
 	is.close();
 }
 
- void writeToFile(std::ofstream &outputFile, unsigned int layer, std::vector<unsigned int> &components) {
-	graph_t g = G[layer];
+void writeToFile(std::ofstream &outputFile, unsigned int layer, const graph_t &g, const std::vector<unsigned int> &components) {
 	for(unsigned int i = 0; i < num_vertices(g); i++) {
 		if (degree(i, g) > 0)
 			outputFile<<i<<","<<ccs[i]<<","<<layer<<","<<components[i]<<"\n";
 	}
 }
 
-void writeMetaData(std::string prefix, long long preprocessingTime, long long algorithmTime) {
+void writeMetaData(const std::string &prefix, long long preprocessingTime, long long algorithmTime) {
 	std::ofstream outputFile;
 	outputFile.open(prefix+"-info.json");
 	outputFile<<"{\n";
@@ -92,9 +94,39 @@ void writeMetaData(std::string prefix, long long preprocessingTime, long long al
 	outputFile.close();
 }
 
+void writeCCInfo(const std::string &prefix, const std::vector<unsigned int> &components, unsigned int num, unsigned int num_verts, unsigned int layer) {
+	std::string prefixx = prefix+"/layer-"+std::to_string(layer)+".cc";
+	unsigned int *freq = new unsigned int[num];
+	std::fill_n(freq, num, 0);
+	for (unsigned int i = 0; i < num_verts; i++)
+		freq[components[i]]++;
+	std::ofstream outputFile(prefixx+"-info.json");
+	outputFile << "{\n";
+	unsigned int num2 = num;
+	for (size_t i = 0; i < num2; i++) {
+		/* subgraph_t sg = subgraph_t(g, */
+		/* 	[components,i](graph_t::edge_descriptor e) { */
+		/* 		return components.at(source(e,g))==i */
+		/* 			|| components.at(target(e,g))==i; */
+		/* 	}, */
+		/* 	[components,i](graph_t::vertex_descriptor v) { */
+		/* 		return components.at(v)==i; */
+		/* 	}); */
+		if (freq[i] > 1) {
+			outputFile<<'"'<<i<<'"'<<": {\n";
+			outputFile<<"\t\"vertices\":"<<freq[i]<<"\n},\n";
+		}
+		else
+			num--;
+	}
+	outputFile << "\"-1\": {}\n}";
+	outputFile.close();
+}
+
+
 int main(int argc, char *argv[]) {
-	if (argc < 3) {
-		std::cerr<<argv[0]<<": usage: ./cc-layers-mat <path to graph> <path to connected components>\n";
+	if (argc < 4) {
+		std::cerr<<argv[0]<<": usage: ./cc-layers-mat <path to graph> <path to connected components> <path to layers dir>\n";
 		exit(1);
 	}
 	std::string prefix = argv[1];
@@ -113,14 +145,13 @@ int main(int argc, char *argv[]) {
 	outputFile.open(prefixx);
 	/* outputFile<<"# vertex,connected_component,layer,connected_component_in_layer\n"; */
 	/* outputFile<<"# #components: "<<num_components<<"\n"; */
-	std::vector<unsigned int> components(10);
 	for (auto g = G.begin(); g != G.end(); g++) {
-		components.resize(num_vertices(g->second));
-		components.clear();
+		std::vector<unsigned int> components(num_vertices(g->second));
 		reset();
-		connected_components(g->second, &components[0]);
+		unsigned int num = connected_components(g->second, &components[0]);
 		algorithmTime += getTimeElapsed();
-		writeToFile(outputFile, g->first, components);
+		writeToFile(outputFile, g->first, g->second, components);
+		writeCCInfo(argv[3], components, num, num_vertices(g->second), g->first);
 	}
 	outputFile.close();
 	writeMetaData(prefixx, preprocessingTime, algorithmTime);

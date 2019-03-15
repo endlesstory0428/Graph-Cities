@@ -2,8 +2,10 @@
 #include <fstream>
 #include <sys/time.h>
 #include <assert.h>
+#include <netinet/in.h>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/connected_components.hpp>
+#include <boost/graph/filtered_graph.hpp>
 #define DEBUG (1)
 
 #define BUFFER_NUM_EDGES ((unsigned int) 1<<25)
@@ -12,8 +14,9 @@
 using namespace boost;
 
 typedef adjacency_list<vecS, vecS, undirectedS> graph_t;
-typedef graph_traits<graph_t>::vertex_descriptor Vertex;
-typedef graph_traits<graph_t>::edge_descriptor Edge;
+typedef filtered_graph<graph_t, std::function<bool(graph_t::edge_descriptor)>, std::function<bool(graph_t::vertex_descriptor)> > subgraph_t;
+/* typedef graph_traits<graph_t>::vertex_descriptor Vertex; */
+/* typedef graph_traits<graph_t>::edge_descriptor Edge; */
 
 graph_t g;
 
@@ -54,6 +57,21 @@ void readGraph(const std::string &inputFile) {
 	is.close();
 }
 
+void readGraphBin(const std::string &fileName) {
+	std::ifstream is;
+	is.open(fileName, std::ios::in | std::ios::binary);
+	is.seekg (0, is.end);
+	int length = is.tellg()/sizeof(unsigned int);
+	is.seekg (0, is.beg);
+	unsigned int src, tgt;
+	for (int i = 0; i < length/2; i++) {
+		is.read((char *)(&src), sizeof(unsigned int));
+		is.read((char *)(&tgt), sizeof(unsigned int));
+		assert(add_edge(htonl(src), htonl(tgt), g).second);
+	}
+	is.close();
+}
+
  void writeToFile(const std::string &prefix, std::vector<unsigned int> components) {
 	std::ofstream outputFile;
 	outputFile.open(prefix);
@@ -65,14 +83,19 @@ void readGraph(const std::string &inputFile) {
 	outputFile.close();
 }
 
-void writeMetaData(std::string prefix, unsigned int num_components, long long preprocessingTime, long long algorithmTime) {
+void writeMetaData(const std::string &prefix, unsigned int num_components, long long preprocessingTime, long long algorithmTime) {
 	std::ofstream outputFile;
-	outputFile.open(prefix+"-info.json");
+	outputFile.open(prefix+"-decomposition-info.json");
 	outputFile<<"{\n";
 	outputFile<<"\"number-components\":"<<num_components<<",\n";
 	outputFile<<"\"preprocessing-time\":"<<preprocessingTime<<",\n";
 	outputFile<<"\"algorithm-time\":"<<algorithmTime<<"\n}";
 	outputFile.close();
+}
+
+void writeCCMetaData(std::ofstream &outputFile, unsigned int cc, unsigned int NODENUM) {
+	outputFile<<'"'<<cc<<'"'<<": {\n";
+	outputFile<<"\t\"vertices\":"<<NODENUM<<"\n},\n";
 }
 
 int main(int argc, char *argv[]) {
@@ -91,7 +114,10 @@ int main(int argc, char *argv[]) {
 	}
 
 	reset();
-	readGraph(prefix);
+	if (layer <= 0)
+		readGraphBin(prefix+".bin");
+	else
+		readGraph(prefix);
 	if(DEBUG)
 		std::cout<<"LOADED GRAPH "<<num_vertices(g)<<", "<<num_edges(g)<<"\n";
 	long long preprocessingTime = getTimeElapsed();
@@ -102,6 +128,31 @@ int main(int argc, char *argv[]) {
 
 	long long algorithmTime = getTimeElapsed();
 	writeToFile(prefixx, components);
+
+	unsigned int *freq = new unsigned int[num];
+	std::fill_n(freq, num, 0);
+	for (unsigned int i = 0; i < num_vertices(g); i++)
+		freq[components[i]]++;
+	std::ofstream outputFile(prefixx+"-info.json");
+	outputFile << "{\n";
+	unsigned int num2 = num;
+	for (size_t i = 0; i < num2; i++) {
+		/* subgraph_t sg = subgraph_t(g, */
+		/*	[components,i](graph_t::edge_descriptor e) { */
+		/*		return components.at(source(e,g))==i */
+		/*			|| components.at(target(e,g))==i; */
+		/*	}, */
+		/*	[components,i](graph_t::vertex_descriptor v) { */
+		/*		return components.at(v)==i; */
+		/*	}); */
+		if (freq[i] > 1)
+			writeCCMetaData(outputFile, i, freq[i]);
+		else
+			num--;
+	}
+	outputFile << "\"-1\": {}\n}";
+	outputFile.close();
+
 	writeMetaData(prefixx, num, preprocessingTime, algorithmTime);
 	return 0;
 }

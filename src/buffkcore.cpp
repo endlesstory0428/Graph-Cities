@@ -16,7 +16,7 @@
 #include <thread>
 #define DEBUG 1
 
-#define BUFFER_NUM_EDGES ((unsigned int) 1<<25)
+#define BUFFER_NUM_EDGES ((unsigned int) 1<<15)
 #define ENULL ((unsigned int) -1)
 
 // A struct to represent an edge in the edge list

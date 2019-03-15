@@ -85,12 +85,33 @@ bccs:
 .PHONY: bccs
 
 cc-layers:
-	for FILE in $$(ls $(GRAPH)/$(GRAPH)_layers | grep .csv); do \
+	for FILE in $$(ls $(GRAPH)/$(GRAPH)_layers -v | grep .csv); do \
 		echo $$FILE; \
-		./cc-layers-mat $(GRAPH)/$(GRAPH)_layers/"$$FILE" $(GRAPH)/$(GRAPH).cc; \
+		./cc-layers-mat $(GRAPH)/$(GRAPH)_layers/"$$FILE" $(GRAPH)/$(GRAPH).cc $(GRAPH)/$(GRAPH)_layers; \
 	done
 
-.PHONY: ccs
+.PHONY: cc-layers
+
+waves:
+	for FILE in $$(ls $(GRAPH)/$(GRAPH)_layers -v | grep .cc-info.json); do \
+		echo $$FILE; \
+		LAYER=$${FILE:6:-13}; \
+		NUM=$$(python -c "import sys, json; x=json.load(sys.stdin); print(x[sorted(x,key=lambda k:x[k].get('vertices',0))[-1]]['vertices'])" < $(GRAPH)/$(GRAPH)_layers/"$$FILE"); \
+		if (($$NUM > 2000)); \
+		then echo $$LAYER; \
+			FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$$LAYER']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
+			./wave \
+				$(GRAPH)/$(GRAPH)_layers \
+				"$$FILENAME" \
+				$$LAYER \
+				$$(python -c "import sys, json; x=json.load(sys.stdin)['$$LAYER']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
+				$(GRAPH)/$(GRAPH).nodemap \
+				$$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap))) \
+				$$(($$(wc -l < $(GRAPH)/$(GRAPH).nodemap))); \
+		fi; \
+	done
+
+.PHONY: waves
 
 bstats:
 	echo $$(($$(wc -c < $(GRAPH)/$(GRAPH).bin)/8)), $$(($$(wc -l < $(GRAPH)/$(GRAPH).nodemap))), $$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap)))
