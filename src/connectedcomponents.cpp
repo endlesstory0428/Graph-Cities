@@ -150,7 +150,7 @@ int main(int argc, char *argv[]) {
 		else
 			num--;
 	}
-	outputFile << "\"-1\": {}\n}";
+	outputFile << "\"-1\":{}\n}";
 	outputFile.close();
 
 	writeMetaData(prefixx, num, preprocessingTime, algorithmTime);

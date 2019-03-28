@@ -119,7 +119,7 @@ void writeCCInfo(const std::string &prefix, const std::vector<unsigned int> &com
 		else
 			num--;
 	}
-	outputFile << "\"-1\": {}\n}";
+	outputFile << "\"-1\":{}\n}";
 	outputFile.close();
 }
 
