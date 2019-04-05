@@ -265,34 +265,48 @@ void findWaves(unsigned int *deg, unsigned int *waves, unsigned int *levels) {
 	unsigned int mindeg = deg[vert[1]];
 	unsigned int wave = 0;
 	unsigned int level = 0;
-	unsigned int till;
+	unsigned int till = ENULL;
 
 	do {
+		// std::cerr<<"till: "<<till<<"\n";
 		if (deg[vert[1]] == mindeg) {
 			wave++;
 			level = 0;
-			till = bins[mindeg+1]-1;
+			if (mindeg + 1 <= md) till = bins[mindeg+1]-1;
 		} else {
 			till = bins[mindeg]-1;
 		}
 		level++;
-		till = till == ENULL ? g.NODENUM + 1 : till;
-		/* std::cerr<<"till: "<<till<<"\n"; */
+		till = till > g.NODENUM ? g.NODENUM : till;
+
+		// printArray(deg, g.NODENUM+1);
+		// printArray(bins, md+1);
+		// std::cerr<<"till: "<<till<<"\n";
+		// std::cerr<<"ENULL: "<<ENULL<<"\n";
+		// std::cerr<<"mindeg: "<<mindeg<<"\n";
+		// std::cerr<<"wave: "<<wave<<"\n";
+		if (till == 1) {
+			unsigned int v = vert[1];
+			waves[v] = wave;
+			levels[v] = level;
+			deg[v] = ENULL;
+			break;
+		}
 		for(unsigned int i = 1; i <= till; i++) {
 			/* std::cerr<<"i: "<<i<<"\n"; */
 			unsigned int v = vert[i];
-			/* std::cerr<<"i2: "<<i<<", "<<deg[v]<<"\n"; */
+			// std::cerr<<"i2: "<<i<<", "<<deg[v]<<"\n";
 			// Do nothing if node doesn't exist in the graph
 			if(g.start_indices[v] == 0 && g.end_indices[v] == 0) {
 				;
 			}
 			else {
 				/* std::cerr<<"i3: "<<i<<"\n"; */
-				/* std::cerr<<v<<": "<<deg[v]<<", "<<waves[v]<<"\n"; */
+				// std::cerr<<v<<": "<<deg[v]<<", "<<waves[v]<<"\n";
 				waves[v] = wave;
 				levels[v] = level;
 				deg[v] = ENULL;
-				/* std::cerr<<v<<": "<<deg[v]<<", "<<waves[v]<<"\n"; */
+				// std::cerr<<v<<": "<<deg[v]<<", "<<waves[v]<<"\n";
 				/* std::cerr<<"i4: "<<i<<"\n"; */
 
 				for(unsigned int j = g.start_indices[v]; j <= g.end_indices[v]; j++) {
@@ -330,7 +344,7 @@ void findWaves(unsigned int *deg, unsigned int *waves, unsigned int *levels) {
 		}
 		/* std::cerr<<"HERE 0\n"; */
 
-		/* printArray(deg, g.NODENUM+1); */
+		// printArray(deg, g.NODENUM+1);
 		if (*std::min_element(deg+1, deg + g.NODENUM + 1) == ENULL)
 			break;
 
