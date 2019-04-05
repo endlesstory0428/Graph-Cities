@@ -5,7 +5,7 @@
 #include <netinet/in.h>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/connected_components.hpp>
-#include <boost/graph/filtered_graph.hpp>
+// #include <boost/graph/filtered_graph.hpp>
 #define DEBUG (1)
 
 #define BUFFER_NUM_EDGES ((unsigned int) 1<<25)
@@ -14,7 +14,7 @@
 using namespace boost;
 
 typedef adjacency_list<vecS, vecS, undirectedS> graph_t;
-typedef filtered_graph<graph_t, std::function<bool(graph_t::edge_descriptor)>, std::function<bool(graph_t::vertex_descriptor)> > subgraph_t;
+// typedef filtered_graph<graph_t, std::function<bool(graph_t::edge_descriptor)>, std::function<bool(graph_t::vertex_descriptor)> > subgraph_t;
 /* typedef graph_traits<graph_t>::vertex_descriptor Vertex; */
 /* typedef graph_traits<graph_t>::edge_descriptor Edge; */
 
@@ -93,9 +93,10 @@ void writeMetaData(const std::string &prefix, unsigned int num_components, long 
 	outputFile.close();
 }
 
-void writeCCMetaData(std::ofstream &outputFile, unsigned int cc, unsigned int NODENUM) {
+void writeCCMetaData(std::ofstream &outputFile, unsigned int cc, unsigned int NODENUM, unsigned int EDGENUM) {
 	outputFile<<'"'<<cc<<'"'<<": {\n";
-	outputFile<<"\t\"vertices\":"<<NODENUM<<"\n},\n";
+	outputFile<<"\t\"vertices\":"<<NODENUM<<",\n";
+	outputFile<<"\t\"edges\":"<<EDGENUM<<"\n},\n";
 }
 
 int main(int argc, char *argv[]) {
@@ -133,6 +134,12 @@ int main(int argc, char *argv[]) {
 	std::fill_n(freq, num, 0);
 	for (unsigned int i = 0; i < num_vertices(g); i++)
 		freq[components[i]]++;
+	unsigned int *efreq = new unsigned int[num];
+	std::fill_n(efreq, num, 0);
+	graph_traits < graph_t >::edge_iterator ei, ei_end;
+	for (tie(ei, ei_end) = edges(g); ei != ei_end; ++ei)
+		efreq[components[source(*ei, g)]]++;
+
 	std::ofstream outputFile(prefixx+"-info.json");
 	outputFile << "{\n";
 	unsigned int num2 = num;
@@ -146,7 +153,7 @@ int main(int argc, char *argv[]) {
 		/*		return components.at(v)==i; */
 		/*	}); */
 		if (freq[i] > 1)
-			writeCCMetaData(outputFile, i, freq[i]);
+			writeCCMetaData(outputFile, i, freq[i], efreq[i]/2);
 		else
 			num--;
 	}

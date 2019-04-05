@@ -96,8 +96,8 @@ waves:
 	for FILE in $$(ls $(GRAPH)/$(GRAPH)_layers -v | grep .cc-info.json); do \
 		echo $$FILE; \
 		LAYER=$${FILE:6:-13}; \
-		NUM=$$(python -c "import sys, json; x=json.load(sys.stdin); print(x[sorted(x,key=lambda k:x[k].get('vertices',0))[-1]]['vertices'])" < $(GRAPH)/$(GRAPH)_layers/"$$FILE"); \
-		if (($$NUM > 2000)); then \
+		NUM=$$(python -c "import sys, json; x=json.load(sys.stdin); print(x[sorted(x,key=lambda k:x[k].get('edges',0))[-1]]['edges'])" < $(GRAPH)/$(GRAPH)_layers/"$$FILE"); \
+		if (($$NUM > 2**16)); then \
 			echo Layer: $$LAYER; \
 			FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$$LAYER']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
 			./wave \
@@ -117,7 +117,7 @@ bicntcomps:
 	for FILE in $$(ls $(GRAPH)/$(GRAPH)_waves -v | grep waves-info.json); do \
 		echo $$FILE; \
 		LAYER=$${FILE:6:-16}; \
-		WAVES=$$(python -c "import sys, json; print(' '.join([x[0] for x in filter(lambda y:y[1].get('edges',0)>2**14,json.load(sys.stdin).items())]))" < $(GRAPH)/$(GRAPH)_waves/"$$FILE"); \
+		WAVES=$$(python -c "import sys, json; print(' '.join([x[0] for x in filter(lambda y:y[1].get('edges',0)>2**16,json.load(sys.stdin).items())]))" < $(GRAPH)/$(GRAPH)_waves/"$$FILE"); \
 		for WAVE in $$WAVES; do \
 			echo Layer: $$LAYER; \
 			echo Wave: $$WAVE; \

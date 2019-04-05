@@ -94,7 +94,7 @@ void writeMetaData(const std::string &prefix, long long preprocessingTime, long 
 	outputFile.close();
 }
 
-void writeCCInfo(const std::string &prefix, const std::vector<unsigned int> &components, unsigned int num, unsigned int num_verts, unsigned int layer) {
+void writeCCInfo(const std::string &prefix, const std::vector<unsigned int> &components, unsigned int num, unsigned int num_verts, unsigned int layer, unsigned int *efreq) {
 	std::string prefixx = prefix+"/layer-"+std::to_string(layer)+".cc";
 	unsigned int *freq = new unsigned int[num];
 	std::fill_n(freq, num, 0);
@@ -114,7 +114,9 @@ void writeCCInfo(const std::string &prefix, const std::vector<unsigned int> &com
 		/* 	}); */
 		if (freq[i] > 1) {
 			outputFile<<'"'<<i<<'"'<<": {\n";
-			outputFile<<"\t\"vertices\":"<<freq[i]<<"\n},\n";
+			outputFile<<"\t\"vertices\":"<<freq[i]<<",\n";
+			outputFile<<"\t\"edges\":"<<efreq[i]/2<<"\n},\n";
+
 		}
 		else
 			num--;
@@ -151,7 +153,13 @@ int main(int argc, char *argv[]) {
 		unsigned int num = connected_components(g->second, &components[0]);
 		algorithmTime += getTimeElapsed();
 		writeToFile(outputFile, g->first, g->second, components);
-		writeCCInfo(argv[3], components, num, num_vertices(g->second), g->first);
+		unsigned int *efreq = new unsigned int[num];
+		std::fill_n(efreq, num, 0);
+		graph_traits < graph_t >::edge_iterator ei, ei_end;
+		for (tie(ei, ei_end) = edges(g->second); ei != ei_end; ++ei)
+			efreq[components[source(*ei, g->second)]]++;
+		writeCCInfo(argv[3], components, num, num_vertices(g->second), g->first, efreq);
+
 	}
 	outputFile.close();
 	writeMetaData(prefixx, preprocessingTime, algorithmTime);
