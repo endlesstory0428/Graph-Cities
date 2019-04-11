@@ -64,7 +64,7 @@ long long getTimeElapsed() {
 }
 
 // Memory maps input file
-void createMemoryMap(char *fileName) {
+void createMemoryMap(const char *fileName) {
 	unsigned int binFile = open(fileName, O_RDWR);
 	long fileSizeInByte;
 	struct stat sizeResults;
@@ -493,8 +493,8 @@ int main(int argc, char *argv[]) {
 	unsigned int *originalIndices = new unsigned int[g.EDGENUM];
 	unsigned int *edgeLabels = new unsigned int[g.EDGENUM];
 	std::fill_n(edgeLabels, g.EDGENUM, ENULL);
-	/* createMemoryMap(tmpFile); */
-	createInMemoryEdgeList(tmpFile);
+	createMemoryMap(tmpFile);
+	// createInMemoryEdgeList(tmpFile);
 	if(DEBUG)
 		std::cout<<"CREATED MEMORY MAP\n";
 	formatGraph(originalIndices);
