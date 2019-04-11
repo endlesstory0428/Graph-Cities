@@ -2,7 +2,7 @@ GRAPH := simplegraph
 LAYER := 0
 WAVE := 0
 
-PRODUCT := buffkcore wave connectedcomponents biconnectedcomponents cc-layers-mat
+PRODUCT := sort buffkcore wave connectedcomponents biconnectedcomponents cc-layers-mat
 
 CXX := g++
 LINKER := g++
@@ -26,14 +26,17 @@ clean:
 .PHONY: clean
 
 sanitize:
-	cat $(GRAPH)/$(GRAPH).txt | grep -v '#' | sort -nk 1 | uniq | tr -d '\r' | awk '$$1 != $$2 {print $$1"\t"$$2}' > $(GRAPH)/$(GRAPH)
-	cat $(GRAPH)/$(GRAPH) | tr '\t' '\n' | sort -nu  > $(GRAPH)/$(GRAPH).nodemap
+	# cat $(GRAPH)/$(GRAPH).txt | grep -v '#' | sort -nk 1 | uniq | tr -d '\r' | awk '$$1 != $$2 {print $$1"\t"$$2}' > $(GRAPH)/$(GRAPH)
+	# cat $(GRAPH)/$(GRAPH) | tr '\t' '\n' | sort -nu  > $(GRAPH)/$(GRAPH).nodemap
+	./sort $(GRAPH)/$(GRAPH).txt $$(wc -l $(GRAPH)/$(GRAPH).txt)
 
 .PHONY: sanitize
 
 union:
-	mv $(GRAPH)/$(GRAPH) $(GRAPH)/$(GRAPH)-dir.txt
-	cat $(GRAPH)/$(GRAPH)-dir.txt | awk '{print $$0"\n"$$2"\t"$$1}' | sort -nk 1 | uniq > $(GRAPH)/$(GRAPH)
+	# mv $(GRAPH)/$(GRAPH) $(GRAPH)/$(GRAPH)-dir.txt
+	# cat $(GRAPH)/$(GRAPH)-dir.txt | awk '{print $$0"\n"$$2"\t"$$1}' | sort -nk 1 | uniq > $(GRAPH)/$(GRAPH)
+	./sort $(GRAPH)/$(GRAPH).txt $$(wc -l $(GRAPH)/$(GRAPH).txt) true
+
 
 .PHONY: union
 

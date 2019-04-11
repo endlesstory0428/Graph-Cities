@@ -92,7 +92,7 @@ void createInMemoryEdgeList(const char *fileName) {
 		is.close();
 }
 
-void doubleAndReverseGraph(char *inputFile, const char *outputFile, unsigned int *label2node) {
+void readGraph(char *inputFile, const char *outputFile, unsigned int *label2node) {
 	std::ifstream is;
 	is.open(inputFile, std::ios::in | std::ios::binary);
 	std::ofstream os;
@@ -487,9 +487,9 @@ int main(int argc, char *argv[]) {
 	unsigned int *node2label = new unsigned int[g.NODENUM+1];
 	unsigned int *label2node = new unsigned int[atoi(argv[5])+1];
 	initNodeMap(argv[4], node2label, label2node);
-	doubleAndReverseGraph(argv[1], tmpFile, label2node);
+	readGraph(argv[1], tmpFile, label2node);
 	if(DEBUG)
-		std::cout<<"DOUBLED AND REVERSED GRAPH\n";
+		std::cout<<"READ GRAPH\n";
 	unsigned int *originalIndices = new unsigned int[g.EDGENUM];
 	unsigned int *edgeLabels = new unsigned int[g.EDGENUM];
 	std::fill_n(edgeLabels, g.EDGENUM, ENULL);
