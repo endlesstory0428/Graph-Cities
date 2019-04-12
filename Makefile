@@ -26,32 +26,26 @@ clean:
 .PHONY: clean
 
 sanitize:
-	# cat $(GRAPH)/$(GRAPH).txt | grep -v '#' | sort -nk 1 | uniq | tr -d '\r' | awk '$$1 != $$2 {print $$1"\t"$$2}' > $(GRAPH)/$(GRAPH)
-	# cat $(GRAPH)/$(GRAPH) | tr '\t' '\n' | sort -nu  > $(GRAPH)/$(GRAPH).nodemap
-	./sort $(GRAPH)/$(GRAPH).txt $$(wc -l $(GRAPH)/$(GRAPH).txt)
+	NUMEDGES=$$(head $(GRAPH)/$(GRAPH).txt | tr ' ' '\n' | grep -a1 'Edges' | tail -n1); \
+	[ ! -z "$${NUMEDGES##*[!0-9]*}" ] || NUMEDGES=$$(($$(wc -l < $(GRAPH)/$(GRAPH).txt))); \
+	./sort $(GRAPH)/$(GRAPH).txt $$NUMEDGES
 
 .PHONY: sanitize
 
 union:
-	# mv $(GRAPH)/$(GRAPH) $(GRAPH)/$(GRAPH)-dir.txt
-	# cat $(GRAPH)/$(GRAPH)-dir.txt | awk '{print $$0"\n"$$2"\t"$$1}' | sort -nk 1 | uniq > $(GRAPH)/$(GRAPH)
-	./sort $(GRAPH)/$(GRAPH).txt $$(wc -l $(GRAPH)/$(GRAPH).txt) true
-
+	NUMEDGES=$$(head $(GRAPH)/$(GRAPH).txt | tr ' ' '\n' | grep -a1 'Edges' | tail -n1); \
+	[ ! -z "$${NUMEDGES##*[!0-9]*}" ] || NUMEDGES=$$(($$(wc -l < $(GRAPH)/$(GRAPH).txt))); \
+	./sort $(GRAPH)/$(GRAPH).txt $$NUMEDGES true
 
 .PHONY: union
-
-mmap:
-	java -jar mmap.jar Convert $(GRAPH)/$(GRAPH)
-
-.PHONY: mmap
 
 decomp:
 	./buffkcore \
 		"$(GRAPH)/$(GRAPH).bin" \
 		$$(($$(wc -c < $(GRAPH)/$(GRAPH).bin)/8)) \
-		$$(($$(wc -l < $(GRAPH)/$(GRAPH).nodemap))) \
+		$$(($$(wc -c < $(GRAPH)/$(GRAPH).nodemap)/4)) \
 		"$(GRAPH)/$(GRAPH).nodemap" \
-		$$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap)))
+		$$(($$(tail -c4 $(GRAPH)/$(GRAPH).nodemap | ./bindump.sh)))
 
 .PHONY: decomp
 
@@ -63,8 +57,8 @@ dwave:
 		$(LAYER) \
 		$$(python -c "import sys, json; x=json.load(sys.stdin)['$(LAYER)']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
 		$(GRAPH)/$(GRAPH).nodemap \
-		$$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap))) \
-		$$(($$(wc -l < $(GRAPH)/$(GRAPH).nodemap)))
+		$$(($$(tail -c4 $(GRAPH)/$(GRAPH).nodemap | ./bindump.sh))) \
+		$$(($$(wc -c < $(GRAPH)/$(GRAPH).nodemap)/4))
 
 .PHONY: decomp
 
@@ -83,7 +77,7 @@ bccs:
 		$(LAYER) \
 		$(GRAPH)/$(GRAPH)_layers \
 		$(WAVE) \
-		$$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap)))
+		$$(($$(tail -c4 $(GRAPH)/$(GRAPH).nodemap | ./bindump.sh)))
 
 .PHONY: bccs
 
@@ -109,8 +103,8 @@ waves:
 				$$LAYER \
 				$$(python -c "import sys, json; x=json.load(sys.stdin)['$$LAYER']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
 				$(GRAPH)/$(GRAPH).nodemap \
-				$$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap))) \
-				$$(($$(wc -l < $(GRAPH)/$(GRAPH).nodemap))); \
+				$$(($$(tail -c4 $(GRAPH)/$(GRAPH).nodemap | ./bindump.sh))) \
+				$$(($$(wc -c < $(GRAPH)/$(GRAPH).nodemap)/4)); \
 		fi; \
 	done
 
@@ -130,14 +124,14 @@ bicntcomps:
 				$$LAYER \
 				$(GRAPH)/$(GRAPH)_layers \
 				$$WAVE \
-				$$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap))); \
+				$$(($$(tail -c4 $(GRAPH)/$(GRAPH).nodemap | ./bindump.sh))); \
 		done; \
 	done
 
 .PHONY: bicntcomps
 
 bstats:
-	echo $$(($$(wc -c < $(GRAPH)/$(GRAPH).bin)/8)), $$(($$(wc -l < $(GRAPH)/$(GRAPH).nodemap))), $$(($$(tail -n 1 $(GRAPH)/$(GRAPH).nodemap)))
+	echo $$(($$(wc -c < $(GRAPH)/$(GRAPH).bin)/8)), $$(($$(wc -c < $(GRAPH)/$(GRAPH).nodemap)/4)), $$(($$(tail -c4 $(GRAPH)/$(GRAPH).nodemap | ./bindump.sh)))
 
 .PHONY: bstats
 
