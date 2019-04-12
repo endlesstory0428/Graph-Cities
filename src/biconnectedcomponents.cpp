@@ -119,6 +119,8 @@ int main(int argc, char *argv[]) {
 	std::string prefixx;
 	if (layer <= 0) {
 		prefixx = prefix+".bcc";
+		std::cerr<<"Choose a layer or wave.\n";
+		exit(1);
 	} else {
 		prefixx = argv[3];
 		prefixx += "/layer-"+std::to_string(layer)+".bcc";
