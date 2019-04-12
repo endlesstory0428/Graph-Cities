@@ -14,9 +14,10 @@
 #include <limits.h>
 #include <omp.h>
 #include <thread>
+#include <boost/dynamic_bitset.hpp>
 #define DEBUG 1
 
-#define BUFFER_NUM_EDGES ((unsigned int) 1<<17)
+#define BUFFER_NUM_EDGES ((unsigned int) 1<<22)
 #define ENULL ((unsigned int) -1)
 
 // A struct to represent an edge in the edge list
@@ -61,6 +62,11 @@ long long getTimeElapsed() {
 	long long timeElapsed = newTime - currentTimeMilliS;
 	currentTimeMilliS = newTime;
 	return timeElapsed;
+}
+
+inline bool exists(const char *name) {
+	struct stat buffer;
+	return (stat(name, &buffer) == 0);
 }
 
 // Memory maps input file
@@ -160,21 +166,6 @@ int compareByEdges(const void * a, const void * b) {
 	if ((g.edgeList + *(unsigned int *)a)->src > (g.edgeList + *(unsigned int *)b)->src)
 		return 1;
 	return 0;
-}
-
-// Formats the graph by sorting it and tracing original indices in the graph
-void formatGraph(unsigned int *originalIndices) {
-	unsigned int *indices = new unsigned int[g.EDGENUM];
-	for(unsigned int i = 0; i < g.EDGENUM; i++) {
-		indices[i] = i;
-	}
-	qsort(indices, g.EDGENUM, sizeof(unsigned int), compareByEdges);
-	for(unsigned int i = 0; i < g.EDGENUM; i++) {
-		originalIndices[indices[i]] = i;
-	}
-	std::sort(g.edgeList, g.edgeList + g.EDGENUM, compareEdges);
-	//qsort(g.edgeList, g.EDGENUM, sizeof(edge), compareByEdges);
-	delete [] indices;
 }
 
 // Finds the start and end indices	of each node in the graph
@@ -371,17 +362,18 @@ void parKCore(unsigned int *deg, unsigned int *edgeLabels) {
 
 }
 
-unsigned int labelEdgesAndUpdateDegree(unsigned int peel, bool *isFinalNode, unsigned int *degree, unsigned int *edgeLabels) {
+unsigned int labelEdgesAndUpdateDegree(unsigned int peel, boost::dynamic_bitset<> *isFinalNode, unsigned int *degree, unsigned int *edgeLabels) {
 	unsigned int numEdges = 0;
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + i)->src;
 		unsigned int tgt = (g.edgeList + i)->tgt;
-		if(isFinalNode[src] && isFinalNode[tgt] && edgeLabels[i] == ENULL) {
+		if((*isFinalNode)[src] && (*isFinalNode)[tgt] && edgeLabels[i] == ENULL) {
 			edgeLabels[i] = peel;
 			degree[src] -= 1;
 			numEdges++;
 		}
 	}
+	// std::cerr << numEdges << "\n";
 	return numEdges;
 }
 
@@ -424,17 +416,17 @@ void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENU
 	outputFile.close();
 }
 
-void initNodeMap(char *inputFile, unsigned int *node2label, unsigned int *label2node) {
-	std::ifstream is(inputFile);
+void initNodeMap(char *inputFile, unsigned int *node2label) {//, unsigned int *label2node) {
+	std::ifstream is(inputFile, std::ios::in | std::ios::binary);
 	unsigned int label;
 	for(unsigned int i = 1; i <= g.NODENUM; i++) {
-		is >> label;
+		is.read((char *)(&label), sizeof(unsigned int));
 		node2label[i] = label;
-		label2node[label] = i;
+		// label2node[label] = i;
 	}
 }
 
-void writeLayerToFile(const std::string &prefix, unsigned int topLayer, unsigned int layer, unsigned int *edgeIndices, unsigned int *edgeLabels, unsigned int *node2label) {
+void writeLayerToFile(const std::string &prefix, unsigned int topLayer, unsigned int layer, unsigned int *edgeLabels, unsigned int *node2label) {
 	long long wtime = currentTimeStamp();
 	std::ofstream outputFile;
 	std::string prefixx;
@@ -446,9 +438,9 @@ void writeLayerToFile(const std::string &prefix, unsigned int topLayer, unsigned
 	outputFile.open(prefixx+".csv");
 	/* outputFile<<"# source_vertex,target_vertex,layer\n"; */
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
-		unsigned int label = edgeLabels[edgeIndices[i]];
+		unsigned int label = edgeLabels[i];
 		if (label >= layer && label <= (topLayer))
-			outputFile<<node2label[(g.edgeList + edgeIndices[i])->src]<<","<<node2label[(g.edgeList + edgeIndices[i])->tgt]<<","<<label<<"\n";
+			outputFile<<node2label[(g.edgeList + i)->src]<<","<<node2label[(g.edgeList + i)->tgt]<<","<<label<<"\n";
 	}
 	outputFile.close();
 	ioTime += currentTimeStamp()-wtime;
@@ -478,30 +470,33 @@ int main(int argc, char *argv[]) {
 	if (DEBUG) {
 		std::cout<<numthreads<<"\n";
 		std::cout<<BUFFER_NUM_EDGES<<"\n";
+		std::cout<<ENULL<<"\n";
 	}
-	const char *tmpFile = "tmp.bin";
-	remove(tmpFile);
+	// std::string tmpFile = prefix.substr(0,prefix.length()-4)+"-reindexed.bin";
+	// remove(tmpFile);
 	g.EDGENUM = atoi(argv[2]);
+	std::cerr << "Edges: " << g.EDGENUM << "\n";
 	g.NODENUM = atoi(argv[3]);
+	std::cerr << "Nodes: " << g.NODENUM << "\n";
 	reset();
 	unsigned int *node2label = new unsigned int[g.NODENUM+1];
-	unsigned int *label2node = new unsigned int[atoi(argv[5])+1];
-	initNodeMap(argv[4], node2label, label2node);
-	readGraph(argv[1], tmpFile, label2node);
-	if(DEBUG)
-		std::cout<<"READ GRAPH\n";
-	unsigned int *originalIndices = new unsigned int[g.EDGENUM];
+	// unsigned int *label2node = new unsigned int[atoi(argv[5])+1];
+	initNodeMap(argv[4], node2label); //, label2node);
+	if (DEBUG)
+		std::cout<<"INITIALIZED NODEMAP\n";
+	// std::cout<<tmpFile.c_str()<<": "<<!exists(tmpFile.c_str())<<"\n";
+	// if (!exists(tmpFile.c_str()))
+	//     readGraph(argv[1], tmpFile.c_str(), label2node);
+	// if(DEBUG)
+	//     std::cout<<"READ GRAPH\n";
 	unsigned int *edgeLabels = new unsigned int[g.EDGENUM];
 	std::fill_n(edgeLabels, g.EDGENUM, ENULL);
-	createMemoryMap(tmpFile);
+	createMemoryMap(argv[1]);
 	// createInMemoryEdgeList(tmpFile);
 	if(DEBUG)
 		std::cout<<"CREATED MEMORY MAP\n";
-	formatGraph(originalIndices);
 	long long preprocessingTime = getTimeElapsed();
 	reset();
-	if(DEBUG)
-		std::cout<<"FORMATTED GRAPH\n";
 	findStartAndEndIndices();
 	if(DEBUG)
 		std::cout<<"START AND END INDICES COMPUTED\n";
@@ -522,49 +517,49 @@ int main(int argc, char *argv[]) {
 			topLayer = mc;
 		if(DEBUG)
 			std::cout<<"CURRENT MAXIMUM CORE : "<<mc<<"\n";
-		bool *isFinalNode = new bool[g.NODENUM + 1];
-		std::fill_n(isFinalNode, g.NODENUM + 1, false);
+		boost::dynamic_bitset<> *isFinalNode = new boost::dynamic_bitset<>(g.NODENUM + 1);
+		// std::fill_n(isFinalNode, g.NODENUM + 1, false);
 		numVerts = 0;
 		for(unsigned int i = 0; i <= g.NODENUM; i++) {
 			if(core[i] == mc) {
-				isFinalNode[i] = true;
+				(*isFinalNode)[i] = true;
 				numVerts++;
 			}
 		}
 		numtaEdges = labelEdgesAndUpdateDegree(mc, isFinalNode, degree, edgeLabels);
-		delete [] isFinalNode;
+		// delete [] isFinalNode;
 		writeLayerMetaData(outputFile, mc, topLayer, numVerts, numtaEdges);
 		numEdges += numtaEdges;
 		if (numEdges >= BUFFER_NUM_EDGES) {
-			/* writeLayerToFile(writeOut, prefix, topLayer, mc, originalIndices, edgeLabels, node2label); */
+			/* writeLayerToFile(writeOut, prefix, topLayer, mc, edgeLabels, node2label); */
 			t.join();
-			t = std::thread(writeLayerToFile, prefix, topLayer, mc, originalIndices, edgeLabels, node2label);
+			t = std::thread(writeLayerToFile, prefix, topLayer, mc, edgeLabels, node2label);
 			topLayer = 0;
 			numEdges = 0;
 		}
 	}
-	/* g.EDGENUM /= 2; */
-	/* unsigned int *originalLabels = new unsigned int[g.EDGENUM]; */
-	/* if(DEBUG) */
-	/* 	std::cout<<"RECONSTRUCTING ORIGINAL LABELS\n"; */
-	/* for(unsigned int i = 0; i < g.EDGENUM; i++) { */
-	/* 	originalLabels[i] = edgeLabels[originalIndices[i]]; */
-	/* } */
+	// g.EDGENUM /= 2;
+	// unsigned int *originalLabels = new unsigned int[g.EDGENUM];
+	// if(DEBUG)
+	//     std::cout<<"RECONSTRUCTING ORIGINAL LABELS\n";
+	// for(unsigned int i = 0; i < g.EDGENUM; i++) {
+	//     originalLabels[i] = edgeLabels[originalIndices[i]];
+	// }
 	long long algorithmTime = getTimeElapsed();
-	/* writeToFile(originalIndices, originalLabels); */
+	// writeToFile(originalIndices, originalLabels);
 	t.join();
 	outputFile<<"\"0\":{}\n}";
 	outputFile.close();
 	if (numEdges > 0)
-		writeLayerToFile(prefix, topLayer, mc, originalIndices, edgeLabels, node2label);
+		writeLayerToFile(prefix, topLayer, mc, edgeLabels, node2label);
 	writeMetaData(prefix, atoi(argv[3]), atoi(argv[2])/2, maxdeg, preprocessingTime, algorithmTime);
-	remove(tmpFile);
+	// remove(tmpFile);
 	delete [] core;
 	delete [] degree;
 	delete [] g.start_indices;
 	delete [] g.end_indices;
 	delete [] edgeLabels;
-	/* delete [] originalLabels; */
-	delete [] originalIndices;
+	// delete [] originalLabels;
+	// delete [] originalIndices;
 	return 0;
 }

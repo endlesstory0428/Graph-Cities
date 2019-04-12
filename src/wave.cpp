@@ -427,13 +427,13 @@ void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENU
 	outputFile.close();
 }
 
-void initNodeMap(char *inputFile, unsigned int *node2label, unsigned int *label2node, unsigned int numnodes) {
-	std::ifstream is(inputFile);
+void initNodeMap(char *inputFile, unsigned int *node2label) {//, unsigned int *label2node) {
+	std::ifstream is(inputFile, std::ios::in | std::ios::binary);
 	unsigned int label;
-	for(unsigned int i = 1; i <= numnodes; i++) {
-		is >> label;
+	for(unsigned int i = 1; i <= g.NODENUM; i++) {
+		is.read((char *)(&label), sizeof(unsigned int));
 		node2label[i] = label;
-		label2node[label] = i;
+		// label2node[label] = i;
 	}
 }
 

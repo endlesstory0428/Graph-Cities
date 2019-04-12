@@ -5,6 +5,7 @@
 #include <cstring>
 #include <algorithm>
 #include <assert.h>
+#include <netinet/in.h>
 #include <unordered_map>
 #include <boost/dynamic_bitset.hpp>
 #define DEBUG (1)
@@ -24,6 +25,7 @@ struct graph {
 }g;
 
 boost::dynamic_bitset<> verts;
+unsigned int maxlabel = 0;
 
 void readGraph(const std::string &inputFile, unsigned int numedges, bool dounion) {
 	verts = boost::dynamic_bitset<>(2*numedges);
@@ -50,6 +52,10 @@ void readGraph(const std::string &inputFile, unsigned int numedges, bool dounion
 			(g.edgeList + edge)->tgt = src;
 			edge++;
 		}
+		if (src > maxlabel)
+			maxlabel = src;
+		if (tgt > maxlabel)
+			maxlabel = tgt;
 	}
 	g.EDGENUM = edge;
 	is.close();
@@ -84,7 +90,18 @@ int compareByEdges(const void * a, const void * b) {
 
 void writeToFile(const std::string &prefix) {
 	std::ofstream outputFile;
-	outputFile.open(prefix);
+	outputFile.open(prefix+".nodemap", std::ios::out | std::ios::binary);
+	unsigned int *label2node = new unsigned int[maxlabel + 1];
+	unsigned int j = 1;
+	for (boost::dynamic_bitset<>::size_type i = 0; i < verts.size(); i++) {
+		if (verts[i]) {
+			// unsigned int out = ntohl(i);
+			outputFile.write((char *)(&i), sizeof(unsigned int));
+			label2node[i] = j++;
+		}
+	}
+	outputFile.close();
+	outputFile.open(prefix+".bin", std::ios::out | std::ios::binary);
 	unsigned int psrc = -1;
 	unsigned int ptgt = -1;
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
@@ -93,24 +110,24 @@ void writeToFile(const std::string &prefix) {
 		if (src == tgt || (src == psrc && tgt == ptgt)) {
 			continue;
 		}
-		outputFile << src << "\t" << tgt << "\n";
+		// outputFile << label2node[src] << label2node[tgt];
+		// unsigned int out = ntohl(label2node[src]);
+		outputFile.write((char *)(&label2node[src]), sizeof(unsigned int));
+		// out = ntohl(label2node[tgt]);
+		outputFile.write((char *)(&label2node[tgt]), sizeof(unsigned int));
 		psrc = src;
 		ptgt = tgt;
 	}
-	outputFile.close();
-	outputFile.open(prefix+".nodemap");
-	for (boost::dynamic_bitset<>::size_type i = 0; i < verts.size(); i++)
-		if (verts[i])
-			outputFile << i << "\n";
 	outputFile.close();
 }
 
 int main(int argc, char *argv[]) {
 	if (argc < 3) {
-		std::cerr<<argv[0]<<": usage: ./sanitize <path to graph> <do union?>\n";
+		std::cerr<<argv[0]<<": usage: ./sanitize <path to graph.txt> <# edges> <do union?>\n";
 		exit(1);
 	}
-	bool dounion = argc > 2 && strncmp(argv[3],"true",4);
+	bool dounion = argc > 3 && !strncmp(argv[3],"true",4);
+	std::cerr << "Union: " << dounion << "\n";
 	std::string prefix = argv[1];
 	readGraph(prefix, atoi(argv[2]), dounion);
 	if(DEBUG)
