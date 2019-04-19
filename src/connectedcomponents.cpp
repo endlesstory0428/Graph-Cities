@@ -39,18 +39,20 @@ long long getTimeElapsed() {
 	return timeElapsed;
 }
 
-void initNodeMap(const std::string &inputFile, unsigned int *node2label) {//, unsigned int *label2node) {
+unsigned int *initNodeMap(const std::string &inputFile) {//, unsigned int *label2node) {
 	std::ifstream is(inputFile, std::ios::in | std::ios::binary);
 	is.seekg (0, is.end);
-	int length = is.tellg()/sizeof(unsigned int);
+	unsigned int length = is.tellg()/sizeof(unsigned int);
 	is.seekg (0, is.beg);
+	std::cerr<<length<<"\n";
 	unsigned int label;
-	node2label = new unsigned int[length];
-	for(int i = 1; i <= length; i++) {
+	unsigned int *node2label = new unsigned int[length];
+	for(unsigned int i = 1; i <= length; i++) {
 		is.read((char *)(&label), sizeof(unsigned int));
 		node2label[i] = label;
 		// label2node[label] = i;
 	}
+	return node2label;
 }
 
 void readGraph(const std::string &inputFile) {
@@ -71,15 +73,15 @@ void readGraph(const std::string &inputFile) {
 }
 
 void readGraphBin(const std::string &fileName) {
-	unsigned int *node2label;
-	initNodeMap(fileName.substr(0,fileName.length()-4)+".nodemap", node2label);
+	unsigned int *node2label = initNodeMap(fileName.substr(0,fileName.length()-4)+".nodemap");
 	std::ifstream is;
 	is.open(fileName, std::ios::in | std::ios::binary);
 	is.seekg (0, is.end);
-	int length = is.tellg()/sizeof(unsigned int);
+	unsigned int length = is.tellg()/sizeof(unsigned int);
 	is.seekg (0, is.beg);
+	std::cerr<<length<<"\n";
 	unsigned int src, tgt;
-	for (int i = 0; i < length/2; i++) {
+	for (unsigned int i = 0; i < length/2; i++) {
 		is.read((char *)(&src), sizeof(unsigned int));
 		is.read((char *)(&tgt), sizeof(unsigned int));
 		assert(add_edge(node2label[src], node2label[tgt], g).second);
