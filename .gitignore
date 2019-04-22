@@ -21,6 +21,15 @@ livejournal/
 orkut/
 com-friendster/
 
+*.txt
+*.png
+*.html
+*.xcf
+*.cpp
+*.json
+*.py
+*.sh
+times
 .ccls*
 sort
 buffkcore
