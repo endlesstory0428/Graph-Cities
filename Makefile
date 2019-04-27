@@ -2,7 +2,7 @@ GRAPH := simplegraph
 LAYER := 0
 WAVE := 0
 
-PRODUCT := sort buffkcore wave connectedcomponents biconnectedcomponents cc-layers-mat
+PRODUCT := sort buffkcore wave connectedcomponents biconnectedcomponents cc-layers-mat iwave
 
 CXX := g++
 LINKER := g++
@@ -60,7 +60,40 @@ dwave:
 		$$(($$(tail -c4 $(GRAPH)/$(GRAPH).nodemap | ./bindump.sh))) \
 		$$(($$(wc -c < $(GRAPH)/$(GRAPH).nodemap)/4))
 
-.PHONY: decomp
+.PHONY: dwave
+
+wavemap:
+	FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).cc-layers); \
+	./wavemap.py \
+		"$$FILENAME" \
+		$(GRAPH)/$(GRAPH)_waves/layer-$(LAYER)-waves.csv
+
+.PHONY: wavemap
+
+wavemaps:
+	for FILE in $$(ls $(GRAPH)/$(GRAPH)_waves -v | grep waves.csv); do \
+		echo $$FILE; \
+		LAYER=$${FILE:6:-10}; \
+		FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$$LAYER']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).cc-layers); \
+		./wavemap.py \
+			"$$FILENAME" \
+			$(GRAPH)/$(GRAPH)_waves/$$FILE; \
+	done
+
+.PHONY: wavemaps
+
+diwave:
+	FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
+	./iwave \
+		$(GRAPH)/$(GRAPH)_layers \
+		"$$FILENAME" \
+		$(LAYER) \
+		$$(python -c "import sys, json; x=json.load(sys.stdin)['$(LAYER)']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
+		$(GRAPH)/$(GRAPH).nodemap \
+		$$(($$(tail -c4 $(GRAPH)/$(GRAPH).nodemap | ./bindump.sh))) \
+		$$(($$(wc -c < $(GRAPH)/$(GRAPH).nodemap)/4))
+
+.PHONY: diwave
 
 ccs:
 	FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
@@ -140,4 +173,4 @@ lstats:
 		$$(python -c "import sys, json; x=json.load(sys.stdin)['$(LAYER)']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
 		$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json)
 
-.PHONY: bstats
+.PHONY: lstats
