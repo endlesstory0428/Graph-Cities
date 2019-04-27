@@ -280,25 +280,27 @@ void findWaves(unsigned int *deg, unsigned int *waves, unsigned int *levels) {
 		till = till > g.NODENUM ? g.NODENUM : till;
 
 		// printArray(deg, g.NODENUM+1);
+		// printArray(vert, g.NODENUM+1);
 		// printArray(bins, md+1);
 		// std::cerr<<"till: "<<till<<"\n";
 		// std::cerr<<"ENULL: "<<ENULL<<"\n";
 		// std::cerr<<"mindeg: "<<mindeg<<"\n";
 		// std::cerr<<"wave: "<<wave<<"\n";
-		if (till == 1) {
-			unsigned int v = vert[1];
-			waves[v] = wave;
-			levels[v] = level;
-			deg[v] = ENULL;
-			break;
-		}
+		// if (till == 1) {
+		//     unsigned int v = vert[1];
+		//     waves[v] = wave;
+		//     levels[v] = level;
+		//     deg[v] = ENULL;
+		//     break;
+		// }
 		for(unsigned int i = 1; i <= till; i++) {
 			/* std::cerr<<"i: "<<i<<"\n"; */
 			unsigned int v = vert[i];
 			// std::cerr<<"i2: "<<i<<", "<<deg[v]<<"\n";
 			// Do nothing if node doesn't exist in the graph
-			if(g.start_indices[v] == 0 && g.end_indices[v] == 0) {
+			if(false && g.start_indices[v] == 0 && g.end_indices[v] == 0) {
 				;
+				std::cerr<<"Test\n";
 			}
 			else {
 				/* std::cerr<<"i3: "<<i<<"\n"; */

@@ -32,6 +32,15 @@ void reset() {
 	currentTimeMilliS = currentTimeStamp();
 }
 
+// Utility function to print a given array
+template <class T>
+void printArray(T *arr, unsigned int n) {
+	for(unsigned int i = 0; i < n; i++) {
+		std::cout<<arr[i]<<" ";
+	}
+	std::cout<<"\n";
+}
+
 long long getTimeElapsed() {
 	long long newTime = currentTimeStamp();
 	long long timeElapsed = newTime - currentTimeMilliS;
@@ -46,12 +55,13 @@ unsigned int *initNodeMap(const std::string &inputFile) {//, unsigned int *label
 	is.seekg (0, is.beg);
 	std::cerr<<length<<"\n";
 	unsigned int label;
-	unsigned int *node2label = new unsigned int[length];
+	unsigned int *node2label = new unsigned int[length+1];
 	for(unsigned int i = 1; i <= length; i++) {
 		is.read((char *)(&label), sizeof(unsigned int));
 		node2label[i] = label;
 		// label2node[label] = i;
 	}
+	// printArray(node2label, length);
 	return node2label;
 }
 
