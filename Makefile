@@ -40,6 +40,7 @@ union:
 .PHONY: union
 
 decomp:
+	mkdir -p $(GRAPH)/$(GRAPH)_layers
 	./buffkcore \
 		"$(GRAPH)/$(GRAPH).bin" \
 		$$(($$(wc -c < $(GRAPH)/$(GRAPH).bin)/8)) \
@@ -50,6 +51,7 @@ decomp:
 .PHONY: decomp
 
 dwave:
+	mkdir -p $(GRAPH)/$(GRAPH)_waves
 	FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
 	./wave \
 		$(GRAPH)/$(GRAPH)_layers \
@@ -123,6 +125,7 @@ cc-layers:
 .PHONY: cc-layers
 
 waves:
+	mkdir -p $(GRAPH)/$(GRAPH)_waves
 	for FILE in $$(ls $(GRAPH)/$(GRAPH)_layers -v | grep .cc-info.json); do \
 		echo $$FILE; \
 		LAYER=$${FILE:6:-13}; \
