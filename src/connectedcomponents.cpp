@@ -99,7 +99,7 @@ void readGraphBin(const std::string &fileName) {
 	is.close();
 }
 
- void writeToFile(const std::string &prefix, std::vector<unsigned int> components) {
+void writeToFile(const std::string &prefix, std::vector<unsigned int> components) {
 	std::ofstream outputFile;
 	outputFile.open(prefix);
 	/* outputFile<<"# vertex,connected_component\n"; */
@@ -164,8 +164,10 @@ int main(int argc, char *argv[]) {
 	unsigned int *efreq = new unsigned int[num];
 	std::fill_n(efreq, num, 0);
 	graph_traits < graph_t >::edge_iterator ei, ei_end;
-	for (tie(ei, ei_end) = edges(g); ei != ei_end; ++ei)
+	for (tie(ei, ei_end) = edges(g); ei != ei_end; ++ei) {
+		assert(components[source(*ei, g)] == components[target(*ei, g)]);
 		efreq[components[source(*ei, g)]]++;
+	}
 
 	std::ofstream outputFile(prefixx+"-info.json");
 	outputFile << "{\n";
@@ -179,7 +181,7 @@ int main(int argc, char *argv[]) {
 		/*	[components,i](graph_t::vertex_descriptor v) { */
 		/*		return components.at(v)==i; */
 		/*	}); */
-		if (freq[i] > 1)
+		if (efreq[i] > 0)
 			writeCCMetaData(outputFile, i, freq[i], efreq[i]/2);
 		else
 			num--;
