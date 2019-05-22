@@ -35,29 +35,29 @@ void readGraph(const std::string &inputFile, unsigned int numedges, bool dounion
 	std::ifstream is;
 	is.open(inputFile);
 	unsigned int src, tgt;
-	unsigned int edge = 0;
+	unsigned int cedge = 0;
 	std::string line;
 	while (std::getline(is, line)) {
 		if (line[0] == '#')
 			continue;
 		std::istringstream iss(line);
 		assert(iss>>src>>tgt);
-		(g.edgeList + edge)->src = src;
-		(g.edgeList + edge)->tgt = tgt;
-		edge++;
+		(g.edgeList + cedge)->src = src;
+		(g.edgeList + cedge)->tgt = tgt;
+		cedge++;
 		verts[src] = 1;
 		verts[tgt] = 1;
 		if (dounion) {
-			(g.edgeList + edge)->src = tgt;
-			(g.edgeList + edge)->tgt = src;
-			edge++;
+			(g.edgeList + cedge)->src = tgt;
+			(g.edgeList + cedge)->tgt = src;
+			cedge++;
 		}
 		if (src > maxlabel)
 			maxlabel = src;
 		if (tgt > maxlabel)
 			maxlabel = tgt;
 	}
-	g.EDGENUM = edge;
+	g.EDGENUM = cedge;
 	is.close();
 }
 

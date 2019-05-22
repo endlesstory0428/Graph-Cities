@@ -81,21 +81,21 @@ void createMemoryMap(char *fileName) {
 
 // In-memory edge list instead of memory mapped file
 void createInMemoryEdgeList(const char *fileName) {
-		g.edgeList = new edge[g.EDGENUM];
-		std::ifstream is;
-		is.open(fileName, std::ios::in | std::ios::binary);
-		unsigned int src, tgt;
-		/* unsigned int updatedEdgeNum = g.EDGENUM; */
-		for(unsigned int i = 0; i < g.EDGENUM; i++) {
-			is.read((char *)(&src), sizeof(unsigned int));
-			is.read((char *)(&tgt), sizeof(unsigned int));
-			assert(src != ENULL && src <= g.NODENUM);
-			assert(tgt != ENULL && tgt <= g.NODENUM);
-			(g.edgeList + i)->src = src;
-			(g.edgeList + i)->tgt = tgt;
+	g.edgeList = new edge[g.EDGENUM];
+	std::ifstream is;
+	is.open(fileName, std::ios::in | std::ios::binary);
+	unsigned int src, tgt;
+	/* unsigned int updatedEdgeNum = g.EDGENUM; */
+	for(unsigned int i = 0; i < g.EDGENUM; i++) {
+		is.read((char *)(&src), sizeof(unsigned int));
+		is.read((char *)(&tgt), sizeof(unsigned int));
+		assert(src != ENULL && src <= g.NODENUM);
+		assert(tgt != ENULL && tgt <= g.NODENUM);
+		(g.edgeList + i)->src = src;
+		(g.edgeList + i)->tgt = tgt;
 
-		}
-		is.close();
+	}
+	is.close();
 }
 
 void readLayer(const std::string &inputFile, unsigned int *label2node, unsigned int *node2label, unsigned int tlayer) {
@@ -194,11 +194,11 @@ void findStartAndEndIndices() {
 	unsigned int old = g.edgeList->src;
 	g.start_indices[old] = 0;
 	for(i = 0; i < g.EDGENUM; i++) {
-			if((g.edgeList + i)->src != old) {
-					g.end_indices[old] = i - 1;
-					old = (g.edgeList + i)->src;
-					g.start_indices[old] = i;
-			}
+		if((g.edgeList + i)->src != old) {
+			g.end_indices[old] = i - 1;
+			old = (g.edgeList + i)->src;
+			g.start_indices[old] = i;
+		}
 	}
 	g.end_indices[old] = i - 1;
 }
@@ -319,20 +319,20 @@ void findWaves(unsigned int *deg, unsigned int *waves, unsigned int *levels) {
 
 					if(deg[u] != ENULL) {
 						//if((edgeList + j)->src != old_src || (edgeList + j)->tgt != old_tgt) {
-							/* if(deg[u] > deg[v]) { */
-							/* 	unsigned int du = deg[u]; */
-							/* 	unsigned int pu = pos[u]; */
-							/* 	unsigned int pw = bins[du]; */
-							/* 	unsigned int w = vert[pw]; */
-							/* 	if(u != w) { */
-							/* 		pos[u] = pw; */
-							/* 		pos[w] = pu; */
-							/* 		vert[pu] = w; */
-							/* 		vert[pw] = u; */
-							/* 	} */
-							/* 	bins[du]++; */
-							/* 	deg[u]--; */
-							/* } */
+						/* if(deg[u] > deg[v]) { */
+						/* 	unsigned int du = deg[u]; */
+						/* 	unsigned int pu = pos[u]; */
+						/* 	unsigned int pw = bins[du]; */
+						/* 	unsigned int w = vert[pw]; */
+						/* 	if(u != w) { */
+						/* 		pos[u] = pw; */
+						/* 		pos[w] = pu; */
+						/* 		vert[pu] = w; */
+						/* 		vert[pw] = u; */
+						/* 	} */
+						/* 	bins[du]++; */
+						/* 	deg[u]--; */
+						/* } */
 						//}
 						deg[u]--;
 
@@ -359,7 +359,7 @@ void findWaves(unsigned int *deg, unsigned int *waves, unsigned int *levels) {
 }
 
 
-void buildWavesAndLabel(unsigned int *waves, unsigned int *ccs, unsigned int *metanodes) {
+void buildWavesAndLabel(std::ofstream &outputFile, unsigned int *waves, unsigned int *levels, unsigned int *ccs, unsigned int *metanodes) {
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + i)->src;
 		unsigned int tgt = (g.edgeList + i)->tgt;
@@ -375,18 +375,52 @@ void buildWavesAndLabel(unsigned int *waves, unsigned int *ccs, unsigned int *me
 	}
 
 	unsigned int mnode = 0;
-	std::vector<unsigned int> components(g.NODENUM);
 	for (auto gr = G.begin(); gr != G.end(); gr++) {
-		components.resize(boost::num_vertices(gr->second));
-		components.clear();
+		unsigned int wave = gr->first;
+		unsigned int NODENUM = boost::num_vertices(gr->second);
+		// unsigned int EDGENUM = boost::num_edges(gr->second);
+
+		std::vector<unsigned int> components(NODENUM);
 		unsigned int num = boost::connected_components(gr->second, &components[0]);
-		for (unsigned int i = 1; i <= boost::num_vertices(gr->second); i++) {
+		unsigned int *compVerts = new unsigned int[num];
+		unsigned int *compEdges = new unsigned int[num];
+		unsigned int *compLevel = new unsigned int[num];
+		std::fill_n(compVerts, num, 0);
+		std::fill_n(compEdges, num, 0);
+		std::fill_n(compLevel, num, 0);
+		for (unsigned int i = 1; i <= NODENUM; i++) {
 			if (waves[i] == gr->first) {
 				ccs[i] = components[i];
 				metanodes[i] = mnode + components[i];
+				compVerts[components[i]]++;
+				if (levels[i] > compLevel[components[i]])
+					compLevel[components[i]]++;
 			}
 		}
 		mnode += num;
+
+		boost::graph_traits < graph_t >::edge_iterator ei, ei_end;
+		for (boost::tie(ei, ei_end) = boost::edges(gr->second); ei != ei_end; ++ei) {
+			assert(components[source(*ei, gr->second)] == components[target(*ei, gr->second)]);
+			compEdges[components[source(*ei, gr->second)]]++;
+		}
+
+
+		outputFile<<'"'<<wave<<'"'<<": {\n";
+		// outputFile<<"\t\"vertices\":"<<NODENUM<<",\n";
+		// outputFile<<"\t\"edges\":"<<EDGENUM/2<<",\n";
+		for (unsigned int i = 0; i<num; i++) {
+			if (compVerts[i] < 1)
+				continue;
+			outputFile<<"\t\""<<i<<"\": {\n";
+			outputFile<<"\t\t\"vertices\":"<<compVerts[i]<<",\n";
+			outputFile<<"\t\t\"edges\":"<<compEdges[i]/2<<",\n";
+			outputFile<<"\t\t\"levels\":"<<compLevel[i]<<"\n\t}";
+			if (i < num - 1)
+				outputFile<<",";
+			outputFile<<"\n";
+		}
+		outputFile<<"},\n";
 	}
 }
 
@@ -482,12 +516,14 @@ int main(int argc, char *argv[]) {
 	findWaves(degree, waves, levels);
 	unsigned int *ccs = new unsigned int[g.NODENUM + 1];
 	unsigned int *metanodes = new unsigned int[g.NODENUM + 1];
-	buildWavesAndLabel(waves, ccs, metanodes);
+	buildWavesAndLabel(outputFile, waves, levels, ccs, metanodes);
 	long long algorithmTime = getTimeElapsed();
-	for (auto gr = G.begin(); gr != G.end(); gr++) {
-		unsigned int num_verts = std::count(waves, waves + g.NODENUM + 1, gr->first);
-		writeWaveMetaData(outputFile, gr->first, num_verts, boost::num_edges(gr->second));
-	}
+
+	// for (auto gr = G.begin(); gr != G.end(); gr++) {
+	//     unsigned int num_verts = std::count(waves, waves + g.NODENUM + 1, gr->first);
+	//     writeWaveMetaData(outputFile, gr->first, num_verts, boost::num_edges(gr->second));
+	// }
+
 	outputFile<<"\"0\":{}\n}";
 	outputFile.close();
 	writeToFile(prefixx, originalIndices, node2label, waves, levels, ccs, metanodes);
