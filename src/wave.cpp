@@ -408,20 +408,16 @@ void buildWavesAndLabel(std::ofstream &outputFile, unsigned int *waves, unsigned
 		unsigned int num_edges = boost::num_edges(gr->second);
 
 		outputFile<<'"'<<wave<<'"'<<": {\n";
-		outputFile<<"\t\"vertices\":"<<num_verts<<",\n";
-		outputFile<<"\t\"edges\":"<<num_edges/2<<",\n";
 		for (unsigned int i = 0; i<num; i++) {
 			if (compVerts[i] < 1)
 				continue;
 			outputFile<<"\t\""<<i<<"\": {\n";
 			outputFile<<"\t\t\"vertices\":"<<compVerts[i]<<",\n";
 			outputFile<<"\t\t\"edges\":"<<compEdges[i]/2<<",\n";
-			outputFile<<"\t\t\"levels\":"<<compLevel[i]<<"\n\t}";
-			if (i < num - 1)
-				outputFile<<",";
-			outputFile<<"\n";
+			outputFile<<"\t\t\"levels\":"<<compLevel[i]<<"\n\t},\n";
 		}
-		outputFile<<"},\n";
+		outputFile<<"\t\"vertices\":"<<num_verts<<",\n";
+		outputFile<<"\t\"edges\":"<<num_edges/2<<"\n},\n";
 	}
 }
 
