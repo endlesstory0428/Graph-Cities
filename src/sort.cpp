@@ -42,6 +42,10 @@ void readGraph(const std::string &inputFile, unsigned int numedges, bool dounion
 			continue;
 		std::istringstream iss(line);
 		assert(iss>>src>>tgt);
+		// if (src == tgt)
+		//     std::cerr<<"SELF EDGE!\n";
+		if (src == tgt)
+			continue;
 		(g.edgeList + cedge)->src = src;
 		(g.edgeList + cedge)->tgt = tgt;
 		cedge++;
@@ -107,7 +111,7 @@ void writeToFile(const std::string &prefix) {
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + i)->src;
 		unsigned int tgt = (g.edgeList + i)->tgt;
-		if (src == tgt || (src == psrc && tgt == ptgt)) {
+		if (src == psrc && tgt == ptgt) {
 			continue;
 		}
 		// outputFile << label2node[src] << label2node[tgt];
