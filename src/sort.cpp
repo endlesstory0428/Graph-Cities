@@ -5,10 +5,32 @@
 #include <cstring>
 #include <algorithm>
 #include <assert.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 #include <unordered_map>
 #include <boost/dynamic_bitset.hpp>
 #define DEBUG (1)
+
+long long currentTimeMilliS = 0;
+long long ioTime = 0;
+
+long long currentTimeStamp() {
+	struct timeval te;
+	gettimeofday(&te, NULL); // get current time
+	long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds
+	return milliseconds;
+}
+
+void reset() {
+	currentTimeMilliS = currentTimeStamp();
+}
+
+long long getTimeElapsed() {
+	long long newTime = currentTimeStamp();
+	long long timeElapsed = newTime - currentTimeMilliS;
+	currentTimeMilliS = newTime;
+	return timeElapsed;
+}
 
 // A struct to represent an edge in the edge list
 struct edge {
@@ -125,6 +147,16 @@ void writeToFile(const std::string &prefix) {
 	outputFile.close();
 }
 
+void writeMetaData(std::string prefix, long long readTime, long long sortTime, long long writeTime) {
+	std::ofstream outputFile;
+	outputFile.open(prefix+"-preprocess.json");
+	outputFile<<"{\n";
+	outputFile<<"\"read-time\":"<<readTime<<",\n";
+	outputFile<<"\"sort-time\":"<<sortTime<<",\n";
+	outputFile<<"\"write-time\":"<<writeTime<<"\n}";
+	outputFile.close();
+}
+
 int main(int argc, char *argv[]) {
 	if (argc < 3) {
 		std::cerr<<argv[0]<<": usage: ./sanitize <path to graph.txt> <# edges> <do union?>\n";
@@ -133,15 +165,22 @@ int main(int argc, char *argv[]) {
 	bool dounion = argc > 3 && !strncmp(argv[3],"true",4);
 	std::cerr << "Union: " << dounion << "\n";
 	std::string prefix = argv[1];
+	reset();
 	readGraph(prefix, atoi(argv[2]), dounion);
 	if(DEBUG)
 		std::cout<<"LOADED GRAPH "<<g.EDGENUM<<", "<<g.NODENUM<<"\n";
+	long long readTime = getTimeElapsed();
+	reset();
 	std::sort(g.edgeList, g.edgeList + g.EDGENUM, compareEdges);
 	if(DEBUG)
 		std::cout<<"SORTED GRAPH\n";
+	long long sortTime = getTimeElapsed();
+	reset();
 	prefix = prefix.substr(0,prefix.length()-4);
 	writeToFile(prefix);
+	long long writeTime = getTimeElapsed();
 	if(DEBUG)
 		std::cout<<"DONE\n";
+	writeMetaData(prefix, readTime, sortTime, writeTime);
 	return 0;
 }

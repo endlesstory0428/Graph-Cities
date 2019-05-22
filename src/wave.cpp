@@ -378,7 +378,6 @@ void buildWavesAndLabel(std::ofstream &outputFile, unsigned int *waves, unsigned
 	for (auto gr = G.begin(); gr != G.end(); gr++) {
 		unsigned int wave = gr->first;
 		unsigned int NODENUM = boost::num_vertices(gr->second);
-		// unsigned int EDGENUM = boost::num_edges(gr->second);
 
 		std::vector<unsigned int> components(NODENUM);
 		unsigned int num = boost::connected_components(gr->second, &components[0]);
@@ -405,10 +404,12 @@ void buildWavesAndLabel(std::ofstream &outputFile, unsigned int *waves, unsigned
 			compEdges[components[source(*ei, gr->second)]]++;
 		}
 
+		unsigned int num_verts = std::count(waves, waves + g.NODENUM + 1, gr->first);
+		unsigned int num_edges = boost::num_edges(gr->second);
 
 		outputFile<<'"'<<wave<<'"'<<": {\n";
-		// outputFile<<"\t\"vertices\":"<<NODENUM<<",\n";
-		// outputFile<<"\t\"edges\":"<<EDGENUM/2<<",\n";
+		outputFile<<"\t\"vertices\":"<<num_verts<<",\n";
+		outputFile<<"\t\"edges\":"<<num_edges/2<<",\n";
 		for (unsigned int i = 0; i<num; i++) {
 			if (compVerts[i] < 1)
 				continue;
@@ -518,11 +519,6 @@ int main(int argc, char *argv[]) {
 	unsigned int *metanodes = new unsigned int[g.NODENUM + 1];
 	buildWavesAndLabel(outputFile, waves, levels, ccs, metanodes);
 	long long algorithmTime = getTimeElapsed();
-
-	// for (auto gr = G.begin(); gr != G.end(); gr++) {
-	//     unsigned int num_verts = std::count(waves, waves + g.NODENUM + 1, gr->first);
-	//     writeWaveMetaData(outputFile, gr->first, num_verts, boost::num_edges(gr->second));
-	// }
 
 	outputFile<<"\"0\":{}\n}";
 	outputFile.close();
