@@ -52,21 +52,12 @@ make GRAPH=dataset_name sanitize
 replacing dataset\_name with the name of your data set as per the directory
 structure.
 
-If the dataset you are analyzing is in an undirected format (meaning each edge
-(u,v) in the edgelist also has an accompanying edge (v,u)) than you can skip to
-the next step. Otherwise run the following command to convert to an undirected
-format:
+If the dataset you are analyzing isn't an undirected format (meaning each edge
+(u,v) in the edgelist also has an accompanying edge (v,u)) than run the
+following command to convert to an undirected format:
 
 ```bash
 make GRAPH=dataset_name union
-```
-
-Finally convert the text edge list to a `.bin` using the mmap.jar file
-available in this repo as well as from here:
-http://poloclub.gatech.edu/mmap/MMap.zip
-
-```bash
-make GRAPH=dataset_name mmap
 ```
 
 ## Decompositions
