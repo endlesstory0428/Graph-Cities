@@ -3,7 +3,7 @@ LAYER := 0
 WAVE := 0
 SP := 2**16
 
-PRODUCT := sort buffkcore wave connectedcomponents biconnectedcomponents cc-layers-mat iwave
+PRODUCT := preproc buffkcore wave cc-layers-mat
 
 CXX := g++
 LINKER := g++
@@ -29,14 +29,14 @@ clean:
 sanitize:
 	NUMEDGES=$$(head $(GRAPH)/$(GRAPH).txt | tr ' ' '\n' | grep -a1 'Edges' | tail -n1); \
 	[ ! -z "$${NUMEDGES##*[!0-9]*}" ] || NUMEDGES=$$(($$(wc -l < $(GRAPH)/$(GRAPH).txt))); \
-	./sort $(GRAPH)/$(GRAPH).txt $$NUMEDGES
+	./preproc $(GRAPH)/$(GRAPH).txt $$NUMEDGES
 
 .PHONY: sanitize
 
 union:
 	NUMEDGES=$$(head $(GRAPH)/$(GRAPH).txt | tr ' ' '\n' | grep -a1 'Edges' | tail -n1); \
 	[ ! -z "$${NUMEDGES##*[!0-9]*}" ] || NUMEDGES=$$(($$(wc -l < $(GRAPH)/$(GRAPH).txt))); \
-	./sort $(GRAPH)/$(GRAPH).txt $$NUMEDGES true
+	./preproc $(GRAPH)/$(GRAPH).txt $$NUMEDGES true
 
 .PHONY: union
 
@@ -45,9 +45,9 @@ decomp:
 	./buffkcore \
 		"$(GRAPH)/$(GRAPH).bin" \
 		$$(($$(wc -c < $(GRAPH)/$(GRAPH).bin)/8)) \
-		$$(($$(wc -c < $(GRAPH)/$(GRAPH).nodemap)/4)) \
-		"$(GRAPH)/$(GRAPH).nodemap" \
-		$$(($$(tail -c4 $(GRAPH)/$(GRAPH).nodemap | ./bindump.sh)))
+		$$(($$(wc -c < $(GRAPH)/$(GRAPH).cc)/8)) \
+		"$(GRAPH)/$(GRAPH).cc" \
+		$$(($$(tail -c8 $(GRAPH)/$(GRAPH).cc | ./bindump.sh -w4 | head -n 1)))
 
 .PHONY: decomp
 
@@ -59,9 +59,9 @@ dwave:
 		"$$FILENAME" \
 		$(LAYER) \
 		$$(python -c "import sys, json; x=json.load(sys.stdin)['$(LAYER)']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
-		$(GRAPH)/$(GRAPH).nodemap \
-		$$(($$(tail -c4 $(GRAPH)/$(GRAPH).nodemap | ./bindump.sh))) \
-		$$(($$(wc -c < $(GRAPH)/$(GRAPH).nodemap)/4))
+		$(GRAPH)/$(GRAPH).cc \
+		$$(($$(tail -c8 $(GRAPH)/$(GRAPH).cc | ./bindump.sh -w4 | head -n 1))) \
+		$$(($$(wc -c < $(GRAPH)/$(GRAPH).cc)/8))
 
 .PHONY: dwave
 
@@ -85,38 +85,6 @@ wavemaps:
 
 .PHONY: wavemaps
 
-diwave:
-	FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
-	./iwave \
-		$(GRAPH)/$(GRAPH)_layers \
-		"$$FILENAME" \
-		$(LAYER) \
-		$$(python -c "import sys, json; x=json.load(sys.stdin)['$(LAYER)']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
-		$(GRAPH)/$(GRAPH).nodemap \
-		$$(($$(tail -c4 $(GRAPH)/$(GRAPH).nodemap | ./bindump.sh))) \
-		$$(($$(wc -c < $(GRAPH)/$(GRAPH).nodemap)/4))
-
-.PHONY: diwave
-
-ccs:
-	FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
-	[ -f "$$FILENAME" ] || FILENAME=$(GRAPH)/$(GRAPH); \
-	./connectedcomponents "$$FILENAME" $(LAYER) $(GRAPH)/$(GRAPH)_layers
-
-.PHONY: ccs
-
-bccs:
-	FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
-	[ -f "$$FILENAME" ] || FILENAME=$(GRAPH)/$(GRAPH); \
-	./biconnectedcomponents \
-		"$$FILENAME" \
-		$(LAYER) \
-		$(GRAPH)/$(GRAPH)_layers \
-		$(WAVE) \
-		$$(($$(tail -c4 $(GRAPH)/$(GRAPH).nodemap | ./bindump.sh)))
-
-.PHONY: bccs
-
 cc-layers:
 	for FILE in $$(ls $(GRAPH)/$(GRAPH)_layers -v | grep .csv); do \
 		echo $$FILE; \
@@ -139,36 +107,16 @@ waves:
 				"$$FILENAME" \
 				$$LAYER \
 				$$(python -c "import sys, json; x=json.load(sys.stdin)['$$LAYER']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
-				$(GRAPH)/$(GRAPH).nodemap \
-				$$(($$(tail -c4 $(GRAPH)/$(GRAPH).nodemap | ./bindump.sh))) \
-				$$(($$(wc -c < $(GRAPH)/$(GRAPH).nodemap)/4)); \
+				$(GRAPH)/$(GRAPH).cc \
+				$$(($$(tail -c8 $(GRAPH)/$(GRAPH).cc | ./bindump.sh -w4 | head -n 1))) \
+				$$(($$(wc -c < $(GRAPH)/$(GRAPH).cc)/8)); \
 		fi; \
 	done
 
 .PHONY: waves
 
-bicntcomps:
-	for FILE in $$(ls $(GRAPH)/$(GRAPH)_waves -v | grep waves-info.json); do \
-		echo $$FILE; \
-		LAYER=$${FILE:6:-16}; \
-		WAVES=$$(python -c "import sys, json; print(' '.join([x[0] for x in filter(lambda y:y[1].get('edges',0)>$(SP),json.load(sys.stdin).items())]))" < $(GRAPH)/$(GRAPH)_waves/"$$FILE"); \
-		for WAVE in $$WAVES; do \
-			echo Layer: $$LAYER; \
-			echo Wave: $$WAVE; \
-			FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$$LAYER']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
-			./biconnectedcomponents \
-				"$$FILENAME" \
-				$$LAYER \
-				$(GRAPH)/$(GRAPH)_layers \
-				$$WAVE \
-				$$(($$(tail -c4 $(GRAPH)/$(GRAPH).nodemap | ./bindump.sh))); \
-		done; \
-	done
-
-.PHONY: bicntcomps
-
 bstats:
-	echo $$(($$(wc -c < $(GRAPH)/$(GRAPH).bin)/8)), $$(($$(wc -c < $(GRAPH)/$(GRAPH).nodemap)/4)), $$(($$(tail -c4 $(GRAPH)/$(GRAPH).nodemap | ./bindump.sh)))
+	echo $$(($$(wc -c < $(GRAPH)/$(GRAPH).bin)/8)), $$(($$(wc -c < $(GRAPH)/$(GRAPH).cc)/8)), $$(($$(tail -c8 $(GRAPH)/$(GRAPH).cc | ./bindump.sh -w4 | head -n 1)))
 
 .PHONY: bstats
 

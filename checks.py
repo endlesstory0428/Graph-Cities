@@ -32,9 +32,6 @@ else:
 
 # Check CC
 
-with open(graph + '.cc-decomposition-info.json') as f:
-    ccdecompinfo = json.load(f)
-
 with open(graph + '.cc-info.json') as f:
     ccinfo = json.load(f)
 

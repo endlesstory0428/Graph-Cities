@@ -31,7 +31,7 @@ com-friendster/
 *.sh
 times
 .ccls*
-sort
+preproc
 buffkcore
 wave
 connectedcomponents
