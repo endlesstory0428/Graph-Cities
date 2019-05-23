@@ -59,18 +59,15 @@ void readGraph(const std::string &inputFile, const std::string &ccfile) {
 		assert(add_edge(src, tgt, G[layer]).second);
 	}
 	is.close();
-	is.open(ccfile);
+	is.open(ccfile, std::ios::in | std::ios::binary);
 	is.seekg (0, is.end);
-	int length = is.tellg();
+	unsigned int length = is.tellg()/sizeof(unsigned int);
 	is.seekg (0, is.beg);
 	unsigned int vert, cc;
 	ccs = std::vector<unsigned int>(length);
-	while (std::getline(is, line)) {
-		if (line[0] == '#')
-			continue;
-		std::replace(line.begin(), line.end(), ',', ' ');
-		std::istringstream iss(line);
-		assert(iss >> vert >> cc);
+	for (unsigned int i = 0; i < length/2; i++) {
+		is.read((char *)(&vert), sizeof(unsigned int));
+		is.read((char *)(&cc), sizeof(unsigned int));
 		if (vert > ccs.size())
 			ccs.resize(vert);
 		ccs[vert] = cc;

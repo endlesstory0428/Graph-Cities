@@ -418,9 +418,10 @@ void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENU
 
 void initNodeMap(char *inputFile, unsigned int *node2label) {//, unsigned int *label2node) {
 	std::ifstream is(inputFile, std::ios::in | std::ios::binary);
-	unsigned int label;
+	unsigned int label, cc;
 	for(unsigned int i = 1; i <= g.NODENUM; i++) {
 		is.read((char *)(&label), sizeof(unsigned int));
+		is.read((char *)(&cc), sizeof(unsigned int));
 		node2label[i] = label;
 		// label2node[label] = i;
 	}
@@ -459,7 +460,7 @@ void writeLayerMetaData(std::ofstream &outputFile, unsigned int layer, unsigned 
 
 int main(int argc, char *argv[]) {
 	if (argc < 6) {
-		std::cerr<<argv[0]<<": usage: ./buffkcore <path to graph.bin> <# edges> <# nodes> <path to graph.nodemap> <largest node label>\n";
+		std::cerr<<argv[0]<<": usage: ./buffkcore <path to graph.bin> <# edges> <# nodes> <path to graph.cc> <largest node label>\n";
 		exit(1);
 	}
 	std::string prefix = argv[1];

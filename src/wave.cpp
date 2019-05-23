@@ -462,9 +462,10 @@ void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENU
 
 void initNodeMap(char *inputFile, unsigned int *node2label) {//, unsigned int *label2node) {
 	std::ifstream is(inputFile, std::ios::in | std::ios::binary);
-	unsigned int label;
+	unsigned int label, cc;
 	for(unsigned int i = 1; i <= g.NODENUM; i++) {
 		is.read((char *)(&label), sizeof(unsigned int));
+		is.read((char *)(&cc), sizeof(unsigned int));
 		node2label[i] = label;
 		// label2node[label] = i;
 	}
@@ -478,7 +479,7 @@ void writeWaveMetaData(std::ofstream &outputFile, unsigned int wave, unsigned in
 
 int main(int argc, char *argv[]) {
 	if (argc < 9) {
-		std::cerr<<argv[0]<<": usage: ./wave <path to layers dir> <layer file> <layer> <# edges> <# nodes> <path to graph.nodemap> <largest node label> <# nodes in nodemap>\n";
+		std::cerr<<argv[0]<<": usage: ./wave <path to layers dir> <layer file> <layer> <# edges> <# nodes> <path to graph.cc> <largest node label> <# nodes in nodemap>\n";
 		exit(1);
 	}
 	std::string prefix = argv[1];
