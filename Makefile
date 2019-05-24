@@ -3,7 +3,7 @@ LAYER := 0
 WAVE := 0
 SP := 2**16
 
-PRODUCT := preproc buffkcore wave cc-layers-mat
+PRODUCT := preproc buffkcore ewave cc-layers-mat
 
 CXX := g++
 LINKER := g++
@@ -54,7 +54,7 @@ decomp:
 dwave:
 	mkdir -p $(GRAPH)/$(GRAPH)_waves
 	FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
-	./wave \
+	./ewave \
 		$(GRAPH)/$(GRAPH)_layers \
 		"$$FILENAME" \
 		$(LAYER) \
@@ -64,26 +64,6 @@ dwave:
 		$$(($$(wc -c < $(GRAPH)/$(GRAPH).cc)/8))
 
 .PHONY: dwave
-
-wavemap:
-	FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).cc-layers); \
-	./wavemap.py \
-		"$$FILENAME" \
-		$(GRAPH)/$(GRAPH)_waves/layer-$(LAYER)-waves.csv
-
-.PHONY: wavemap
-
-wavemaps:
-	for FILE in $$(ls $(GRAPH)/$(GRAPH)_waves -v | grep waves.csv); do \
-		echo $$FILE; \
-		LAYER=$${FILE:6:-10}; \
-		FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$$LAYER']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).cc-layers); \
-		./wavemap.py \
-			"$$FILENAME" \
-			$(GRAPH)/$(GRAPH)_waves/$$FILE; \
-	done
-
-.PHONY: wavemaps
 
 cc-layers:
 	for FILE in $$(ls $(GRAPH)/$(GRAPH)_layers -v | grep .csv); do \
@@ -102,7 +82,7 @@ waves:
 		if (($$NUM > $(SP))); then \
 			echo Layer: $$LAYER; \
 			FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$$LAYER']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
-			./wave \
+			./ewave \
 				$(GRAPH)/$(GRAPH)_layers \
 				"$$FILENAME" \
 				$$LAYER \
