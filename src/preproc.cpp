@@ -225,7 +225,7 @@ int main(int argc, char *argv[]) {
 	std::cerr << "Union: " << dounion << "\n";
 	std::string prefix = argv[1];
 	reset();
-	readGraph(prefix, atoi(argv[2]), dounion);
+	readGraph(prefix, atol(argv[2]), dounion);
 	if(DEBUG)
 		std::cout<<"LOADED GRAPH "<<g.EDGENUM<<", "<<g.NODENUM<<"\n";
 	long long readTime = getTimeElapsed();

@@ -520,11 +520,11 @@ int main(int argc, char *argv[]) {
 	}
 	char tmpFile[] = "tmp.bin";
 	remove(tmpFile);
-	g.EDGENUM = atoi(argv[2]);
-	g.NODENUM = atoi(argv[3]);
+	g.EDGENUM = atol(argv[2]);
+	g.NODENUM = atol(argv[3]);
 	reset();
 	unsigned int *node2label = new unsigned int[g.NODENUM];
-	unsigned int *label2node = new unsigned int[atoi(argv[5])];
+	unsigned int *label2node = new unsigned int[atol(argv[5])];
 	initNodeMap(argv[4], node2label, label2node);
 	doubleAndReverseGraph(argv[1], tmpFile, label2node);
 	if(DEBUG)
@@ -588,7 +588,7 @@ int main(int argc, char *argv[]) {
 	long long algorithmTime = getTimeElapsed();
 	t.join();
 	writeToFile(originalIndices, originalLabels, node2label);
-	writeMetaData(argv[1], atoi(argv[3]), atoi(argv[2]), preprocessingTime, algorithmTime);
+	writeMetaData(argv[1], atol(argv[3]), atol(argv[2]), preprocessingTime, algorithmTime);
 	remove(tmpFile);
 	delete [] core;
 	delete [] degree;

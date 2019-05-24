@@ -415,8 +415,8 @@ void writeMetaData(unsigned int NODENUM, unsigned int EDGENUM, long long preproc
 int main(int argc, char *argv[]) {
     char *tmpFile = "tmp.bin";
     remove(tmpFile);
-    g.EDGENUM = atoi(argv[2]);
-    g.NODENUM = atoi(argv[3]);
+    g.EDGENUM = atol(argv[2]);
+    g.NODENUM = atol(argv[3]);
     reset();
     doubleAndReverseGraph(argv[1], tmpFile);
     if(DEBUG)
@@ -464,7 +464,7 @@ int main(int argc, char *argv[]) {
     }
     long long algorithmTime = getTimeElapsed();
     writeToFile(originalIndices, originalLabels);
-    writeMetaData(atoi(argv[3]), atoi(argv[2]), preprocessingTime, algorithmTime);
+    writeMetaData(atol(argv[3]), atol(argv[2]), preprocessingTime, algorithmTime);
     remove(tmpFile);
     delete [] core;
     delete [] degree;

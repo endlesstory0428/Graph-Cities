@@ -475,13 +475,13 @@ int main(int argc, char *argv[]) {
 	}
 	// std::string tmpFile = prefix.substr(0,prefix.length()-4)+"-reindexed.bin";
 	// remove(tmpFile);
-	g.EDGENUM = atoi(argv[2]);
+	g.EDGENUM = atol(argv[2]);
 	std::cerr << "Edges: " << g.EDGENUM << "\n";
-	g.NODENUM = atoi(argv[3]);
+	g.NODENUM = atol(argv[3]);
 	std::cerr << "Nodes: " << g.NODENUM << "\n";
 	reset();
 	unsigned int *node2label = new unsigned int[g.NODENUM+1];
-	// unsigned int *label2node = new unsigned int[atoi(argv[5])+1];
+	// unsigned int *label2node = new unsigned int[atol(argv[5])+1];
 	initNodeMap(argv[4], node2label); //, label2node);
 	if (DEBUG)
 		std::cout<<"INITIALIZED NODEMAP\n";
