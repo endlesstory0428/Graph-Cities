@@ -454,7 +454,7 @@ void writeLayerToFile(const std::string &prefix, unsigned int topLayer, unsigned
 void writeLayerMetaData(std::ofstream &outputFile, unsigned int layer, unsigned int prev, unsigned int NODENUM, unsigned int EDGENUM) {
 	outputFile<<'"'<<layer<<'"'<<": {\n";
 	outputFile<<"\t\"vertices\":"<<NODENUM<<",\n";
-	outputFile<<"\t\"edges\":"<<EDGENUM/2<<",\n";
+	outputFile<<"\t\"edges\":"<<EDGENUM<<",\n";
 	outputFile<<"\t\"file_suffix\":"<<prev<<"\n},\n";
 }
 
@@ -529,7 +529,7 @@ int main(int argc, char *argv[]) {
 		}
 		numtaEdges = labelEdgesAndUpdateDegree(mc, isFinalNode, degree, edgeLabels);
 		// delete [] isFinalNode;
-		writeLayerMetaData(outputFile, mc, topLayer, numVerts, numtaEdges);
+		writeLayerMetaData(outputFile, mc, topLayer, numVerts, numtaEdges/2);
 		numEdges += numtaEdges;
 		if (numEdges >= BUFFER_NUM_EDGES) {
 			/* writeLayerToFile(writeOut, prefix, topLayer, mc, edgeLabels, node2label); */
@@ -553,7 +553,7 @@ int main(int argc, char *argv[]) {
 	outputFile.close();
 	if (numEdges > 0)
 		writeLayerToFile(prefix, topLayer, mc, edgeLabels, node2label);
-	writeMetaData(prefix, atoi(argv[3]), atoi(argv[2])/2, maxdeg, preprocessingTime, algorithmTime);
+	writeMetaData(prefix, g.NODENUM, g.EDGENUM/2, maxdeg, preprocessingTime, algorithmTime);
 	// remove(tmpFile);
 	delete [] core;
 	delete [] degree;

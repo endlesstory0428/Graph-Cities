@@ -167,8 +167,8 @@ void writeToFile(const std::string &prefix) {
 		unsigned int src = (g.edgeList + i)->src;
 		unsigned int tgt = (g.edgeList + i)->tgt;
 		if (src == psrc && tgt == ptgt) {
-			continue;
 			g.EDGENUM--;
+			continue;
 		}
 		assert(ds->find_set(src) == ds->find_set(tgt));
 		cefreq[ds->find_set(src)]++;
