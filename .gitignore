@@ -33,10 +33,11 @@ times
 .ccls*
 preproc
 buffkcore
-wave
+ewave
 connectedcomponents
-biconnectedcomponents
 cc-layers-mat
+biconnectedcomponents
+wave
 iwave
 # Created by https://www.gitignore.io/api/c++,vim,java,python
 # Edit at https://www.gitignore.io/?templates=c++,vim,java,python
