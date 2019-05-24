@@ -15,19 +15,19 @@ graph = graph_name + '/' + graph_name
 with open(graph + '-layer-info.json') as f:
     layerinfo = json.load(f)
 
-with open(graph + '-decomposition-info.json') as f:
-    decompinfo = json.load(f)
+with open(graph + '-metadata.json') as f:
+    metainfo = json.load(f)
 
 numedges = 0
 for layer, val in layerinfo.items():
     if int(layer) > 0:
         numedges += val['edges']
 
-if decompinfo['edges'] == numedges:
+if metainfo['edges'] == numedges:
     print(graph_name, 'Peel Edges: PASSED')
 else:
     print(
-        ERR, graph_name, 'Peel Edges: FAILED,', numedges, '!=', decompinfo['edges'], CLR
+        ERR, graph_name, 'Peel Edges: FAILED,', numedges, '!=', metainfo['edges'], CLR
     )
 
 # Check CC
@@ -42,18 +42,18 @@ for cc, val in ccinfo.items():
         numverts += val['vertices']
         numedges += val['edges']
 
-if decompinfo['edges'] == numedges:
+if metainfo['edges'] == numedges:
     print(graph_name, 'CC Edges: PASSED')
 else:
     print(
-        ERR, graph_name, 'CC Edges: FAILED,', numedges, '!=', decompinfo['edges'], CLR
+        ERR, graph_name, 'CC Edges: FAILED,', numedges, '!=', metainfo['edges'], CLR
     )
 
-if decompinfo['vertices'] == numverts:
+if metainfo['vertices'] == numverts:
     print(graph_name, 'CC Vertices: PASSED')
 else:
     print(
-        ERR, graph_name, 'CC Vertices: FAILED,', numverts, '!=', decompinfo['vertices'],
+        ERR, graph_name, 'CC Vertices: FAILED,', numverts, '!=', metainfo['vertices'],
         CLR
     )
 
@@ -97,12 +97,12 @@ for layer, val0 in cclayersinfo.items():
                 layerinfo[layer]['vertices'], CLR
             )
 
-if decompinfo['edges'] == totaledges:
+if metainfo['edges'] == totaledges:
     print(graph_name, 'CC-Layers Edges: PASSED')
 else:
     print(
         ERR, graph_name, 'CC-Layers Edges: FAILED,', totaledges, '!=',
-        decompinfo['edges'], CLR
+        metainfo['edges'], CLR
     )
 
 # Waves
@@ -164,12 +164,12 @@ for layer, val0 in wavesinfo.items():
                 '!=', layerinfo[layer]['vertices'], CLR
             )
 
-if decompinfo['edges'] == totaledges:
+if metainfo['edges'] == totaledges:
     print(graph_name, 'CC-Layers Edges: PASSED')
 else:
     print(
         ERR, graph_name, 'CC-Layers Edges: FAILED,', totaledges, '!=',
-        decompinfo['edges'], CLR
+        metainfo['edges'], CLR
     )
 
 # cclayers = pd.read_csv(
