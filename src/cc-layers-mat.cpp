@@ -44,6 +44,7 @@ void readGraph(const std::string &inputFile, const std::string &ccfile) {
 	unsigned int src, tgt, layer;
 	/* graph_t g; */
 	std::string line;
+	unsigned int maxlabel = 0;
 	while (std::getline(is, line)) {
 		if (line[0] == '#')
 			continue;
@@ -57,6 +58,8 @@ void readGraph(const std::string &inputFile, const std::string &ccfile) {
 		/* 	G[layer] = g; */
 		/* } */
 		assert(add_edge(src, tgt, G[layer]).second);
+		if (src > maxlabel) maxlabel = src;
+		if (tgt > maxlabel) maxlabel = tgt;
 	}
 	is.close();
 	is.open(ccfile, std::ios::in | std::ios::binary);
@@ -64,12 +67,12 @@ void readGraph(const std::string &inputFile, const std::string &ccfile) {
 	unsigned int length = is.tellg()/sizeof(unsigned int);
 	is.seekg (0, is.beg);
 	unsigned int vert, cc;
-	ccs = std::vector<unsigned int>(length/2);
+	ccs = std::vector<unsigned int>(maxlabel);
 	for (unsigned int i = 0; i < length/2; i++) {
 		is.read((char *)(&vert), sizeof(unsigned int));
 		is.read((char *)(&cc), sizeof(unsigned int));
-		if (vert > ccs.size())
-			ccs.resize(vert+1);
+		// if (vert > ccs.size())
+		//     ccs.resize(vert+1);
 		ccs[vert] = cc;
 	}
 	is.close();
