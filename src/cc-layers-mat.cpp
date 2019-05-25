@@ -67,12 +67,13 @@ void readGraph(const std::string &inputFile, const std::string &ccfile) {
 	unsigned int length = is.tellg()/sizeof(unsigned int);
 	is.seekg (0, is.beg);
 	unsigned int vert, cc;
-	ccs = std::vector<unsigned int>(maxlabel);
+	ccs = std::vector<unsigned int>(maxlabel+1);
 	for (unsigned int i = 0; i < length/2; i++) {
 		is.read((char *)(&vert), sizeof(unsigned int));
 		is.read((char *)(&cc), sizeof(unsigned int));
 		// if (vert > ccs.size())
 		//     ccs.resize(vert+1);
+		// std::cerr<<"vert: "<<vert<<", max: "<<maxlabel<<", size: "<<ccs.size()<<"\n";
 		ccs[vert] = cc;
 	}
 	is.close();
