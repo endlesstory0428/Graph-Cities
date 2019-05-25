@@ -74,6 +74,8 @@ void readGraph(const std::string &inputFile, const std::string &ccfile) {
 		// if (vert > ccs.size())
 		//     ccs.resize(vert+1);
 		// std::cerr<<"vert: "<<vert<<", max: "<<maxlabel<<", size: "<<ccs.size()<<"\n";
+		if (vert > maxlabel)
+			break;
 		ccs[vert] = cc;
 	}
 	is.close();
