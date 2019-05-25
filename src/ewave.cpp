@@ -21,9 +21,10 @@
 #define BUFFER_NUM_EDGES ((unsigned int) 1<<25)
 #define ENULL ((unsigned int) -1)
 
-typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS, unsigned int> graph_t;
+typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS, unsigned int, unsigned int> graph_t;
 
 std::unordered_map<unsigned int, graph_t> G;
+std::unordered_map<std::pair<unsigned int, unsigned int>, std::pair<unsigned int, unsigned int>, boost::hash<std::pair<unsigned int, unsigned int>>> ews;
 
 // A struct to represent an edge in the edge list
 struct edge {
@@ -316,9 +317,16 @@ void findWaves(unsigned int *deg, unsigned int *waves, unsigned int *levels) {
 					/* std::cerr<<"i5j: "<<j<<"\n"; */
 					unsigned int u = (g.edgeList + j)->tgt;
 					/* std::cerr<<v<<"->"<<u<<": "<<deg[u]<<", "<<waves[u]<<"\n"; */
-					waves[j] = wave;
-					boost::add_edge(u, v, G[wave]);
-					levels[j] = level;
+					auto key = std::pair<unsigned int, unsigned int>(v,u);
+					if (ews.find(key) == ews.end()) {
+						// boost::add_edge(v, u, G[wave]);
+						// boost::add_edge(u, v, G[wave]);
+						ews[key].first = wave;
+						ews[key].second = level;
+						auto yek = std::pair<unsigned int, unsigned int>(u,v);
+						ews[yek].first = wave;
+						ews[yek].second = level;
+					}
 
 					if(deg[u] != ENULL) {
 						//if((edgeList + j)->src != old_src || (edgeList + j)->tgt != old_tgt) {
@@ -363,19 +371,17 @@ void findWaves(unsigned int *deg, unsigned int *waves, unsigned int *levels) {
 
 
 void buildWavesAndLabel(std::ofstream &outputFile, unsigned int *waves, unsigned int *levels, unsigned int *ccs) {//, unsigned int *metanodes) {
-	// for(unsigned int i = 0; i < g.EDGENUM; i++) {
-	//     unsigned int src = (g.edgeList + i)->src;
-	//     unsigned int tgt = (g.edgeList + i)->tgt;
-	//     unsigned int wave = waves[src];
-	//     // std::cerr<<src<<"-->"<<tgt<<" : "<<degree[src]<<"-->"<<degree[tgt]<<"\n";
-	//     if (wave == waves[tgt]) {
-	//         boost::add_edge(src, tgt, G[wave]);
-	//     } else {
-	//         boost::add_edge(src, 0, G[wave]);
-	//         boost::remove_edge(src, 0, G[wave]);
-	//         boost::remove_vertex(0, G[wave]);
-	//     }
-	// }
+	unsigned int pstart;
+	for(unsigned int i = 0; i < g.EDGENUM; i++) {
+		unsigned int src = (g.edgeList + i)->src;
+		unsigned int tgt = (g.edgeList + i)->tgt;
+		auto key = std::pair<unsigned int, unsigned int>(src,tgt);
+		unsigned int wave = ews[key].first;
+		boost::add_edge(src, tgt, G[wave]);
+		waves[i] = wave;
+		levels[i] = ews[key].second;
+		ews[key].first = i;
+	}
 
 	// unsigned int mnode = 0;
 	for (auto gr = G.begin(); gr != G.end(); gr++) {
@@ -390,51 +396,54 @@ void buildWavesAndLabel(std::ofstream &outputFile, unsigned int *waves, unsigned
 		std::fill_n(compVerts, num, 0);
 		std::fill_n(compEdges, num, 0);
 		std::fill_n(compLevel, num, 0);
-		// for (unsigned int i = 0; i < g.NODENUM NODENUM; i++) {
-		//     if (waves[i] == gr->first) {
-		//         ccs[i] = components[i];
-		//         metanodes[i] = mnode + components[i];
-		//         compVerts[components[i]]++;
-		//         if (levels[i] > compLevel[components[i]])
-		//             compLevel[components[i]]++;
+		// for(unsigned int i = 0; i < g.EDGENUM; i++) {
+		//     unsigned int src = (g.edgeList + i)->src;
+		//     unsigned int tgt = (g.edgeList + i)->tgt;
+		//     // auto cedge = boost::edge(src,tgt,gr->second);
+		//     auto key = std::pair<unsigned int, unsigned int>(src,tgt);
+		//     if (ews[key].first == wave) {
+		//         num_edges++;
+		//         waves[i] = wave;
+		//         levels[i] = ews[key].second;
+		//         assert(components[src] == components[tgt]);
+		//         ccs[i] = components[src];
+		//         compEdges[components[src]]++;
+		//         if (src != prevSrc) {
+		//             num_verts++;
+		//             compVerts[components[src]]++;
+		//             if (levels[i] > compLevel[components[src]])
+		//                 compLevel[components[src]] = levels[i];
+		//         }
+		//         prevSrc = src;
 		//     }
 		// }
-		// mnode += num;
-		
+
 		unsigned int num_edges = 0;
 		unsigned int num_verts = 0;
 		unsigned int prevSrc = -1;
-		for(unsigned int i = 0; i < g.EDGENUM; i++) {
-			if (waves[i] == wave) {
-				unsigned int src = (g.edgeList + i)->src;
-				unsigned int tgt = (g.edgeList + i)->tgt;
-				num_edges++;
-				assert(components[src] == components[tgt]);
-				ccs[i] = components[src];
-				compEdges[components[src]]++;
-				if (src != prevSrc) {
-					num_verts++;
-					compVerts[components[src]]++;
-					if (levels[i] > compLevel[components[src]])
-						compLevel[components[src]] = levels[i];
-				}
-				prevSrc = src;
+		boost::graph_traits < graph_t >::edge_iterator ei, ei_end;
+		for (boost::tie(ei, ei_end) = boost::edges(gr->second); ei != ei_end; ++ei) {
+			unsigned int src = boost::source(*ei, gr->second);
+			unsigned int tgt = boost::target(*ei, gr->second);
+			auto key = std::pair<unsigned int, unsigned int>(src,tgt);
+			assert(components[src] == components[tgt]);
+			num_edges++;
+			compEdges[components[src]]++;
+			unsigned int i = ews[key].first;
+			ccs[i] = components[src];
+			if (src != prevSrc) {
+				num_verts++;
+				compVerts[components[src]]++;
+				if (levels[i] > compLevel[components[src]])
+					compLevel[components[src]] = levels[i];
 			}
+			prevSrc = src;
+
 		}
-
-		// boost::graph_traits < graph_t >::edge_iterator ei, ei_end;
-		// for (boost::tie(ei, ei_end) = boost::edges(gr->second); ei != ei_end; ++ei) {
-		//     assert(components[source(*ei, gr->second)] == components[target(*ei, gr->second)]);
-		//     compEdges[components[source(*ei, gr->second)]]++;
-		// }
-
-		// unsigned int num_verts = std::count(waves, waves + g.NODENUM + 1, gr->first);
-		// unsigned int num_edges = boost::num_edges(gr->second);
-		// unsigned int num_verts = boost::num_vertices(gr->second);
 
 		outputFile<<'"'<<wave<<'"'<<": {\n";
 		for (unsigned int i = 0; i<num; i++) {
-			if (compVerts[i] < 1)
+			if (compEdges[i] < 1)
 				continue;
 			outputFile<<"\t\""<<i<<"\": {\n";
 			outputFile<<"\t\t\"vertices\":"<<compVerts[i]<<",\n";
