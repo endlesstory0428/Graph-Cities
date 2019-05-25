@@ -1,3 +1,5 @@
+SHELL := $(shell which bash)
+PYTHON := $(shell which python3)
 GRAPH := simplegraph
 LAYER := 0
 WAVE := 0
@@ -53,12 +55,12 @@ decomp:
 
 dwave:
 	mkdir -p $(GRAPH)/$(GRAPH)_waves
-	FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
+	FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$($(PYTHON) -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
 	./ewave \
 		$(GRAPH)/$(GRAPH)_layers \
 		"$$FILENAME" \
 		$(LAYER) \
-		$$(python -c "import sys, json; x=json.load(sys.stdin)['$(LAYER)']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
+		$$($(PYTHON) -c "import sys, json; x=json.load(sys.stdin)['$(LAYER)']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
 		$(GRAPH)/$(GRAPH).cc \
 		$$(($$(tail -c8 $(GRAPH)/$(GRAPH).cc | ./bindump.sh -w4 | head -n 1))) \
 		$$(($$(wc -c < $(GRAPH)/$(GRAPH).cc)/8))
@@ -78,15 +80,15 @@ waves:
 	for FILE in $$(ls $(GRAPH)/$(GRAPH)_layers -v | grep .cc-info.json); do \
 		echo $$FILE; \
 		LAYER=$${FILE:6:-13}; \
-		NUM=$$(python -c "import sys, json; x=json.load(sys.stdin); print(x[sorted(x,key=lambda k:x[k].get('edges',0))[-1]]['edges'])" < $(GRAPH)/$(GRAPH)_layers/"$$FILE"); \
+		NUM=$$($(PYTHON) -c "import sys, json; x=json.load(sys.stdin); print(x[sorted(x,key=lambda k:x[k].get('edges',0))[-1]]['edges'])" < $(GRAPH)/$(GRAPH)_layers/"$$FILE"); \
 		if (($$NUM > $(SP))); then \
 			echo Layer: $$LAYER; \
-			FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$(python -c "import sys, json; print(json.load(sys.stdin)['$$LAYER']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
+			FILENAME=$$(echo $(GRAPH)/$(GRAPH)_layers/*-$$($(PYTHON) -c "import sys, json; print(json.load(sys.stdin)['$$LAYER']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json).csv); \
 			./ewave \
 				$(GRAPH)/$(GRAPH)_layers \
 				"$$FILENAME" \
 				$$LAYER \
-				$$(python -c "import sys, json; x=json.load(sys.stdin)['$$LAYER']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
+				$$($(PYTHON) -c "import sys, json; x=json.load(sys.stdin)['$$LAYER']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
 				$(GRAPH)/$(GRAPH).cc \
 				$$(($$(tail -c8 $(GRAPH)/$(GRAPH).cc | ./bindump.sh -w4 | head -n 1))) \
 				$$(($$(wc -c < $(GRAPH)/$(GRAPH).cc)/8)); \
@@ -102,7 +104,7 @@ bstats:
 
 lstats:
 	echo \
-		$$(python -c "import sys, json; x=json.load(sys.stdin)['$(LAYER)']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
-		$$(python -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json)
+		$$($(PYTHON) -c "import sys, json; x=json.load(sys.stdin)['$(LAYER)']; print(2*x['edges'],x['vertices'])" < $(GRAPH)/$(GRAPH)-layer-info.json) \
+		$$($(PYTHON) -c "import sys, json; print(json.load(sys.stdin)['$(LAYER)']['file_suffix'])" < $(GRAPH)/$(GRAPH)-layer-info.json)
 
 .PHONY: lstats
