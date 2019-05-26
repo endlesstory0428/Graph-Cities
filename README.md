@@ -65,9 +65,9 @@ format:
 ```bash
 make GRAPH=dataset_name union
 ```
-Both sanitation commands create two metadata files called
-`dataset_name-metadata.json` and `dataset_name.cc-info.json` containing basic
-metadata and connected-component metadata respectively.
+Both sanitation commands create a binary edgelist file as well as two metadata
+files called `dataset_name-metadata.json` and `dataset_name.cc-info.json`
+containing basic metadata and connected-component metadata respectively.
 
 ## Decompositions
 
