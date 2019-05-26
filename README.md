@@ -32,7 +32,7 @@ src/
 Makefile
 ```
 
-## Data Sanitation
+## Data Preprocessing
 
 Input text files should be tab separated where each row contains a `source` and
 `target` (these must be numbers).
@@ -43,6 +43,11 @@ We sanitize the data to remove:
 * duplicate edges (multi-graph)
 * edge weights
 
+During the sanititation step we also use the union find method to find the
+connected components of the entire graph. This is saved as a vertex mapping
+(`vertex, connected-component`) in a binary file of the graphs name with the
+extension cc.
+
 To perform the sanititation run:
 
 ```bash
@@ -52,13 +57,17 @@ make GRAPH=dataset_name sanitize
 replacing dataset\_name with the name of your data set as per the directory
 structure.
 
-If the dataset you are analyzing isn't an undirected format (meaning each edge
-(u,v) in the edgelist also has an accompanying edge (v,u)) than run the
-following command to convert to an undirected format:
+If the dataset you are analyzing isn't in an undirected format (every edge
+(u,v) in an undirected graph edgelist also has an accompanying edge (v,u)) than
+run the following command instead to sanitize and convert to an undirected
+format:
 
 ```bash
 make GRAPH=dataset_name union
 ```
+Both sanitation commands create two metadata files called
+`dataset_name-metadata.json` and `dataset_name.cc-info.json` containing basic
+metadata and connected-component metadata respectively.
 
 ## Decompositions
 
@@ -92,90 +101,36 @@ applied to layers only.  To run the wave decomposition on layer number X run:
 ```bash
 make GRAPH=dataset_name LAYER=X dwave
 ```
-This will output four files into the waves subdirectory:
+This will output three files into the waves subdirectory:
 
 - `layer-X-waves.csv` with the format:
-`vertex_id, level_number, wave_number, wave_connected-component, meta_node_id`
-- `layer-X-metaedges.csv` with format:
-`source_metanode, target_metanode`
+`source, target, wave_number, wave_connected-component, level_number`
 - `layer-X-waves-info.json` containing wave metadata
 - `layer-X-wavedecomp-info.json` containing the decomposition metadata
 
 Additionally if you want to automatically compute the waves of layer-connected components
-that are bigger than 2^14 edges you can run:
+that are larger than m number of edges you can run:
 
 ```bash
-make GRAPH=dataset_name waves
+make GRAPH=dataset_name SP=m waves
 ```
-
-### Connected Components
-
-To find the connected components of the entire dataset run:
-
-```bash
-make GRAPH=dataset_name ccs
-```
-This will output a file called `datase\_name.cc` with a list formated as `vertex,
-connected_component_id`. This will also output a file called
-`dataset_name.cc-decomposition-info.json` containing metadata for this computation as well as a
-file called `dataset_name.cc-info.json` with metadata for each connected component in the graph.
-
-To find the connected components of a layer run:
-
-```bash
-make GRAPH=dataset_name LAYER=X ccs
-```
-
-This will output files of the same format called `layer-X.cc`,
-`layer-X.cc-info.json`, and `layer-X.cc-decmoposition-info.json`
-in the layers subdirectory.
 
 ### Connected Components vs Layers Matrix
 
-This requires that you already ran the connected components command on the 
-original graph. To compute the matrix run:
+This requires that you already ran the peel decomposition on the original
+graph. To compute the matrix run:
 
 ```bash
 make GRAPH=dataset_name cc-layers
 ```
 
 This will output one files for each peel layers bucket file with the the
-extension of cc-layers and one file for each layer with connected component 
-metadata like in the previous section. The first type of file contains a list 
+extension of cc-layers and one file for each layer with connected component
+metadata like in the previous section. The first type of file contains a list
 of the format:
 `vertex_id, connected_component, layer, connected_component_in_layer`
 Also this will output a file called `layer-X-Y.cc-layers-info.json` containing
 metadata for this computation.
-
-### Biconnected Components
-
-To run biconnected components on the entire graph run:
-
-```bash
-make GRAPH=dataset_name bccs
-```
-
-This will output a file called `dataset_name.bcc` with a list formated as
-`source,target,biconnected_component_id`. This will also output a file called
-`dataset_name.bcc-info.json` containing metadata for this computation.
-
-To run biconnected components on a layer run:
-
-```bash
-make GRAPH=dataset_name LAYER=X bccs
-```
-
-This will output files of the same format called `layer-X.bcc` and
-`layer-X.bcc-info.json` in the layers subdirectory.
-
-To run biconnected components on waves run:
-
-```bash
-make GRAPH=dataset_name LAYER=X WAVE=Y bccs
-```
-
-This will output files of the same format called `layer-X-wave-Y.bcc` and
-`layer-X-wave-Y.bcc-info.json` in the waves subdirectory.
 
 ## License
 
