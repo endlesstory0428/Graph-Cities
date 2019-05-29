@@ -20,24 +20,30 @@ cclayers = pd.read_csv(
     header=None,
     names=['vertex', 'CC', 'Layer', 'cc'],
     usecols=['vertex', 'Layer', 'cc']
-).query('Layer==' + str(layer)).sort_values(by='vertex').reset_index(drop=True)
+).query('Layer==@layer').reset_index(drop=True)
 
 waves = pd.read_csv(
     wavecsvfile,
     header=None,
     names=['source', 'target', 'Wave', 'wcc', 'Level'],
     usecols=['source', 'Wave', 'wcc']
-).drop_duplicates().sort_values(by='source').reset_index(drop=True)
+).drop_duplicates().reset_index(drop=True)
 
 with open(waveinfofile) as f:
     ccwaves = json.load(f)
 
-for wave in set(waves['Wave']):
-    for v, _, wcc in waves.query('Wave==' + str(wave)).drop_duplicates(subset='wcc'
-                                                                       ).get_values():
-        ccwaves[str(wave)][str(wcc)]['layer-cc'] = int(
-            cclayers.query('vertex==' + str(v))['cc'].get_values()[0]
-        )
+print('making map')
+for wave, data in ccwaves.items():
+    if int(wave) <= 0: continue
+    for wcc, dic in data.items():
+        # for v, _, wcc in waves.query('Wave==' + str(wave)).drop_duplicates(subset='wcc').get_values():
+        if type(dic) != 'dict':
+            continue
+        v = waves.query("Wave==@wave").query("wcc==@wcc").get_values()[0][0]
+        ccwaves[wave][wcc]['layer-cc'] = int(cclayers.query('vertex==@v')['cc'].get_values()[0])
+print('done making map')
 
+print('writing', waveinfofile)
 with open(waveinfofile, 'w') as outfile:
     json.dump(ccwaves, outfile, indent='\t')
+print('wrote', waveinfofile)
