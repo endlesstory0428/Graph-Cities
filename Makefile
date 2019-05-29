@@ -97,6 +97,17 @@ waves:
 
 .PHONY: waves
 
+wave-layer-cc:
+	mkdir -p $(GRAPH)/$(GRAPH)_waves
+	for FILE in $$(ls $(GRAPH)/$(GRAPH)_waves -v | grep waves-info.json); do \
+		echo $$FILE; \
+		LAYER=$${FILE:6:-16}; \
+		echo Layer: $$LAYER; \
+		./wavelayercc.py $(GRAPH) $$LAYER; \
+	done
+
+.PHONY: wave-layer-cc
+
 bstats:
 	echo $$(($$(wc -c < $(GRAPH)/$(GRAPH).bin)/8)), $$(($$(wc -c < $(GRAPH)/$(GRAPH).cc)/8)), $$(($$(tail -c8 $(GRAPH)/$(GRAPH).cc | ./bindump.sh -w4 | head -n 1)))
 
