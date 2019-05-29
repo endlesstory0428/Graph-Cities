@@ -34,13 +34,14 @@ with open(waveinfofile) as f:
 
 print('making map')
 for wave, data in ccwaves.items():
-    if int(wave) <= 0: continue
+    if int(wave) <= 0:
+        continue
     for wcc, dic in data.items():
         # for v, _, wcc in waves.query('Wave==' + str(wave)).drop_duplicates(subset='wcc').get_values():
-        if type(dic) != 'dict':
+        if type(dic) != dict:
             continue
         v = waves.query("Wave==@wave").query("wcc==@wcc").get_values()[0][0]
-        ccwaves[wave][wcc]['layer-cc'] = int(cclayers.query('vertex==@v')['cc'].get_values()[0])
+        dic['layer-cc'] = int(cclayers.query('vertex==@v')['cc'].get_values()[0])
 print('done making map')
 
 print('writing', waveinfofile)
