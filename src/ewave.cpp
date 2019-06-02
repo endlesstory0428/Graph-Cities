@@ -371,6 +371,7 @@ void findWaves(unsigned int *deg, unsigned int *waves, unsigned int *levels) {
 
 
 void buildWavesAndLabel(std::ofstream &outputFile, unsigned int *waves, unsigned int *levels, unsigned int *ccs) {//, unsigned int *metanodes) {
+	unsigned int maxlevel = 0;
 	for(unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + i)->src;
 		unsigned int tgt = (g.edgeList + i)->tgt;
@@ -379,6 +380,7 @@ void buildWavesAndLabel(std::ofstream &outputFile, unsigned int *waves, unsigned
 		boost::add_edge(src, tgt, G[wave]);
 		waves[i] = wave;
 		levels[i] = ews[key].second;
+		if (levels[i] > maxlevel) maxlevel = levels[i];
 		ews[key].first = i;
 	}
 
@@ -417,10 +419,14 @@ void buildWavesAndLabel(std::ofstream &outputFile, unsigned int *waves, unsigned
 		//     }
 		// }
 
-		unsigned int *level_efreq =  new unsigned int[NODENUM/2];
-		unsigned int *level_vfreq =  new unsigned int[NODENUM/2];
-		std::fill_n(level_efreq, NODENUM/2, 0);
-		std::fill_n(level_vfreq, NODENUM/2, 0);
+		unsigned int **level_efreq =  new unsigned int*[num];
+		unsigned int **level_vfreq =  new unsigned int*[num];
+		for (unsigned int i = 0; i<num; i++) {
+			level_efreq[i] = new unsigned int[maxlevel];
+			level_vfreq[i] = new unsigned int[maxlevel];
+			std::fill_n(level_efreq[i], maxlevel, 0);
+			std::fill_n(level_vfreq[i], maxlevel, 0);
+		}
 		unsigned int num_edges = 0;
 		unsigned int num_verts = 0;
 		unsigned int prevSrc = -1;
@@ -434,11 +440,11 @@ void buildWavesAndLabel(std::ofstream &outputFile, unsigned int *waves, unsigned
 			compEdges[components[src]]++;
 			unsigned int i = ews[key].first;
 			ccs[i] = components[src];
-			level_efreq[levels[i]]++;
+			level_efreq[components[src]][levels[i]]++;
 			if (src != prevSrc) {
 				num_verts++;
 				compVerts[components[src]]++;
-				level_vfreq[levels[i]]++;
+				level_vfreq[components[src]][levels[i]]++;
 				if (levels[i] > compLevel[components[src]])
 					compLevel[components[src]] = levels[i];
 			}
@@ -456,12 +462,13 @@ void buildWavesAndLabel(std::ofstream &outputFile, unsigned int *waves, unsigned
 			//outputFile<<"\t\t\"levels\":"<<compLevel[i]<<"\n\t},\n";
 			outputFile<<"\t\t\"levels\": {\n";
 			for (unsigned int j = 1; j <= compLevel[i]; j++) {
-				if (level_efreq[j] > 0)
 				outputFile<<"\t\t\t\""<<j<<"\": {\n";
-				outputFile<<"\t\t\t\t\"vertices\":"<<level_vfreq[j]<<",\n";
-				outputFile<<"\t\t\t\t\"edges\":"<<level_efreq[j]/2<<"\n\t\t\t},\n";
+				outputFile<<"\t\t\t\t\"vertices\":"<<level_vfreq[i][j]<<",\n";
+				outputFile<<"\t\t\t\t\"edges\":"<<level_efreq[i][j]/2<<"\n\t\t\t}";
+				if (j < compLevel[i]) outputFile<<',';
+				outputFile<<'\n';
 			}
-			outputFile<<"\t\t},\n";
+			outputFile<<"\t\t}\n\t},";
 		}
 		outputFile<<"\t\"vertices\":"<<num_verts<<",\n";
 		outputFile<<"\t\"edges\":"<<num_edges/2<<"\n},\n";
