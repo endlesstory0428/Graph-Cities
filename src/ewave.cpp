@@ -419,14 +419,14 @@ void buildWavesAndLabel(std::ofstream &outputFile, unsigned int *waves, unsigned
 		//     }
 		// }
 
-		unsigned int **level_efreq =  new unsigned int*[num];
-		unsigned int **level_vfreq =  new unsigned int*[num];
-		for (unsigned int i = 0; i<num; i++) {
-			level_efreq[i] = new unsigned int[maxlevel];
-			level_vfreq[i] = new unsigned int[maxlevel];
-			std::fill_n(level_efreq[i], maxlevel, 0);
-			std::fill_n(level_vfreq[i], maxlevel, 0);
-		}
+		std::unordered_map<unsigned int,unsigned int> *level_efreq =  new std::unordered_map<unsigned int,unsigned int>[num];
+		std::unordered_map<unsigned int,unsigned int> *level_vfreq =  new std::unordered_map<unsigned int,unsigned int>[num];
+		// for (unsigned int i = 0; i<num; i++) {
+		//     level_efreq[i] = new unsigned int[maxlevel+1];
+		//     level_vfreq[i] = new unsigned int[maxlevel+1];
+		//     std::fill_n(level_efreq[i], maxlevel+1, 0);
+		//     std::fill_n(level_vfreq[i], maxlevel+1, 0);
+		// }
 		unsigned int num_edges = 0;
 		unsigned int num_verts = 0;
 		unsigned int prevSrc = -1;
@@ -459,7 +459,7 @@ void buildWavesAndLabel(std::ofstream &outputFile, unsigned int *waves, unsigned
 			outputFile<<"\t\""<<i<<"\": {\n";
 			outputFile<<"\t\t\"vertices\":"<<compVerts[i]<<",\n";
 			outputFile<<"\t\t\"edges\":"<<compEdges[i]/2<<",\n";
-			//outputFile<<"\t\t\"levels\":"<<compLevel[i]<<"\n\t},\n";
+			// outputFile<<"\t\t\"levels\":"<<compLevel[i]<<"\n\t},\n";
 			outputFile<<"\t\t\"levels\": {\n";
 			for (unsigned int j = 1; j <= compLevel[i]; j++) {
 				outputFile<<"\t\t\t\""<<j<<"\": {\n";
