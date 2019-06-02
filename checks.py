@@ -159,6 +159,33 @@ for layer, val0 in wavesinfo.items():
                                 CLR
                             )
 
+                        levedges = 0
+                        for level, leval in ccval['levels'].items():
+                            levedges += leval['edges']
+                            if leval['edges'] > leval['vertices'] * (leval['vertices'] -
+                                                                     1) / 2:
+                                print(
+                                    ERR, graph_name,
+                                    'Level: FAILED, denser than clique', CLR
+                                )
+                            if leval['vertices'] > 2 * leval['edges']:
+                                print(
+                                    ERR, graph_name,
+                                    'Level: FAILED, less dense than bundle', CLR
+                                )
+
+                        if levedges == ccval['edges']:
+                            print(
+                                graph_name, 'Wave-CC', wave, '-', cc, 'of Layer', layer,
+                                'Edges: PASSED'
+                            )
+                        else:
+                            print(
+                                ERR, graph_name, 'Wave-CC', wave, '-', cc,
+                                'CCs of Layer', layer, 'Edges: FAILED', levedges, '!=',
+                                ccval['edges'], CLR
+                            )
+
                 if ccverts == val['vertices']:
                     print(
                         graph_name, 'Wave', wave, 'CCs of Layer', layer,
