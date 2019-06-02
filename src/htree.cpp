@@ -1,13 +1,13 @@
-#include <iostream>
-#include <fstream>
-#include <sys/time.h>
 #include <assert.h>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/connected_components.hpp>
+#include <fstream>
+#include <iostream>
+#include <sys/time.h>
 #define DEBUG (1)
 
-#define BUFFER_NUM_EDGES ((unsigned int) 1<<25)
-#define ENULL ((unsigned int) -1)
+#define BUFFER_NUM_EDGES ((unsigned int)1 << 25)
+#define ENULL ((unsigned int)-1)
 
 using namespace boost;
 
@@ -23,13 +23,12 @@ long long currentTimeMilliS = 0;
 long long currentTimeStamp() {
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
-	long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds
+	long long milliseconds =
+		te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
 	return milliseconds;
 }
 
-void reset() {
-	currentTimeMilliS = currentTimeStamp();
-}
+void reset() { currentTimeMilliS = currentTimeStamp(); }
 
 long long getTimeElapsed() {
 	long long newTime = currentTimeStamp();
@@ -75,51 +74,57 @@ void readGraph(const std::string &inputFile, const std::string &ccfile) {
 	is.close();
 }
 
- void writeToFile(std::ofstream &outputFile, unsigned int layer, std::vector<unsigned int> &components) {
+void writeToFile(std::ofstream &outputFile, unsigned int layer,
+				 std::vector<unsigned int> &components) {
 	graph_t g = G[layer];
-	for(unsigned int i = 0; i < num_vertices(g); i++) {
+	for (unsigned int i = 0; i < num_vertices(g); i++) {
 		if (degree(i, g) > 0)
-			outputFile<<i<<","<<ccs[i]<<","<<layer<<","<<components[i]<<"\n";
+			outputFile << i << "," << ccs[i] << "," << layer << "," << components[i]
+					   << "\n";
 	}
 }
 
-void writeMetaData(std::string prefix, long long preprocessingTime, long long algorithmTime) {
+void writeMetaData(std::string prefix, long long preprocessingTime,
+				   long long algorithmTime) {
 	std::ofstream outputFile;
-	outputFile.open(prefix+"-info.json");
-	outputFile<<"{\n";
-	outputFile<<"\"preprocessing-time\":"<<preprocessingTime<<",\n";
-	outputFile<<"\"algorithm-time\":"<<algorithmTime<<"\n}";
+	outputFile.open(prefix + "-info.json");
+	outputFile << "{\n";
+	outputFile << "\"preprocessing-time\":" << preprocessingTime << ",\n";
+	outputFile << "\"algorithm-time\":" << algorithmTime << "\n}";
 	outputFile.close();
 }
 
 void writeCCInfo(std::string prefix, unsigned int num_components) {
 	std::ofstream outputFile;
-	outputFile.open(prefix+"-info.json");
-	outputFile<<"{\n";
-	outputFile<<"\"number_components\":"<<num_components<<"\n}";
+	outputFile.open(prefix + "-info.json");
+	outputFile << "{\n";
+	outputFile << "\"number_components\":" << num_components << "\n}";
 	outputFile.close();
 }
 
 int main(int argc, char *argv[]) {
 	if (argc < 3) {
-		std::cerr<<argv[0]<<": usage: ./cc-layers-mat <path to graph> <path to connected components>\n";
+		std::cerr << argv[0]
+				  << ": usage: ./cc-layers-mat <path to graph> <path to connected "
+					 "components>\n";
 		exit(1);
 	}
 	std::string prefix = argv[1];
-	std::string prefixx = prefix.substr(0,prefix.length()-4)+".cc-layers";
+	std::string prefixx = prefix.substr(0, prefix.length() - 4) + ".cc-layers";
 	std::string prefixcc = argv[2];
-	
+
 	G = std::unordered_map<unsigned int, graph_t>();
 	reset();
 	readGraph(prefix, prefixcc);
-	if(DEBUG)
-		std::cout<<"LOADED GRAPH\n";
+	if (DEBUG)
+		std::cout << "LOADED GRAPH\n";
 	long long preprocessingTime = getTimeElapsed();
 	long long algorithmTime = 0;
-	
+
 	std::ofstream outputFile;
 	outputFile.open(prefixx);
-	/* outputFile<<"# vertex,connected_component,layer,connected_component_in_layer\n"; */
+	/* outputFile<<"# vertex,connected_component,layer,connected_component_in_layer\n";
+	 */
 	/* outputFile<<"# #components: "<<num_components<<"\n"; */
 	std::vector<unsigned int> components(10);
 	for (auto g = G.begin(); g != G.end(); g++) {

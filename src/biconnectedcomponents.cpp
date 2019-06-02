@@ -1,13 +1,13 @@
-#include <iostream>
-#include <fstream>
-#include <sys/time.h>
 #include <assert.h>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/biconnected_components.hpp>
+#include <fstream>
+#include <iostream>
+#include <sys/time.h>
 #define DEBUG (1)
 
-#define BUFFER_NUM_EDGES ((unsigned int) 1<<25)
-#define ENULL ((unsigned int) -1)
+#define BUFFER_NUM_EDGES ((unsigned int)1 << 25)
+#define ENULL ((unsigned int)-1)
 
 using namespace boost;
 
@@ -16,7 +16,9 @@ struct edge_component_t {
 	typedef edge_property_tag kind;
 } edge_component;
 
-typedef adjacency_list<vecS, vecS, undirectedS, no_property, property<edge_component_t, std::size_t >> graph_t;
+typedef adjacency_list<vecS, vecS, undirectedS, no_property,
+					   property<edge_component_t, std::size_t>>
+	graph_t;
 /* typedef graph_traits<graph_t>::vertex_descriptor Vertex; */
 /* typedef graph_traits<graph_t>::edge_descriptor Edge; */
 
@@ -27,13 +29,12 @@ long long currentTimeMilliS = 0;
 long long currentTimeStamp() {
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
-	long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds
+	long long milliseconds =
+		te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
 	return milliseconds;
 }
 
-void reset() {
-	currentTimeMilliS = currentTimeStamp();
-}
+void reset() { currentTimeMilliS = currentTimeStamp(); }
 
 long long getTimeElapsed() {
 	long long newTime = currentTimeStamp();
@@ -43,12 +44,11 @@ long long getTimeElapsed() {
 }
 
 // Utility function to print a given array
-template <class T>
-void printArray(T *arr, unsigned int n) {
-	for(unsigned int i = 0; i < n; i++) {
-		std::cout<<arr[i]<<" ";
+template <class T> void printArray(T *arr, unsigned int n) {
+	for (unsigned int i = 0; i < n; i++) {
+		std::cout << arr[i] << " ";
 	}
-	std::cout<<"\n";
+	std::cout << "\n";
 }
 
 void readGraph(const std::string &inputFile, bool *wavemask) {
@@ -63,7 +63,7 @@ void readGraph(const std::string &inputFile, bool *wavemask) {
 		/* std::cerr<<line; */
 		std::istringstream iss(line);
 		assert(iss >> src >> tgt);
-		if(wavemask[src] && wavemask[tgt]) {
+		if (wavemask[src] && wavemask[tgt]) {
 			assert(add_edge(src, tgt, g).second);
 		}
 	}
@@ -89,41 +89,46 @@ void readWave(const std::string &inputFile, bool *waves, unsigned int woi) {
 	is.close();
 }
 
- void writeToFile(const std::string &prefix, property_map <graph_t, edge_component_t>::type components) {
+void writeToFile(const std::string &prefix,
+				 property_map<graph_t, edge_component_t>::type components) {
 	std::ofstream outputFile;
 	outputFile.open(prefix);
 	/* outputFile<<"# source_vertex,target_vertex,biconnected_component\n"; */
-	graph_traits < graph_t >::edge_iterator ei, ei_end;
+	graph_traits<graph_t>::edge_iterator ei, ei_end;
 	for (tie(ei, ei_end) = edges(g); ei != ei_end; ++ei)
-		outputFile << source(*ei, g) << "," << target(*ei, g) << "," << components[*ei] << "\n";
+		outputFile << source(*ei, g) << "," << target(*ei, g) << "," << components[*ei]
+				   << "\n";
 	outputFile.close();
 }
 
-void writeMetaData(std::string prefix, unsigned int num_components, long long preprocessingTime, long long algorithmTime) {
+void writeMetaData(std::string prefix, unsigned int num_components,
+				   long long preprocessingTime, long long algorithmTime) {
 	std::ofstream outputFile;
-	outputFile.open(prefix+"-info.json");
-	outputFile<<"{\n";
-	outputFile<<"\"number-biconnected_components\":"<<num_components<<",\n";
-	outputFile<<"\"preprocessing-time\":"<<preprocessingTime<<",\n";
-	outputFile<<"\"algorithm-time\":"<<algorithmTime<<"\n}";
+	outputFile.open(prefix + "-info.json");
+	outputFile << "{\n";
+	outputFile << "\"number-biconnected_components\":" << num_components << ",\n";
+	outputFile << "\"preprocessing-time\":" << preprocessingTime << ",\n";
+	outputFile << "\"algorithm-time\":" << algorithmTime << "\n}";
 	outputFile.close();
 }
 
 int main(int argc, char *argv[]) {
 	if (argc < 6) {
-		std::cerr<<argv[0]<<": usage: ./biconnectedcomponents <path to graph> <layer> <path to layers dir> <wave> <max vertex label>\n";
+		std::cerr << argv[0]
+				  << ": usage: ./biconnectedcomponents <path to graph> <layer> <path "
+					 "to layers dir> <wave> <max vertex label>\n";
 		exit(1);
 	}
 	std::string prefix = argv[1];
 	int layer = atol(argv[2]);
 	std::string prefixx;
 	if (layer <= 0) {
-		prefixx = prefix+".bcc";
-		std::cerr<<"Choose a layer or wave.\n";
+		prefixx = prefix + ".bcc";
+		std::cerr << "Choose a layer or wave.\n";
 		exit(1);
 	} else {
 		prefixx = argv[3];
-		prefixx += "/layer-"+std::to_string(layer)+".bcc";
+		prefixx += "/layer-" + std::to_string(layer) + ".bcc";
 	}
 
 	int wave = atol(argv[4]);
@@ -131,8 +136,9 @@ int main(int argc, char *argv[]) {
 	bool *wavemask = new bool[atol(argv[5])];
 	if (wave > 0) {
 		prefixx = argv[3];
-		prefixx = prefixx.substr(0, prefixx.length()-6) + "waves/layer-" + std::to_string(layer);
-		std::string inFile = prefixx+"-waves.csv";
+		prefixx = prefixx.substr(0, prefixx.length() - 6) + "waves/layer-" +
+				  std::to_string(layer);
+		std::string inFile = prefixx + "-waves.csv";
 		std::fill_n(wavemask, atol(argv[5]), false);
 		/* std::cerr<<inFile<<"\n"; */
 		readWave(inFile, wavemask, wave);
@@ -144,12 +150,12 @@ int main(int argc, char *argv[]) {
 
 	reset();
 	readGraph(prefix, wavemask);
-	if(DEBUG)
-		std::cout<<"LOADED GRAPH "<<num_vertices(g)<<", "<<num_edges(g)<<"\n";
+	if (DEBUG)
+		std::cout << "LOADED GRAPH " << num_vertices(g) << ", " << num_edges(g) << "\n";
 	long long preprocessingTime = getTimeElapsed();
 	reset();
 
-	property_map <graph_t, edge_component_t>::type components = get(edge_component, g);
+	property_map<graph_t, edge_component_t>::type components = get(edge_component, g);
 	std::size_t num = biconnected_components(g, components);
 
 	long long algorithmTime = getTimeElapsed();
