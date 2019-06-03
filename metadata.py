@@ -60,7 +60,7 @@ def makeDataFrame(GRAPH, unit, layer_num=-1, wave_num=-1, wavecc_num=-1):
         if unit == 'levels':
             items = []
             maxlevel = len(max(stuff, key=lambda x: len(x[1]['levels']))[1]['levels'])
-            print(stuff)
+            # print(stuff)
             for x in range(1, maxlevel + 1):
                 items.append(
                     (
@@ -93,7 +93,7 @@ def makeDataFrame(GRAPH, unit, layer_num=-1, wave_num=-1, wavecc_num=-1):
     for u, dic in items:
         if len(dic) == 0: continue
         e, v = dic['edges'], dic['vertices']
-        df.loc[ind] = [u, e, v]
+        df.loc[ind] = [int(u), int(e), int(v)]
         ind += 1
 
     return df
