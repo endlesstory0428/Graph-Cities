@@ -26,7 +26,11 @@ plot(
         # log_x=True,
         log_y=True,
         # line_group=,
-        # line_shape="spline"
-        # trendline='lowess'
+        # line_shape="spline",
+        # trendline='lowess',
+        title=f'{sys.argv[1]} {sys.argv[2]}; ' +
+        (len(sys.argv) > 3) * f'layer-{sys.argv[3-len(sys.argv)]} ' +
+        (len(sys.argv) > 4) * f'wave-{sys.argv[4-len(sys.argv)]} ' +
+        (len(sys.argv) > 5) * f'wave_cc-{sys.argv[5-len(sys.argv)]}'
     )
 )
