@@ -167,6 +167,8 @@ void writeToFile(const std::string &prefix) {
 	outputFile.open(prefix + ".bin", std::ios::out | std::ios::binary);
 	unsigned int *cefreq = new unsigned int[maxlabel + 1];
 	std::fill_n(cefreq, maxlabel + 1, 0);
+	unsigned int *degree = new unsigned int[g.NODENUM + 1];
+	std::fill_n(degree, g.NODENUM + 1, 0);
 	unsigned int psrc = -1;
 	unsigned int ptgt = -1;
 	unsigned int EDGENUM = g.EDGENUM;
@@ -184,8 +186,17 @@ void writeToFile(const std::string &prefix) {
 		outputFile.write((char *)(&label2node[src]), sizeof(unsigned int));
 		// out = ntohl(label2node[tgt]);
 		outputFile.write((char *)(&label2node[tgt]), sizeof(unsigned int));
+		degree[label2node[src]]++;
+		degree[label2node[tgt]]++;
 		psrc = src;
 		ptgt = tgt;
+	}
+	outputFile.close();
+	outputFile.open(prefix + ".deg");
+	for (boost::dynamic_bitset<>::size_type i = 0; i <= maxlabel; i++) {
+		if (verts[i]) {
+			outputFile<<i<<","<<degree[label2node[i]]/2<<"\n";
+		}
 	}
 	outputFile.close();
 	outputFile.open(prefix + ".cc-info.json");
