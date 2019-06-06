@@ -108,14 +108,18 @@ wave-layer-cc:
 .PHONY: wave-layer-cc
 
 metawccs:
-	for FILE in $$(ls $(GRAPH)/$(GRAPH)_waves -v | grep waves-info.json); do \
+	for FILE in $$(ls $(GRAPH)/$(GRAPH)_waves -v | grep waves.csv); do \
 		echo $$FILE; \
-		LAYER=$${FILE:6:-16}; \
+		LAYER=$${FILE:6:-10}; \
 		echo Layer: $$LAYER; \
 		./consubwave.py $(GRAPH) $$LAYER; \
 	done
 
 .PHONY: metawccs
+
+# if (($$(stat -c '%s' $(GRAPH)/$(GRAPH)_waves/$$FILE)/1024/1024/1024 < 6)); then \
+#     ./consubwave.py $(GRAPH) $$LAYER; \
+# fi; \
 
 bstats:
 	echo $$(($$(wc -c < $(GRAPH)/$(GRAPH).bin)/8)), $$(($$(wc -c < $(GRAPH)/$(GRAPH).cc)/8)), $$(($$(tail -c8 $(GRAPH)/$(GRAPH).cc | ./bindump.sh -w4 | head -n 1)))
