@@ -107,7 +107,7 @@ wave-layer-cc:
 
 .PHONY: wave-layer-cc
 
-subwaveccs:
+metawccs:
 	for FILE in $$(ls $(GRAPH)/$(GRAPH)_waves -v | grep waves-info.json); do \
 		echo $$FILE; \
 		LAYER=$${FILE:6:-16}; \
@@ -115,7 +115,7 @@ subwaveccs:
 		./consubwave.py $(GRAPH) $$LAYER; \
 	done
 
-.PHONY: subwaveccs
+.PHONY: metawccs
 
 bstats:
 	echo $$(($$(wc -c < $(GRAPH)/$(GRAPH).bin)/8)), $$(($$(wc -c < $(GRAPH)/$(GRAPH).cc)/8)), $$(($$(tail -c8 $(GRAPH)/$(GRAPH).cc | ./bindump.sh -w4 | head -n 1)))
