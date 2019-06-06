@@ -20,27 +20,24 @@ cclayers = pd.read_csv(
     header=None,
     names=['vertex', 'CC', 'Layer', 'cc'],
     usecols=['vertex', 'Layer', 'cc']
-).query('Layer==@layer').sort_values(by='vertex').reset_index(drop=True)
-
-layercc = list(range(cclayers.get_values()[-1][0] + 1))
-for v, _, cc in cclayers.get_values():
-    layercc[v] = int(cc)
+).query('Layer==@layer').transpose()
+# cclayers.sort_values(by='vertex', inplace=True)
+cclayers.columns = cclayers.loc['vertex'].get_values()
 
 waves = pd.read_csv(
     wavecsvfile,
     header=None,
     names=['source', 'target', 'Wave', 'wcc', 'Level'],
     usecols=['source', 'Wave', 'wcc']
-).drop_duplicates().reset_index(drop=True)
+)
+waves.drop_duplicates(subset=['Wave', 'wcc'], inplace=True)
 
 with open(waveinfofile) as f:
     ccwaves = json.load(f)
 
 print('making map')
-for wave, data in ccwaves.items():
-    for v, _, wcc in waves.query('Wave==@wave').drop_duplicates(subset='wcc'
-                                                                ).get_values():
-        data[str(wcc)]['layer-cc'] = layercc[v]
+for s, w, c in waves.get_values():
+    ccwaves[str(w)][str(c)]['layer-cc'] = int(cclayers[s].cc)
 print('done making map')
 
 print('writing', waveinfofile)
