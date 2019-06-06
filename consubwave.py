@@ -1,39 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import sys
 import pandas as pd
-from pprint import pprint
-
-
-class DisjointSet(object):
-    def __init__(self):
-        self.leader = {}  # maps a member to the group's leader
-        self.group = {}  # maps a group leader to the group (which is a set)
-
-    def add(self, a, b):
-        leadera = self.leader.get(a)
-        leaderb = self.leader.get(b)
-        if leadera is not None:
-            if leaderb is not None:
-                if leadera == leaderb: return  # nothing to do
-                groupa = self.group[leadera]
-                groupb = self.group[leaderb]
-                if len(groupa) < len(groupb):
-                    a, leadera, groupa, b, leaderb, groupb = b, leaderb, groupb, a, leadera, groupa  # noqa
-                groupa |= groupb
-                del self.group[leaderb]
-                for k in groupb:
-                    self.leader[k] = leadera
-            else:
-                self.group[leadera].add(b)
-                self.leader[b] = leadera
-        else:
-            if leaderb is not None:
-                self.group[leaderb].add(a)
-                self.leader[a] = leaderb
-            else:
-                self.leader[a] = self.leader[b] = a
-                self.group[a] = set([a, b])
-
 
 graph = sys.argv[1]
 graph += '/' + graph
@@ -51,24 +18,32 @@ waves = pd.read_csv(
 ).drop_duplicates().reset_index(drop=True)
 print('read')
 
-ds = DisjointSet()
-
-
-def w_union(df):
-    cwwccs = df.get_values()
-    for i in range(1, len(cwwccs)):
-        ds.add(tuple(cwwccs[0][1:]), tuple(cwwccs[i][1:]))
-    return len(cwwccs)
-
-
-print('union-find')
-clones = waves.groupby(['source']).apply(w_union).reset_index(name='num')
+print('counting')
+waves.sort_values(by='Wave', inplace=True)
+waves.sort_values(by='source', kind='mergesort', inplace=True)
+# clones = waves.groupby(['source']).size().reset_index(name='num').query('num>1')
+mg = {}
+prevsrc = -1
+srcwwcc = None
+# chkcnt = 1
+for s, w, c in waves.get_values():
+    if s == prevsrc:
+        mg[(*srcwwcc, w, c)] = mg.get((*srcwwcc, w, c), 0) + 1
+        # chkcnt += 1
+        assert (srcwwcc[0] < w)
+    else:
+        # chk = clones.query('source==@prevsrc')['num'].get_values()
+        # if chk:
+        #     if chkcnt != chk[0]:
+        #         print(chkcnt, chk)
+        #         assert (False)
+        srcwwcc = (w, c)
+        prevsrc = s
+        # chkcnt = 1
 print('done')
 
 print('writing')
-with open(graph + '-subwave-map.dict', 'w') as f:
-    pprint(ds.leader, stream=f)
-
-with open(graph + '-subwave-groups.dict', 'w') as f:
-    pprint(ds.group, stream=f)
+with open(graph + '-metaedges.csv', 'w') as f:
+    for x in mg.items():
+        print(*x[0], x[1], sep=',', file=f)
 print('wrote')
