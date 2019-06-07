@@ -27,7 +27,6 @@ com-friendster/
 *.xcf
 *.cpp
 *.json
-*.py
 *.sh
 times
 .ccls*
@@ -41,6 +40,7 @@ wave
 iwave
 notes/
 plots/
+test*
 # Created by https://www.gitignore.io/api/c++,vim,java,python
 # Edit at https://www.gitignore.io/?templates=c++,vim,java,python
 
