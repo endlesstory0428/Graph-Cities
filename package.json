@@ -1,0 +1,15 @@
+{
+  "name": "g-atlas",
+  "description": "graph visualization",
+  "version": "0.0.1",
+  "private": true,
+  "main": "app.js",
+  "dependencies": {
+    "bsearch": "^0.1.1",
+    "express": "^4.17.1",
+    "html": "^1.0.0",
+    "node-fs": "^0.1.7",
+    "node-fs-extra": "^0.8.2",
+    "socket.io": "*"
+  }
+}
