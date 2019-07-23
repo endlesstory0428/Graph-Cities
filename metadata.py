@@ -1,10 +1,59 @@
 #!/usr/bin/env python3
 import json
 import glob
+import math
 import pandas as pd
 
 ERR = '\033[91m'
 CLR = '\033[0m'
+
+
+def getBuckets(strjson, btype, IP=2**16):
+    def lind(n):
+        return 'log' + str(n) + btype + 'b'
+
+    def pind(n):
+        return btype + 'b' + str(n)
+
+    def numverts(x):
+        return int(strjson[x].get('vertices', 0))
+
+    ordered = sorted(strjson.keys(), key=numverts)
+    size = sum([numverts(x) for x in strjson])
+    logsize = math.ceil(math.log2(size))
+    # print(size)
+    b = 1
+    p = 1
+    e = 0
+    buckets = {}
+    for x in ordered:
+        if int(x) <= 0:
+            continue
+
+        e += strjson[x]['edges']
+
+        while numverts(x) > logsize:
+            logsize *= logsize
+            b += 1
+            p = 1
+
+        if lind(b) not in buckets:
+            buckets[lind(b)] = {}
+
+        if e > IP:
+            # buckets[b]['edges'] = e
+            p += 1
+            e = 0
+
+        if pind(p) not in buckets[lind(b)]:
+            buckets[lind(b)][pind(p)] = {}
+
+        buckets[lind(b)][pind(p)][btype + str(x)] = {
+            'v': strjson[x]['vertices'],
+            'e': strjson[x]['edges']
+        }
+        # print(logsize)
+    return buckets
 
 
 def loadFiles(graph_name):
@@ -75,8 +124,7 @@ def makeDataFrame(GRAPH, unit, layer_num=-1, wave_num=-1, wavecc_num=-1):
                             'vertices':
                             sum(
                                 [
-                                    lcc[1]['levels'].get(str(x),
-                                                         {'vertices': 0})['vertices']
+                                    lcc[1]['levels'].get(str(x), {'vertices': 0})['vertices']
                                     for lcc in stuff
                                 ]
                             )
@@ -86,8 +134,8 @@ def makeDataFrame(GRAPH, unit, layer_num=-1, wave_num=-1, wavecc_num=-1):
         else:
             items = stuff
     elif layer_num > 0 and wave_num > 0 and wavecc_num > 0:
-        items = GRAPH['layers'][str(layer_num)]['waves'][str(wave_num)][
-            str(wavecc_num)]['levels'].items()
+        items = GRAPH['layers'][str(layer_num)]['waves'][str(wave_num)][str(wavecc_num)
+                                                                        ]['levels'].items()
 
     ind = 0
     for u, dic in items:
