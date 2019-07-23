@@ -19,7 +19,8 @@
 long long currentTimeMilliS = 0;
 long long ioTime = 0;
 
-long long currentTimeStamp() {
+long long currentTimeStamp()
+{
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
 	long long milliseconds =
@@ -27,9 +28,13 @@ long long currentTimeStamp() {
 	return milliseconds;
 }
 
-void reset() { currentTimeMilliS = currentTimeStamp(); }
+void reset()
+{
+	currentTimeMilliS = currentTimeStamp();
+}
 
-long long getTimeElapsed() {
+long long getTimeElapsed()
+{
 	long long newTime = currentTimeStamp();
 	long long timeElapsed = newTime - currentTimeMilliS;
 	currentTimeMilliS = newTime;
@@ -58,7 +63,8 @@ std::vector<unsigned int> rank;
 std::vector<unsigned int> parent;
 boost::disjoint_sets<unsigned int *, unsigned int *> *ds;
 
-void readGraph(const std::string &inputFile, unsigned int numedges, bool dounion) {
+void readGraph(const std::string &inputFile, unsigned int numedges, bool dounion)
+{
 	rank = std::vector<unsigned int>(numedges * 2);
 	parent = std::vector<unsigned int>(numedges * 2);
 	ds = new boost::disjoint_sets<unsigned int *, unsigned int *>(&rank[0], &parent[0]);
@@ -112,7 +118,8 @@ void readGraph(const std::string &inputFile, unsigned int numedges, bool dounion
 	is.close();
 }
 
-bool compareEdges(const edge &a, const edge &b) {
+bool compareEdges(const edge &a, const edge &b)
+{
 	if (a.src < b.src)
 		return true;
 	if (a.src == b.src) {
@@ -123,19 +130,19 @@ bool compareEdges(const edge &a, const edge &b) {
 }
 
 // Compares indices according to their corresponding edges
-int compareByEdges(const void *a, const void *b) {
+int compareByEdges(const void *a, const void *b)
+{
 	if ((g.edgeList + *(unsigned int *)a)->src < (g.edgeList + *(unsigned int *)b)->src)
 		return -1;
-	if ((g.edgeList + *(unsigned int *)a)->src ==
-		(g.edgeList + *(unsigned int *)b)->src) {
+	if ((g.edgeList + *(unsigned int *)a)->src == (g.edgeList + *(unsigned int *)b)->src) {
 		if ((g.edgeList + *(unsigned int *)a)->tgt <
-			(g.edgeList + *(unsigned int *)b)->tgt)
+		    (g.edgeList + *(unsigned int *)b)->tgt)
 			return -1;
 		if ((g.edgeList + *(unsigned int *)a)->tgt ==
-			(g.edgeList + *(unsigned int *)b)->tgt)
+		    (g.edgeList + *(unsigned int *)b)->tgt)
 			return 0;
 		if ((g.edgeList + *(unsigned int *)a)->tgt >
-			(g.edgeList + *(unsigned int *)b)->tgt)
+		    (g.edgeList + *(unsigned int *)b)->tgt)
 			return 1;
 	}
 	if ((g.edgeList + *(unsigned int *)a)->src > (g.edgeList + *(unsigned int *)b)->src)
@@ -143,7 +150,8 @@ int compareByEdges(const void *a, const void *b) {
 	return 0;
 }
 
-void writeToFile(const std::string &prefix) {
+void writeToFile(const std::string &prefix)
+{
 	std::ofstream outputFile;
 	outputFile.open(prefix + ".cc", std::ios::out | std::ios::binary);
 	unsigned int *label2node = new unsigned int[maxlabel + 1];
@@ -195,7 +203,7 @@ void writeToFile(const std::string &prefix) {
 	outputFile.open(prefix + ".deg");
 	for (boost::dynamic_bitset<>::size_type i = 0; i <= maxlabel; i++) {
 		if (verts[i]) {
-			outputFile<<i<<","<<degree[label2node[i]]/2<<"\n";
+			outputFile << i << "," << degree[label2node[i]] / 2 << "\n";
 		}
 	}
 	outputFile.close();
@@ -221,7 +229,8 @@ void writeToFile(const std::string &prefix) {
 }
 
 void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENUM,
-				   long long readTime, long long sortTime, long long writeTime) {
+		   long long readTime, long long sortTime, long long writeTime)
+{
 	std::ofstream outputFile;
 	outputFile.open(prefix + "-metadata.json");
 	outputFile << "{\n";
@@ -234,10 +243,11 @@ void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENU
 	outputFile.close();
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 	if (argc < 3) {
 		std::cerr << argv[0]
-				  << ": usage: ./sanitize <path to graph.txt> <# edges> <do union?>\n";
+			  << ": usage: ./sanitize <path to graph.txt> <# edges> <do union?>\n";
 		exit(1);
 	}
 	bool dounion = argc > 3 && !strncmp(argv[3], "true", 4);

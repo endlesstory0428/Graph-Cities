@@ -29,7 +29,8 @@ struct graph {
 
 long long currentTimeMilliS = 0;
 
-long long currentTimeStamp() {
+long long currentTimeStamp()
+{
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
 	long long milliseconds =
@@ -37,9 +38,13 @@ long long currentTimeStamp() {
 	return milliseconds;
 }
 
-void reset() { currentTimeMilliS = currentTimeStamp(); }
+void reset()
+{
+	currentTimeMilliS = currentTimeStamp();
+}
 
-long long getTimeElapsed() {
+long long getTimeElapsed()
+{
 	long long newTime = currentTimeStamp();
 	long long timeElapsed = newTime - currentTimeMilliS;
 	currentTimeMilliS = newTime;
@@ -47,14 +52,16 @@ long long getTimeElapsed() {
 }
 
 // Utility function to print the entire memory mapped graph
-void printGraph() {
+void printGraph()
+{
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		std::cout << (g.edgeList + i)->src << " " << (g.edgeList + i)->tgt << "\n";
 	}
 }
 
 // Utility function to print a given array
-template <class T> void printArray(T *arr, unsigned int n) {
+template <class T> void printArray(T *arr, unsigned int n)
+{
 	for (unsigned int i = 0; i < n; i++) {
 		std::cout << arr[i] << " ";
 	}
@@ -62,18 +69,20 @@ template <class T> void printArray(T *arr, unsigned int n) {
 }
 
 // Memory maps input file
-void createMemoryMap(char *fileName) {
+void createMemoryMap(char *fileName)
+{
 	unsigned int binFile = open(fileName, O_RDWR);
 	long fileSizeInByte;
 	struct stat sizeResults;
 	assert(stat(fileName, &sizeResults) == 0);
 	fileSizeInByte = sizeResults.st_size;
 	g.edgeList = (edge *)mmap(NULL, fileSizeInByte, PROT_READ | PROT_WRITE, MAP_SHARED,
-							  binFile, 0);
+				  binFile, 0);
 	close(binFile);
 }
 
-bool compareEdges(const edge &a, const edge &b) {
+bool compareEdges(const edge &a, const edge &b)
+{
 	if (a.src < b.src)
 		return true;
 	if (a.src == b.src) {
@@ -84,19 +93,19 @@ bool compareEdges(const edge &a, const edge &b) {
 }
 
 // Compares indices according to their corresponding edges
-int compareByEdges(const void *a, const void *b) {
+int compareByEdges(const void *a, const void *b)
+{
 	if ((g.edgeList + *(unsigned int *)a)->src < (g.edgeList + *(unsigned int *)b)->src)
 		return -1;
-	if ((g.edgeList + *(unsigned int *)a)->src ==
-		(g.edgeList + *(unsigned int *)b)->src) {
+	if ((g.edgeList + *(unsigned int *)a)->src == (g.edgeList + *(unsigned int *)b)->src) {
 		if ((g.edgeList + *(unsigned int *)a)->tgt <
-			(g.edgeList + *(unsigned int *)b)->tgt)
+		    (g.edgeList + *(unsigned int *)b)->tgt)
 			return -1;
 		if ((g.edgeList + *(unsigned int *)a)->tgt ==
-			(g.edgeList + *(unsigned int *)b)->tgt)
+		    (g.edgeList + *(unsigned int *)b)->tgt)
 			return 0;
 		if ((g.edgeList + *(unsigned int *)a)->tgt >
-			(g.edgeList + *(unsigned int *)b)->tgt)
+		    (g.edgeList + *(unsigned int *)b)->tgt)
 			return 1;
 	}
 	if ((g.edgeList + *(unsigned int *)a)->src > (g.edgeList + *(unsigned int *)b)->src)
@@ -104,7 +113,8 @@ int compareByEdges(const void *a, const void *b) {
 }
 
 // Formats the graph by sorting it and tracing original indices in the graph
-void formatGraph(unsigned int *originalIndices) {
+void formatGraph(unsigned int *originalIndices)
+{
 	unsigned int *indices = new unsigned int[g.EDGENUM];
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		indices[i] = i;
@@ -117,7 +127,8 @@ void formatGraph(unsigned int *originalIndices) {
 	delete[] indices;
 }
 
-void doubleAndReverseGraph(char *inputFile, char *outputFile) {
+void doubleAndReverseGraph(char *inputFile, char *outputFile)
+{
 	std::ifstream is;
 	is.open(inputFile, std::ios::in | std::ios::binary);
 	std::ofstream os;
@@ -158,7 +169,8 @@ void doubleAndReverseGraph(char *inputFile, char *outputFile) {
 	os.close();
 }
 
-bool isGraphEmpty(unsigned int *edgeLabels) {
+bool isGraphEmpty(unsigned int *edgeLabels)
+{
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		if (edgeLabels[i] == -1)
 			return false;
@@ -167,7 +179,8 @@ bool isGraphEmpty(unsigned int *edgeLabels) {
 }
 
 // Finds the start and end indices  of each node in the graph
-void findStartAndEndIndices() {
+void findStartAndEndIndices()
+{
 	g.start_indices = new unsigned int[g.NODENUM + 1];
 	g.end_indices = new unsigned int[g.NODENUM + 1];
 	std::fill_n(g.start_indices, g.NODENUM + 1, 0);
@@ -186,7 +199,8 @@ void findStartAndEndIndices() {
 }
 
 // Computes the degree of each node in the graph
-void findDegree(unsigned int *edgeLabels, float *degree) {
+void findDegree(unsigned int *edgeLabels, float *degree)
+{
 	std::fill_n(degree, g.NODENUM + 1, 0);
 	// unsigned int old_src = -1, old_tgt = -1;
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
@@ -206,7 +220,8 @@ void findDegree(unsigned int *edgeLabels, float *degree) {
 	}
 }
 
-void findKCore(unsigned int *edgeLabels, unsigned int *deg) {
+void findKCore(unsigned int *edgeLabels, unsigned int *deg)
+{
 	unsigned int *vert = new unsigned int[g.NODENUM + 1];
 	unsigned int *pos = new unsigned int[g.NODENUM + 1];
 	std::fill_n(vert, g.NODENUM + 1, 0);
@@ -270,7 +285,8 @@ void findKCore(unsigned int *edgeLabels, unsigned int *deg) {
 }
 
 void labelEdgesAndUpdateDegree(unsigned int peel, bool *isFinalNode, float *degree,
-							   unsigned int *edgeLabels) {
+			       unsigned int *edgeLabels)
+{
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + i)->src;
 		unsigned int tgt = (g.edgeList + i)->tgt;
@@ -282,19 +298,21 @@ void labelEdgesAndUpdateDegree(unsigned int peel, bool *isFinalNode, float *degr
 	}
 }
 
-void writeToFile(unsigned int *edgeIndices, unsigned int *edgeLabels) {
+void writeToFile(unsigned int *edgeIndices, unsigned int *edgeLabels)
+{
 	std::ofstream outputFile;
 	outputFile.open("graph-decomposition.csv");
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		outputFile << (g.edgeList + edgeIndices[i])->src << ","
-				   << (g.edgeList + edgeIndices[i])->tgt << "," << edgeLabels[i]
-				   << "\n";
+			   << (g.edgeList + edgeIndices[i])->tgt << "," << edgeLabels[i]
+			   << "\n";
 	}
 	outputFile.close();
 }
 
-void writeMetaData(unsigned int NODENUM, unsigned int EDGENUM,
-				   long long preprocessingTime, long long algorithmTime) {
+void writeMetaData(unsigned int NODENUM, unsigned int EDGENUM, long long preprocessingTime,
+		   long long algorithmTime)
+{
 	std::ofstream outputFile;
 	outputFile.open("graph-decomposition-info.file");
 	outputFile << "{\n";
@@ -305,7 +323,8 @@ void writeMetaData(unsigned int NODENUM, unsigned int EDGENUM,
 	outputFile.close();
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 	char *tmpFile = "tmp.bin";
 	remove(tmpFile);
 	g.EDGENUM = atol(argv[2]);

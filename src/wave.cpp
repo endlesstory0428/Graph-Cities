@@ -21,8 +21,7 @@
 #define BUFFER_NUM_EDGES ((unsigned int)1 << 25)
 #define ENULL ((unsigned int)-1)
 
-typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS,
-							  unsigned int>
+typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS, unsigned int>
 	graph_t;
 
 std::unordered_map<unsigned int, graph_t> G;
@@ -42,7 +41,8 @@ struct graph {
 } g;
 
 // Utility function to print a given array
-template <class T> void printArray(T *arr, unsigned int n) {
+template <class T> void printArray(T *arr, unsigned int n)
+{
 	for (unsigned int i = 0; i < n; i++) {
 		std::cout << arr[i] << " ";
 	}
@@ -51,7 +51,8 @@ template <class T> void printArray(T *arr, unsigned int n) {
 
 long long currentTimeMilliS = 0;
 
-long long currentTimeStamp() {
+long long currentTimeStamp()
+{
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
 	long long milliseconds =
@@ -59,9 +60,13 @@ long long currentTimeStamp() {
 	return milliseconds;
 }
 
-void reset() { currentTimeMilliS = currentTimeStamp(); }
+void reset()
+{
+	currentTimeMilliS = currentTimeStamp();
+}
 
-long long getTimeElapsed() {
+long long getTimeElapsed()
+{
 	long long newTime = currentTimeStamp();
 	long long timeElapsed = newTime - currentTimeMilliS;
 	currentTimeMilliS = newTime;
@@ -69,19 +74,21 @@ long long getTimeElapsed() {
 }
 
 // Memory maps input file
-void createMemoryMap(char *fileName) {
+void createMemoryMap(char *fileName)
+{
 	unsigned int binFile = open(fileName, O_RDWR);
 	long fileSizeInByte;
 	struct stat sizeResults;
 	assert(stat(fileName, &sizeResults) == 0);
 	fileSizeInByte = sizeResults.st_size;
 	g.edgeList = (edge *)mmap(NULL, fileSizeInByte, PROT_READ | PROT_WRITE, MAP_SHARED,
-							  binFile, 0);
+				  binFile, 0);
 	close(binFile);
 }
 
 // In-memory edge list instead of memory mapped file
-void createInMemoryEdgeList(const char *fileName) {
+void createInMemoryEdgeList(const char *fileName)
+{
 	g.edgeList = new edge[g.EDGENUM];
 	std::ifstream is;
 	is.open(fileName, std::ios::in | std::ios::binary);
@@ -98,8 +105,9 @@ void createInMemoryEdgeList(const char *fileName) {
 	is.close();
 }
 
-void readLayer(const std::string &inputFile, unsigned int *label2node,
-			   unsigned int *node2label, unsigned int tlayer) {
+void readLayer(const std::string &inputFile, unsigned int *label2node, unsigned int *node2label,
+	       unsigned int tlayer)
+{
 	g.edgeList = new edge[g.EDGENUM];
 	std::ifstream is;
 	is.open(inputFile);
@@ -144,7 +152,8 @@ void readLayer(const std::string &inputFile, unsigned int *label2node,
 	is.close();
 }
 
-bool compareEdges(const edge &a, const edge &b) {
+bool compareEdges(const edge &a, const edge &b)
+{
 	if (a.src < b.src)
 		return true;
 	if (a.src == b.src) {
@@ -155,19 +164,19 @@ bool compareEdges(const edge &a, const edge &b) {
 }
 
 // Compares indices according to their corresponding edges
-int compareByEdges(const void *a, const void *b) {
+int compareByEdges(const void *a, const void *b)
+{
 	if ((g.edgeList + *(unsigned int *)a)->src < (g.edgeList + *(unsigned int *)b)->src)
 		return -1;
-	if ((g.edgeList + *(unsigned int *)a)->src ==
-		(g.edgeList + *(unsigned int *)b)->src) {
+	if ((g.edgeList + *(unsigned int *)a)->src == (g.edgeList + *(unsigned int *)b)->src) {
 		if ((g.edgeList + *(unsigned int *)a)->tgt <
-			(g.edgeList + *(unsigned int *)b)->tgt)
+		    (g.edgeList + *(unsigned int *)b)->tgt)
 			return -1;
 		if ((g.edgeList + *(unsigned int *)a)->tgt ==
-			(g.edgeList + *(unsigned int *)b)->tgt)
+		    (g.edgeList + *(unsigned int *)b)->tgt)
 			return 0;
 		if ((g.edgeList + *(unsigned int *)a)->tgt >
-			(g.edgeList + *(unsigned int *)b)->tgt)
+		    (g.edgeList + *(unsigned int *)b)->tgt)
 			return 1;
 	}
 	if ((g.edgeList + *(unsigned int *)a)->src > (g.edgeList + *(unsigned int *)b)->src)
@@ -176,7 +185,8 @@ int compareByEdges(const void *a, const void *b) {
 }
 
 // Formats the graph by sorting it and tracing original indices in the graph
-void formatGraph(unsigned int *originalIndices) {
+void formatGraph(unsigned int *originalIndices)
+{
 	unsigned int *indices = new unsigned int[g.EDGENUM];
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		indices[i] = i;
@@ -191,7 +201,8 @@ void formatGraph(unsigned int *originalIndices) {
 }
 
 // Finds the start and end indices	of each node in the graph
-void findStartAndEndIndices() {
+void findStartAndEndIndices()
+{
 	g.start_indices = new unsigned int[g.NODENUM + 1];
 	g.end_indices = new unsigned int[g.NODENUM + 1];
 	std::fill_n(g.start_indices, g.NODENUM + 1, 0);
@@ -210,7 +221,8 @@ void findStartAndEndIndices() {
 }
 
 // Computes the degree of each node in the graph
-unsigned int findDegree(unsigned int *degree) {
+unsigned int findDegree(unsigned int *degree)
+{
 	std::fill_n(degree, g.NODENUM + 1, 0);
 	unsigned int max = 0;
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
@@ -225,7 +237,8 @@ unsigned int findDegree(unsigned int *degree) {
 	return max;
 }
 
-void findWaves(unsigned int *deg, unsigned int *waves, unsigned int *levels) {
+void findWaves(unsigned int *deg, unsigned int *waves, unsigned int *levels)
+{
 	/* unsigned int * lodeg = new unsigned int[g.NODENUM + 1]; */
 	/* lodeg[0] = 0; */
 
@@ -316,8 +329,8 @@ void findWaves(unsigned int *deg, unsigned int *waves, unsigned int *levels) {
 				// std::cerr<<v<<": "<<deg[v]<<", "<<waves[v]<<"\n";
 				/* std::cerr<<"i4: "<<i<<"\n"; */
 
-				for (unsigned int j = g.start_indices[v]; j <= g.end_indices[v]; j++) {
-
+				for (unsigned int j = g.start_indices[v]; j <= g.end_indices[v];
+				     j++) {
 					/* std::cerr<<"i5j: "<<j<<"\n"; */
 					unsigned int u = (g.edgeList + j)->tgt;
 					/* std::cerr<<v<<"->"<<u<<": "<<deg[u]<<", "<<waves[u]<<"\n"; */
@@ -363,9 +376,9 @@ void findWaves(unsigned int *deg, unsigned int *waves, unsigned int *levels) {
 	delete[] bins;
 }
 
-void buildWavesAndLabel(std::ofstream &outputFile, unsigned int *waves,
-						unsigned int *levels, unsigned int *ccs,
-						unsigned int *metanodes) {
+void buildWavesAndLabel(std::ofstream &outputFile, unsigned int *waves, unsigned int *levels,
+			unsigned int *ccs, unsigned int *metanodes)
+{
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + i)->src;
 		unsigned int tgt = (g.edgeList + i)->tgt;
@@ -407,7 +420,7 @@ void buildWavesAndLabel(std::ofstream &outputFile, unsigned int *waves,
 		boost::graph_traits<graph_t>::edge_iterator ei, ei_end;
 		for (boost::tie(ei, ei_end) = boost::edges(gr->second); ei != ei_end; ++ei) {
 			assert(components[source(*ei, gr->second)] ==
-				   components[target(*ei, gr->second)]);
+			       components[target(*ei, gr->second)]);
 			compEdges[components[source(*ei, gr->second)]]++;
 		}
 
@@ -428,14 +441,15 @@ void buildWavesAndLabel(std::ofstream &outputFile, unsigned int *waves,
 	}
 }
 
-void writeToFile(const std::string &prefix, unsigned int *edgeIndices,
-				 unsigned int *node2label, unsigned int *waves, unsigned int *levels,
-				 unsigned int *ccs, unsigned int *metanodes) {
+void writeToFile(const std::string &prefix, unsigned int *edgeIndices, unsigned int *node2label,
+		 unsigned int *waves, unsigned int *levels, unsigned int *ccs,
+		 unsigned int *metanodes)
+{
 	std::ofstream outputFile;
 	outputFile.open(prefix + "-metaedges.csv");
 	/* outputFile<<"# source_metanode,target_metanode\n"; */
 	std::unordered_map<std::pair<unsigned int, unsigned int>, bool,
-					   boost::hash<std::pair<unsigned int, unsigned int>>>
+			   boost::hash<std::pair<unsigned int, unsigned int> > >
 		map;
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = metanodes[(g.edgeList + edgeIndices[i])->src];
@@ -456,14 +470,14 @@ void writeToFile(const std::string &prefix, unsigned int *edgeIndices,
 	/* outputFile<<"# vertex,level,wave,wave_connected_component,meta_node\n"; */
 	for (unsigned int i = 1; i <= g.NODENUM; i++) {
 		outputFile << node2label[i] << "," << levels[i] << "," << waves[i] << ","
-				   << ccs[i] << "," << metanodes[i] << "\n";
+			   << ccs[i] << "," << metanodes[i] << "\n";
 	}
 	outputFile.close();
 }
 
 void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENUM,
-				   unsigned int maxdeg, long long preprocessingTime,
-				   long long algorithmTime) {
+		   unsigned int maxdeg, long long preprocessingTime, long long algorithmTime)
+{
 	std::ofstream outputFile;
 	outputFile.open(prefix + "-wavedecomp-info.json");
 	outputFile << "{\n";
@@ -475,8 +489,8 @@ void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENU
 	outputFile.close();
 }
 
-void initNodeMap(char *inputFile,
-				 unsigned int *node2label) { //, unsigned int *label2node) {
+void initNodeMap(char *inputFile, unsigned int *node2label)
+{ //, unsigned int *label2node) {
 	std::ifstream is(inputFile, std::ios::in | std::ios::binary);
 	unsigned int label, cc;
 	for (unsigned int i = 1; i <= g.NODENUM; i++) {
@@ -487,14 +501,16 @@ void initNodeMap(char *inputFile,
 	}
 }
 
-void writeWaveMetaData(std::ofstream &outputFile, unsigned int wave,
-					   unsigned int NODENUM, unsigned int EDGENUM) {
+void writeWaveMetaData(std::ofstream &outputFile, unsigned int wave, unsigned int NODENUM,
+		       unsigned int EDGENUM)
+{
 	outputFile << '"' << wave << '"' << ": {\n";
 	outputFile << "\t\"vertices\":" << NODENUM << ",\n";
 	outputFile << "\t\"edges\":" << EDGENUM / 2 << "\n},\n";
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 	if (argc < 9) {
 		std::cerr
 			<< argv[0]
@@ -503,8 +519,7 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 	std::string prefix = argv[1];
-	std::string prefixx =
-		prefix.substr(0, prefix.length() - 7) + "_waves/layer-" + argv[3];
+	std::string prefixx = prefix.substr(0, prefix.length() - 7) + "_waves/layer-" + argv[3];
 	std::ofstream outputFile(prefixx + "-waves-info.json");
 	outputFile << "{\n";
 	g.EDGENUM = atol(argv[4]);
@@ -542,7 +557,7 @@ int main(int argc, char *argv[]) {
 	outputFile.close();
 	writeToFile(prefixx, originalIndices, node2label, waves, levels, ccs, metanodes);
 	writeMetaData(prefixx, atol(argv[5]), atol(argv[4]) / 2, maxdeg, preprocessingTime,
-				  algorithmTime);
+		      algorithmTime);
 	/* printArray(waves, g.NODENUM+1); */
 	delete[] degree;
 	delete[] waves;

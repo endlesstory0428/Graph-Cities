@@ -22,7 +22,8 @@ graph_t g;
 
 long long currentTimeMilliS = 0;
 
-long long currentTimeStamp() {
+long long currentTimeStamp()
+{
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
 	long long milliseconds =
@@ -30,25 +31,30 @@ long long currentTimeStamp() {
 	return milliseconds;
 }
 
-void reset() { currentTimeMilliS = currentTimeStamp(); }
+void reset()
+{
+	currentTimeMilliS = currentTimeStamp();
+}
 
 // Utility function to print a given array
-template <class T> void printArray(T *arr, unsigned int n) {
+template <class T> void printArray(T *arr, unsigned int n)
+{
 	for (unsigned int i = 0; i < n; i++) {
 		std::cout << arr[i] << " ";
 	}
 	std::cout << "\n";
 }
 
-long long getTimeElapsed() {
+long long getTimeElapsed()
+{
 	long long newTime = currentTimeStamp();
 	long long timeElapsed = newTime - currentTimeMilliS;
 	currentTimeMilliS = newTime;
 	return timeElapsed;
 }
 
-unsigned int *
-initNodeMap(const std::string &inputFile) { //, unsigned int *label2node) {
+unsigned int *initNodeMap(const std::string &inputFile)
+{ //, unsigned int *label2node) {
 	std::ifstream is(inputFile, std::ios::in | std::ios::binary);
 	is.seekg(0, is.end);
 	unsigned int length = is.tellg() / sizeof(unsigned int);
@@ -65,7 +71,8 @@ initNodeMap(const std::string &inputFile) { //, unsigned int *label2node) {
 	return node2label;
 }
 
-void readGraph(const std::string &inputFile) {
+void readGraph(const std::string &inputFile)
+{
 	std::ifstream is;
 	is.open(inputFile);
 	unsigned int src, tgt;
@@ -82,7 +89,8 @@ void readGraph(const std::string &inputFile) {
 	is.close();
 }
 
-void readGraphBin(const std::string &fileName) {
+void readGraphBin(const std::string &fileName)
+{
 	unsigned int *node2label =
 		initNodeMap(fileName.substr(0, fileName.length() - 4) + ".nodemap");
 	std::ifstream is;
@@ -100,7 +108,8 @@ void readGraphBin(const std::string &fileName) {
 	is.close();
 }
 
-void writeToFile(const std::string &prefix, std::vector<unsigned int> components) {
+void writeToFile(const std::string &prefix, std::vector<unsigned int> components)
+{
 	std::ofstream outputFile;
 	outputFile.open(prefix);
 	/* outputFile<<"# vertex,connected_component\n"; */
@@ -112,7 +121,8 @@ void writeToFile(const std::string &prefix, std::vector<unsigned int> components
 }
 
 void writeMetaData(const std::string &prefix, unsigned int num_components,
-				   long long preprocessingTime, long long algorithmTime) {
+		   long long preprocessingTime, long long algorithmTime)
+{
 	std::ofstream outputFile;
 	outputFile.open(prefix + "-decomposition-info.json");
 	outputFile << "{\n";
@@ -123,17 +133,19 @@ void writeMetaData(const std::string &prefix, unsigned int num_components,
 }
 
 void writeCCMetaData(std::ofstream &outputFile, unsigned int cc, unsigned int NODENUM,
-					 unsigned int EDGENUM) {
+		     unsigned int EDGENUM)
+{
 	outputFile << '"' << cc << '"' << ": {\n";
 	outputFile << "\t\"vertices\":" << NODENUM << ",\n";
 	outputFile << "\t\"edges\":" << EDGENUM << "\n},\n";
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 	if (argc < 4) {
 		std::cerr << argv[0]
-				  << ": usage: ./connectedcomponents <path to graph> <layer> <path to "
-					 "layers dir>\n";
+			  << ": usage: ./connectedcomponents <path to graph> <layer> <path to "
+			     "layers dir>\n";
 		exit(1);
 	}
 	std::string prefix = argv[1];

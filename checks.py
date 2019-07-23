@@ -26,9 +26,7 @@ for layer, val in layerinfo.items():
 if metainfo['edges'] == numedges:
     print(graph_name, 'Peel Edges: PASSED')
 else:
-    print(
-        ERR, graph_name, 'Peel Edges: FAILED,', numedges, '!=', metainfo['edges'], CLR
-    )
+    print(ERR, graph_name, 'Peel Edges: FAILED,', numedges, '!=', metainfo['edges'], CLR)
 
 # Check CC
 
@@ -55,10 +53,7 @@ else:
 if metainfo['vertices'] == numverts:
     print(graph_name, 'CC Vertices: PASSED')
 else:
-    print(
-        ERR, graph_name, 'CC Vertices: FAILED,', numverts, '!=', metainfo['vertices'],
-        CLR
-    )
+    print(ERR, graph_name, 'CC Vertices: FAILED,', numverts, '!=', metainfo['vertices'], CLR)
 
 # Check CC-Layers
 
@@ -108,10 +103,7 @@ for layer, val0 in cclayersinfo.items():
 if metainfo['edges'] == totaledges:
     print(graph_name, 'CC-Layers Edges: PASSED')
 else:
-    print(
-        ERR, graph_name, 'CC-Layers Edges: FAILED,', totaledges, '!=',
-        metainfo['edges'], CLR
-    )
+    print(ERR, graph_name, 'CC-Layers Edges: FAILED,', totaledges, '!=', metainfo['edges'], CLR)
 
 # Waves
 
@@ -148,30 +140,24 @@ for layer, val0 in wavesinfo.items():
                         ccverts += ccval['vertices']
                         ccedges += ccval['edges']
 
-                        if ccval['edges'] > ccval['vertices'] * (ccval['vertices'] -
-                                                                 1) / 2:
-                            print(
-                                ERR, graph_name, 'CC: FAILED, denser than clique', CLR
-                            )
+                        if ccval['edges'] > ccval['vertices'] * (ccval['vertices'] - 1) / 2:
+                            print(ERR, graph_name, 'CC: FAILED, denser than clique', CLR)
                         if ccval['vertices'] > 2 * ccval['edges']:
-                            print(
-                                ERR, graph_name, 'CC: FAILED, less dense than bundle',
-                                CLR
-                            )
+                            print(ERR, graph_name, 'CC: FAILED, less dense than bundle', CLR)
 
                         levedges = 0
                         for level, leval in ccval['levels'].items():
                             levedges += leval['edges']
-                            if leval['edges'] > leval['vertices'] * (leval['vertices'] -
-                                                                     1) / 2:
-                                print(
-                                    ERR, graph_name,
-                                    'Level: FAILED, denser than clique', CLR
-                                )
+                            if leval['edges'] > leval['vertices'] * (leval['vertices'] - 1) / 2:
+                                print(ERR, graph_name, 'Level: FAILED, denser than clique', CLR)
                             if leval['vertices'] > 2 * leval['edges']:
                                 print(
-                                    ERR, graph_name,
-                                    'Level: FAILED, less dense than bundle', CLR
+                                    ERR, graph_name, 'Level: FAILED, less dense than bundle',
+                                    CLR
+                                )
+                            if leval['sources'] > leval['vertices']:
+                                print(
+                                    ERR, graph_name, 'Level: FAILED, sources > vertices?', CLR
                                 )
 
                         if levedges == ccval['edges']:
@@ -181,16 +167,12 @@ for layer, val0 in wavesinfo.items():
                             )
                         else:
                             print(
-                                ERR, graph_name, 'Wave-CC', wave, '-', cc,
-                                'CCs of Layer', layer, 'Edges: FAILED', levedges, '!=',
-                                ccval['edges'], CLR
+                                ERR, graph_name, 'Wave-CC', wave, '-', cc, 'CCs of Layer',
+                                layer, 'Edges: FAILED', levedges, '!=', ccval['edges'], CLR
                             )
 
                 if ccverts == val['vertices']:
-                    print(
-                        graph_name, 'Wave', wave, 'CCs of Layer', layer,
-                        'Vertices: PASSED'
-                    )
+                    print(graph_name, 'Wave', wave, 'CCs of Layer', layer, 'Vertices: PASSED')
                 else:
                     print(
                         ERR, graph_name, 'Wave', wave, 'CCs of Layer', layer,
@@ -198,13 +180,11 @@ for layer, val0 in wavesinfo.items():
                     )
 
                 if ccedges == val['edges']:
-                    print(
-                        graph_name, 'Wave', wave, 'CCs of Layer', layer, 'Edges: PASSED'
-                    )
+                    print(graph_name, 'Wave', wave, 'CCs of Layer', layer, 'Edges: PASSED')
                 else:
                     print(
-                        ERR, graph_name, 'Wave', wave, 'CCs of Layer', layer,
-                        'Edges: FAILED', ccedges, '!=', val['edges'], CLR
+                        ERR, graph_name, 'Wave', wave, 'CCs of Layer', layer, 'Edges: FAILED',
+                        ccedges, '!=', val['edges'], CLR
                     )
 
 #       if layerinfo[layer]['vertices'] == numverts:
@@ -218,10 +198,7 @@ for layer, val0 in wavesinfo.items():
 if metainfo['edges'] == totaledges:
     print(graph_name, 'CC-Layers Edges: PASSED')
 else:
-    print(
-        ERR, graph_name, 'CC-Layers Edges: FAILED,', totaledges, '!=',
-        metainfo['edges'], CLR
-    )
+    print(ERR, graph_name, 'CC-Layers Edges: FAILED,', totaledges, '!=', metainfo['edges'], CLR)
 
 # cclayers = pd.read_csv(
 #     sys.argv[1],

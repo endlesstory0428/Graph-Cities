@@ -17,7 +17,7 @@ struct edge_component_t {
 } edge_component;
 
 typedef adjacency_list<vecS, vecS, undirectedS, no_property,
-					   property<edge_component_t, std::size_t>>
+		       property<edge_component_t, std::size_t> >
 	graph_t;
 /* typedef graph_traits<graph_t>::vertex_descriptor Vertex; */
 /* typedef graph_traits<graph_t>::edge_descriptor Edge; */
@@ -26,7 +26,8 @@ graph_t g;
 
 long long currentTimeMilliS = 0;
 
-long long currentTimeStamp() {
+long long currentTimeStamp()
+{
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
 	long long milliseconds =
@@ -34,9 +35,13 @@ long long currentTimeStamp() {
 	return milliseconds;
 }
 
-void reset() { currentTimeMilliS = currentTimeStamp(); }
+void reset()
+{
+	currentTimeMilliS = currentTimeStamp();
+}
 
-long long getTimeElapsed() {
+long long getTimeElapsed()
+{
 	long long newTime = currentTimeStamp();
 	long long timeElapsed = newTime - currentTimeMilliS;
 	currentTimeMilliS = newTime;
@@ -44,14 +49,16 @@ long long getTimeElapsed() {
 }
 
 // Utility function to print a given array
-template <class T> void printArray(T *arr, unsigned int n) {
+template <class T> void printArray(T *arr, unsigned int n)
+{
 	for (unsigned int i = 0; i < n; i++) {
 		std::cout << arr[i] << " ";
 	}
 	std::cout << "\n";
 }
 
-void readGraph(const std::string &inputFile, bool *wavemask) {
+void readGraph(const std::string &inputFile, bool *wavemask)
+{
 	std::ifstream is;
 	is.open(inputFile);
 	unsigned int src, tgt;
@@ -70,7 +77,8 @@ void readGraph(const std::string &inputFile, bool *wavemask) {
 	is.close();
 }
 
-void readWave(const std::string &inputFile, bool *waves, unsigned int woi) {
+void readWave(const std::string &inputFile, bool *waves, unsigned int woi)
+{
 	std::ifstream is;
 	is.open(inputFile);
 	unsigned int vert, wave;
@@ -90,19 +98,21 @@ void readWave(const std::string &inputFile, bool *waves, unsigned int woi) {
 }
 
 void writeToFile(const std::string &prefix,
-				 property_map<graph_t, edge_component_t>::type components) {
+		 property_map<graph_t, edge_component_t>::type components)
+{
 	std::ofstream outputFile;
 	outputFile.open(prefix);
 	/* outputFile<<"# source_vertex,target_vertex,biconnected_component\n"; */
 	graph_traits<graph_t>::edge_iterator ei, ei_end;
 	for (tie(ei, ei_end) = edges(g); ei != ei_end; ++ei)
 		outputFile << source(*ei, g) << "," << target(*ei, g) << "," << components[*ei]
-				   << "\n";
+			   << "\n";
 	outputFile.close();
 }
 
-void writeMetaData(std::string prefix, unsigned int num_components,
-				   long long preprocessingTime, long long algorithmTime) {
+void writeMetaData(std::string prefix, unsigned int num_components, long long preprocessingTime,
+		   long long algorithmTime)
+{
 	std::ofstream outputFile;
 	outputFile.open(prefix + "-info.json");
 	outputFile << "{\n";
@@ -112,11 +122,12 @@ void writeMetaData(std::string prefix, unsigned int num_components,
 	outputFile.close();
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 	if (argc < 6) {
 		std::cerr << argv[0]
-				  << ": usage: ./biconnectedcomponents <path to graph> <layer> <path "
-					 "to layers dir> <wave> <max vertex label>\n";
+			  << ": usage: ./biconnectedcomponents <path to graph> <layer> <path "
+			     "to layers dir> <wave> <max vertex label>\n";
 		exit(1);
 	}
 	std::string prefix = argv[1];
@@ -137,7 +148,7 @@ int main(int argc, char *argv[]) {
 	if (wave > 0) {
 		prefixx = argv[3];
 		prefixx = prefixx.substr(0, prefixx.length() - 6) + "waves/layer-" +
-				  std::to_string(layer);
+			  std::to_string(layer);
 		std::string inFile = prefixx + "-waves.csv";
 		std::fill_n(wavemask, atol(argv[5]), false);
 		/* std::cerr<<inFile<<"\n"; */

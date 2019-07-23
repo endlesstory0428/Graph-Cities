@@ -15,7 +15,8 @@ char *mmapGraph;
 
 long long currentTimeMilliS = 0;
 
-long long currentTimeStamp() {
+long long currentTimeStamp()
+{
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
 	long long milliseconds =
@@ -23,23 +24,29 @@ long long currentTimeStamp() {
 	return milliseconds;
 }
 
-void reset() { currentTimeMilliS = currentTimeStamp(); }
+void reset()
+{
+	currentTimeMilliS = currentTimeStamp();
+}
 
-long long getTimeElapsed() {
+long long getTimeElapsed()
+{
 	long long newTime = currentTimeStamp();
 	long long timeElapsed = newTime - currentTimeMilliS;
 	currentTimeMilliS = newTime;
 	return timeElapsed;
 }
 
-void showTimeElapsed(const char *comment) {
+void showTimeElapsed(const char *comment)
+{
 	long long newTime = currentTimeStamp();
 	long long timeElapsed = newTime - currentTimeMilliS;
 	currentTimeMilliS = newTime;
 	std::cout << comment << ": " << timeElapsed << " milliseconds.\n";
 }
 
-void createMemoryMap() {
+void createMemoryMap()
+{
 	int binFile = open(INPUTFILE, O_RDONLY);
 	long fileSizeInByte;
 	struct stat sizeResults;
@@ -53,7 +60,8 @@ void createMemoryMap() {
 }
 
 // Checks if the boolean array is all false (corresponds to empty array).
-bool isEmpty(bool *arr, int n) {
+bool isEmpty(bool *arr, int n)
+{
 	for (int i = 0; i < n; i++) {
 		if (arr[i] == false) {
 			return false;
@@ -62,14 +70,16 @@ bool isEmpty(bool *arr, int n) {
 	return true;
 }
 
-bool isEdgeDeleted(int i) {
+bool isEdgeDeleted(int i)
+{
 	if (i != 0)
 		return true;
 	return false;
 }
 
 // Computes the degree of each node in an undirected graph represented by an edge list
-void computeDegree(int *edgeLabels, bool *isNodeDeleted, int *degree) {
+void computeDegree(int *edgeLabels, bool *isNodeDeleted, int *degree)
+{
 	int pointer = 0;
 	int source, target;
 	std::fill_n(degree, NODENUM, 0);
@@ -82,7 +92,7 @@ void computeDegree(int *edgeLabels, bool *isNodeDeleted, int *degree) {
 		assert(source <= NODENUM && target <= NODENUM);
 		// Update degree only if the nodes / edge haven't been deleted
 		if (!isNodeDeleted[source] && !isNodeDeleted[target] &&
-			!isEdgeDeleted(edgeLabels[i])) {
+		    !isEdgeDeleted(edgeLabels[i])) {
 			degree[source]++;
 			degree[target]++;
 		}
@@ -97,7 +107,8 @@ void computeDegree(int *edgeLabels, bool *isNodeDeleted, int *degree) {
 }
 
 // Delete all nodes with degree <= peel
-void deleteNodes(int peel, int *degree, bool *isNodeDeleted, int numNodes) {
+void deleteNodes(int peel, int *degree, bool *isNodeDeleted, int numNodes)
+{
 	for (int i = 0; i < numNodes; i++) {
 		if (degree[i] <= peel) {
 			isNodeDeleted[i] = true;
@@ -106,7 +117,8 @@ void deleteNodes(int peel, int *degree, bool *isNodeDeleted, int numNodes) {
 }
 
 // Deletes the largest core
-bool labelAndDeleteEdges(int peel, bool *isFinalNode, int *edgeLabels) {
+bool labelAndDeleteEdges(int peel, bool *isFinalNode, int *edgeLabels)
+{
 	int pointer = 0;
 	int source, target;
 	bool isGraphEmpty = true;
@@ -119,7 +131,7 @@ bool labelAndDeleteEdges(int peel, bool *isFinalNode, int *edgeLabels) {
 		target = htonl(*((int *)(mmapGraph + pointer)));
 		pointer += sizeof(int);
 		if (isFinalNode[source] && isFinalNode[target] &&
-			!isEdgeDeleted(edgeLabels[i])) {
+		    !isEdgeDeleted(edgeLabels[i])) {
 			if (DEBUG)
 				std::cout << source << " " << target << " " << peel << "\n";
 			edgeLabels[i] = peel;
@@ -129,7 +141,8 @@ bool labelAndDeleteEdges(int peel, bool *isFinalNode, int *edgeLabels) {
 	return isGraphEmpty;
 }
 
-void edgeDecomposition(int *edgeLabels) {
+void edgeDecomposition(int *edgeLabels)
+{
 	int peel = 0;
 	int *degree = new int[NODENUM];
 	// Tracks deleted nodes
@@ -176,7 +189,8 @@ void edgeDecomposition(int *edgeLabels) {
 			// Checks if doing this removes all nodes from the graph
 			if (isEmpty(isNodeDeleted, NODENUM)) {
 				// Label these edges and delete them from the graph
-				isGraphEmpty = labelAndDeleteEdges(peel, isFinalNode, edgeLabels);
+				isGraphEmpty =
+					labelAndDeleteEdges(peel, isFinalNode, edgeLabels);
 				// If graph is empty, finish execution
 				if (isGraphEmpty)
 					break;
@@ -192,7 +206,8 @@ void edgeDecomposition(int *edgeLabels) {
 	delete[] isFinalNode;
 }
 
-void writeToFile(int *edgeLabels) {
+void writeToFile(int *edgeLabels)
+{
 	std::ofstream outputFile;
 	outputFile.open(OUTPUTFILE);
 	for (int i = 0; i < EDGENUM; i++) {
@@ -201,7 +216,8 @@ void writeToFile(int *edgeLabels) {
 	outputFile.close();
 }
 
-int main() {
+int main()
+{
 	int *edgeLabels = new int[EDGENUM];
 	createMemoryMap();
 	reset();

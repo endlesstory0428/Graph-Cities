@@ -35,7 +35,8 @@ struct graph {
 } g;
 
 // Utility function to print a given array
-template <class T> void printArray(T *arr, unsigned int n) {
+template <class T> void printArray(T *arr, unsigned int n)
+{
 	for (unsigned int i = 0; i < n; i++) {
 		std::cout << arr[i] << " ";
 	}
@@ -45,7 +46,8 @@ template <class T> void printArray(T *arr, unsigned int n) {
 long long currentTimeMilliS = 0;
 long long ioTime = 0;
 
-long long currentTimeStamp() {
+long long currentTimeStamp()
+{
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
 	long long milliseconds =
@@ -53,34 +55,41 @@ long long currentTimeStamp() {
 	return milliseconds;
 }
 
-void reset() { currentTimeMilliS = currentTimeStamp(); }
+void reset()
+{
+	currentTimeMilliS = currentTimeStamp();
+}
 
-long long getTimeElapsed() {
+long long getTimeElapsed()
+{
 	long long newTime = currentTimeStamp();
 	long long timeElapsed = newTime - currentTimeMilliS;
 	currentTimeMilliS = newTime;
 	return timeElapsed;
 }
 
-inline bool exists(const char *name) {
+inline bool exists(const char *name)
+{
 	struct stat buffer;
 	return (stat(name, &buffer) == 0);
 }
 
 // Memory maps input file
-void createMemoryMap(const char *fileName) {
+void createMemoryMap(const char *fileName)
+{
 	unsigned int binFile = open(fileName, O_RDWR);
 	long fileSizeInByte;
 	struct stat sizeResults;
 	assert(stat(fileName, &sizeResults) == 0);
 	fileSizeInByte = sizeResults.st_size;
 	g.edgeList = (edge *)mmap(NULL, fileSizeInByte, PROT_READ | PROT_WRITE, MAP_SHARED,
-							  binFile, 0);
+				  binFile, 0);
 	close(binFile);
 }
 
 // In-memory edge list instead of memory mapped file
-void createInMemoryEdgeList(const char *fileName) {
+void createInMemoryEdgeList(const char *fileName)
+{
 	g.edgeList = new edge[g.EDGENUM];
 	std::ifstream is;
 	is.open(fileName, std::ios::in | std::ios::binary);
@@ -97,7 +106,8 @@ void createInMemoryEdgeList(const char *fileName) {
 	is.close();
 }
 
-void readGraph(char *inputFile, const char *outputFile, unsigned int *label2node) {
+void readGraph(char *inputFile, const char *outputFile, unsigned int *label2node)
+{
 	std::ifstream is;
 	is.open(inputFile, std::ios::in | std::ios::binary);
 	std::ofstream os;
@@ -139,7 +149,8 @@ void readGraph(char *inputFile, const char *outputFile, unsigned int *label2node
 	os.close();
 }
 
-bool compareEdges(const edge &a, const edge &b) {
+bool compareEdges(const edge &a, const edge &b)
+{
 	if (a.src < b.src)
 		return true;
 	if (a.src == b.src) {
@@ -150,19 +161,19 @@ bool compareEdges(const edge &a, const edge &b) {
 }
 
 // Compares indices according to their corresponding edges
-int compareByEdges(const void *a, const void *b) {
+int compareByEdges(const void *a, const void *b)
+{
 	if ((g.edgeList + *(unsigned int *)a)->src < (g.edgeList + *(unsigned int *)b)->src)
 		return -1;
-	if ((g.edgeList + *(unsigned int *)a)->src ==
-		(g.edgeList + *(unsigned int *)b)->src) {
+	if ((g.edgeList + *(unsigned int *)a)->src == (g.edgeList + *(unsigned int *)b)->src) {
 		if ((g.edgeList + *(unsigned int *)a)->tgt <
-			(g.edgeList + *(unsigned int *)b)->tgt)
+		    (g.edgeList + *(unsigned int *)b)->tgt)
 			return -1;
 		if ((g.edgeList + *(unsigned int *)a)->tgt ==
-			(g.edgeList + *(unsigned int *)b)->tgt)
+		    (g.edgeList + *(unsigned int *)b)->tgt)
 			return 0;
 		if ((g.edgeList + *(unsigned int *)a)->tgt >
-			(g.edgeList + *(unsigned int *)b)->tgt)
+		    (g.edgeList + *(unsigned int *)b)->tgt)
 			return 1;
 	}
 	if ((g.edgeList + *(unsigned int *)a)->src > (g.edgeList + *(unsigned int *)b)->src)
@@ -170,8 +181,9 @@ int compareByEdges(const void *a, const void *b) {
 	return 0;
 }
 
-// Finds the start and end indices	of each node in the graph
-void findStartAndEndIndices() {
+// Finds the start and end indices of each node in the graph
+void findStartAndEndIndices()
+{
 	g.start_indices = new unsigned int[g.NODENUM + 1];
 	g.end_indices = new unsigned int[g.NODENUM + 1];
 	std::fill_n(g.start_indices, g.NODENUM + 1, 0);
@@ -189,7 +201,8 @@ void findStartAndEndIndices() {
 	g.end_indices[old] = i - 1;
 }
 
-bool isGraphEmpty(unsigned int *edgeLabels) {
+bool isGraphEmpty(unsigned int *edgeLabels)
+{
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		if (edgeLabels[i] == ENULL)
 			return false;
@@ -198,7 +211,8 @@ bool isGraphEmpty(unsigned int *edgeLabels) {
 }
 
 // Computes the degree of each node in the graph
-unsigned int findDegree(unsigned int *edgeLabels, unsigned int *degree) {
+unsigned int findDegree(unsigned int *edgeLabels, unsigned int *degree)
+{
 	std::fill_n(degree, g.NODENUM + 1, 0);
 	unsigned int max = 0;
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
@@ -217,9 +231,8 @@ unsigned int findDegree(unsigned int *edgeLabels, unsigned int *degree) {
 	return max;
 }
 
-void scan(unsigned int *deg, unsigned int level, unsigned int *curr,
-		  long *currTailPtr) {
-
+void scan(unsigned int *deg, unsigned int level, unsigned int *curr, long *currTailPtr)
+{
 	// Size of cache line
 	const long BUFFER_SIZE_BYTES = 2048;
 	const long BUFFER_SIZE = BUFFER_SIZE_BYTES / sizeof(unsigned int);
@@ -229,9 +242,7 @@ void scan(unsigned int *deg, unsigned int level, unsigned int *curr,
 
 #pragma omp for schedule(static)
 	for (unsigned int i = 0; i < g.NODENUM + 1; i++) {
-
 		if (deg[i] == level) {
-
 			buff[index] = i;
 			index++;
 
@@ -257,9 +268,9 @@ void scan(unsigned int *deg, unsigned int level, unsigned int *curr,
 }
 
 void processSubLevel(unsigned int *curr, long currTail, unsigned int *deg,
-					 unsigned int *edgeLabels, unsigned int level, unsigned int *next,
-					 long *nextTailPtr) {
-
+		     unsigned int *edgeLabels, unsigned int level, unsigned int *next,
+		     long *nextTailPtr)
+{
 	// Size of cache line
 	const long BUFFER_SIZE_BYTES = 2048;
 	const long BUFFER_SIZE = BUFFER_SIZE_BYTES / sizeof(unsigned int);
@@ -279,15 +290,21 @@ void processSubLevel(unsigned int *curr, long currTail, unsigned int *deg,
 				if (edgeLabels[j] == ENULL) {
 					unsigned int u = (g.edgeList + j)->tgt;
 					if (deg[u] > level) {
-						unsigned int du = __sync_fetch_and_sub(&deg[u], 1);
+						unsigned int du =
+							__sync_fetch_and_sub(&deg[u], 1);
 						if (du == (level + 1)) {
 							buff[index] = u;
 							index++;
 							if (index >= BUFFER_SIZE) {
 								long tempIdx =
-									__sync_fetch_and_add(nextTailPtr, BUFFER_SIZE);
-								for (long bufIdx = 0; bufIdx < BUFFER_SIZE; bufIdx++)
-									next[tempIdx + bufIdx] = buff[bufIdx];
+									__sync_fetch_and_add(
+										nextTailPtr,
+										BUFFER_SIZE);
+								for (long bufIdx = 0;
+								     bufIdx < BUFFER_SIZE;
+								     bufIdx++)
+									next[tempIdx + bufIdx] =
+										buff[bufIdx];
 								index = 0;
 							}
 						}
@@ -317,7 +334,8 @@ void processSubLevel(unsigned int *curr, long currTail, unsigned int *deg,
 }
 
 // ParK to compute k core decomposition in parallel
-void parKCore(unsigned int *deg, unsigned int *edgeLabels) {
+void parKCore(unsigned int *deg, unsigned int *edgeLabels)
+{
 	unsigned int *curr = new unsigned int[g.NODENUM];
 	unsigned int *next = new unsigned int[g.NODENUM];
 
@@ -331,14 +349,13 @@ void parKCore(unsigned int *deg, unsigned int *edgeLabels) {
 		unsigned int level = 0;
 
 		while (todo > 0) {
-
 			scan(deg, level, curr, &currTail);
 
 			while (currTail > 0) {
 				todo = todo - currTail;
 
 				processSubLevel(curr, currTail, deg, edgeLabels, level, next,
-								&nextTail);
+						&nextTail);
 
 				if (tid == 0) {
 					unsigned int *tempCurr = curr;
@@ -360,9 +377,9 @@ void parKCore(unsigned int *deg, unsigned int *edgeLabels) {
 	delete[] next;
 }
 
-unsigned int labelEdgesAndUpdateDegree(unsigned int peel,
-									   boost::dynamic_bitset<> *isFinalNode,
-									   unsigned int *degree, unsigned int *edgeLabels) {
+unsigned int labelEdgesAndUpdateDegree(unsigned int peel, boost::dynamic_bitset<> *isFinalNode,
+				       unsigned int *degree, unsigned int *edgeLabels)
+{
 	unsigned int numEdges = 0;
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + i)->src;
@@ -377,7 +394,8 @@ unsigned int labelEdgesAndUpdateDegree(unsigned int peel,
 	return numEdges;
 }
 
-void labelAndDeletePeelOneEdges(float *degree, unsigned int *edgeLabels) {
+void labelAndDeletePeelOneEdges(float *degree, unsigned int *edgeLabels)
+{
 	float *tmp = new float[g.NODENUM + 1];
 	std::copy(degree, degree + g.NODENUM + 1, tmp);
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
@@ -394,20 +412,21 @@ void labelAndDeletePeelOneEdges(float *degree, unsigned int *edgeLabels) {
 	delete[] tmp;
 }
 
-void writeToFile(unsigned int *edgeIndices, unsigned int *edgeLabels) {
+void writeToFile(unsigned int *edgeIndices, unsigned int *edgeLabels)
+{
 	std::ofstream outputFile;
 	outputFile.open("graph-decomposition.csv");
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		outputFile << (g.edgeList + edgeIndices[i])->src << ","
-				   << (g.edgeList + edgeIndices[i])->tgt << "," << edgeLabels[i]
-				   << "\n";
+			   << (g.edgeList + edgeIndices[i])->tgt << "," << edgeLabels[i]
+			   << "\n";
 	}
 	outputFile.close();
 }
 
 void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENUM,
-				   unsigned int maxdeg, long long preprocessingTime,
-				   long long algorithmTime) {
+		   unsigned int maxdeg, long long preprocessingTime, long long algorithmTime)
+{
 	std::ofstream outputFile;
 	outputFile.open(prefix.substr(0, prefix.length() - 4) + "-decomposition-info.json");
 	outputFile << "{\n";
@@ -420,8 +439,8 @@ void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENU
 	outputFile.close();
 }
 
-void initNodeMap(char *inputFile,
-				 unsigned int *node2label) { //, unsigned int *label2node) {
+void initNodeMap(char *inputFile, unsigned int *node2label)
+{ //, unsigned int *label2node) {
 	std::ifstream is(inputFile, std::ios::in | std::ios::binary);
 	unsigned int label, cc;
 	for (unsigned int i = 1; i <= g.NODENUM; i++) {
@@ -432,18 +451,18 @@ void initNodeMap(char *inputFile,
 	}
 }
 
-void writeLayerToFile(const std::string &prefix, unsigned int topLayer,
-					  unsigned int layer, unsigned int *edgeLabels,
-					  unsigned int *node2label) {
+void writeLayerToFile(const std::string &prefix, unsigned int topLayer, unsigned int layer,
+		      unsigned int *edgeLabels, unsigned int *node2label)
+{
 	long long wtime = currentTimeStamp();
 	std::ofstream outputFile;
 	std::string prefixx;
 	if (topLayer != layer) {
 		prefixx = prefix.substr(0, prefix.length() - 4) + "_layers/layer-" +
-				  std::to_string(layer) + "-" + std::to_string(topLayer);
+			  std::to_string(layer) + "-" + std::to_string(topLayer);
 	} else {
 		prefixx = prefix.substr(0, prefix.length() - 4) + "_layers/layer-" +
-				  std::to_string(layer);
+			  std::to_string(layer);
 	}
 	outputFile.open(prefixx + ".csv");
 	/* outputFile<<"# source_vertex,target_vertex,layer\n"; */
@@ -451,7 +470,7 @@ void writeLayerToFile(const std::string &prefix, unsigned int topLayer,
 		unsigned int label = edgeLabels[i];
 		if (label >= layer && label <= (topLayer))
 			outputFile << node2label[(g.edgeList + i)->src] << ","
-					   << node2label[(g.edgeList + i)->tgt] << "," << label << "\n";
+				   << node2label[(g.edgeList + i)->tgt] << "," << label << "\n";
 	}
 	outputFile.close();
 	ioTime += currentTimeStamp() - wtime;
@@ -461,24 +480,25 @@ void writeLayerToFile(const std::string &prefix, unsigned int topLayer,
 	/* outputFile.close(); */
 }
 
-void writeLayerMetaData(std::ofstream &outputFile, unsigned int layer,
-						unsigned int prev, unsigned int NODENUM, unsigned int EDGENUM) {
+void writeLayerMetaData(std::ofstream &outputFile, unsigned int layer, unsigned int prev,
+			unsigned int NODENUM, unsigned int EDGENUM)
+{
 	outputFile << '"' << layer << '"' << ": {\n";
 	outputFile << "\t\"vertices\":" << NODENUM << ",\n";
 	outputFile << "\t\"edges\":" << EDGENUM << ",\n";
 	outputFile << "\t\"file_suffix\":" << prev << "\n},\n";
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 	if (argc < 6) {
 		std::cerr << argv[0]
-				  << ": usage: ./buffkcore <path to graph.bin> <# edges> <# nodes> "
-					 "<path to graph.cc> <largest node label>\n";
+			  << ": usage: ./buffkcore <path to graph.bin> <# edges> <# nodes> "
+			     "<path to graph.cc> <largest node label>\n";
 		exit(1);
 	}
 	std::string prefix = argv[1];
-	std::ofstream outputFile(prefix.substr(0, prefix.length() - 4) +
-							 "-layer-info.json");
+	std::ofstream outputFile(prefix.substr(0, prefix.length() - 4) + "-layer-info.json");
 	outputFile << "{\n";
 	int numthreads = omp_get_max_threads();
 	omp_set_num_threads(numthreads - 2);
@@ -551,7 +571,7 @@ int main(int argc, char *argv[]) {
 			 */
 			t.join();
 			t = std::thread(writeLayerToFile, prefix, topLayer, mc, edgeLabels,
-							node2label);
+					node2label);
 			topLayer = 0;
 			numEdges = 0;
 		}
@@ -571,7 +591,7 @@ int main(int argc, char *argv[]) {
 	if (numEdges > 0)
 		writeLayerToFile(prefix, topLayer, mc, edgeLabels, node2label);
 	writeMetaData(prefix, g.NODENUM, g.EDGENUM / 2, maxdeg, preprocessingTime,
-				  algorithmTime);
+		      algorithmTime);
 	// remove(tmpFile);
 	delete[] core;
 	delete[] degree;

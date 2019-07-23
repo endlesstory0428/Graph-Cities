@@ -20,7 +20,8 @@ std::vector<unsigned int> ccs;
 
 long long currentTimeMilliS = 0;
 
-long long currentTimeStamp() {
+long long currentTimeStamp()
+{
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
 	long long milliseconds =
@@ -28,16 +29,21 @@ long long currentTimeStamp() {
 	return milliseconds;
 }
 
-void reset() { currentTimeMilliS = currentTimeStamp(); }
+void reset()
+{
+	currentTimeMilliS = currentTimeStamp();
+}
 
-long long getTimeElapsed() {
+long long getTimeElapsed()
+{
 	long long newTime = currentTimeStamp();
 	long long timeElapsed = newTime - currentTimeMilliS;
 	currentTimeMilliS = newTime;
 	return timeElapsed;
 }
 
-void readGraph(const std::string &inputFile, const std::string &ccfile) {
+void readGraph(const std::string &inputFile, const std::string &ccfile)
+{
 	std::ifstream is;
 	is.open(inputFile);
 	unsigned int src, tgt, layer;
@@ -75,17 +81,18 @@ void readGraph(const std::string &inputFile, const std::string &ccfile) {
 }
 
 void writeToFile(std::ofstream &outputFile, unsigned int layer,
-				 std::vector<unsigned int> &components) {
+		 std::vector<unsigned int> &components)
+{
 	graph_t g = G[layer];
 	for (unsigned int i = 0; i < num_vertices(g); i++) {
 		if (degree(i, g) > 0)
 			outputFile << i << "," << ccs[i] << "," << layer << "," << components[i]
-					   << "\n";
+				   << "\n";
 	}
 }
 
-void writeMetaData(std::string prefix, long long preprocessingTime,
-				   long long algorithmTime) {
+void writeMetaData(std::string prefix, long long preprocessingTime, long long algorithmTime)
+{
 	std::ofstream outputFile;
 	outputFile.open(prefix + "-info.json");
 	outputFile << "{\n";
@@ -94,7 +101,8 @@ void writeMetaData(std::string prefix, long long preprocessingTime,
 	outputFile.close();
 }
 
-void writeCCInfo(std::string prefix, unsigned int num_components) {
+void writeCCInfo(std::string prefix, unsigned int num_components)
+{
 	std::ofstream outputFile;
 	outputFile.open(prefix + "-info.json");
 	outputFile << "{\n";
@@ -102,11 +110,12 @@ void writeCCInfo(std::string prefix, unsigned int num_components) {
 	outputFile.close();
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 	if (argc < 3) {
 		std::cerr << argv[0]
-				  << ": usage: ./cc-layers-mat <path to graph> <path to connected "
-					 "components>\n";
+			  << ": usage: ./cc-layers-mat <path to graph> <path to connected "
+			     "components>\n";
 		exit(1);
 	}
 	std::string prefix = argv[1];
