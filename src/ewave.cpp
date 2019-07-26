@@ -322,21 +322,22 @@ void findWaves(uint32_t *deg, uint32_t *waves, uint32_t *levels)
 				;
 				std::cerr << "Test\n";
 			} else {
-				/* std::cerr<<"i3: "<<i<<"\n"; */
+				// std::cerr<<"i3: "<<i<<"\n";
 				// std::cerr<<v<<": "<<deg[v]<<", "<<waves[v]<<"\n";
 				waves[v] = wave;
 				levels[v] = level;
 				deg[v] = ENULL;
 				// std::cerr<<v<<": "<<deg[v]<<", "<<waves[v]<<"\n";
-				/* std::cerr<<"i4: "<<i<<"\n"; */
+				// std::cerr<<"i4: "<<i<<"\n";
 
 				for (uint32_t j = g.start_indices[v]; j <= g.end_indices[v];
 				     j++) {
-					/* std::cerr<<"i5j: "<<j<<"\n"; */
+					// std::cerr<<"i5j: "<<j<<"\n";
 					uint32_t u = (g.edgeList + j)->tgt;
-					/* std::cerr<<v<<"->"<<u<<": "<<deg[u]<<", "<<waves[u]<<"\n"; */
+					// std::cerr<<v<<"->"<<u<<": "<<deg[u]<<", "<<waves[u]<<"\n";
 					auto key = std::pair<uint32_t, uint32_t>(v, u);
 					if (ews.find(key) == ews.end()) {
+						assert(deg[u] != ENULL);
 						// boost::add_edge(v, u, G[wave]);
 						// boost::add_edge(u, v, G[wave]);
 						ews[key].first = wave;
@@ -344,36 +345,40 @@ void findWaves(uint32_t *deg, uint32_t *waves, uint32_t *levels)
 						auto yek = std::pair<uint32_t, uint32_t>(u, v);
 						ews[yek].first = wave;
 						ews[yek].second = level;
+						// deg[u]--;
+						// waves[u] = wave;
+						// levels[u] = level;
 					}
 
 					if (deg[u] != ENULL) {
+						// assert(ews.find(key) == ews.end());
 						// if((edgeList + j)->src != old_src || (edgeList + j)->tgt !=
 						// old_tgt) {
-						/* if(deg[u] > deg[v]) { */
-						/* 	uint32_t du = deg[u]; */
-						/* 	uint32_t pu = pos[u]; */
-						/* 	uint32_t pw = bins[du]; */
-						/* 	uint32_t w = vert[pw]; */
-						/* 	if(u != w) { */
-						/* 		pos[u] = pw; */
-						/* 		pos[w] = pu; */
-						/* 		vert[pu] = w; */
-						/* 		vert[pw] = u; */
-						/* 	} */
-						/* 	bins[du]++; */
-						/* 	deg[u]--; */
-						/* } */
+						// if(deg[u] > deg[v]) {
+						//         uint32_t du = deg[u];
+						//         uint32_t pu = pos[u];
+						//         uint32_t pw = bins[du];
+						//         uint32_t w = vert[pw];
+						//         if(u != w) {
+						//                 pos[u] = pw;
+						//                 pos[w] = pu;
+						//                 vert[pu] = w;
+						//                 vert[pw] = u;
+						//         }
+						//         bins[du]++;
+						//         deg[u]--;
+						// }
 						//}
 						deg[u]--;
 					}
-					/* std::cerr<<v<<"->"<<u<<": "<<deg[u]<<", "<<waves[u]<<"\n"; */
+					// std::cerr<<v<<"->"<<u<<": "<<deg[u]<<", "<<waves[u]<<"\n";
 					// old_src = (edgeList + j)->src;
 					// old_tgt = (edgeList + j)->tgt;
 				}
 			}
-			/* std::cerr<<"i: "<<i<<"\n"; */
+			// std::cerr<<"i: "<<i<<"\n";
 		}
-		/* std::cerr<<"HERE 0\n"; */
+		// std::cerr<<"HERE 0\n";
 
 		// printArray(deg, g.NODENUM+1);
 		if (*std::min_element(deg + 1, deg + g.NODENUM + 1) == ENULL)
@@ -450,6 +455,7 @@ void buildWavesAndLabel(std::ofstream &outputFile, uint32_t *waves, uint32_t *le
 		uint32_t num_edges = 0;
 		uint32_t num_verts = 0;
 		uint32_t prevSrc = -1;
+		uint32_t maxLevel = 0;
 		boost::graph_traits<graph_t>::edge_iterator ei, ei_end;
 		for (boost::tie(ei, ei_end) = boost::edges(gr->second); ei != ei_end; ++ei) {
 			uint32_t src = boost::source(*ei, gr->second);
@@ -474,6 +480,8 @@ void buildWavesAndLabel(std::ofstream &outputFile, uint32_t *waves, uint32_t *le
 					compLevel[components[src]] = levels[i];
 				vert_level[src][levels[i]] = 1;
 			}
+			if (levels[i] > maxLevel)
+				maxLevel = levels[i];
 		}
 
 		outputFile << '"' << wave << '"' << ": {\n";
@@ -484,16 +492,26 @@ void buildWavesAndLabel(std::ofstream &outputFile, uint32_t *waves, uint32_t *le
 			outputFile << "\t\t\"vertices\":" << compVerts[i] << ",\n";
 			outputFile << "\t\t\"edges\":" << compEdges[i] / 2 << ",\n";
 			// outputFile<<"\t\t\"levels\":"<<compLevel[i]<<"\n\t},\n";
-			outputFile << "\t\t\"levels\": {\n";
-			for (uint32_t j = 1; j <= compLevel[i]; j++) {
-				outputFile << "\t\t\t\"" << j << "\": {\n";
-				outputFile << "\t\t\t\t\"sources\":" << source_freq[i][j]
+			outputFile << "\t\t\"fragments\": {\n";
+			uint32_t last = compLevel[i];
+			if (last == maxLevel)
+				last++;
+			uint32_t ssum = compVerts[i];
+			for (uint32_t j = 1; j <= last; j++) {
+				if (j < last)
+					ssum -= source_freq[i][j];
+				outputFile << "\t\t\t\"" << j - 1 << "\": {\n";
+				outputFile << "\t\t\t\t\"sources\":"
+					   << (j < last ? source_freq[i][j]
+								 : ssum)
 					   << ",\n";
-				outputFile << "\t\t\t\t\"vertices\":" << level_vfreq[i][j]
+				outputFile << "\t\t\t\t\"vertices\":"
+					   << (j < last ? level_vfreq[i][j]
+								 : ssum)
 					   << ",\n";
 				outputFile << "\t\t\t\t\"edges\":" << level_efreq[i][j] / 2
 					   << "\n\t\t\t}";
-				if (j < compLevel[i])
+				if (j < last)
 					outputFile << ',';
 				outputFile << '\n';
 			}
@@ -535,7 +553,7 @@ void writeToFile(const std::string &prefix, uint32_t *node2label, uint32_t *wave
 		uint32_t src = (g.edgeList + i)->src;
 		uint32_t tgt = (g.edgeList + i)->tgt;
 		outputFile << node2label[src] << "," << node2label[tgt] << "," << waves[i]
-			   << "," << ccs[i] << "," << levels[i] << "\n";
+			   << "," << ccs[i] << "," << levels[i] - 1 << "\n";
 	}
 	outputFile.close();
 }

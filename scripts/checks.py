@@ -146,18 +146,35 @@ for layer, val0 in wavesinfo.items():
                             print(ERR, graph_name, 'CC: FAILED, less dense than bundle', CLR)
 
                         levedges = 0
-                        for level, leval in ccval['levels'].items():
+                        lesources = 0
+                        for frag, leval in ccval['fragments'].items():
                             levedges += leval['edges']
+                            lesources += leval['sources']
                             if leval['edges'] > leval['vertices'] * (leval['vertices'] - 1) / 2:
-                                print(ERR, graph_name, 'Level: FAILED, denser than clique', CLR)
-                            if leval['vertices'] > 2 * leval['edges']:
-                                print(
-                                    ERR, graph_name, 'Level: FAILED, less dense than bundle',
-                                    CLR
-                                )
+                                print(ERR, graph_name, 'Frag: FAILED, denser than clique', CLR)
+                            # if leval['vertices'] > 2 * leval['edges']:
+                            #     print(
+                            #         ERR, graph_name, 'Frag: FAILED, less dense than bundle',
+                            #         CLR
+                            #     )
                             if leval['sources'] > leval['vertices']:
                                 print(
-                                    ERR, graph_name, 'Level: FAILED, sources > vertices?', CLR
+                                    ERR, graph_name,
+                                    'Frag: FAILED, {} sources > {} vertices?'.format(
+                                        leval['sources'], leval['vertices']
+                                    ), CLR
+                                )
+                            if leval['sources'] * int(layer) < leval['edges']:
+                                print(
+                                    ERR, graph_name,
+                                    'Frag: FAILED, {} sources*{} < {} edges?'.format(
+                                        leval['sources'], layer, leval['edges']
+                                    ), CLR
+                                )
+                            if leval['sources'] == 0:
+                                print(
+                                    ERR, graph_name, 'Wave-CC', wave, '-', cc, 'of Layer',
+                                    layer, 'Frag ' + frag + ': FAILED, sources = 0', CLR
                                 )
 
                         if levedges == ccval['edges']:
@@ -169,6 +186,17 @@ for layer, val0 in wavesinfo.items():
                             print(
                                 ERR, graph_name, 'Wave-CC', wave, '-', cc, 'CCs of Layer',
                                 layer, 'Edges: FAILED', levedges, '!=', ccval['edges'], CLR
+                            )
+                        if lesources == ccval['vertices']:
+                            print(
+                                graph_name, 'Wave-CC', wave, '-', cc, 'of Layer', layer,
+                                'Vertices: PASSED'
+                            )
+                        else:
+                            print(
+                                ERR, graph_name, 'Wave-CC', wave, '-', cc, 'CCs of Layer',
+                                layer, 'Vertices: FAILED', lesources, '>', ccval['vertices'],
+                                CLR
                             )
 
                 if ccverts == val['vertices']:
@@ -211,6 +239,6 @@ else:
 # waves = pd.read_csv(
 #     sys.argv[2],
 #     header=None,
-#     names=['vertex', 'Level', 'Wave', 'wcc', 'meta_node'],
-#     usecols=['vertex', 'Level', 'Wave']
+#     names=['vertex', 'frag', 'Wave', 'wcc', 'meta_node'],
+#     usecols=['vertex', 'frag', 'Wave']
 # ).sort_values(by='vertex').reset_index(drop=True)
