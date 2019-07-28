@@ -90,6 +90,14 @@ div.graph-nav-info {
 	max-width:20%;
 	pointer-events:none;
 	opacity:0.7;
+	
+	border-radius: 5px;
+    padding: 3px 7px;
+	
+	border: 1px solid #bfbfbf;
+    opacity: 1;
+	background-color: white;
+	color: black;
 }
 .graph-label {
 	
@@ -267,8 +275,9 @@ p.modifier-controls-title{
 	background:#f1f3f5;
 	min-height: 16px;
     margin: 0;
-	margin-bottom:3px;
-    padding: 3px;
+	/*margin-bottom:3px;
+    padding: 3px;*/
+	padding-right: 3px;
     background: #f1f3f5;
     justify-content: center;
 	cursor:pointer;
@@ -640,15 +649,21 @@ div.minimal div.dropdown-title{
 	    -webkit-appearance: button;
 }
 
+div.minimal div.dropdown-item{
+	height: auto;
+	padding: 3px 1px;
+}
+
 div.minimal button.material{
 	    text-transform: capitalize;
 	margin: 0; 
-	padding: 1px 6px;
+	/*padding: 1px 6px;*/
+	padding: 0px 2px;
 	height:auto;
 	letter-spacing: normal;
     word-spacing: normal;
 	box-shadow: none;
-	font-size: small;
+	font-size: xx-small;
 	background-color: buttonface;
 	border-width: 2px;
     border-style: outset;
@@ -711,7 +726,7 @@ div.material-slider{
 }
 .minimal>div.material-slider{
 	position:relative;
-	
+	max-width:300px;
 	box-sizing:border-box;
 	height:10px;
 	margin: 3px;
@@ -720,6 +735,8 @@ div.material-slider{
 
 	height:5px;
 }
+
+
 .minimal div.material-slider-pivot{
 	width: 8px;
     height: 8px;
@@ -1019,6 +1036,11 @@ div.dropdown-select-item{
     text-align: center;
 	justify-content: center;
 
+}
+
+.minimal div.dropdown-select-title,div.dropdown-select-label,div.dropdown-select-item{
+	height:auto;
+	box-shadow:none;
 }
 
 .axis text{

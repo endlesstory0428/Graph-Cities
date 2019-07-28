@@ -5,7 +5,7 @@ G.addModule("ui",{
 	init:function(){
 		graphInfoElement=document.getElementById("graph-info");
 		this.CCTooltipElement=this.makeTooltip("top-level-CC-tooltip");
-		let minimalUI=getQueryVariable("minimalUI");
+		let minimalUI=G.getQueryVariable("minimalUI");
 		if(minimalUI){
 			this.minimalUI=true;
 			getE("top-bar").style.display="none";
@@ -46,7 +46,8 @@ G.addModule("ui",{
 		//now, the path is basically teh ame as teh data path, and the old "parent" isn't used - going back and forward is done through the graph history (in cases where the expanded subgraph's natural metagraph is not the last metagraph)
 		let parentPath=null,nameText=null; 
 		if(graph.metagraph){parentPath=graph.metagraph;nameText=toNormalText(graph.subgraphType)+" "+graph.subgraphID;}
-		if(graph.originalGraph){parentPath=graph.originalGraph;nameText=toNormalText(graph.metagraphType)+" metagraph"}
+		if(graph.originalGraph){parentPath=graph.originalGraph;nameText=toNormalText(graph.metagraphType)+" metagraph";}
+		if(graph.wholeGraph){parentPath=graph.wholeGraph;nameText=toNormalText(graph.subgraphType)+" "+graph.subgraphID;}
 			
 		if(!graph.hierarchyPathElem){
 			let hierarchyPathElem=getE("hierarchy-path");
@@ -72,6 +73,7 @@ G.addModule("ui",{
 			//let parent=graph.metagraph||graph.originalGraph||graph.wholeGraph;//either the metagraph it's expanded from, or the riginal graph hose metagraph it is, or the containing graph of the subgraph in cases where there is no metagraph (like user-selection subgraphs)
 			
 			if(parentPath){
+				//if(G.loading.hasGraph(graph.datasetID))
 				let parent=G.getGraph(parentPath);
 				if(!parent.hierarchyPathContent)this.initHierarchyPathElems(parent);
 				graph.hierarchyPathName.textContent=nameText;
@@ -113,11 +115,12 @@ G.addModule("ui",{
 		}*/
 		str=str.replaceAll("/"," ");
 		str=str.replaceAll("wave2","wave");
-		str=str.replace(/layer ([0-9]+) (CC|cc) ([0-9]+)/g,"connected fixed point $3");
+		str=str.replace(/layer ([0-9]+) (CC|cc) ([0-9]+)/g,"connected fixed point $1");
 		str=str.replace(/layer ([0-9]+)/g,"fixed point $1");
 		str=str.replace(/wave ([0-9]+) (CC|cc) ([0-9]+)/g,"wave $1 subwave $3");
 		str=str.replace(/waveLevel/g,"fragment");
 		str=str.replace(/level/g,"fragment");
+		str=str.replace(/metagraphs/g,"metagraph of");
 		str=str.replace("wave","\nwave");//just one instance
 		//str=str.replaceAll("layer","fixed point");
 		str= str.replace(/(?<=[a-z])([A-Z/]+)/g, ' $1').replace("_"," ").replace(/^./, function(str){ return str.toUpperCase(); });
@@ -146,20 +149,26 @@ G.addModule("ui",{
 			if(graph.edges[graph.heightProperty]){
 				let obj=graph.edges[graph.heightProperty];
 				if(obj.max!=undefined&&obj.min!=undefined){
-					summaryText=this.toCustomText(graph.heightProperty)+" "+obj.min+" to "+obj.max;
+					summaryText=this.toCustomText(graph.heightProperty)+" "+((obj.min==obj.max)?obj.min:(obj.min+" to "+obj.max));
 				}
 			}
 			else if(graph.vertices[graph.heightProperty]){
 				let obj=graph.vertices[graph.heightProperty];
 				if(obj.max!=undefined&&obj.min!=undefined){
-					summaryText=this.toCustomText(graph.heightProperty)+" "+obj.min+" to "+obj.max;
+					summaryText=this.toCustomText(graph.heightProperty)+" "+((obj.min==obj.max)?obj.min:(obj.min+" to "+obj.max));
 				}
 			}
 		}
 		let title=this.graphPathToText(graph.dataPath);
 		if(summaryText)title=title+" ("+summaryText+")";
 		getE("minimal-graph-title").innerText=title;
-		//getE("minimal-graph-desc").innerText=summaryText;
+		let V=graph.vertices.length,E=graph.edges.length;
+		let p=(E/(V*(V-1)/2)),k=Math.log(E/V)/Math.log(Math.log(V));
+		let VEText="|V|: "+V+", |E|: "+E;//+", avg. degree: "+shortStr(2*E/V)+", density: "+shortStr(p)+", sparsity:"+shortStr(k);
+		if(p==1){VEText+=" (complete)";}
+		if(graph.heightProperty&&(graph.nodes.length!=V)){VEText+=", clones: "+graph.nodes.length;}
+		
+		getE("minimal-graph-desc").innerText=VEText;
 		//update text descriptions and ribbon
 		if(graph.datasetID!=this.topLevelGraphPath){
 			this.showTopLevelGraphStats(G.getGraph(graph.datasetID));
@@ -170,10 +179,14 @@ G.addModule("ui",{
 		//layers: use the triangle?
 		if(graph.globalPartitionInfo&&graph.globalPartitionInfo.layer){
 			let l=graph.globalPartitionInfo.layer.value;
-			this.ribbonSelection.filter((data)=>data.layer==l).select(".selector").style("visibility","visible");
-			this.ribbonSelection.filter((data)=>data.layer!=l).select(".selector").style("visibility","hidden");
+			if(this.ribbonSelection){
+				this.ribbonSelection.filter((data)=>data.layer==l).select(".selector").style("visibility","visible");
+				this.ribbonSelection.filter((data)=>data.layer!=l).select(".selector").style("visibility","hidden");
+			}
 		}
-		else{this.ribbonSelection.select(".selector").style("visibility","hidden");}
+		else{
+			if(this.ribbonSelection){this.ribbonSelection.select(".selector").style("visibility","hidden");}
+		}
 		//ccs: highlight the CC or CC bucket
 		if(graph.globalPartitionInfo&&graph.globalPartitionInfo.CC){
 			let V=graph.globalPartitionInfo.CC.V,E=graph.globalPartitionInfo.CC.E,str=V+","+E;
@@ -421,12 +434,15 @@ G.addModule("ui",{
 			*/
 			tipSelection.select("#ribbon-description").text(str);
 			//v and e distributions
-			let vDist=Object.keys(data.Vdist),vDistValues=vDist.map((x)=>data.Vdist[x]);
-			let eDist=Object.keys(data.Edist),eDistValues=eDist.map((x)=>data.Edist[x]);
-			let svg1=tipSelection.select("#ribbon-vertex-dist");
-			let svg2=tipSelection.select("#ribbon-edge-dist");
-			drawPlot("vertices","count",vDist,vDistValues,svg1,190,90);
-			drawPlot("edges","count",eDist,eDistValues,svg2,190,90);
+			if(data.Vdist){
+				let vDist=Object.keys(data.Vdist),vDistValues=vDist.map((x)=>data.Vdist[x]);
+				let eDist=Object.keys(data.Edist),eDistValues=eDist.map((x)=>data.Edist[x]);
+				let svg1=tipSelection.select("#ribbon-vertex-dist");
+				let svg2=tipSelection.select("#ribbon-edge-dist");
+				drawPlot("vertices","count",vDist,vDistValues,svg1,190,90);
+				drawPlot("edges","count",eDist,eDistValues,svg2,190,90);
+			}
+			
 			
 			G.ui.showTooltip(tip);
 		}

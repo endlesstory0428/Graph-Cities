@@ -56,10 +56,12 @@ void main() {
 	
 	float distance=length( mvPosition.xyz );
 	float sizeFactor=(1.+smoothstep(0.,10000.,distance)*3.)/(distance+0.01);
-	float metanodeExpandedFactor=1.;if(isExpanded>0.){metanodeExpandedFactor=4.;}
+	float metanodeExpandedFactor=1.;//if(isExpanded>0.){metanodeExpandedFactor=4.;}
 	float additiveMetanodeExpandedFactor=0.;if(isExpanded>0.){additiveMetanodeExpandedFactor=50.;}
 	//gl_PointSize = ( 3.0 * sizeFactor  )*size*pointSize*activeLayerFactor*metanodeExpandedFactor;//*ccSizeFactor;
-	gl_PointSize = clamp(10000.0 *sizeFactor*size,0.05,100.)*activeLayerFactor*metanodeExpandedFactor*nodeSizeFactor;;//*size//*ccSizeFactor;//*ccSizeFactor
+	float minSizeClamp=0.05,maxSizeClamp=100.;
+	if(isExpanded>0.){minSizeClamp=0.001;maxSizeClamp=10000.;}
+	gl_PointSize = clamp(10000.0 *sizeFactor*size,minSizeClamp,maxSizeClamp)*activeLayerFactor*metanodeExpandedFactor*nodeSizeFactor;;//*size//*ccSizeFactor;//*ccSizeFactor
 	//gl_PointSize = pointSize;
 	//gl_Position =vec4(position,1.0);
 	

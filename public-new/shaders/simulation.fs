@@ -1,7 +1,7 @@
 varying vec2 vUv;
 uniform sampler2D tPositions;
 uniform sampler2D tPositionsPrev;
-uniform sampler2D nodeData;//layer, layerset ID,original ID, ccSize
+uniform sampler2D nodeData;//layer, charge(was layerset ID),original ID, subgraph level
 uniform sampler2D nodePinData;
 uniform sampler2D nodeTargetRadiusData;
 uniform sampler2D nodeTargetAnglesData;
@@ -70,12 +70,12 @@ void main(void) {
 	vec2 r = pos.xy;
 	vec2 r1  = texture2D(tPositions, vUv).xy;//r(t+1)
 	vec2 f = vec2( 0. );//now forces only apply to x and y, the layoutDataSize is fixed by a formula
-	vec4 node = texture2D(nodeData, vUv);//layer, layerset ID,original ID, ccSize
+	vec4 node = texture2D(nodeData, vUv);//layer,charge,original ID, subgraph level
 	vec4 nodePin = texture2D(nodePinData, vUv);//x,y,z,pinned
 	vec4 nodeSelected = texture2D(nodeSelectionData, vUv);//x:isSelected
 	vec4 clustering = texture2D(clusteringData, vUv);
 	vec4 metanode = texture2D(metanodeData, vUv);
-	float layer=node.x,layerSetID=node.y,original=node.z,subgraphLevel=node.w;//was ccsize but nt used now
+	float layer=node.x,charge=node.y,original=node.z,subgraphLevel=node.w;//was ccsize but nt used now
 	
 	
 	float totalEdges=0.,totalVertices=0.;//sanity check
@@ -84,6 +84,8 @@ void main(void) {
 	
 	//it seems avoiding if's is faster here
 	
+	float realAlignmentFactor=alignmentStrengthFactor;
+	if(heightFactor<0.01)realAlignmentFactor=5.;
 	//actually an if outside of loops desn't seem to affect fps
 	for(float y = d/2.; y < 1.; y += d ){
 		for(float x = d/2.; x < 1.; x += d ){
@@ -93,7 +95,7 @@ void main(void) {
 			vec4 other=texture2D(tPositions,vec2(x, y));
 			vec4 otherData=texture2D(nodeData,vec2(x, y));
 			vec4 otherMetanodeData=texture2D(metanodeData,vec2(x, y));
-			float otherlayer=otherData.x,otherlayerSetID=otherData.y,otheroriginal=otherData.z,otherccSize=otherData.w,otherMetanodeID=otherMetanodeData.x;
+			float otherlayer=otherData.x,otherCharge=otherData.y,otheroriginal=otherData.z,otherccSize=otherData.w,otherMetanodeID=otherMetanodeData.x;
 			float otherSubgraphLevel=otherMetanodeData.w;
 			//if(otherlayer!=activeLayer)continue;
 			vec2 v = other.xy - r1;
@@ -103,9 +105,9 @@ void main(void) {
 			float isDifferent=step(0.01,abs(original-otheroriginal));
 			float subgraphChargeFactor=pow(0.8, subgraphLevel);//now if they have forces between, the subgraph levels have to be the same
 			vec2 force=(
-					(v/(a*sqrt(a)))*G*isDifferent*subgraphChargeFactor //many-body, skipping forces between aligned nodes;
+					(v/(a*sqrt(a)))*G*isDifferent*charge//subgraphChargeFactor //many-body, skipping forces between aligned nodes;
 					//+(v*max(-150.,a-1000.*linkDistanceFactor)/(a+e2))*(e*edgeStrength*linkStrengthFactor)//link force, the expanding force of edges should not be too strong
-					+(v*max(0.,a-0.1)/(a+e2))*((1.-isDifferent)*alignmentStrength*alignmentStrengthFactor)//alignment force
+					+(v*max(0.,a-0.1)/(a+e2))*((1.-isDifferent)*alignmentStrength*realAlignmentFactor)//alignment force
 				)
 				*max(delta(activeLayerEnabled,1.),min(isEqual(otherlayer,activeLayer),isEqual(layer,activeLayer)))//ignore if either of them is not in the active layer
 				*step(0.,nodeCount-totalVertices)//ignore unused node slots

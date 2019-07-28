@@ -26,6 +26,7 @@ G.addModule("controls",{
 				G.addLog("error: the save path is unknown");
 			}
 		}
+		G.saveLayout=saveLayout;
 		
 		function saveImage(){
 			let path=this.graph.datasetID;//this.graph.dataPath;
@@ -213,16 +214,52 @@ G.addModule("controls",{
 					G.display(G.graph);
 				}
 				else{
-					//G.graph.heightProperty="waveLevel";
-					//G.graph.heightPropertyTypeHint="edges";
+					G.graph.heightProperty="waveLevel";
+					G.graph.heightPropertyTypeHint="edges";
 					return;
 				}
 				
 			},
 			"iterative wave edge decomposition":()=>G.display(G.analytics.computeWaveEdgeDecomposition2(G.graph)),
+			"region graph":()=>{
+				if(G.graph.heightPropertyType!="edges"){G.addLog("error: there's no height information");return;}
+				let result=G.analytics.getRegionGraph(G.graph);
+				G.graph.representation="regionGraph";
+				G.display(G.graph);
+			},
+			"region graph 1":()=>{
+				if(G.graph.heightPropertyType!="edges"){G.addLog("error: there's no height information");return;}
+				let result=G.analytics.getRegionGraph(G.graph,"distance1");
+				G.graph.representation="regionGraph";
+				G.display(G.graph);
+				//G.display(G.graph);
+			},
+			"region graph all":()=>{
+				if(G.graph.heightPropertyType!="edges"){G.addLog("error: there's no height information");return;}
+				let result=G.analytics.getRegionGraph(G.graph,"all");
+				G.graph.representation="regionGraph";
+				G.display(G.graph);
+			},
+			"region graph custom":()=>{
+				if(G.graph.heightPropertyType!="edges"){G.addLog("error: there's no height information");return;}
+				let result=G.analytics.getRegionGraph(G.graph,{maxDistance:G.controls.get("regionMaxDistance")});
+				G.graph.representation="regionGraph";
+				G.display(G.graph);
+			},
 		};
-		
-		this.addDropdownMenu(controlsElem,"algorithms",this.algorithms);
+		this.add("regionMaxDistance",1,{min:1,max:10,type:"integer",lazy:true},(value)=>{
+			G.addLog("distance is "+value);
+			if(G.graph.representation=="regionGraph"){
+				if(G.graph.heightPropertyType!="edges"){G.addLog("error: there's no height information");return;}
+				let result=G.analytics.getRegionGraph(G.graph,{maxDistance:value});
+				if(G.view.graph&&G.view.graph.modifiers){//follow the old modifiers
+					if(!result.modifiers)result.modifiers={};
+					Object.assign(result.modifiers,G.view.graph.modifiers);
+				}
+				G.display(G.graph);
+			}
+		});
+		let algsMenu=this.addDropdownMenu(controlsElem,"algorithms",this.algorithms);
 		
 
 		
@@ -440,13 +477,13 @@ G.addModule("controls",{
 		this.contextMenus.empty.onmouseout=hideFunc;
 
 		
-		this.addButton(this.contextMenus.vertices,"add to SN",()=>G.analytics.addVertexToSparseNet(this.contextMenuTarget));
-		this.addButton(this.contextMenus.vertices,"display layer",()=>G.toggleActiveLayer(this.contextMenuTarget.layer));
-		this.addButton(this.contextMenus.vertices,"expand individually",()=>G.loading.expandVertex(this.contextMenuTarget,null,false));
-		this.addButton(this.contextMenus.vertices,"expand in place",()=>G.loading.expandVertex(this.contextMenuTarget,null,true));
+		this.addButton(this.contextMenus.vertices,"add to SN",()=>G.analytics.addVertexToSparseNet(this.contextMenuTarget.original));
+		this.addButton(this.contextMenus.vertices,"display layer",()=>G.toggleActiveLayer(this.contextMenuTarget.height));
+		this.addButton(this.contextMenus.vertices,"expand individually",()=>G.loading.expandVertex(this.contextMenuTarget.original,null,false));
+		this.addButton(this.contextMenus.vertices,"expand in place",()=>G.loading.expandVertex(this.contextMenuTarget.original,null,true));
 		
 		this.addButton(this.contextMenus.waveLayers,"expand level",()=>{
-			let level=this.contextMenuTarget.layer;
+			let level=this.contextMenuTarget.height;
 			G.load(this.graph.expandLevel(level));
 			/*let g=G.graph.expandedGraph;
 			if(!g)return;
@@ -528,6 +565,7 @@ G.addModule("controls",{
 			else {G.simulationRunning=true;}
 					
 		});
+		this.addKeyListener(G.canvasContainer,"$",saveLayout);
 		this.addKeyListener(G.canvasContainer,"l",()=>{//what if teh user just wants to pause/unpause but doens't want to see labels??
 			G.ui.showLabels();
 		});
@@ -571,6 +609,47 @@ G.addModule("controls",{
 		graphFolder.add(G, 'showWaveLevelTable');
 		G.showSmallCCinWhole=true;
 		graphFolder.add(G, 'showSmallCCinWhole');
+		G.downloadVerticesAndEdgesByHeight=function(){
+			let g=G.view.graph;
+			if(g.heightPropertyType!="edges"){G.addLog("error: there's no height information");return;}
+			
+			let heights={};
+			let cloneMaps=g.edges[g.heightPropertyName].cloneMaps;
+			let clones=g.edges[g.heightPropertyName].clones;
+			for(let i=0;i<g.vertices.length;i++){
+				for(let value in cloneMaps[i]){
+					if(!heights[value]){heights[value]={v:i.toString(),e:""};}
+					else{heights[value].v+=" "+i}
+					let cloneID=cloneMaps[i][value];
+					for (let neighbor in clones[cloneID].edges){
+						let originaNeighbor=clones[neighbor].original;
+						if(originaNeighbor>i){
+							if(heights[value].e.length==0){heights[value].e="("+i+","+originaNeighbor+")";}
+							else{heights[value].e+=" ("+i+","+originaNeighbor+")";}
+						}
+					}
+				}
+			}
+			let heightValues=Object.keys(heights).sort(compareBy((x)=>Number(x),true));
+			let vtext="";
+			let etext="";
+			let first=true;
+			for(let value of heightValues){
+				if(first){
+					vtext+=heights[value].v;
+					etext+=heights[value].e;
+					first=false;
+				}
+				else{
+					vtext+="\n"+heights[value].v;
+					etext+="\n"+heights[value].e;
+				}
+				
+			}
+			downloadString(etext,g.name+".edges");
+			downloadString(vtext,g.name+".vertices");
+		};
+		graphFolder.add(G, 'downloadVerticesAndEdgesByHeight');
 		
 		let sceneFolder = gui.addFolder('Scene');
 	
@@ -628,6 +707,8 @@ G.addModule("controls",{
 
 		const toolTipElem = document.createElement('div');G.toolTipElem=toolTipElem;
 		toolTipElem.classList.add('graph-tooltip');
+		toolTipElem.style.display="none";
+		toolTipElem.classList.add('graph-tooltip');
 		G.canvasContainer.appendChild(toolTipElem);
 	
 		G.showingTooltip=false;
@@ -672,7 +753,8 @@ G.addModule("controls",{
 		let menu=getE("style-menu");
 		this.values[controlName]=initialValue;
 		//let e=new Error();console.log(controlName +" set to "+initialValue+" at "+ e.stack);
-		if(options){//is a selection; only use the keys
+		if(!options)options={};
+		if(typeof initialValue=="string"){//is a selection; only use the keys
 			this.addDropdownSelect(menu,toNormalText(controlName),Object.keys(options),(value)=>{this.values[controlName]=value;if(callback)callback(value);},{initialValue:initialValue});
 			//parentElem,title,items,func,options
 		}
@@ -681,11 +763,15 @@ G.addModule("controls",{
 				this.addCheckbox(menu,toNormalText(controlName),(value)=>{this.values[controlName]=value;if(callback)callback(value);});
 			}
 			else if(typeof initialValue =="number"){
-				this.addSlider(menu,toNormalText(controlName),(value)=>{this.values[controlName]=value;if(callback)callback(value);},{min:initialValue/10,max:initialValue*10,value:initialValue});
+				let min=initialValue/10,max=initialValue*10;
+				if("min" in options)min=options.min;
+				if("max" in options)max=options.max;
+				Object.assign(options,{min:min,max:max,value:initialValue});
+				this.addSlider(menu,toNormalText(controlName),(value)=>{this.values[controlName]=value;if(callback)callback(value);},options);
 			}
 
 		}
-		
+		return options;
 	},
 	get:function(controlName,initialValue,options,callback){
 		//to support: 1)each view may create its own set of controls, bound to some HTML element 2) controls can be created and used in one single place, such as ***=controls.get(name,original,min,max) will create the control with the default value the first time it's called, and get its value later (maybe even update the range if needed); it can be bound to a property and listen o it as needed, because  
@@ -747,6 +833,7 @@ G.addModule("controls",{
 		if("min" in options==false)options.min=0;
 		if("max" in options==false)options.max=1;
 		
+		
 		let s=d3.select(parentElem).append("div").attr("class","material-slider");
 		let elem=s.node();elem.__options=options;
 		
@@ -760,6 +847,9 @@ G.addModule("controls",{
 			let width=clamp(d3.event.x,0,rect.width);//-rect.left;
 			let percent=Math.floor(100*(width)/rect.width)+"%";//-rect.left
 			let value=(options.max-options.min)*(width)/rect.width+options.min;//-rect.left
+			if(options.type=="integer"){
+				value=Math.round(value);
+			}
 			bar.style("width",percent);
 			pivot.style("left",percent);
 			func(value);
@@ -946,6 +1036,25 @@ G.addModule("controls",{
 			//options.index=i;
 		};
 		options.onUpdate=onUpdate;//call when the value is changed outside
+		let updateItems=function(newItems,initialValue){
+			menuBody.selectAll("div.dropdown-select-item").remove();
+			for(let i in newItems){
+				let item=newItems[i];//for both list or object type input
+				let value=(typeof item=="function")?i:item;
+				if(!initialValue)initialValue=value;
+				menuBody.append("div").attr("class","dropdown-select-item").text(toNormalText(value)).on("click",()=>{
+					options.value=value;
+					if(options.upward){menuTitle.text(value+" \u25b2");}
+					else{menuTitle.text(value+" \u25bc");}
+					options.index=i;
+					if(func)func(item,i);
+					if(typeof item=="function")item();
+				});
+			}
+			if(options.upward){menuTitle.text(toNormalText(initialValue)+" \u25b2");}
+			else{menuTitle.text(toNormalText(initialValue)+" \u25bc");}
+		};
+		options.updateItems=updateItems;//call when the list ofites needs to be changed
 		return options;
 	},
 	addKeyListener(elem,key,keydownfunc,keyupfunc,options){
@@ -963,7 +1072,13 @@ G.addModule("controls",{
 			}
 		});
 	},
-	
+	addDragListener(elem,startdragfunc,dragfunc,stopdragfunc,options){
+		if(!options)options={};
+		options.isDragging=false;
+		elem.addEventListener( 'mousedown', mousemove, false );
+		elem.addEventListener( 'mousemove', mousemove, false );
+		elem.addEventListener( 'mouseup', mouseup, false );
+	},
 	
 	
 	
@@ -1068,7 +1183,7 @@ G.addModule("controls",{
 		G.onrightclick=function (result){
 			if(result)
 			{
-				let objID=result.objectID,obj=G.view.model[result.type][objID];
+				let objID=result.objectID,obj=G.view.model[result.type].getObj(objID);//G.view.model[result.type][objID];
 				let originalObjectID=result.originalObjectID,originalObjectType=result.originalObjectType,originalObject=result.originalObjectType?result.subview.graph[originalObjectType][originalObjectID]:null;
 				let subgraphLevel=result.subview.subgraphLevel;let subgraph=result.subview.graph;
 				G.showContextMenu("vertices",obj);
@@ -1149,6 +1264,7 @@ type: "nodes"*/
 				}
 				
 				G.toolTipElem.textContent = originalDesc+viewDesc;
+				G.toolTipElem.style.display="";
 				
 				switch (result.type)
 				{
@@ -1170,6 +1286,7 @@ type: "nodes"*/
 			}
 			else{
 				G.toolTipElem.textContent="";
+				G.toolTipElem.style.display="none";
 			}
 		}
 		G.onhoverend=function(result){
@@ -1179,6 +1296,7 @@ type: "nodes"*/
 				let originalObjectID=result.originalObjectID,originalObjectType=result.originalObjectType,originalObject=result.originalObjectType?result.subview.graph[originalObjectType][originalObjectID]:null;
 				let subgraphLevel=result.subview.subgraphLevel;let subgraph=result.subview.graph;
 				G.toolTipElem.textContent="";
+				G.toolTipElem.style.display="none";
 				switch (result.type)
 				{
 					case "nodes":
@@ -1255,6 +1373,7 @@ type: "nodes"*/
 			let menu=G.controls.contextMenus[type];
 			if(menu){
 				G.toolTipElem.textContent="";
+				G.toolTipElem.style.display="none";
 				menu.style.display="block";
 				menu.style.top=(G.mouseScreenPos.y+1)+"px";
 				menu.style.left=(G.mouseScreenPos.x+1)+"px";

@@ -85,7 +85,7 @@ G.addModule("view",{
 		G.resetView=this.resetView;
 		G.renderer = new THREE.WebGLRenderer( {
 			antialias: false, //canvas: canvas, context: context ,
-			//clearColor: 0x000000, 
+			clearColor: 0xffffff, //??
 			//clearAlpha: 0, 
 			preserveDrawingBuffer: true,
 		} );
@@ -199,9 +199,38 @@ G.addModule("view",{
 				for (let i=0;i<this.subviews.length;i++){
 					//addHiddenProperty(this.subviews[i].graph.vertices,"layout",layouts[i]);
 					this.subviews[i].graph.vertices.addProperty("layout",null,layouts[i]);
+					for(let v of layouts[i]){if(!v)throw Error();}
 				}
+				
+				//try reusing parts of the old (main) layout if the new graph has no layout and there's a significant overlap (but if the overlap is tiny, don't reuse as it could make the layout look worse)
+				if(!newGraph.vertices.layout){
+					//here if it has a layout it should have been loaded
+					let newLayout=new Array(newGraph.vertices.length);let overlapCount=0;
+					let oldLayout=layouts[0],oldIDs=this.subviews[0].graph.vertices.id,oldIDMap=this.subviews[0].graph.vertexMap;
+					for(let i=0;i<newGraph.vertices.length;i++){
+						let id=newGraph.vertices.id[i];
+						if(id in oldIDMap){
+							newLayout[i]=new THREE.Vector3().copy(oldLayout[oldIDMap[id]]);
+							overlapCount++;
+						}
+					}
+					if(overlapCount>newGraph.vertices.length*0.5){
+						for(let i=0;i<newGraph.vertices.length;i++){
+							if(newLayout[i])continue;
+							let v=new THREE.Vector3();newLayout[i]=v;
+							do{v.x = THREE.Math.randFloatSpread(100);v.y = THREE.Math.randFloatSpread(100);v.z = THREE.Math.randFloatSpread(100);}
+							while(v.length()>Math.random()*50+50);
+						}
+						//must fill in missing entries
+						newGraph.vertices.addProperty("layout",null,newLayout);
+					}
+				}
+				
 			}
 		}
+		
+		
+		
 		let minimap=getE("minimap");
 		//save minimap before the child graph is shown
 		if(this.graph&&(!this.graph.imageData)&&(this.graph.vertices.length>0||this.graph.globalRings&&this.graph.globalRings.length>0)){
@@ -210,8 +239,9 @@ G.addModule("view",{
 		if(newGraph.parent&&newGraph.parent.imageData){minimap.src=newGraph.parent.imageData;minimap.style.display="block";}//works even if the parent is not the current graph
 		else{minimap.src="images/blank.png";minimap.style.display="none";}
 	},
-	displayGraph:async function(graph){
-		
+	displayGraph:async function(graph,options){
+		if(!options)options={};
+		if(graph.vertices.layout)for(let i=0;i<graph.vertices.layout.length;i++){if(!graph.vertices.layout[i])throw Error();}
 		while(graph.representation)graph=G.getGraph(graph.dataPath+"/metagraphs/"+graph.representation);//only use the real displayed top level graph
 		
 		if(graph.vertices.id.isAbstract){console.log("warning: showing abstract graph");return;}
@@ -224,8 +254,9 @@ G.addModule("view",{
 				else{
 					if(layout){G.addLog("using precomputed layout");}
 					//make sure the number of items is the same as the vertex count, in case the graph changed
-					if(layout.length>graph.vertices.length){layout.splice(graph.vertices.length);}
+					if(layout.length>graph.vertices.length){layout=layout.slice(0,graph.vertices.length);}
 					while(layout.length<graph.vertices.length){layout.push(new THREE.Vector3())}
+					for(let i=0;i< layout.length;i++){if(!layout[i])throw Error();}
 					graph.vertices.addProperty("layout",null,layout);
 				}
 			});
@@ -236,9 +267,8 @@ G.addModule("view",{
 		
 		this.step=0;
 		this.timer=0;//reset the time since simulation started
-		if(this.graph!=graph)G.resetView();//exclude expansion in-place
+		if((this.graph!=graph)&&(!options.noMoveCamera))G.resetView();//exclude expansion in-place
 		this.graph=graph;
-		
 		
 		
 		let heightPropertyName=graph.heightProperty,heightPropertyType;
@@ -295,7 +325,10 @@ G.addModule("view",{
 	animateOnce:function animateOnce() {
 		G.stats.begin();
 		
-		if(!this.simulationShader){G.composer.render(delta);return;}
+		if(!this.simulationShader){
+			G.composer.render(delta);
+			return;
+		}
 		if(!this.model||!this.model.nodes){return;}
 		
 		var delta = this.clock.getDelta();
@@ -331,11 +364,11 @@ G.addModule("view",{
 		nodeData:{
 			isArray:true,
 			value:(model)=>{
-				let nodes=model.nodes,nodeHeights=nodes.height;
+				let nodes=model.nodes,nodeHeights=nodes.height,nodeCharges=nodes.charge;
 				let result=[];
 				for(let i=0;i<nodes.length;i++){
 					result[i]={x:nodeHeights[i],
-					y:0,//node.layerSetID, //should replace with correct values
+					y:nodeCharges[i],//0,//node.layerSetID, //should replace with correct values
 					z:nodes.original[i],//node.original,//note: we can get the original ID inside each subview, but the limitation is that cross-subgraph alignment (such as in layer/cc metagraphs) doesn't work unless we have a global vertex intrinsic identity no matter what subgraph it's in
 					w:nodes.subgraphLevel[i],//was node.ccSize but not needed now
 					};
@@ -478,7 +511,7 @@ G.addModule("view",{
 		linkForceEnabled:{value:()=>G.controls.get("linkForceEnabled",true),dynamic:true},//linkForceEnabled:{value:()=>G.linkForceEnabled,dynamic:true},
 		activeLayerEnabled:{value:()=>G.activeLayer!=null,dynamic:true},
 		activeLayer:{value:()=>G.activeLayer,dynamic:true,},
-		maxLayer:{value:()=>Math.max.apply(null,G.view.model.nodes.height)},//G.graph.nodeHeights
+		maxLayer:{value:()=>arrayMax(G.view.model.nodes.height)},//G.graph.nodeHeights
 		
 		radiusFactor:{value:()=>G.controls.get("radiusFactor",1),dynamic:true},
 		
@@ -506,6 +539,11 @@ G.addModule("view",{
 			isArray:true,
 			value:(model)=>{//assuming they are non negative, scale to between -0.5 and 0.5
 				let max=model.heights.max,min=model.heights.min,logLayerHeightRatio=((model.showingInterlayers||(model.layerHeightOption=="linear"))?0:G.controls.get("logLayerHeightRatio")),layerCount=Object.keys(model.heights).length;
+				if(getQueryVariable("linearHeight"))logLayerHeightRatio=0;
+				//allow forcing certain heights to be more separate from others? Or even just separate more at one height value (>=)?
+				let separateAtHeight=undefined;
+				if(getQueryVariable("separateAtHeight"))separateAtHeight=Number(unescape(getQueryVariable("separateAtHeight")).trim());
+				if(isNaN(separateAtHeight)){separateAtHeight=0;}//console.log("separateAtHeight is "+separateAtHeight);
 				let result=new Array(max+1);
 				for(let i=0;i<=max;i++){
 					let temp;
@@ -515,6 +553,17 @@ G.addModule("view",{
 						let logH=(Math.log(i+1.)-Math.log(min+1))/(Math.log(max+1.)-Math.log(min+1));
 						let linearH=(i-min)/(max-min);
 						temp=(1-logLayerHeightRatio)*linearH+logLayerHeightRatio*logH;
+					}
+					if(G.view.graph.modifiers&&G.view.graph.modifiers.dimming&&(G.view.graph.modifiers.dimming.separate==true)){//separateAtHeight
+						let reverse=G.view.graph.modifiers.dimming.reverse;
+						let threshold=G.view.graph.modifiers.dimming.threshold;
+						if(reverse){
+							temp*=0.5;if(i>threshold)temp+=0.5;
+						}
+						else{
+							temp*=0.5;if(i>=threshold)temp+=0.5;
+						}
+						
 					}
 					result[i]=(temp-0.5)*500.0*Math.sqrt(Math.log(max+1.));
 				}
@@ -548,6 +597,24 @@ G.addModule("view",{
 				isExpanded:{
 					value:(node,i,array)=>array.isExpanded?array.isExpanded[i]:0,
 				},
+				size:{
+					value:(node,i,array)=>{
+						let result=array.size[i];
+						if(array.isExpanded[i]&&array.metanodeSize[i])result+=array.metanodeSize[i];
+						result=result*Math.pow(0.5,array.subgraphLevel[i]);
+						return result;
+					},
+				},
+				charge:{
+					value:(node,i,array)=>{
+						let result=array.charge[i];
+						if(array.isExpanded[i]&&array.metanodeSize[i]){
+							result+=array.metanodeSize[i]*array.metanodeSize[i];
+						}
+						result=result*Math.pow(0.5,array.subgraphLevel[i]);
+						return result;
+					},
+				},
 				height:{
 					isArray:true,
 					value:(model)=>{
@@ -568,7 +635,10 @@ G.addModule("view",{
 						nodes.forEach((node,i,array)=>{
 							let value=colorValues[i];
 							if(value==undefined){let metanodeID=metanodeIDs[i];value=colorValues[metanodeID];}
-							if(value==undefined){value=-1;}//0 is the first color, -1 is a neutral color (grey?)
+							if(value==undefined){
+								value=-1;
+								if(G.view.graph.colorScale){value=0.5;}
+							}//0 is the first color, -1 is a neutral color (grey?)
 							colorValues[i]=value;
 						});
 						return colorValues;
@@ -595,12 +665,21 @@ G.addModule("view",{
 							var v=new THREE.Vector4();
 							let result=G.view.getOriginalObject("nodes",i);
 							let layout=result.graph.vertices.layout,vID=result.originalObjectID;
+							/*if(layout){
+								if(!layout[vID]){throw Error();}
+								if(isNaN(layout[vID].x))throw Error();
+								v.x=layout[vID].x;v.y=layout[vID].y;v.z=layout[vID].z;
+							}*/
 							if(layout&&layout[vID]&&(!isNaN(layout[vID].x))){v.x=layout[vID].x;v.y=layout[vID].y;v.z=layout[vID].z;}
 							else{
 								do{v.x = THREE.Math.randFloatSpread(100);v.y = THREE.Math.randFloatSpread(100);v.z = THREE.Math.randFloatSpread(100);}
 								while(v.length()>Math.random()*50+50);
 								let metanodeID=metanodeIDs[i];
-								if(metanodeID!=-1){v.add(newLayout[metanodeID]);}
+								if(metanodeID!=-1){
+									let metavertexResult=G.view.getOriginalObject("nodes",metanodeID);
+									v.add(newLayout[metavertexResult.originalObjectID]);
+									//v.add(newLayout[metanodeID]);
+								}
 							}
 							//note: add metanode position to random initial position - if there's a cached position, it sould not be modified. when I load a subgraph in place, its layout is not loaded from the server so the initial positions have to be random and we can add the metanode position. If it were loaded from teh server, we would have to differentiate between saved (presumably origin-centered) layouts and cached (possibly metanode-centered) layouts. 
 							v.w=1;//would be 0 for extra space that correspond to no nodes
@@ -695,12 +774,10 @@ G.addModule("view",{
 			value:(model)=>{
 				let colorList=[],colorValues=[];let scale=colorScale;//G.colorScale
 				let graph=G.view.graph;
-				if(graph.colorScale){scale=G.colorScales[G.view.graph.colorScale];}
+				if(graph.colorScaleName){scale=G.colorScales[G.view.graph.colorScaleName];}
 				if(graph.heightProperty=="wave"||graph.heightProperty=="originalWaveLevel"||graph.embeddedWaveMap||graph.embeddedLevelMap){scale=G.colorScales.lightBlueRed;}
 				if(graph.colorScale){
-					let begin=graph.colorScale.begin;
-					let end=graph.colorScale.end;
-					//let style1="hsl("+
+					let [begin,end]=graph.colorScale.split(":");
 					G.colorScales.dynamic=d3.scaleSequential(d3.interpolateHslLong(begin,end)),
 					scale=G.colorScales.dynamic;
 				}
@@ -712,6 +789,7 @@ G.addModule("view",{
 					colorList[i]=color;
 					colorValues[i]=colorValue;
 				}
+				model.colorValues=colorValues;
 				return colorList;
 			}
 		},
@@ -738,7 +816,7 @@ G.addModule("view",{
 						}
 						heights[height].v++;
 					});
-					console.log("height range for "+objName+": "+minHeight+", "+maxHeight);
+					//console.log("height range for "+objName+": "+minHeight+", "+maxHeight);
 				}
 				/*
 				let linkSources=model.links.source,linkTargets=model.links.target;
@@ -752,9 +830,9 @@ G.addModule("view",{
 				});
 				*/
 				
-				let heightsList=Object.keys(heights);
-				let max=Math.max.apply(null,heightsList);if(max==-Infinity)max=0;addHiddenProperty(heights,"max",max);
-				let min=Math.min.apply(null,heightsList);if(min==Infinity)min=0;addHiddenProperty(heights,"min",min);
+				let heightsList=Object.keys(heights).map((n)=>Number(n));
+				let max=arrayMax(heightsList);if(max==-Infinity)max=0;addHiddenProperty(heights,"max",max);
+				let min=arrayMin(heightsList);if(min==Infinity)min=0;addHiddenProperty(heights,"min",min);
 				addHiddenProperty(heights,"count",heightsList.length);
 				return heights;
 			}
@@ -1008,8 +1086,14 @@ G.addModule("view",{
 			if(newGraph.isMetagraph){
 				for(let vID=0;vID<newGraph.vertices.length;vID++){
 					let vs=newGraph.vertices;
-					if(vs.isExpanded&&vs.isExpanded[vID]&&vs.subgraph&&vs.subgraph[vID]){
-						queue.push(vs.subgraph[vID]);
+					if(vs.isExpanded&&vs.isExpanded[vID]){
+						//the subgraph is now accessed by its dataPath
+						let path;
+						if(newGraph.subgraphPrefix){
+							path=newGraph.subgraphPrefix+"/"+vs.id[vID];
+							queue.push(G.getGraph(path));
+						}
+						else console.warn("no subgraph prefix");
 					}
 				}
 			}
@@ -1017,14 +1101,18 @@ G.addModule("view",{
 		//now, put all the objects from different graphs into a consistent list
 		let results=DataSet.concatDataSets(subviews,G.subview.templates);//{dataset:results,offsets:offsets}
 		let offsets=results.offsets;let model=results.dataset;
-		let graphMap=new Map();let graphList=[];
+		let graphMap={};//new Map();
+		let graphList=[];
 		for(let graphID=0;graphID<subviews.length;graphID++){
 			let subview=subviews[graphID];let g=subview.graph;let offset=offsets[graphID];
-			graphMap.set(g,graphID);graphList.push(g);
+			//graphMap.set(g,graphID);
+			graphMap[g.dataPath]=graphID;
+			graphList.push(g);
 			let metanodeID=null,globalMetanodeID=null,subgraphLevel=0;
 			if(g.parent&&(g!=graph)){//don't reference the parent of the current top graph
-				let parentViewID=graphMap.get(g.parent),parentView=subviews[parentViewID];
-				metanodeID=g.metanodeID;globalMetanodeID=metanodeID+parentView.nodeOffset;
+				let parentViewID=graphMap[g.currentMetagraph||g.parent];//graphMap[g.parent];
+				let parentView=subviews[parentViewID];
+				metanodeID=g.metanodeID;globalMetanodeID=metanodeID+offsets[parentViewID].nodes;//offset.nodes;
 				subview.globalMetanodeID=globalMetanodeID;subview.metanodeID=metanodeID;
 				subgraphLevel=parentView.subgraphLevel+1;
 			}
@@ -1151,7 +1239,10 @@ G.addModule("view",{
 		for(let gID=0;gID<this.subviews.length;gID++){
 			let subview=this.subviews[gID];
 			let graph=subview.graph;
-			if(!graph.vertices.layout)graph.vertices.addProperty("layout",null,()=>{return new THREE.Vector3();});
+			if(!graph.vertices.layout){
+				let layout=[];for(let i=0;i<graph.vertices.length;i++)layout[i]=new THREE.Vector3();
+				graph.vertices.addProperty("layout",null,layout);
+			}
 			let layout=graph.vertices.layout;let nodeOffset=this.offsets[gID].nodes;
 			for(let i=0;i<subview.nodes.length;i++){
 				let ID=i+nodeOffset;let vertexID=G.subview.templates.nodes.getOriginalObjectID(graph,i);
