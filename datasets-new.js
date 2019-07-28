@@ -8,7 +8,7 @@ var datasetIDMaps={};
 var dataDir,cacheDir;
 let summaryProperties=["id","name","info"];//"hidden","dynamic","params","vertexCount","edgeCount","isHierarchy","layers"
 
-let timeTolerance=5000;
+let timeTolerance=5000;//??
 let summaryFunctions={
 	"V":(d)=>d.data.vertices.length,
 	"E":(d)=>d.data.edges.length,
@@ -191,12 +191,18 @@ let DataTemplates={//these functions all take a graph(that has a dataPath etc) n
 	waveAndWaveLevel:{
 		deps:"graph",condition:(g)=>{
 			if(g.dataPath==g.datasetID){return true;}
-			for(let p of g.partitionInfo){if(p.type=="wave"||p.type=="waveLevel"||p.type=="wave2"||p.type=="level")return false;}
+			let isLayer=false;let isCC=false;
+			for(let p of g.partitionInfo){
+				if(p.type=="wave"||p.type=="waveLevel"||p.type=="wave2"||p.type=="level")return false;
+				if(p.type=="layer"){isLayer=true;}
+				if(p.type=="CC"){isCC=true;}
+			}
 			let lastType=g.partitionInfo[g.partitionInfo.length-1].type;
 			if(lastType=="BCC"){//currently disable it
 				return false;
 			}
 			if(g.vertices.length<256)return false;//for subgraphs, skip small ones
+			if(g.vertices.length>1024&&(!isLayer))return false;//skip large whole graphs
 			return true;
 		},
 		files:["vertices.wave.json.gz","vertices.waveLevel.json.gz"],
@@ -207,10 +213,22 @@ let DataTemplates={//these functions all take a graph(that has a dataPath etc) n
 			g.vertices.addProperty("waveLevel","int",results.vertexLayers);
 			saveProperty(g,"vertices","waveLevel");
 			
+			saveObj(g.dataPath,"wavesSummary",results.waves);
+			
 		},
 		load:(g)=>{//only loads the peel values, but also checks the subgraph/metagraph files in case those files need updating
 			loadProperty(g,"vertices","wave");
 			loadProperty(g,"vertices","waveLevel");
+		},
+	},
+	wavesSummary:{
+		deps:"graph,waveAndWaveLevel",condition:(g)=>{
+			return true;
+		},
+		files:["wavesSummary.json.gz"],
+		make:(g)=>{
+			let results=Algs.getVertexWavesAndLevels(g);
+			saveObj(g.dataPath,"wavesSummary",results.waves);
 		},
 	},
 	waveSubgraphs:{//separated from wave calculation because saving many waves can be very annoying, and we want wave maps but not wave subgraphs for very large graphs
@@ -236,7 +254,7 @@ let DataTemplates={//these functions all take a graph(that has a dataPath etc) n
 	},
 	//pure data should go before subgraphs so they can be projected onto subgraphs when needed
 	cc:{//separated from ccID because this crashing would mess up the summary
-		deps:"graph,ccID",optionalDeps:"fixedPointLayer",files:["CC"],subgraphs:"CC", 
+		deps:"graph,ccID",optionalDeps:"fixedPointLayer,originalWaveLevel",files:["CC"],subgraphs:"CC", 
 		condition:(g)=>{//layers can have ccs and those subgraphs have its own subgraphs
 			//if it has the dependencies
 			return true;
@@ -246,8 +264,19 @@ let DataTemplates={//these functions all take a graph(that has a dataPath etc) n
 			//also save subgraphs
 			let result=Algs.getVertexPartition(g,ccids);
 			//console.log(result.subgraphs);
+			let layerEnabled=false,levelEnabled=false;
+			let projections={};
+			
 			if("fixedPointLayer" in g.edges.properties){
-				saveSubgraphs(g,"CC",result.subgraphs,{projectProperties:{edges:{fixedPointLayer:"fixedPointLayer"}}});//projects the peel values to CCs to avoid unnecessary computation
+				if(g.edges.properties.fixedPointLayer.isAbstract)loadProperty(g,"edges","fixedPointLayer");
+				projections.edges={fixedPointLayer:"fixedPointLayer"};layerEnabled=true;
+			}
+			if("originalWaveLevel" in g.vertices.properties){
+				if(g.vertices.properties.originalWaveLevel.isAbstract)loadProperty(g,"vertices","originalWaveLevel");
+				projections.vertices={originalWaveLevel:"originalWaveLevel"};levelEnabled=true;
+			}
+			if(layerEnabled||levelEnabled){
+				saveSubgraphs(g,"CC",result.subgraphs,{projectProperties:projections});//projects the peel values to CCs to avoid unnecessary computation
 			}
 			else{//eg. layers should have ccs (actually they are already computed in layerCC so this is not used but just in case)
 				saveSubgraphs(g,"CC",result.subgraphs);
@@ -351,7 +380,30 @@ let DataTemplates={//these functions all take a graph(that has a dataPath etc) n
 			
 		},
 	},
-	
+	layerCCSummary:{
+		deps:"layerCC",files:["layerCCSummary.json.gz"],
+		make:(g)=>{
+			let layerCCSummary={};
+			let list=loadSubgraphs(g,"layer",true);
+			for(let layer of list){
+				if(!(layer.subgraphs&&layer.subgraphs.CC)){
+					layerCCSummary[layer.subgraphID]={};
+					layerCCSummary[layer.subgraphID].V=layer.vertices.length;//add layer V and E
+					layerCCSummary[layer.subgraphID].E=layer.edges.length;
+				}
+				else{
+					layerCCSummary[layer.subgraphID]=layer.subgraphs.CC;//has distrbutions and large CC IDs
+					layerCCSummary[layer.subgraphID].V=layer.vertices.length;//add layer V and E
+					layerCCSummary[layer.subgraphID].E=layer.edges.length;
+				}
+				
+				
+			}
+			g.layerCCSummary=layerCCSummary;
+			saveSummary(g);
+			saveObj(g.dataPath,"layerCCSummary",layerCCSummary);
+		},
+	},
 	BCC:{//only CC subgraphs can have BCCs - In fact I think only CCs of a layer can have BCCs
 		deps:"graph",files:["BCC","metagraphs/BCC"],subgraphs:"BCC",
 		//only works for CC subgraphs that are not in layer 1
@@ -396,6 +448,7 @@ let DataTemplates={//these functions all take a graph(that has a dataPath etc) n
 	waveCC:{
 		deps:"graph,waveAndWaveLevel,waveSubgraphs",files:["metagraphs/waveCC","vertices.waveCCid.json.gz"],
 		condition:(g)=>{//if it has waves
+		return false;
 			return true;
 		},
 		make:(g)=>{
@@ -532,6 +585,7 @@ let DataTemplates={//these functions all take a graph(that has a dataPath etc) n
 	waveCC2:{
 		deps:"graph,waveAndWaveLevel,waveSubgraphs2",files:["metagraphs/waveCC2","vertices.waveCCid2.json.gz"],
 		condition:(g)=>{//if it has waves
+		//return false;
 			return true;
 		},
 		make:(g)=>{
@@ -637,6 +691,7 @@ let DataTemplates={//these functions all take a graph(that has a dataPath etc) n
 	waveMap:{//may work for very large graphs, doesn't require wave subgraphs
 		deps:"graph,waveAndWaveLevel,waveCC2",//waveCCid2 - which considers parts of a wave that that have edges meeting in a same later-wave vertex as connected
 		condition:(g)=>{
+			return false;
 			return true;//if it has waves and levels
 		},
 		files:["metagraphs/waveMap"],
@@ -665,15 +720,9 @@ let DataTemplates={//these functions all take a graph(that has a dataPath etc) n
 					if(otherLevel>waveLevel){waveObj[waveCCid][waveLevel].ef++;}//count forward and internal edges
 					if(otherLevel==waveLevel&&neighbor>vID){waveObj[waveCCid][waveLevel].e++;}
 				}
-				
 			}
-			
 			let metagraph=new Graph();metagraph.waveMap=waveMap;//metagraph.arcLinks=arcLinks;
 			saveMetagraph(graph,"waveMap",metagraph);
-			
-			
-			
-			
 		},
 	},
 	
@@ -681,6 +730,7 @@ let DataTemplates={//these functions all take a graph(that has a dataPath etc) n
 		//here they are for the whole graph, not each wave. (bucketed waves would not have their own level subgraphs, to ensure all levels can be retrieved, we may need to save the levels of teh original graph again?)
 		deps:"graph,waveAndWaveLevel,waveSubgraphs2",files:["metagraphs/waveLevel","waveLevel"],//creates level subgraphs for wave subgraphs, and for the parent too?
 		condition:(g)=>{//if it has waves and wave edge subgraphs
+		return false;
 			return true;
 		},
 		make:(g)=>{
@@ -699,16 +749,27 @@ let DataTemplates={//these functions all take a graph(that has a dataPath etc) n
 			if(g.partitionInfo&&g.partitionInfo.length>1&&(g.partitionInfo[g.partitionInfo.length-2].type=="wave2")&&(g.partitionInfo[g.partitionInfo.length-1].type=="CC"))return true;//wave CCs also have it
 			return false;
 		},
-		make:(g)=>{//found taht sometimes it's missing and annoying to remake?
+		
+		make:(g)=>{//found taht sometimes it's missing and annoying to remake? actually they may exist but are outdated due to a previous bug
+			
+			if(fileExists(g.dataPath,"vertices.originalWaveLevel.json.gz")){
+				touch(g.dataPath,"vertices.originalWaveLevel.json.gz");
+			}
+			//I think we should just try touching the file, and if it still doesn't work, recreate the subgraph instead of trying to hack it
 			if(g.partitionInfo[g.partitionInfo.length-1].type!="CC")return;
-			let parentGraph=new Graph();parentGraph.dataPath=g.dataPath.substring(0,g.dataPath.lastIndexOf("CC")-1);
+			
+			let parentGraph=new Graph();parentGraph.dataPath=g.dataPath.substring(0,g.dataPath.lastIndexOf("CC")-1);//this doesn't work for waves is they are missing the data!
 			loadTopology(parentGraph);
 			loadProperty(parentGraph,"vertices","originalWaveLevel");
 			let projectedWaveLevels=parentGraph.projectVertexProperty(g,"originalWaveLevel");
+			//console.log("projectedWaveLevels was: ");
+			//console.log(projectedWaveLevels);
 			g.vertices.addProperty("originalWaveLevel",parentGraph.vertices.properties.originalWaveLevel.type,projectedWaveLevels);
 			saveProperty(g,"vertices","originalWaveLevel");
 			
+			
 		},
+		
 		load:(g)=>{//only loads the peel values, but also checks the subgraph/metagraph files in case those files need updating
 			loadProperty(g,"vertices","originalWaveLevel");
 		},
@@ -718,10 +779,16 @@ let DataTemplates={//these functions all take a graph(that has a dataPath etc) n
 		condition:(g)=>{//if it has original levels
 			//if(g.partitionInfo&&(g.partitionInfo[g.partitionInfo.length-1].type=="wave2"))return true;
 			//return false;
+			//return false;
 			return true;
 		},
 		make:(g)=>{
 			let originalWaveLevel=g.vertices.originalWaveLevel;
+			if(!originalWaveLevel){
+				console.log("originalWaveLevel is ");
+				console.log(originalWaveLevel);
+				return;
+			}
 			let edgeWaveLevelIDs=g.edgePropertyFromVertexProperty("originalWaveLevel");
 			let result=Algs.getEdgePartition(g,edgeWaveLevelIDs);
 			saveSubgraphs(g,"level",result.subgraphs,{unbucketedVLimit:1024,unbucketedELimit:4096});
@@ -732,6 +799,7 @@ let DataTemplates={//these functions all take a graph(that has a dataPath etc) n
 	levelCC:{
 		deps:"graph,originalWaveLevel,levelSubgraphs",files:["vertices.levelCCid.json.gz","metagraphs/levelCC"],//not saving subgraphs/ CC metagraphs now
 		condition:(g)=>{//for waves only
+		return false;
 			return true;
 		},
 		make:(g)=>{
@@ -830,6 +898,7 @@ let DataTemplates={//these functions all take a graph(that has a dataPath etc) n
 	levelMap:{//like waveMap, but for each wave subgraph's levels (skips bucketed waves)
 		deps:"graph,originalWaveLevel,levelSubgraphs,levelCC",//waveCCid2 - which considers parts of a wave that that have edges meeting in a same later-wave vertex as connected
 		condition:(g)=>{
+			return false;
 			return true;//if it has levels
 		},
 		files:["metagraphs/levelMap"],
@@ -1068,7 +1137,7 @@ async function loadAllFiles(datasetFiles,cachesToRefresh,noLoad){
 					
 					if((!needGenerating)&&(nextTemplate in cachesToRefresh)){//cachesToRefresh[nextTemplate] is the number of minutes of age allowed 
 						if((startTime-currentDataUpdateTime>cachesToRefresh[nextTemplate]*60000+timeTolerance)){
-							console.log("forcing refresh "+nextTemplate+((cachesToRefresh[nextTemplate]==0)?"":(" because its age is "+(startTime-currentDataUpdateTime)+"ms")));
+							console.log("forcing refresh "+nextTemplate+" for "+graph.dataPath+((cachesToRefresh[nextTemplate]==0)?"":(" because its age is "+(startTime-currentDataUpdateTime)+"ms")));
 							needGenerating=true;
 						}
 						else{
@@ -1118,11 +1187,26 @@ async function loadAllFiles(datasetFiles,cachesToRefresh,noLoad){
 						//it could be a Promise or not
 						let obj={};graph.savedData[nextTemplate]=obj;
 						if(success&&allFilesExist(expectedFiles,graph.dataPath)){
+							//check the time of updated files to see if they are new
+							let isNew=true;
 							currentDataUpdateTime=newestTimeOfFiles(expectedFiles,graph.dataPath);
-							obj.loaded=true;// if it's recreated, assume it's as if it's loaded, so no need to load it again
-							if(!templateObj.alwaysMake){savedDataChanged=true;}//some data that is not temporary has changed, update the summary
-							//console.log("successsfully generated  "+nextTemplate+" at "+new Date(currentDataUpdateTime));
-							//don't update if the production fails
+							for(let depID of templateObj.deps){
+								if(graph.savedData[depID].updateTime>currentDataUpdateTime+timeTolerance){
+									console.log("making cache "+nextTemplate+" failed for "+graph.dataPath+" because it's still "+(graph.savedData[depID].updateTime-currentDataUpdateTime)+"ms older than "+depID);
+									isNew=false;
+									throw Error("cache production sanity check failed");//this case should not be ignored
+									break;
+								}
+							}
+							if(isNew){
+								obj.loaded=true;// if it's recreated, assume it's as if it's loaded, so no need to load it again
+								if(!templateObj.alwaysMake){savedDataChanged=true;}//some data that is not temporary has changed, update the summary
+								//console.log("successsfully generated  "+nextTemplate+" at "+new Date(currentDataUpdateTime));
+								//don't update if the production fails
+							}
+							else{
+								obj.exists=false;
+							}
 						}
 						else{
 							if(success)console.warn("expected files not found: "+JSON.stringify(expectedFiles)+", in "+graph.dataPath);
@@ -1136,8 +1220,10 @@ async function loadAllFiles(datasetFiles,cachesToRefresh,noLoad){
 						if(templateObj.alwaysLoad){await loadCache(nextTemplate);}
 					}
 					if(templateObj.subgraphs){//put these subgraphs on the stack
-						let list=loadSubgraphs(graph,templateObj.subgraphs);//creates abstract graph objects for them
+						let list=loadSubgraphs(graph,templateObj.subgraphs,true);//creates abstract graph objects for them
+						//including bucketed ones to check for data integrity
 						for(let newGraph of list){
+							if(newGraph.wholeGraph!=graph.dataPath)throw Error("wholeGraph is not the parent's path: expected "+graph.dataPath+", found "+graph.dataPath);
 							if("bucketID" in newGraph)continue;//don't process bucketed graphs
 							graphStack.push(newGraph);
 						}
@@ -1145,6 +1231,10 @@ async function loadAllFiles(datasetFiles,cachesToRefresh,noLoad){
 					//it's either recreated or checked to be up to date
 					graph.savedData[nextTemplate].files=expectedFiles;
 					graph.savedData[nextTemplate].updateTime=currentDataUpdateTime;
+					let now=new Date().getTime();
+					if(currentDataUpdateTime>now+5){//sometimes it's a fraction of a ms later
+						throw Error("cache production time in the future: "+(currentDataUpdateTime-now)+"ms");
+					}
 				}
 				//check existing subgraph/metagraph files, in case they are missing
 				
@@ -1234,12 +1324,13 @@ function getLoadingMethod(id,files){
 		return ()=>{
 			return new Promise(function(resolve, reject) {
 				console.log("loading big file "+file.path);
-				let sizeRead=0,percentage=0,lastPercentage=0,increment=(file.size<100000000)?20:5;
+				let sizeRead=0,percentage=0,lastPercentage=0,increment=(file.size<100000000)?20:((file.size<5000000000)?5:1);
 				var lineReader = readline.createInterface({
 					input: fs.createReadStream(file.path)
 				});
 				lineReader.on('line', function (line) {
-					datasets[id].data.loadEdgeLine(line);
+					if(line.length!=0&&line[0]!="#")datasets[id].data.loadEdgeLine(line);
+					
 					sizeRead+=line.length+1;//note: it seems there's no way to know which line ending (\n or \r\n) we got from readline, so this size may be underestimated.
 					percentage=sizeRead/file.size*100;//why they are not equal even if I add the byte for the newline?
 					while(percentage>lastPercentage+increment){lastPercentage+=increment;console.log(id+" loaded "+Math.floor(percentage)+"%");}
@@ -1558,6 +1649,7 @@ function loadTopology(g){//the save/load tool functions will convert it to a pat
 function saveProperty(g,objName,propName){
 	if("bucketID" in g)return;
 	let str=g[objName].properties[propName].toJSON();
+	if(propName=="originalWaveLevel"){console.log("saved originalWaveLevel for "+g.dataPath);}
 	saveObjStr(g.dataPath,objName+"."+propName,str);
 }
 function loadProperty(g,objName,propName){
@@ -1579,11 +1671,16 @@ function saveSummary(g){
 	touch(g.dataPath);
 }
 function saveAllProperties(g){ //saves the commonly loaded vertex IDs, edge sources and targets in one file(topology), and other properties in separate files
+//note: must save main files (vertex IDs, edge sources and targets) before all other properties, because graphs may come with certain properties precalculated and if they are saved too early the system would think they are outdated compared to the graph topology. Luckily there are no dependencies between properties right now. Actually, parts of the data should be saved in the order of their dependencies, or in the order the are generated, but we don't have this info readily
 	if("bucketID" in g)return;
+	saveTopology(g);
 	for(let objName in g.objects){
 		let obj=g[objName];
 		for(let propName in obj.properties){
+			if(objName=="vertices"&&propName=="id")continue;
 			if(objName=="vertices"&&propName=="edges")continue;
+			if(objName=="edges"&&propName=="source")continue;
+			if(objName=="edges"&&propName=="target")continue;
 			saveProperty(g,objName,propName);
 		}
 	}
@@ -1591,7 +1688,22 @@ function saveAllProperties(g){ //saves the commonly loaded vertex IDs, edge sour
 	//console.log("saved "+g.dataPath);
 	//todo: also save the summary?
 }
-
+function loadAllProperties(g){ //saves the commonly loaded vertex IDs, edge sources and targets in one file(topology), and other properties in separate files
+//note: must save main files (vertex IDs, edge sources and targets) before all other properties, because graphs may come with certain properties precalculated and if they are saved too early the system would think they are outdated compared to the graph topology. Luckily there are no dependencies between properties right now. Actually, parts of the data should be saved in the order of their dependencies, or in the order the are generated, but we don't have this info readily
+	if("bucketID" in g)return;
+	loadSummary(g);
+	loadTopology(g);
+	for(let objName in g.objects){
+		let obj=g[objName];
+		for(let propName in obj.properties){
+			if(objName=="vertices"&&propName=="id")continue;
+			if(objName=="vertices"&&propName=="edges")continue;
+			if(objName=="edges"&&propName=="source")continue;
+			if(objName=="edges"&&propName=="target")continue;
+			loadProperty(g,objName,propName);
+		}
+	}
+}
 
 
 function saveSubgraphs(g,type,subgraphs,options){//auto buckets, takes array or generator of graphs, adds subgraph-related data(including data path and what partitions were used to create them (which is added at create***Partition in graph-algorithms.js)
@@ -1776,6 +1888,7 @@ function loadSubgraphs(g,type,includeBucketed=false){
 		if(f=="buckets"){bucketsFound=true;return;}
 		let stats=fs.statSync(cacheDir+"/"+g.dataPath+"/"+type+"/"+f);
 		if(stats.isDirectory()==false)return;
+		if(fileExists(g.dataPath,type,f,"summary.json.gz")==false){return;}//??
 		let s=new Graph();
 		s.dataPath=g.dataPath+"/"+type+"/"+f;s.subgraphID=Number(f);
 		loadSummary(s);
@@ -1794,6 +1907,36 @@ function loadSubgraphs(g,type,includeBucketed=false){
 	}
 	subgraphs.sort(compareBy("subgraphID",true));//sort by ID, smallest first 
 	return subgraphs;
+}
+let unionCache=null,unionCachePath=null;
+function loadSubgraphUnion(originalGraph,type,subgraphIDList){
+	if(typeof originalGraph=="object"){originalGraph=originalGraph.dataPath;}
+	if(unionCachePath==originalGraph+"/"+type+"/"+subgraphIDList.join("+"))return unionCache;
+	let subgraphList=[];
+	for(let ID of subgraphIDList){
+		let subgraph;
+		if(fileExists(originalGraph,type,ID,"summary.json.gz")){
+			subgraph=new Graph();
+			subgraph.dataPath=originalGraph+"/"+type+"/"+ID;
+			loadAllProperties(subgraph);
+		}
+		else{
+			subgraph=getBucketedSubgraph(originalGraph,type,ID);
+		}
+		subgraphList.push(subgraph);
+	}
+	//todo: correct way to get the  partition name
+	let newPropertyName=type;
+	if(type=="CC")newPropertyName="cc";
+	if(type=="layer")newPropertyName="fixedPointLayer";
+	if(type=="level")newPropertyName="originalWaveLevel";
+	let result= Graph.unionGraphs(subgraphList,null,newPropertyName,"int").graph;
+	result.dataPath=originalGraph+"/"+type+"/"+subgraphIDList.join("+");
+	unionCache=result;unionCachePath=result.dataPath;
+	result.datasetID=originalGraph.split("/")[0];
+	result.wholeGraph=originalGraph;
+	result.metagraph=subgraphList[0].metagraph;
+	return result;
 }
 function deleteSubgraphs(g,type){
 	let subgraphPath=cacheDir+"/"+g.dataPath+"/"+type;
@@ -1817,11 +1960,13 @@ function saveMetagraph(g,type,metagraph){
 	saveSummary(metagraph);
 	metagraph.unloadAll();
 	if(!g.metagraphs){g.metagraphs={};}
+	//I found it may be necessary to touch the directory to ensure it's mtime is new
 	g.metagraphs[type]={V:metagraph.vertices.length,E:metagraph.edges.length};
 }
 
 let bucketsCache=null,bucketsCachePath=null;
 let bucketCache=null,bucketCachePath=null;
+
 
 function getBuckets(originalGraph,subgraphType){
 	if(typeof originalGraph=="object"){originalGraph=originalGraph.dataPath;}
@@ -1886,7 +2031,6 @@ function getBucketedSubgraph(originalGraph,subgraphType,subgraphID){
 	return null;
 }
 
-
 function getPath(id){
 	let path=cacheDir+"/"+id+"/"+Array.from(arguments).slice(1).join("/");//no suffix here
 	return path;
@@ -1929,6 +2073,11 @@ function compareBy(f,smallFirst) {
 	}
 }
 
+function fileAge(filename){
+	let stat=fs.statSync(filename),now=new Date().getTime();
+	return now-stat.mtimeMs;
+}
+
 //from SO
 function deleteFolderRecursive(path) {
   if( fs.existsSync(path) ) {
@@ -1958,6 +2107,7 @@ module.exports={
 	doCustomComputation:doCustomComputation,
 	saveCustomData:saveCustomData,
 	loadSummary:loadSummary,
+	loadProperty:loadProperty,
 	
 	//reloadAllDatasets:reloadAllDatasets,//to be able to refresh stuff without restarting the server - but it only makes sense if we can reload the cache-producing code,but they are all hard-coded.
 	loadSubgraphSummary:loadSubgraphSummary,
@@ -1966,5 +2116,6 @@ module.exports={
 	getBucketedSubgraph:getBucketedSubgraph,
 	getBuckets:getBuckets,
 	getBucket:getBucket,
+	loadSubgraphUnion:loadSubgraphUnion,
 
 }

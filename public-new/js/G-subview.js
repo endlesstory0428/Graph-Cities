@@ -8,29 +8,43 @@ G.addModule("subview",{
 		
 		nodes:{
 			value:(graph)=>{//this value is calculated for all subgraphs, then combined in another object(G.view.model?) and then used for attrs/uniforms
-				let heightPropertyType=G.graph.heightPropertyType,heightPropertyName=G.graph.heightPropertyName;
-				if(heightPropertyType=="edges"){
-					if(graph.modifiers&&graph.modifiers.filter&&graph.modifiers.filter.property==heightPropertyName&&graph.modifiers.filter.propertyType=="edges"&&(graph.modifiers.filter.property in graph.edges)){//for consistency, only works for teh correct type of property?
-						let min=graph.modifiers.filter.min,max=graph.modifiers.filter.max;
-						let indices=[],indexMap={};
-						let results=graph.edges[heightPropertyName].clones.filter((clone,i)=>
-						{
-							let truth=(clone.value<=max&&clone.value>=min);
-							if(truth){indexMap[i]=indices.length;indices.push(i);}
-							return truth;
-						});
-						//adding indexMap and indices for later use
-						results.indexMap=indexMap;results.originalIndices=indices;
-						return results;
+				let heightPropertyType=G.view.graph.heightPropertyType,heightPropertyName=G.view.graph.heightPropertyName;
+				switch (heightPropertyType){
+					case undefined:{
+						//also allow filtering by edges?
+						
+						if(graph.modifiers&&graph.modifiers.filter&&graph.modifiers.filter.propertyType=="vertices"&&(graph.modifiers.filter.property in graph.vertices)){
+							let propertyName=graph.modifiers.filter.property;
+							let min=graph.modifiers.filter.min,max=graph.modifiers.filter.max;
+							return graph.vertices.filter((v)=>(v[propertyName]<=max&&v[propertyName]>=min));
+						}
+						return graph.vertices;
 					}
-					else return graph.edges[heightPropertyName].clones;
-				}//"original" of each clone is the vertex ID 
-				else{
-					if(graph.modifiers&&graph.modifiers.filter&&graph.modifiers.filter.property==heightPropertyName&&graph.modifiers.filter.propertyType=="vertices"&&(graph.modifiers.filter.property in graph.vertices)){
-						let min=graph.modifiers.filter.min,max=graph.modifiers.filter.max;
-						return graph.vertices.filter((v)=>(v[heightPropertyName]<=max&&v[heightPropertyName]>=min));
+					case "edges":{
+						if(graph.modifiers&&graph.modifiers.filter&&graph.modifiers.filter.property==heightPropertyName&&graph.modifiers.filter.propertyType=="edges"&&(graph.modifiers.filter.property in graph.edges)){//for consistency, only works for teh correct type of property?
+							let min=graph.modifiers.filter.min,max=graph.modifiers.filter.max;
+							let indices=[],indexMap={};
+							let results=graph.edges[heightPropertyName].clones.filter((clone,i)=>
+							{
+								let truth=(clone.value<=max&&clone.value>=min);
+								if(truth){indexMap[i]=indices.length;indices.push(i);}
+								return truth;
+							});
+							//adding indexMap and indices for later use
+							results.indexMap=indexMap;results.originalIndices=indices;
+							return results;
+						}
+						else return graph.edges[heightPropertyName].clones;
+						break;
 					}
-					return graph.vertices;
+					case "vertices":{
+						//also allow filtering by edges?
+						if(graph.modifiers&&graph.modifiers.filter&&graph.modifiers.filter.property==heightPropertyName&&graph.modifiers.filter.propertyType=="vertices"&&(graph.modifiers.filter.property in graph.vertices)){
+							let min=graph.modifiers.filter.min,max=graph.modifiers.filter.max;
+							return graph.vertices.filter((v)=>(v[heightPropertyName]<=max&&v[heightPropertyName]>=min));
+						}
+						return graph.vertices;
+					}
 				}
 			},
 			originalObjectType:"vertices",
@@ -39,7 +53,7 @@ G.addModule("subview",{
 				else return graph.nodes.index[nodeID];
 			},
 			getViewObjectID:(graph,vertexID,preferredHeightValue)=>{
-				let heightPropertyType=G.graph.heightPropertyType,heightPropertyName=G.graph.heightPropertyName;
+				let heightPropertyType=G.view.graph.heightPropertyType,heightPropertyName=G.view.graph.heightPropertyName;
 				if(heightPropertyType=="edges"){
 					let cloneMap= graph.edges[heightPropertyName].cloneMaps[vertexID];
 					if(preferredHeightValue!==undefined&&preferredHeightValue in cloneMap){return cloneMap[preferredHeightValue];}
@@ -59,9 +73,10 @@ G.addModule("subview",{
 						
 					},
 				},
+				
 				degree:{isArray:true,value:(graph)=>{//for forces
 					let vertices=graph.vertices,nodes=graph.nodes;
-					let heightPropertyType=G.graph.heightPropertyType,heightPropertyName=G.graph.heightPropertyName;
+					let heightPropertyType=G.view.graph.heightPropertyType,heightPropertyName=G.view.graph.heightPropertyName;
 					if(heightPropertyType=="edges"){
 						if(nodes.originalIndices){
 							return nodes.originalIndices.map((index)=>Object.keys(graph.edges[heightPropertyName].clones[index].edges).length);
@@ -75,7 +90,32 @@ G.addModule("subview",{
 						return graph.vertices.map((v,i,vertices)=>Object.keys(vertices.edges[i]).length);
 					}//cuurently I assume that only the top metagraph has heights, and subgraphs should follow the height of its metanode(by returning undefined)
 				}},
-				isExpanded:{value:(node,i,array)=>node&&node.isExpanded?1:0,},
+				cloneCount:{//a value that shows how many clones a vertex has, or would have if cloning is not active but there's still an edge property to highlight for some reason.
+					isArray:true,value:(graph)=>{
+					let cloneProperty;
+					let heightPropertyType=G.view.graph.heightPropertyType,heightPropertyName=G.view.graph.heightPropertyName;
+					if(heightPropertyType=="edges"){cloneProperty=heightPropertyName;}
+					else {if(G.view.graph.cloneProperty){cloneProperty=G.view.graph.cloneProperty;}}
+					if(cloneProperty&&graph.edges[cloneProperty]&&graph.edges[cloneProperty].cloneMaps){
+						let maps=graph.edges[cloneProperty].cloneMaps;
+						return graph.nodes.map((node,i,array)=>{
+							if(graph.nodes.originalIndices){i=nodes.originalIndices[i];}
+							let vertexID=(node&&("original" in node))?(node.original):i;
+							return Object.keys(maps[vertexID]).length;
+						});
+						return graph.edges[cloneProperty].cloneMaps.map((obj)=>Object.keys(obj).length);
+					}
+					else {return graph.nodes.map(()=>1);}
+				}},
+				isExpanded:{
+					isArray:true,value:(graph)=>{
+						let vertices=graph.vertices,nodes=graph.nodes;return nodes.map((node,i,array)=>{
+							let vertexID=array.original[i];
+							if(vertices.isExpanded&&vertices.isExpanded[vertexID])return 1;
+							else return 0;
+						});
+					},
+				},
 				isSelected:{
 					isArray:true,value:(graph)=>{
 						let vertices=graph.vertices,nodes=graph.nodes;return nodes.map((node,i,array)=>{
@@ -170,7 +210,7 @@ G.addModule("subview",{
 							return answer;
 						});
 					},
-					scaling:()=>({targetAvg:1})//shouldn't we scale at the global level???
+					scaling:(graph)=>{let obj={targetAvg:1};if(!graph.isMetagraph){obj.maxScaled=2.5;}return obj;}//shouldn't we scale at the global level???
 				},
 				color:{value:function(node){return null;}},
 				pinned:{value:function(node){return false;}},
@@ -268,27 +308,50 @@ G.addModule("subview",{
 		},
 		links:{
 			value:(graph)=>{
+				
 				let heightPropertyType=G.view.graph.heightPropertyType,heightPropertyName=G.view.graph.heightPropertyName;
-				if(heightPropertyType=="edges"){
-					if(graph.modifiers&&graph.modifiers.filter&&graph.modifiers.filter.property==heightPropertyName&&graph.modifiers.filter.propertyType=="edges"&&(graph.modifiers.filter.property in graph.edges)){//for consistency, only works for teh correct type of property?
-						let min=graph.modifiers.filter.min,max=graph.modifiers.filter.max;
-						return graph.edges.filter((e)=>(e[heightPropertyName]<=max&&e[heightPropertyName]>=min));
+				switch (heightPropertyType){
+					case undefined:{
+						
+						if(graph.modifiers&&graph.modifiers.filter&&graph.modifiers.filter.propertyType=="vertices"&&(graph.modifiers.filter.property in graph.vertices)){
+							let propertyName=graph.modifiers.filter.property;
+							let min=graph.modifiers.filter.min,max=graph.modifiers.filter.max;let values=graph.vertices[propertyName];
+							return graph.edges.filter((e,i,es)=>((values[e.source]<=max&&values[e.source]>=min)&&(values[e.target]<=max&&values[e.target]>=min)));
+						}
+						else return Array.from(graph.edges);
 					}
-					else return Array.from(graph.edges);
+					break;
+					case "vertices":
+					{
+						if(graph.modifiers&&graph.modifiers.filter&&graph.modifiers.filter.property==heightPropertyName&&graph.modifiers.filter.propertyType=="vertices"&&(graph.modifiers.filter.property in graph.vertices)){
+							let min=graph.modifiers.filter.min,max=graph.modifiers.filter.max;let values=graph.vertices[heightPropertyName];
+							return graph.edges.filter((e,i,es)=>((values[e.source]<=max&&values[e.source]>=min)&&(values[e.target]<=max&&values[e.target]>=min)));
+						}
+						else return Array.from(graph.edges);
+					}
+					break;
+					case "edges":{
+						if(graph.modifiers&&graph.modifiers.filter&&graph.modifiers.filter.property==heightPropertyName&&graph.modifiers.filter.propertyType=="edges"&&(graph.modifiers.filter.property in graph.edges)){//for consistency, only works for teh correct type of property?
+							let min=graph.modifiers.filter.min,max=graph.modifiers.filter.max;
+							return graph.edges.filter((e)=>(e[heightPropertyName]<=max&&e[heightPropertyName]>=min));
+						}
+						else return Array.from(graph.edges);
+					}
+					break;
+					
+				}
+				if(heightPropertyType=="edges"){
+					
 				}//"original" of each clone is the vertex ID 
 				else{
-					if(graph.modifiers&&graph.modifiers.filter&&graph.modifiers.filter.property==heightPropertyName&&graph.modifiers.filter.propertyType=="vertices"&&(graph.modifiers.filter.property in graph.vertices)){
-						let min=graph.modifiers.filter.min,max=graph.modifiers.filter.max;let values=graph.vertices[heightPropertyName];
-						return graph.edges.filter((e,i,es)=>((values[e.source]<=max&&values[e.source]>=min)&&(values[e.target]<=max&&values[e.target]>=min)));
-					}
-					else return Array.from(graph.edges);
+					
 				}
 			},//don't want to affect original properties
 			properties:{
 				source:{
 					value:(graph)=>{
 						let nodes=graph.nodes;
-						let heightPropertyType=G.graph.heightPropertyType,heightPropertyName=G.graph.heightPropertyName;
+						let heightPropertyType=G.view.graph.heightPropertyType,heightPropertyName=G.view.graph.heightPropertyName;
 						if(heightPropertyType=="edges"){
 							if(graph.links.indexMap){
 								let nMap=graph.nodes.indexMap,lMap=graph.links.indexMap;
@@ -316,7 +379,7 @@ G.addModule("subview",{
 				},
 				target:{
 					value:(graph)=>{
-						let heightPropertyType=G.graph.heightPropertyType,heightPropertyName=G.graph.heightPropertyName;
+						let heightPropertyType=G.view.graph.heightPropertyType,heightPropertyName=G.view.graph.heightPropertyName;
 						if(heightPropertyType=="edges"){
 							if(graph.links.indexMap){//filtered nodes and links
 								let result=[];let ts=graph.edges[heightPropertyName].edgeTargets;
@@ -410,7 +473,7 @@ G.addModule("subview",{
 		lines:{
 			value:(graph)=>{
 				let lines=[];
-				let heightPropertyType=G.graph.heightPropertyType,heightPropertyName=G.graph.heightPropertyName;
+				let heightPropertyType=G.view.graph.heightPropertyType,heightPropertyName=G.view.graph.heightPropertyName;
 				if(heightPropertyType=="edges"){
 					//let func=compareBy((x)=>x[heightPropertyName]);
 					
@@ -560,7 +623,7 @@ G.addModule("subview",{
 				rangeHighlight:{
 					dimensions:3,value:(d,i)=>{
 						var v=new THREE.Vector3();
-						v.x=(d.layer==G.graph.startLayer||d.layer==G.graph.endLayer)?1:0;
+						v.x=(d.layer==G.view.graph.startLayer||d.layer==G.view.graph.endLayer)?1:0;
 						return v;
 					}
 				},
@@ -827,7 +890,8 @@ G.addModule("subview",{
 		},
 		
 	},
-	onModifiersChanged:function(){
+	onModifiersChanged:function(name){
+		G.broadcast("modifierUpdated",{target:this.target,modifier:name,params:(this.target&&this.target.modifiers&&this.target.modifiers[name])});
 		G.view.refreshStyles(true,true);
 	},
 	modifiers:{
@@ -836,15 +900,23 @@ G.addModule("subview",{
 				property:{
 					value:"degree",
 					type:"select",
-					options:["height","degree","originalWaveLevel","levelCCid"],//note these proeprties belong to nodes, not vertices. should all vertex-based modifiers be in subview?
-
+					options:(graph,params)=>{
+						let items=[];
+						if(graph.heightProperty){items.push("height");}
+						for(let name in graph.vertices.properties){
+							if(graph.vertices.properties[name].type!="int")continue;
+							items.push(name);
+						}
+						return items;
+					},
+					//["height","cloneCount","degree","originalWaveLevel","levelCCid"],//note these proeprties belong to nodes, not vertices. should all vertex-based modifiers be in subview?
 				},
 				colorScaleName:{
 					value:"orange",
 					type:"select",
-					options:["orange","orangeLight","cool","warm","spring"],
+					options:Object.keys(G.colorScales),//["orange","orangeLight","cool","warm","spring","custom"],
 					func:(value,graph,params)=>{//parameters are target.modifiers[name][paramName],target,target.modifiers[name]
-						graph.colorScale=value;
+						graph.colorScaleName=value;
 					},
 				},
 				linkColoring:{
@@ -859,7 +931,7 @@ G.addModule("subview",{
 				G.view.sharedUniforms.nodeColorData.needsUpdate=true;
 			},
 			onDisable:(graph,params)=>{
-				delete graph.colorScale;
+				delete graph.colorScaleName;
 			},
 			data:{
 				max:(g,params)=>{if(params.property in g.nodes)return maxPropertyValue(g.nodes,params.property);else return maxPropertyValue(g.vertices,params.property);},
@@ -890,6 +962,154 @@ G.addModule("subview",{
 							let svalue=subview.nodes.colorValue[sID],tvalue=subview.nodes.colorValue[tID];
 							if(data.linkColoring=="max")return Math.max(svalue,tvalue);
 							if(data.linkColoring=="min")return Math.min(svalue,tvalue);
+						},
+					]
+				},
+			}
+		},
+		dimming:{
+			params:{
+				/*
+				propertyType:{
+					value:"vertices",
+					type:"select",
+					options:["vertices","edges"],
+					func:(value,graph,params)=>{
+						//setTimeout(()=>G.display(G.graph),0)
+					},
+				},
+				*/
+				property:{
+					value:(graph,params)=>{
+						if(graph.nodes.height&&graph.nodes.height.length>0&&graph.nodes.height[0]!=undefined){return "height";}
+						return "originalWaveLevel";
+					},
+					type:"select",
+					options:(graph,params)=>{
+						let items=[];
+						if(graph.heightProperty){items.push("height");}
+						for(let name in graph.edges.properties){
+							if(name=="source"||name=="target")continue;
+							items.push(name);
+						}
+						return items;
+					},
+					//["height","fixedPointLayer","wave","originalWaveLevel"],
+					func:(value,graph,params)=>{
+						G.addLog("value range updated");
+						G.subview.refreshModifierControls("dimming");
+					},
+				},
+				threshold:{
+					value:(graph,params)=>maxPropertyValue(graph.nodes,params.property),//0,
+					type:"integer",
+					min:(graph,params)=>{
+						if(params.property=="height") return minPropertyValue(graph.nodes,params.property);
+						else return minPropertyValue(graph.edges,params.property);
+					},
+					//min:(graph,params)=>{return minPropertyValue(graph.nodes,"height");},
+					max:(graph,params)=>{
+						if(params.propertyType=="height")return maxPropertyValue(graph.nodes,params.property);
+						else return maxPropertyValue(graph.edges,params.property);
+					},
+					//max:(graph,params)=>{return maxPropertyValue(graph.nodes,"height");},
+					func:(value,graph,params)=>{
+						//graph.filterChanged=true;//hack
+						//setTimeout(()=>G.display(G.graph),0);
+					},
+				},
+				separate:{
+					value:false,
+					type:"boolean",
+				},
+				reverse:{
+					value:false,
+					type:"boolean",
+				},
+			},
+			onUpdate:(graph,params)=>{
+				G.view.sharedUniforms.layerHeights.needsUpdate=true;
+			},
+			onDisable:(graph,params)=>{
+				G.view.sharedUniforms.layerHeights.needsUpdate=true;
+			},
+			data:{
+				//max:(g,params)=>{if(params.property in g.nodes)return maxPropertyValue(g.nodes,params.property);else return maxPropertyValue(g.vertices,params.property);},
+				//min:(g,params)=>{if(params.property in g.nodes)return minPropertyValue(g.nodes,params.property);else return minPropertyValue(g.vertices,params.property);},
+			},
+			effects:{
+				nodes:{
+					size:[
+						(data,oldValue,node,index,array,graph)=>{
+							let value;
+							if(data.propertyType=="height"){
+								value=array.height[index];if(value===undefined)return;
+								/*if(node&&(data.property in node))value=node[data.property];
+								else if(data.property in array){value=array[data.property][index];}
+								else {
+									let vertexID=G.subview.templates.nodes.getOriginalObjectID(graph,index);if(data.property in graph.vertices){value=graph.vertices[data.property][vertexID];}
+								}*/
+								if(data.reverse){
+									if(value>=data.threshold){return;}
+									else{return oldValue*Math.max(Math.pow(2,Math.min(data.threshold-value,0)),0.1);}
+								}
+								else{
+									if(value<=data.threshold){return;}
+									else{return oldValue*Math.max(Math.pow(2,Math.min(value-data.threshold,0)),0.1);}
+								}
+							}
+							else{
+								
+								if(data.property in graph.vertices){
+									let vertexID=G.subview.templates.nodes.getOriginalObjectID(graph,index);
+									value=graph.vertices[data.property][vertexID];
+									if(value===undefined)return;
+								}
+								else {return;}//don't change node size for edge properties now
+							}
+							
+							
+							
+						},
+					]
+				},
+				links:{
+					brightness:[
+						(data,oldValue,link,index,array,subview)=>{
+							//if(data.linkColoring=="default")return;
+							
+							let sID=array.source[index],tID=array.target[index];
+							let value,svalue,tvalue;
+							if(data.property=="height"){
+								svalue=subview.nodes.height[sID],tvalue=subview.nodes.height[tID];//todo?
+								if(svalue===undefined||tvalue===undefined)return;
+							}
+							else{//use edge property even if there's no height
+								let realIndex=index;
+								if(array.originalIndices){
+									realIndex=array.originalIndices[index];
+								}
+								if(data.property in subview.edges){
+									value=subview.edges[data.property][realIndex];
+									if(value===undefined)return;
+									svalue=value;
+									tvalue=value;
+								}
+								else {
+									//let sID=array.source[index],tID=array.target[index];
+									//if(array.originalIndices){
+									return;
+								}//don't change link brightness for vertex properties now
+							}
+							if(data.reverse){
+								if(svalue<=data.threshold&&tvalue<=data.threshold){return;}
+								else{return oldValue*Math.max(Math.pow(2,data.threshold-svalue),Math.pow(2,data.threshold-tvalue),0.02);}
+							}
+							else{
+								if(svalue>=data.threshold&&tvalue>=data.threshold){return;}
+								else{return oldValue*Math.max(Math.pow(2,svalue-data.threshold),Math.pow(2,tvalue-data.threshold),0.02);}
+
+							}
 						},
 					]
 				},
@@ -959,6 +1179,103 @@ G.addModule("subview",{
 				//}
 				
 				//for(let name in G.view.sharedUniforms)G.view.sharedUniforms[name].needsUpdate=true;
+			},
+			effects:{
+				
+			}
+		},
+		
+		subgraphRange:{//actually this helps the user load different union graphs, instead of modifying the view of the current graph. I didin't remove the filter because this subgraph union would only work for edge partitioned subgraphs
+			onEnable:(g,params)=>{//graphs without a subgraph type cannot have this modifier
+				if(!g.subgraphType){return true;}
+			},
+			params:{
+				//we always use the subgraph type of g, no choosing here?
+				min:{
+					value:(graph,params)=>{if(graph.subgraphID)return graph.subgraphID;return graph.subgraphIDMin},
+					type:"integer",
+					lazy:true,
+					min:(graph,params)=>{return G.getGraph(graph.wholeGraph).subgraphs[graph.subgraphType].min;},
+					max:(graph,params)=>{return G.getGraph(graph.wholeGraph).subgraphs[graph.subgraphType].max;},
+					func:(value,graph,params)=>{
+						if(params.max<params.min)return true;
+						
+					},
+				},
+				max:{
+					value:(graph,params)=>{if(graph.subgraphID)return graph.subgraphID;return graph.subgraphIDMax},
+					type:"integer",
+					lazy:true,
+					min:(graph,params)=>{return G.getGraph(graph.wholeGraph).subgraphs[graph.subgraphType].min;},
+					max:(graph,params)=>{return G.getGraph(graph.wholeGraph).subgraphs[graph.subgraphType].max;},
+					func:(value,graph,params)=>{
+						
+					},
+				},
+			},
+			
+			onUpdate:(graph,params)=>{
+				if(!params)return;
+				
+				if(params.max<params.min){return true};
+				if(("subgraphID" in graph)&&(params.max==graph.subgraphID)&&(params.min==graph.subgraphID))return;
+				if(("subgraphIDMax" in graph)&&(params.max==graph.subgraphIDMax)&&(params.min==graph.subgraphIDMin))return;
+						
+				let subgraphIDs=[];
+				let subgraphStats=G.getGraph(graph.wholeGraph).subgraphs[graph.subgraphType];
+				if(subgraphStats.buckets.length==0){
+					subgraphIDs=subgraphStats.unbucketed.filter((x)=>(x<=params.max&&x>=params.min)).sort(compareBy(x=>Number(x),true));
+				}
+				else{
+					for(let i=params.min;i<=params.max;i++){subgraphIDs.push(i);}
+				}
+				let newPath=graph.wholeGraph+"/"+graph.subgraphType+"/"+subgraphIDs.join("+");
+				if(newPath==graph.dataPath)return;//avoid updating if it's the same graph
+				G.load(newPath).then((newGraph)=>{
+					if(!newGraph)return;
+					let newPropertyName=graph.subgraphType;
+					if(graph.subgraphType=="CC")newPropertyName="cc";
+					if(graph.subgraphType=="layer")newPropertyName="fixedPointLayer";
+					if(graph.subgraphType=="level")newPropertyName="originalWaveLevel";
+					
+					if(graph.heightProperty){
+						newGraph.heightProperty=graph.heightProperty;
+						if(graph.heightPropertyTypeHint){newGraph.heightPropertyTypeHint=graph.heightPropertyTypeHint;}
+						//when heights are active, enable dimming automatically?
+						//if the new subgraphs have higher ID, then they are at the top and we dim what;s below; otherwise dim what's at the top?
+						let oldMax=graph.subgraphIDMax?graph.subgraphIDMax:graph.subgraphID;
+						let oldMin=graph.subgraphIDMin?graph.subgraphIDMin:graph.subgraphID;
+						if(graph.modifiers.dimming){//only if it was already using dimming
+							if(!newGraph.modifiers)newGraph.modifiers={};newGraph.modifiers.dimming=copyObj(graph.modifiers.dimming);
+							if(params.max>oldMax){
+								newGraph.modifiers.dimming.threshold=oldMax+1;newGraph.modifiers.dimming.reverse=false;
+							}
+							else if(params.min<oldMin){
+								newGraph.modifiers.dimming.threshold=oldMin-1;newGraph.modifiers.dimming.reverse=true;
+							}
+							else{
+								//then the range decreased; don't dim anything but keep the modifier active
+								newGraph.modifiers.dimming.threshold=params.min;newGraph.modifiers.dimming.reverse=false;
+							}
+						}
+					}
+					else if("subgraphID" in graph){//add a natural height if the orignal is a single subgraph
+						newGraph.heightProperty=newPropertyName;
+						newGraph.heightPropertyTypeHint="edges";
+					}
+					
+					if(!newGraph.modifiers)newGraph.modifiers={};
+					if(!newGraph.modifiers.subgraphRange)newGraph.modifiers.subgraphRange={};
+					newGraph.modifiers.subgraphRange.max=params.max;
+					newGraph.modifiers.subgraphRange.min=params.min;
+					if(graph.modifiers.nodeColor){newGraph.modifiers.nodeColor=copyObj(graph.modifiers.nodeColor);}
+					if(graph.colorScaleName){newGraph.colorScaleName=graph.colorScaleName;}
+					if(graph.cloneProperty){newGraph.cloneProperty=graph.cloneProperty;}
+					else{newGraph.cloneProperty=newPropertyName;}
+					setTimeout(()=>{G.display(newGraph,{noMoveCamera:true});G.addLog("showing subgraph "+params.min+" to "+params.max);},0);
+				});
+				
+				
 			},
 			effects:{
 				

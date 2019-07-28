@@ -88,7 +88,7 @@ G.addModule("analytics",{
 					value:(g)=>{
 						//skip for single layer graphs
 						if(g.partitionInfo&&g.partitionInfo[g.partitionInfo.length-1].type=="layer")return null;
-						G.analytics.getFixedPointLayers(g);
+						return G.analytics.getFixedPointLayers(g);
 					},//return an array that maps edges to layers. edge partitions should automatically create clones?
 				},
 				wave:{
@@ -98,6 +98,15 @@ G.addModule("analytics",{
 						let waveIDs=g.vertices.wave;
 						let edgeWaveIDs=g.edgePropertyFromVertexProperty("wave");
 						return edgeWaveIDs;
+					},//return an array that maps edges to waves
+				},
+				waveLevel:{
+					type:"integer",lazy:true,isPartition:true,partitionDefaultValue:0,isArray:true,
+					value:(g)=>{
+						if(!g.vertices.waveLevel)return null;
+						let levelIDs=g.vertices.waveLevel;
+						let edgeLevelIDs=g.edgePropertyFromVertexProperty("waveLevel");
+						return edgeLevelIDs;
 					},//return an array that maps edges to waves
 				},
 				originalWaveLevel:{
@@ -352,9 +361,42 @@ G.addModule("analytics",{
 		if(!g)g=G.graph;
 		downloadString(this.getGraphEdges(g,filter),g.name);
 	},
+	getVerticesByHeight:function(g){
+		if(g.heightPropertyType!="edges"){G.addLog("error: there's no height information");return;}
+		let heights={};
+		let cloneMaps=g.edges[g.heightPropertyName].cloneMaps;
+		let clones=g.edges[g.heightPropertyName].clones;
+		for(let i=0;i<g.vertices.length;i++){
+			for(let value in cloneMaps[i]){
+				if(!heights[value]){heights[value]={v:[i],e:[]};}
+				else{heights[value].v.push(i);}
+				let cloneID=cloneMaps[i][value];
+				for (let neighbor in clones[cloneID].edges){
+					let originaNeighbor=clones[neighbor].original;
+					if(originaNeighbor>i){
+						//if(heights[value].e.length==0){heights[value].e="("+i+","+originaNeighbor+")";}
+						//else{heights[value].e+=" ("+i+","+originaNeighbor+")";}
+					}
+				}
+			}
+		}
+		let heightValues=Object.keys(heights).sort(compareBy((x)=>Number(x),true));
+		let verticesByHeight=heightValues.map((value)=>heights[value].v);
+		return verticesByHeight;
+	},
 	
-	
-	
+	getRegionGraph:function(graph,options){
+		let result=G.analytics.getVerticesByHeight(graph);
+		let g2=Algs.getRegionGraph(result,options);
+		g2.dataPath=graph.dataPath+"/metagraphs/regionGraph";
+		g2.originalGraph=graph.dataPath;
+		g2.datasetID=graph.datasetID;
+		if(!G.loading.graphsCache[graph.dataPath])G.loading.saveGraph(graph.dataPath,graph);
+		G.loading.saveGraph(g2.dataPath,g2);
+		if(!graph.metagraphs){graph.metagraphs={};}
+		graph.metagraphs.regionGraph={V:g2.vertices.length,E:g2.edges.length};
+		return g2;
+	},
 
 
 	
@@ -2028,7 +2070,7 @@ G.addModule("analytics",{
 					else{info="category: "+x.subcat+", in "+x.country+", "+x.year;}
 					let id=x?x.id:ids[i];
 					
-					if(titleMap[id]){info=titleMap[x.id]+info;}
+					if(titleMap[id]){info=titleMap[x.id]+" "+info;}
 					return info;
 				});
 				getE("selected-vertices-ids-content").value=texts.join("\n");

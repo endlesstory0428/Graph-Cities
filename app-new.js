@@ -102,24 +102,62 @@ function bindHandlers(datasetsList){
 			console.log("query:",req.query);
 			switch (type){
 				case "subgraphID":{
-					let prefix=req.query.dataPath;
+					let prefix=req.query.dataPath.trim();
 					let subgraphType=req.query.subgraphType;
 					let V=req.query.V;
+					let minV=req.query.minV;
+					let maxV=req.query.maxV;
 					let E=req.query.E;
+					let minE=req.query.minE;
+					let maxE=req.query.maxE;
+					let listAll=req.query.listAll;
 					let g=new Graph();
 					g.dataPath=prefix;
-					let list=Datasets.loadSubgraphs(g,subgraphType);
+					//let list=Datasets.loadSubgraphs(g,subgraphType,true);
 					let subgraphID=null;
-					for(let subgraph of list){
+					/*for(let subgraph of list){
 						if(V!=undefined&&subgraph.vertices.length!=V){continue;}
 						if(E!=undefined&&subgraph.edges.length!=E){continue;}
 						subgraphID=subgraph.subgraphID;
 						break;
+					}*/
+					let summary=Datasets.loadSubgraphFullSummary(prefix,subgraphType);
+					if(listAll){
+						let list=[];
+						for(let subgraph of summary){
+							if(V!=undefined&&subgraph.vertices!=V){continue;}
+							if(minV!=undefined&&subgraph.vertices<minV){continue;}
+							if(maxV!=undefined&&subgraph.vertices>maxV){continue;}
+							if(E!=undefined&&subgraph.edges!=E){continue;}
+							if(minE!=undefined&&subgraph.edges<minE){continue;}
+							if(maxE!=undefined&&subgraph.edges>maxE){continue;}
+							subgraphID=subgraph.subgraphID;
+							//console.log(subgraph);
+							list.push(subgraphID);
+						}
+						console.log("query result:",list);
+						res.header('Content-Type', 'application/json');
+						res.header('Access-Control-Allow-Origin','*');
+						res.send(JSON.stringify(list));
 					}
-					console.log("query result:",subgraphID);
-					res.header('Content-Type', 'application/json');
-					res.header('Access-Control-Allow-Origin','*');
-					res.send(JSON.stringify(subgraphID));
+					else{
+						for(let subgraph of summary){
+							if(V!=undefined&&subgraph.vertices!=V){continue;}
+							if(minV!=undefined&&subgraph.vertices<minV){continue;}
+							if(maxV!=undefined&&subgraph.vertices>maxV){continue;}
+							if(E!=undefined&&subgraph.edges!=E){continue;}
+							if(minE!=undefined&&subgraph.edges<minE){continue;}
+							if(maxE!=undefined&&subgraph.edges>maxE){continue;}
+							subgraphID=subgraph.subgraphID;
+							console.log(subgraph);
+							break;
+						}
+						console.log("query result:",subgraphID);
+						res.header('Content-Type', 'application/json');
+						res.header('Access-Control-Allow-Origin','*');
+						res.send(JSON.stringify(subgraphID));
+
+					}
 					break;
 				}
 					
@@ -166,6 +204,7 @@ function bindHandlers(datasetsList){
 			function fail(){
 				console.log("failed to get bucketed data "+req.params[0]);
 				res.header('Content-Type', 'application/json');
+				res.header('Access-Control-Allow-Origin','*');
 				res.send(JSON.stringify(null));;
 			}
 			if(!fs.existsSync(filename)){
@@ -183,7 +222,42 @@ function bindHandlers(datasetsList){
 					let subgraphType=subgraphListPath.substring(i3+1);
 					if(subgraphType=="metagraphs"){fail();return;}//not a subgraph
 					//console.log("getting bucketed data "+relativePath);
+					let subgraphIDStr=subgraphPath.substring(i2+1);
 					let subgraphID=Number(subgraphPath.substring(i2+1));
+					if(isNaN(subgraphIDStr)){
+						//try subgraph union
+						let subgraphIDList=subgraphIDStr.split("+");
+						let g=Datasets.loadSubgraphUnion(originalGraphPath,subgraphType,subgraphIDList);
+						if(!g){fail();return;}
+						else{
+							let subfileName=relativePath.substring(i1+1);
+							if(subfileName=="summary.json.gz"){
+								console.log("sending subgraph union data "+g.dataPath);
+								res.header('Content-Type', 'application/json');
+								res.header('Access-Control-Allow-Origin','*');
+								res.send(JSON.stringify(g));
+								return;
+							}
+							else{
+								
+								let names=subfileName.split(".");
+								if(names.length!=4){
+									console.log("unexpected subfile name "+subfileName);
+									fail();return;//there are other files like layout
+									//throw Error();
+								}
+								let objName=names[0],propertyName=names[1];
+								if(!g.objects[objName]){fail();return;}
+								let value=g.objects[objName].properties[propertyName];
+								if(!value){fail();return;}
+								console.log("sending subgraph union data "+g.dataPath+" "+subfileName);
+								res.header('Content-Type', 'application/json');
+								res.header('Access-Control-Allow-Origin','*');
+								res.send(JSON.stringify(value));
+								return;
+							}
+						}
+					}
 					let g=Datasets.getBucketedSubgraph(originalGraphPath,subgraphType,subgraphID);
 					if(!g){fail();return;}
 					else{
@@ -191,6 +265,7 @@ function bindHandlers(datasetsList){
 						if(subfileName=="summary.json.gz"){
 							console.log("sending bucketed data "+relativePath);
 							res.header('Content-Type', 'application/json');
+							res.header('Access-Control-Allow-Origin','*');
 							res.send(JSON.stringify(g));
 							return;
 						}
@@ -207,6 +282,7 @@ function bindHandlers(datasetsList){
 							if(!value){fail();return;}
 							console.log("sending bucketed data "+subfileName);
 							res.header('Content-Type', 'application/json');
+							res.header('Access-Control-Allow-Origin','*');
 							res.send(JSON.stringify(value));
 							return;
 						}
@@ -216,10 +292,12 @@ function bindHandlers(datasetsList){
 			}
 			if(filename.indexOf(".json")!=-1)res.header('Content-Type', 'application/json');
 			if(filename.indexOf(".gz")!=-1)res.header('Content-Encoding', 'gzip');
+			res.header('Access-Control-Allow-Origin','*');
 			res.sendFile(filename);
 		});
 		app.get('/datasets', function(req, res) {
 			res.header('Content-Type', 'application/json');//res.header('Content-Encoding', 'gzip');
+			res.header('Access-Control-Allow-Origin','*');
 			res.send(JSON.stringify(Datasets.getDatasetList()));//fs.createReadStream(filename).pipe(res);
 		});
 		app.get( '/', function( req, res ){ //console.log('request is:'+JSON.stringify(req.body));

@@ -15,37 +15,96 @@ G.addModule("loading",{
 		G.load=this.load.bind(this);
 		G.display=this.display.bind(this);
 		G.getGraph=this.getGraph.bind(this);
+		G.hasGraph=this.hasGraph.bind(this);
+		G.getQueryVariable=getQueryVariable;
+		
+		prepareQueryVariables();
+		let modifiersMap={};
+		for(let module of G.moduleList){
+			if(module.modifiers){
+				for(let modifier in module.modifiers){
+					modifiersMap[modifier]=true;
+				}
+			}
+		}
+		let queryVariables=getQueryVariables();
+
 		let dataPath=getQueryVariable("dataPath");
-		let heightProperty=getQueryVariable("heightProperty");
-		let algorithm=getQueryVariable("algorithm");
-		let representation=getQueryVariable("representation");
-		let colorScaleBegin=getQueryVariable("colorScale[begin]");
-		let colorScaleEnd=getQueryVariable("colorScale[end]");
 		if(dataPath){
 			dataPath=unescape(dataPath).trim();
 			//window.history.pushState("", "", "/");//remove the datapath from the URL for debugging
 			let options={};
 			
-			if(heightProperty)options.heightProperty=unescape(heightProperty).trim();
-			if(algorithm){options.algorithm=unescape(algorithm).trim();representation="null";}
-			if(representation)options.representation=unescape(representation).trim();if(options.representation=="null")options.representation=null;
-			if(colorScaleBegin){
-				options.colorScale={begin:unescape(colorScaleBegin).trim(),end:unescape(colorScaleEnd).trim()};
+			for(let name in queryVariables){
+				let value=queryVariables[name];
+				if(name=="dataPath")continue;//let the data itself decide what it's standard path is (in a special case, a dataset's directory was wrong and the file had to be soft linked)
+				if(name in modifiersMap){
+					//
+					options[name]=JSON.stringify(unescape(value).trim());
+				}
+				else{
+					options[name]=unescape(value).trim();
+				}
+				//extra processing
+				switch (name){
+					case "algorithm":{representation="null";break;}
+					case "representation":{if(options.representation=="null")options.representation=null;break;}
+				}
 			}
-			if(options.representation=="null")options.representation=null;
 			this.display(dataPath,options).catch(()=>d3.json("datasets").then((d)=>this.showDatasetList(d)));
 		}
 		else{
 			d3.json("datasets").then((d)=>this.showDatasetList(d));
 		}
 		
-		
+		//allow the including webpage to post messages to this if it's included as an iframe
+		window.addEventListener("message", function( event ) {
+			console.log(event.origin,event.data);
+			G.loading.parentWindow=event.source;
+			G.loading.parentOrigin=event.origin;
+			if(event.data&&event.data.updateModifier){
+				let obj=event.data.updateModifier;
+				let moduleName=obj.module;
+				let modifierName=obj.modifier;
+				let target=G[moduleName].modifierTarget;
+				let params=obj.params;
+				if(!target.modifiers[modifierName]){
+					//console.log("Error: this target has no modifier "+modifierName);return;
+					if(!target.modifiers){target.modifiers={};}
+					target.modifiers[modifierName]=params;
+					G[moduleName].enableModifier(modifierName);
+					return;
+				}
+				let oldParams=target.modifiers[modifierName];
+				Object.assign(oldParams,params);
+				let modObj=G[moduleName].modifiers[modifierName];
+				for(let name in params){
+					let paramObj=modObj.params[name];if(!name){console.log("Error: this modifier has no parameter "+name);}
+					if(paramObj.func)paramObj.func(params[name],target,oldParams);
+				}
+				G[moduleName].modifiers[modifierName].needsUpdate=true;G[moduleName].onModifiersChanged(modifierName);
+			}
+		}, false );
+
 	},
-	
+	modifierUpdated:function(obj){
+		let target=obj.target,modifier=obj.modifier,params=obj.params;
+		if(G.loading.parentWindow){
+			G.loading.parentWindow.postMessage({modifierUpdated:obj},G.loading.parentOrigin);
+		}
+	},
 	graphsCache:{},
+	hasGraph:function(path){
+		return path in this.graphsCache;
+	},
 	getGraph:function(path){
 		if(this.graphsCache[path])return this.graphsCache[path];
 		throw Error("missing "+path);
+	},
+	saveGraph:function(path,g){
+		if(this.graphsCache[path]){console.warn("repeated graph path "+path);}
+		this.graphsCache[path]=g;console.log("saved "+path);
+		G.broadcast("loadGraph",g);
 	},
 	loadSummary:async function(g){///takes a path or a summary object. for UI purposes, also load all summaries of levels above this graph
 		if(typeof g=="string"){
@@ -53,14 +112,14 @@ G.addModule("loading",{
 			let path=g;g=new Graph();let loadedSummary=false;
 			await d3.json("datasets/"+path+"/summary.json.gz").then((summary)=>{if(summary){g.loadSummary(summary);loadedSummary=true;}}).catch((error)=>{console.log("cannot load summary "+path);return;});;
 			if(loadedSummary==false)return;
-			this.graphsCache[path]=g;
+			this.graphsCache[g.dataPath]=g;console.log("saved "+g.dataPath);
 			if(!g.name)g.name=pathToText(g.dataPath);//??
 			//also load summary of the original (for metagraphs) or metagraph (for subgraphs)
 			let parentPath=this.getParentPath(g,false);//false: does not consider skipped metagraphs and history
 			if(parentPath)await this.loadSummary(parentPath);
 			
 		}
-		if((g instanceof Graph)==false){throw Error();}//let summary=g;g=new Graph();g.loadSummary(summary);
+		if((g instanceof Graph)==false){throw Error();}
 		return g;
 	},
 	loadWhole:async function(g){//takes a path or a summary object, or a Graph with summary loaded
@@ -69,9 +128,21 @@ G.addModule("loading",{
 		//first load the topology(ids, sources, targets)
 		let ids,sources,targets;
 		if(g.isAbstract()){
-			await d3.json("datasets/"+g.dataPath+"/vertices.id.json.gz").then((data)=>ids=data.value);
-			await d3.json("datasets/"+g.dataPath+"/edges.source.json.gz").then((data)=>sources=data.value);
-			await d3.json("datasets/"+g.dataPath+"/edges.target.json.gz").then((data)=>targets=data.value);
+			await d3.json("datasets/"+g.dataPath+"/vertices.id.json.gz").then((data)=>{
+				if(typeof data=="string")data=JSON.parse(data);
+				ids=data.value;
+				if(!ids){
+					console.log("missing ids");
+				}
+			});
+			await d3.json("datasets/"+g.dataPath+"/edges.source.json.gz").then((data)=>{
+				if(typeof data=="string")data=JSON.parse(data);
+				sources=data.value;
+			});
+			await d3.json("datasets/"+g.dataPath+"/edges.target.json.gz").then((data)=>{
+				if(typeof data=="string")data=JSON.parse(data);
+				targets=data.value;
+			});
 			g.loadVerticesAndEdges(ids,sources,targets);
 		}
 			
@@ -81,6 +152,7 @@ G.addModule("loading",{
 				if(!obj.properties[propName].isAbstract)continue;
 				//if((objName=="vertices"&&propName=="id")||(objName=="edges"&&propName=="source")||(objName=="edges"&&propName=="target"))continue;
 				await d3.json("datasets/"+g.dataPath+"/"+objName+"."+propName+".json.gz").then((data)=>{
+					if(typeof data=="string")data=JSON.parse(data);
 					obj.setProperty(propName,data.value);
 				});
 			}
@@ -241,21 +313,68 @@ G.addModule("loading",{
 		//{inPlace:inPlace,metagraph:parentGraph,metanodeID:vertexID}
 		if(graph instanceof Promise)graph=await graph;
 		
+		
 		//let maxV=1100,maxE=4000;//debug;
 		//let maxV=G.view.maxTextureSize,maxE=Math.floor(maxV*Math.log(maxV)/2);
-		let maxV=30000,maxE=1000000;//Math.floor(maxV*Math.log(maxV)/2);
+		let maxV=16384,maxE=1048576;//??//Math.floor(maxV*Math.log(maxV)/2);
+		if(G.view.maxTextureSize>16384){
+			console.log("maxTextureSize is "+G.view.maxTextureSize);
+			maxV=1000000,maxE=1500000;
+		}//??//Math.floor(maxV*Math.log(maxV)/2);
 		if(!options)options={};
 		if(!graph){
 			console.warn("no graph to load");return;
 		}
 		if(typeof graph=="string"){
+			if(this.graphsCache[graph])return this.graphsCache[graph];
 			//allow loading a data path directly?
 			let graphPath=graph;
-			graph=await this.loadSummary(graphPath);
-			if(!graph){console.log("failed to load "+graphPath);return null;}
+			//manage union loading in the client
+			if(graphPath.indexOf("+")!=-1){
+				//no LoadSummary
+				
+				let segments=graphPath.split("/");
+				let subgraphType=segments[segments.length-2];
+				let subgraphIDs=segments[segments.length-1];
+				let subgraphIDList=subgraphIDs.split("+").map(x=>Number(x)).sort(compareBy(x=>Number(x),true));//standardize, to make comparing equality easier
+				let originalGraph=segments.slice(0,segments.length-2).join("/");
+				graphPath=originalGraph+"/"+subgraphType+"/"+subgraphIDList.join("+");
+				if(this.graphsCache[graphPath])return this.graphsCache[graphPath];//as a special case, if this graph's dataset was renamed, the standardized path would use the renamed dataset name, not the intrinsic name in the data, cause here we don't know what is the intrinsic name
+				
+				//if(unionCachePath==originalGraph+"/"+subgraphType+"/"+subgraphIDList.join("+"))return unionCache;
+				let subgraphList=[];
+				for(let ID of subgraphIDList){
+					let subgraph=await this.loadWhole(originalGraph+"/"+subgraphType+"/"+ID);
+					subgraphList.push(subgraph);
+				}
+				//todo: correct way to get the partition name
+				let newPropertyName=subgraphType;
+				if(subgraphType=="CC")newPropertyName="cc";
+				if(subgraphType=="layer")newPropertyName="fixedPointLayer";
+				if(subgraphType=="level")newPropertyName="originalWaveLevel";
+				let result=Graph.unionGraphs(subgraphList,null,newPropertyName,"int").graph;
+				//bug fix: if only some of the subgraphs have layouts, we must ensure all vertices in the union have a position.
+				if(result.vertices.layout){
+					result.vertices.removeProperty("layout");
+				}
+				result.dataPath=graphPath;
+				//unionCache=result;unionCachePath=result.dataPath;
+				result.datasetID=segments[0];
+				result.wholeGraph=originalGraph;
+				result.subgraphType=subgraphType;
+				result.metagraph=subgraphList[0].metagraph;
+				result.subgraphIDMin=arrayMin(subgraphIDList);
+				result.subgraphIDMax=arrayMax(subgraphIDList);
+				graph=result;
+			}
+			else{
+				graph=await this.loadSummary(graphPath);
+				if(!graph){console.log("failed to load "+graphPath);return null;}
+			}
 		}
 		Object.assign(graph,options);
 		//now if a graph needs to be shown as a metagraph, we don't just display the metagraph, instead we mark the metagraph as a representation and "display" the abstract original graph.
+		//union graphs don't have "metagraphs"
 		let representation=graph.representation;
 		if((representation===undefined)&&graph.metagraphs&&(graph.vertices.length>maxV||graph.edges.length>maxE)){
 			//choose a metagraph - by default, that's the largest metagraph that's displayable
@@ -275,13 +394,13 @@ G.addModule("loading",{
 		}
 		if(representation){
 			let mg=await this.load(graph.dataPath+"/metagraphs/"+representation);
+			if(graph.colorScale){mg.colorScale=graph.colorScale;}
 		}
 		else{
 			if((graph.vertices.length>maxV||graph.edges.length>maxE)){console.log("warning:loading large graph of V "+graph.vertices.length+", E "+graph.edges.length);}
 			if(graph.vertices.length+graph.edges.length>10000000)throw error();
 			await this.loadWhole(graph);
 		}
-		if(options)Object.assign(graph,options);
 		
 		if(graph.isMetagraph){
 			//graph.metagraph=options.metagraph;graph.metanode=options.metanodeID;
@@ -289,6 +408,16 @@ G.addModule("loading",{
 			if(!graph.vertices.isExpanded)graph.vertices.addProperty("isExpanded","sparse");
 			//options.metagraph.vertices.subgraph[options.metanodeID]=graph;
 			//options.metagraph.vertices.isExpanded[options.metanodeID]=true;
+		}
+		if(graph.dimBelowHeight){
+			if(!graph.modifiers)graph.modifiers={};
+			graph.modifiers.dimming={property:"height",propertyType:"vertices",threshold:graph.dimBelowHeight};
+			if(graph.separateAtHeight){graph.modifiers.dimming.separate=true;}
+		}
+		if(graph.nodeColorProperty){
+			if(!graph.modifiers)graph.modifiers={};
+			graph.modifiers.nodeColor={property:graph.nodeColorProperty,colorScaleName:"lightBlueRed",linkColoring:"default"};//,colorScaleName:"custom"
+			if(graph.colorScaleName){graph.modifiers.nodeColor.colorScaleName=graph.colorScaleName;}
 		}
 		graph.parent=graph.metagraph||graph.originalGraph||graph.wholeGraph;
 		
@@ -308,10 +437,9 @@ G.addModule("loading",{
 		graph=await this.load(graph,options);//assuming it's either a path or a fully loaded graph, not an abstract graph
 			//even if it's a loaded graph, we may want to reuse this to load its representation
 		//}
-
+		if(graph.vertices.layout)for(let i=0;i<graph.vertices.layout.length;i++){if(!graph.vertices.layout[i])throw Error();}
 		if(options)Object.assign(graph,options);
-		
-		console.log("loading graph of |V| "+graph.vertices.length+", |E| "+graph.edges.length);
+		console.log("displaying graph of |V| "+graph.vertices.length+", |E| "+graph.edges.length);
 	
 		//if(graph.name===undefined){graph.name=toNormalText(graph.datasetID);}
 		//else{graph.name=toNormalText(graph.name);}
@@ -338,19 +466,20 @@ G.addModule("loading",{
 			await G.controls.algorithms[options.algorithm](graph);
 		}
 		else {
-			G.broadcast("displayGraph",graph);
+			G.broadcast("displayGraph",graph,options);
 		}
 		
 	},
 		
 	contractVertex:function(vertexID,parentGraph,inPlace){
 		if(!parentGraph)parentGraph=G.graph;
-		parentGraph.vertices[vertexID].isExpanded=false;
+		delete parentGraph.vertices.isExpanded[vertexID];
+		//parentGraph.vertices[vertexID].isExpanded=false;
 		G.view.displayGraph(G.graph);
 	},
 	expandVertex:function(vertexID,parentGraph,inPlace){
 		//let tempDataset=G.graph;
-		if(!parentGraph)parentGraph=G.graph;
+		if(!parentGraph)parentGraph=G.view.graph;
 		//now there are two different sources of subgraphs - saved ones on the server (need a path) or one created on the client (need a function).
 		if(!(parentGraph.subgraphPrefix||parentGraph.expandVertex))return;
 		parentGraph.lastExploredMetanodeIndex=vertexID;
@@ -369,14 +498,19 @@ G.addModule("loading",{
 			
 			if(inPlace){this.load(path,{currentMetagraph:parentGraph.dataPath,metanodeID:vertexID}).then((g)=>{
 				G.preprocessing.loadGraph(g);//todo: remove hack
+				parentGraph.vertices.isExpanded[vertexID]=true;
 				G.view.displayGraph(G.graph);
 			});}//the automatic exploration should not zoom into it
-			else{this.display(path,{currentMetagraph:parentGraph.dataPath,metanodeID:vertexID}).catch(()=>{onExpandFailed()});}
+			else{this.load(path,{currentMetagraph:parentGraph.dataPath,metanodeID:vertexID}).then((g)=>{
+				if(parentGraph.colorScale){g.colorScale=parentGraph.colorScale;}//todo: need more precise control?
+				this.display(g,{currentMetagraph:parentGraph.dataPath,metanodeID:vertexID});
+				}).catch(()=>{onExpandFailed()});}
 		}
 		else{
 			if(inPlace){Promise.resolve(parentGraph.expandVertex(vertexID)).then((g)=>{
 				g.currentMetagraph=parentGraph;g.metanodeID=vertexID;
 				G.preprocessing.loadGraph(g);//todo: remove hack
+				parentGraph.vertices.isExpanded[vertexID]=true;
 				G.view.displayGraph(G.graph);
 			});}//the automatic exploration should not zoom into it
 			else{this.display(Promise.resolve(parentGraph.expandVertex(vertexID)),{metagraph:parentGraph,metanodeID:vertexID}).catch(()=>{onExpandFailed()});}
@@ -391,6 +525,7 @@ G.addModule("loading",{
 		let parentPath;
 		if(typeof g.originalGraph=="string"){parentPath=g.originalGraph;}
 		if(typeof g.metagraph=="string"){parentPath=g.metagraph;}
+		if(typeof g.wholeGraph=="string"){parentPath=g.wholeGraph;}
 		return parentPath;
 		//todo
 		/*let target=g.parent;
@@ -406,22 +541,22 @@ G.addModule("loading",{
 	showMetagraph:function(){
 		
 		//keep backtracking until we get to a graph that's not auto-expanded; if all parents are auto-expanded, refuse to show metagraph.
-		let target=this.getRealParent(G.dataset);
+		let target=this.getParent(G.graph);
 		if(target){
 			//remove the contents of target in the directory tree
-			G.load(target);
+			G.display(target);
 			console.log("showing metagraph "+target.name);
 		}
 		else{G.addLog("no available level above this graph");}
 	},
 	showNextSiblingGraph:function(){
 		// use the next sibling function if the graph has one
-		if(G.dataset.getNextSiblingGraph){
-			G.load(G.dataset.getNextSiblingGraph());
+		if(G.graph.getNextSiblingGraph){
+			G.display(G.graph.getNextSiblingGraph());
 		}
 		else{
 			//keep backtracking until we get to a graph that's not auto-expanded; if all parents are auto-expanded, refuse to show.
-			let target=this.getRealParent(G.dataset);
+			let target=this.getParent(G.graph);
 			if(target){
 				//expand the next metanode
 				let nextSibling=null;
@@ -438,12 +573,12 @@ G.addModule("loading",{
 	},
 	showPreviousSiblingGraph:function(){
 		// use the next sibling function if the graph has one
-		if(G.dataset.getPreviousSiblingGraph){
-			G.load(G.dataset.getPreviousSiblingGraph());
+		if(G.graph.getPreviousSiblingGraph){
+			G.display(G.graph.getPreviousSiblingGraph());
 		}
 		else{
 			//keep backtracking until we get to a graph that's not auto-expanded; if all parents are auto-expanded, refuse to show.
-			let target=this.getRealParent(G.dataset);
+			let target=this.getParent(G.graph);
 			if(target){
 				//expand the next metanode
 				let previousSibling=null;
@@ -459,6 +594,8 @@ G.addModule("loading",{
 	},
 	
 	showDatasetList:function(datasets){
+		let minimalUI=getQueryVariable("minimalUI");
+		if(minimalUI){return;}//don't show it...
 		if(datasets)this.datasets=datasets;
 		if((!datasets)&&this.datasets){
 			datasets=this.datasets;selectE('dataset-menu').style('display','block');return;
@@ -778,13 +915,19 @@ function showTable(tableDialogSelection,dataObj,rowMaps,rowOnclick,cellOnclick){
 function getVLogVKString(v,e){return (v>2)?(String(Math.log(e/v,Math.log(v))).substring(0,5)):"N/A";}
 function getNum(node,name){return Number(node.getAttribute(name));}
 
+let queryVariables={};
+
+function prepareQueryVariables(){
+	var query = window.location.search.substring(1);
+	var vars = query.split("&");
+	for (var i=0;i<vars.length;i++) {
+		var pair = vars[i].split("=");
+		queryVariables[pair[0]]=pair[1];
+	}
+}
 function getQueryVariable(variable)
 {
-       var query = window.location.search.substring(1);
-       var vars = query.split("&");
-       for (var i=0;i<vars.length;i++) {
-               var pair = vars[i].split("=");
-               if(pair[0] == variable){return pair[1];}
-       }
-       return(false);
+	if(variable in queryVariables)return queryVariables[variable];
+	return undefined;
 }
+function getQueryVariables(){return queryVariables;}
