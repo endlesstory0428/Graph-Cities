@@ -50,19 +50,17 @@ for layer, linfo in data['layers'].items():
                         if not wcc.isdigit():
                             continue
                         if wcinfo['edges'] < IP:
-                            del wcinfo['levels']
-                        else:
-                            wcinfo['fragments'] = wcinfo.pop('levels')
+                            del wcinfo['fragments']
 
-    # linfo['ccfile'] = glob.glob(layer_path + '*-' + str(linfo['file_suffix']) + '.cc-layers')[0] # noqa
-    # cc2CC = lcc2CC(int(layer), linfo['ccfile'])
-    # # linfo['lcc2CC'] = {x: cc2CC[x].CC for x in cc2CC}
-    # del linfo['ccs']['-1']
-    # for lcc, cinfo in linfo['ccs'].items():
-    #     # print(lcc)
-    #     # print(cinfo)
-    #     cinfo['CC'] = int(cc2CC[int(lcc)].CC)
-    # del cc2CC
+    linfo['ccfile'] = glob.glob(layer_path + '*-' + str(linfo['file_suffix']) + '.cc-layers')[0]
+    cc2CC = lcc2CC(int(layer), linfo['ccfile'])
+    # linfo['lcc2CC'] = {x: cc2CC[x].CC for x in cc2CC}
+    del linfo['ccs']['-1']
+    for lcc, cinfo in linfo['ccs'].items():
+        # print(lcc)
+        # print(cinfo)
+        cinfo['CC'] = int(cc2CC[int(lcc)].CC)
+    del cc2CC
     del linfo['ccs']
 
     linfo['file'] = glob.glob(layer_path + '*-' + str(linfo['file_suffix']) + '.csv')[0]

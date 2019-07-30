@@ -102,7 +102,7 @@ wave-layer-cc:
 		echo $$FILE; \
 		LAYER=$${FILE:6:-16}; \
 		echo Layer: $$LAYER; \
-		./wavelayercc.py $(GRAPH) $$LAYER; \
+		scripts/wavelayercc.py $(GRAPH) $$LAYER; \
 	done
 
 .PHONY: wave-layer-cc
