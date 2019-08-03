@@ -23,12 +23,12 @@
 #define ENULL ((uint32_t)-1)
 
 typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, uint32_t, uint32_t>
-	graph_t;
+        graph_t;
 
 std::map<uint32_t, graph_t, std::greater<uint32_t> > G;
 std::unordered_map<std::pair<uint32_t, uint32_t>, std::pair<uint32_t, uint32_t>,
-		   boost::hash<std::pair<uint32_t, uint32_t> > >
-	ews;
+                   boost::hash<std::pair<uint32_t, uint32_t> > >
+        ews;
 
 // A struct to represent an edge in the edge list
 struct edge {
@@ -60,7 +60,7 @@ long long currentTimeStamp()
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
 	long long milliseconds =
-		te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
+	        te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
 	return milliseconds;
 }
 
@@ -86,7 +86,7 @@ void createMemoryMap(char *fileName)
 	assert(stat(fileName, &sizeResults) == 0);
 	fileSizeInByte = sizeResults.st_size;
 	g.edgeList = (edge *)mmap(NULL, fileSizeInByte, PROT_READ | PROT_WRITE, MAP_SHARED,
-				  binFile, 0);
+	                          binFile, 0);
 	close(binFile);
 }
 
@@ -110,7 +110,7 @@ void createInMemoryEdgeList(const char *fileName)
 }
 
 void readLayer(const std::string &inputFile, uint32_t *label2node, uint32_t *node2label,
-	       uint32_t tlayer)
+               uint32_t tlayer)
 {
 	g.edgeList = new edge[g.EDGENUM];
 	std::ifstream is;
@@ -393,7 +393,7 @@ void findWaves(uint32_t *deg, uint32_t *waves, uint32_t *levels)
 }
 
 void buildWavesAndLabel(std::ofstream &outputFile, uint32_t *waves, uint32_t *levels,
-			uint32_t *ccs, uint32_t *startwave, uint32_t *startlevel)
+                        uint32_t *ccs, uint32_t *startwave, uint32_t *startlevel)
 { //, uint32_t *metanodes) {
 	// uint32_t maxlevel = 0;
 	for (uint32_t i = 0; i < g.EDGENUM; i++) {
@@ -502,15 +502,11 @@ void buildWavesAndLabel(std::ofstream &outputFile, uint32_t *waves, uint32_t *le
 					ssum -= source_freq[i][j];
 				outputFile << "\t\t\t\"" << j - 1 << "\": {\n";
 				outputFile << "\t\t\t\t\"sources\":"
-					   << (j < last ? source_freq[i][j]
-								 : ssum)
-					   << ",\n";
+				           << (j < last ? source_freq[i][j] : ssum) << ",\n";
 				outputFile << "\t\t\t\t\"vertices\":"
-					   << (j < last ? level_vfreq[i][j]
-								 : ssum)
-					   << ",\n";
+				           << (j < last ? level_vfreq[i][j] : ssum) << ",\n";
 				outputFile << "\t\t\t\t\"edges\":" << level_efreq[i][j] / 2
-					   << "\n\t\t\t}";
+				           << "\n\t\t\t}";
 				if (j < last)
 					outputFile << ',';
 				outputFile << '\n';
@@ -523,7 +519,7 @@ void buildWavesAndLabel(std::ofstream &outputFile, uint32_t *waves, uint32_t *le
 }
 
 void writeToFile(const std::string &prefix, uint32_t *node2label, uint32_t *waves,
-		 uint32_t *levels, uint32_t *ccs)
+                 uint32_t *levels, uint32_t *ccs, uint32_t *startwave, uint32_t *startlevel)
 { //, uint32_t *metanodes) {
 	std::ofstream outputFile;
 	// outputFile.open(prefix+"-metaedges.csv");
@@ -543,6 +539,12 @@ void writeToFile(const std::string &prefix, uint32_t *node2label, uint32_t *wave
 	//     }
 	// }
 	// outputFile.close();
+	outputFile.open(prefix + "-wave-sources.csv");
+	for (uint32_t i = 1; i <= g.NODENUM; i++) {
+		outputFile << node2label[i] << "," << startwave[i] << "," << ccs[i] << ","
+		           << startlevel[i] << "\n";
+	}
+	outputFile.close();
 	outputFile.open(prefix + "-waves.csv");
 	/* outputFile<<"# vertex,level,wave,wave_connected_component,meta_node\n"; */
 	// for(uint32_t i = 1; i <= g.NODENUM; i++) {
@@ -553,13 +555,13 @@ void writeToFile(const std::string &prefix, uint32_t *node2label, uint32_t *wave
 		uint32_t src = (g.edgeList + i)->src;
 		uint32_t tgt = (g.edgeList + i)->tgt;
 		outputFile << node2label[src] << "," << node2label[tgt] << "," << waves[i]
-			   << "," << ccs[i] << "," << levels[i] - 1 << "\n";
+		           << "," << ccs[i] << "," << levels[i] - 1 << "\n";
 	}
 	outputFile.close();
 }
 
 void writeMetaData(std::string prefix, uint32_t NODENUM, uint32_t EDGENUM, uint32_t maxdeg,
-		   long long preprocessingTime, long long algorithmTime)
+                   long long preprocessingTime, long long algorithmTime)
 {
 	std::ofstream outputFile;
 	outputFile.open(prefix + "-wavedecomp-info.json");
@@ -585,7 +587,7 @@ void initNodeMap(char *inputFile, uint32_t *node2label)
 }
 
 void writeWaveMetaData(std::ofstream &outputFile, uint32_t wave, uint32_t NODENUM,
-		       uint32_t EDGENUM)
+                       uint32_t EDGENUM)
 {
 	outputFile << '"' << wave << '"' << ": {\n";
 	outputFile << "\t\"vertices\":" << NODENUM << ",\n";
@@ -596,9 +598,9 @@ int main(int argc, char *argv[])
 {
 	if (argc < 9) {
 		std::cerr
-			<< argv[0]
-			<< ": usage: ./wave <path to layers dir> <layer file> <layer> <# edges> <# "
-			   "nodes> <path to graph.cc> <largest node label> <# nodes in nodemap>\n";
+		        << argv[0]
+		        << ": usage: ./wave <path to layers dir> <layer file> <layer> <# edges> <# "
+		           "nodes> <path to graph.cc> <largest node label> <# nodes in nodemap>\n";
 		exit(1);
 	}
 	std::string prefix = argv[1];
@@ -643,9 +645,10 @@ int main(int argc, char *argv[])
 
 	outputFile << "\"0\":{}\n}";
 	outputFile.close();
-	writeToFile(prefixx, node2label, waves, levels, ccs); //, metanodes);
+	writeToFile(prefixx, node2label, waves, levels, ccs, startwave,
+	            startlevel); //, metanodes);
 	writeMetaData(prefixx, g.NODENUM, g.EDGENUM / 2, maxdeg, preprocessingTime,
-		      algorithmTime);
+	              algorithmTime);
 	/* printArray(waves, g.NODENUM+1); */
 	delete[] degree;
 	delete[] waves;

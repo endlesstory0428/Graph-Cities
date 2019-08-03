@@ -20,7 +20,7 @@ long long currentTimeStamp()
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
 	long long milliseconds =
-		te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
+	        te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
 	return milliseconds;
 }
 
@@ -190,7 +190,7 @@ void edgeDecomposition(int *edgeLabels)
 			if (isEmpty(isNodeDeleted, NODENUM)) {
 				// Label these edges and delete them from the graph
 				isGraphEmpty =
-					labelAndDeleteEdges(peel, isFinalNode, edgeLabels);
+				        labelAndDeleteEdges(peel, isFinalNode, edgeLabels);
 				// If graph is empty, finish execution
 				if (isGraphEmpty)
 					break;

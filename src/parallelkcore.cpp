@@ -45,7 +45,7 @@ long long currentTimeStamp()
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
 	long long milliseconds =
-		te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
+	        te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
 	return milliseconds;
 }
 
@@ -71,7 +71,7 @@ void createMemoryMap(char *fileName)
 	assert(stat(fileName, &sizeResults) == 0);
 	fileSizeInByte = sizeResults.st_size;
 	g.edgeList = (edge *)mmap(NULL, fileSizeInByte, PROT_READ | PROT_WRITE, MAP_SHARED,
-				  binFile, 0);
+	                          binFile, 0);
 	close(binFile);
 }
 
@@ -267,8 +267,8 @@ void scan(unsigned int *deg, unsigned int level, unsigned int *curr, long *currT
 }
 
 void processSubLevel(unsigned int *curr, long currTail, unsigned int *deg,
-		     unsigned int *edgeLabels, unsigned int level, unsigned int *next,
-		     long *nextTailPtr)
+                     unsigned int *edgeLabels, unsigned int level, unsigned int *next,
+                     long *nextTailPtr)
 {
 	// Size of cache line
 	const long BUFFER_SIZE_BYTES = 2048;
@@ -290,20 +290,20 @@ void processSubLevel(unsigned int *curr, long currTail, unsigned int *deg,
 					unsigned int u = (g.edgeList + j)->tgt;
 					if (deg[u] > level) {
 						unsigned int du =
-							__sync_fetch_and_sub(&deg[u], 1);
+						        __sync_fetch_and_sub(&deg[u], 1);
 						if (du == (level + 1)) {
 							buff[index] = u;
 							index++;
 							if (index >= BUFFER_SIZE) {
 								long tempIdx =
-									__sync_fetch_and_add(
-										nextTailPtr,
-										BUFFER_SIZE);
+								        __sync_fetch_and_add(
+								                nextTailPtr,
+								                BUFFER_SIZE);
 								for (long bufIdx = 0;
 								     bufIdx < BUFFER_SIZE;
 								     bufIdx++)
 									next[tempIdx + bufIdx] =
-										buff[bufIdx];
+									        buff[bufIdx];
 								index = 0;
 							}
 						}
@@ -354,7 +354,7 @@ void parKCore(unsigned int *deg, unsigned int *edgeLabels)
 				todo = todo - currTail;
 
 				processSubLevel(curr, currTail, deg, edgeLabels, level, next,
-						&nextTail);
+				                &nextTail);
 
 				if (tid == 0) {
 					unsigned int *tempCurr = curr;
@@ -377,7 +377,7 @@ void parKCore(unsigned int *deg, unsigned int *edgeLabels)
 }
 
 void labelEdgesAndUpdateDegree(unsigned int peel, bool *isFinalNode, float *degree,
-			       unsigned int *edgeLabels)
+                               unsigned int *edgeLabels)
 {
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + i)->src;
@@ -414,14 +414,14 @@ void writeToFile(unsigned int *edgeIndices, unsigned int *edgeLabels)
 	outputFile.open("graph-decomposition.csv");
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		outputFile << (g.edgeList + edgeIndices[i])->src << ","
-			   << (g.edgeList + edgeIndices[i])->tgt << "," << edgeLabels[i]
-			   << "\n";
+		           << (g.edgeList + edgeIndices[i])->tgt << "," << edgeLabels[i]
+		           << "\n";
 	}
 	outputFile.close();
 }
 
 void writeMetaData(unsigned int NODENUM, unsigned int EDGENUM, long long preprocessingTime,
-		   long long algorithmTime)
+                   long long algorithmTime)
 {
 	std::ofstream outputFile;
 	outputFile.open("graph-decomposition-info.json");

@@ -17,8 +17,8 @@ struct edge_component_t {
 } edge_component;
 
 typedef adjacency_list<vecS, vecS, undirectedS, no_property,
-		       property<edge_component_t, std::size_t> >
-	graph_t;
+                       property<edge_component_t, std::size_t> >
+        graph_t;
 /* typedef graph_traits<graph_t>::vertex_descriptor Vertex; */
 /* typedef graph_traits<graph_t>::edge_descriptor Edge; */
 
@@ -31,7 +31,7 @@ long long currentTimeStamp()
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
 	long long milliseconds =
-		te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
+	        te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
 	return milliseconds;
 }
 
@@ -98,7 +98,7 @@ void readWave(const std::string &inputFile, bool *waves, unsigned int woi)
 }
 
 void writeToFile(const std::string &prefix,
-		 property_map<graph_t, edge_component_t>::type components)
+                 property_map<graph_t, edge_component_t>::type components)
 {
 	std::ofstream outputFile;
 	outputFile.open(prefix);
@@ -106,12 +106,12 @@ void writeToFile(const std::string &prefix,
 	graph_traits<graph_t>::edge_iterator ei, ei_end;
 	for (tie(ei, ei_end) = edges(g); ei != ei_end; ++ei)
 		outputFile << source(*ei, g) << "," << target(*ei, g) << "," << components[*ei]
-			   << "\n";
+		           << "\n";
 	outputFile.close();
 }
 
 void writeMetaData(std::string prefix, unsigned int num_components, long long preprocessingTime,
-		   long long algorithmTime)
+                   long long algorithmTime)
 {
 	std::ofstream outputFile;
 	outputFile.open(prefix + "-info.json");
@@ -126,8 +126,8 @@ int main(int argc, char *argv[])
 {
 	if (argc < 6) {
 		std::cerr << argv[0]
-			  << ": usage: ./biconnectedcomponents <path to graph> <layer> <path "
-			     "to layers dir> <wave> <max vertex label>\n";
+		          << ": usage: ./biconnectedcomponents <path to graph> <layer> <path "
+		             "to layers dir> <wave> <max vertex label>\n";
 		exit(1);
 	}
 	std::string prefix = argv[1];
@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
 	if (wave > 0) {
 		prefixx = argv[3];
 		prefixx = prefixx.substr(0, prefixx.length() - 6) + "waves/layer-" +
-			  std::to_string(layer);
+		          std::to_string(layer);
 		std::string inFile = prefixx + "-waves.csv";
 		std::fill_n(wavemask, atol(argv[5]), false);
 		/* std::cerr<<inFile<<"\n"; */

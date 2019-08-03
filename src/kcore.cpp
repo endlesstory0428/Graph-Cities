@@ -34,7 +34,7 @@ long long currentTimeStamp()
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
 	long long milliseconds =
-		te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
+	        te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
 	return milliseconds;
 }
 
@@ -77,7 +77,7 @@ void createMemoryMap(char *fileName)
 	assert(stat(fileName, &sizeResults) == 0);
 	fileSizeInByte = sizeResults.st_size;
 	g.edgeList = (edge *)mmap(NULL, fileSizeInByte, PROT_READ | PROT_WRITE, MAP_SHARED,
-				  binFile, 0);
+	                          binFile, 0);
 	close(binFile);
 }
 
@@ -285,7 +285,7 @@ void findKCore(unsigned int *edgeLabels, unsigned int *deg)
 }
 
 void labelEdgesAndUpdateDegree(unsigned int peel, bool *isFinalNode, float *degree,
-			       unsigned int *edgeLabels)
+                               unsigned int *edgeLabels)
 {
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + i)->src;
@@ -304,14 +304,14 @@ void writeToFile(unsigned int *edgeIndices, unsigned int *edgeLabels)
 	outputFile.open("graph-decomposition.csv");
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		outputFile << (g.edgeList + edgeIndices[i])->src << ","
-			   << (g.edgeList + edgeIndices[i])->tgt << "," << edgeLabels[i]
-			   << "\n";
+		           << (g.edgeList + edgeIndices[i])->tgt << "," << edgeLabels[i]
+		           << "\n";
 	}
 	outputFile.close();
 }
 
 void writeMetaData(unsigned int NODENUM, unsigned int EDGENUM, long long preprocessingTime,
-		   long long algorithmTime)
+                   long long algorithmTime)
 {
 	std::ofstream outputFile;
 	outputFile.open("graph-decomposition-info.file");

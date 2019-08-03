@@ -47,7 +47,7 @@ long long currentTimeStamp()
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
 	long long milliseconds =
-		te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
+	        te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
 	return milliseconds;
 }
 
@@ -73,7 +73,7 @@ void createMemoryMap(char *fileName)
 	assert(stat(fileName, &sizeResults) == 0);
 	fileSizeInByte = sizeResults.st_size;
 	g.edgeList = (edge *)mmap(NULL, fileSizeInByte, PROT_READ | PROT_WRITE, MAP_SHARED,
-				  binFile, 0);
+	                          binFile, 0);
 	close(binFile);
 }
 
@@ -281,8 +281,8 @@ void scan(unsigned int *deg, unsigned int level, unsigned int *curr, long *currT
 }
 
 void processSubLevel(unsigned int *curr, long currTail, unsigned int *deg,
-		     unsigned int *edgeLabels, unsigned int level, unsigned int *next,
-		     long *nextTailPtr, unsigned int buk)
+                     unsigned int *edgeLabels, unsigned int level, unsigned int *next,
+                     long *nextTailPtr, unsigned int buk)
 {
 	// Size of cache line
 	const long BUFFER_SIZE_BYTES = 2048;
@@ -304,20 +304,20 @@ void processSubLevel(unsigned int *curr, long currTail, unsigned int *deg,
 					unsigned int u = (g.edgeList + j)->tgt;
 					if (deg[u] > level) {
 						unsigned int du =
-							__sync_fetch_and_sub(&deg[u], 1);
+						        __sync_fetch_and_sub(&deg[u], 1);
 						if (du == (level + 1)) {
 							buff[index] = u;
 							index++;
 							if (index >= BUFFER_SIZE) {
 								long tempIdx =
-									__sync_fetch_and_add(
-										nextTailPtr,
-										BUFFER_SIZE);
+								        __sync_fetch_and_add(
+								                nextTailPtr,
+								                BUFFER_SIZE);
 								for (long bufIdx = 0;
 								     bufIdx < BUFFER_SIZE;
 								     bufIdx++)
 									next[tempIdx + bufIdx] =
-										buff[bufIdx];
+									        buff[bufIdx];
 								index = 0;
 							}
 						}
@@ -368,7 +368,7 @@ void parKCore(unsigned int *deg, unsigned int *edgeLabels, unsigned int buk)
 				todo = todo - currTail;
 
 				processSubLevel(curr, currTail, deg, edgeLabels, level, next,
-						&nextTail, buk);
+				                &nextTail, buk);
 
 				if (tid == 0) {
 					unsigned int *tempCurr = curr;
@@ -455,7 +455,7 @@ void findKCore(unsigned int *edgeLabels, unsigned int *deg, unsigned int buk)
 }
 
 void labelEdgesAndUpdateDegree(unsigned int peel, bool *isFinalNode, float *degree,
-			       unsigned int *core, unsigned int *edgeLabels)
+                               unsigned int *core, unsigned int *edgeLabels)
 {
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + i)->src;
@@ -501,36 +501,36 @@ void writeToFile(unsigned int *edgeIndices, unsigned int *edgeLabels, unsigned i
 	outputFile.open("graph-decomposition.csv");
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		outputFile << node2label[(g.edgeList + edgeIndices[i])->src] << ","
-			   << node2label[(g.edgeList + edgeIndices[i])->tgt] << ","
-			   << edgeLabels[i] << "\n";
+		           << node2label[(g.edgeList + edgeIndices[i])->tgt] << ","
+		           << edgeLabels[i] << "\n";
 	}
 	outputFile.close();
 }
 
 void writeLayerToFile(std::string prefix, unsigned int layer, unsigned int *edgeIndices,
-		      unsigned int *edgeLabels, unsigned int *node2label)
+                      unsigned int *edgeLabels, unsigned int *node2label)
 {
 	long long wtime = currentTimeStamp();
 	std::ofstream outputFile;
 	outputFile.open(prefix.substr(0, prefix.length() - 4) + "_layers/layer" +
-			std::to_string(layer) + ".csv");
+	                std::to_string(layer) + ".csv");
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		if (edgeLabels[edgeIndices[i]] == layer)
 			outputFile << node2label[(g.edgeList + edgeIndices[i])->src] << ","
-				   << node2label[(g.edgeList + edgeIndices[i])->tgt] << ","
-				   << layer << "\n";
+			           << node2label[(g.edgeList + edgeIndices[i])->tgt] << ","
+			           << layer << "\n";
 	}
 	outputFile.close();
 
 	outputFile.open(prefix.substr(0, prefix.length() - 4) + "_layers/layer" +
-			std::to_string(layer) + "-info.json");
+	                std::to_string(layer) + "-info.json");
 	outputFile << "{\n";
 	outputFile << "\"io-time\":" << (ioTime += currentTimeStamp() - wtime) << "\n}";
 	outputFile.close();
 }
 
 void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENUM,
-		   long long preprocessingTime, long long algorithmTime)
+                   long long preprocessingTime, long long algorithmTime)
 {
 	std::ofstream outputFile;
 	outputFile.open(prefix.substr(0, prefix.length() - 4) + "-decomposition-info.json");
@@ -547,8 +547,8 @@ int main(int argc, char *argv[])
 {
 	if (argc < 6) {
 		std::cerr << argv[0]
-			  << ": usage: ./atlas-decomposition <path to graph.bin> <# edges> <# "
-			     "nodes> <path to graph.nodemap> <largest node label>\n";
+		          << ": usage: ./atlas-decomposition <path to graph.bin> <# edges> <# "
+		             "nodes> <path to graph.nodemap> <largest node label>\n";
 		exit(1);
 	}
 	char tmpFile[] = "tmp.bin";
@@ -610,7 +610,7 @@ int main(int argc, char *argv[])
 		/* writeLayerToFile(argv[1], mc, originalIndices, edgeLabels, node2label); */
 		t.join();
 		t = std::thread(writeLayerToFile, argv[1], mc, originalIndices, edgeLabels,
-				node2label);
+		                node2label);
 	}
 	/* g.EDGENUM /= 2; */
 	unsigned int *originalLabels = new unsigned int[g.EDGENUM];

@@ -24,7 +24,7 @@ long long currentTimeStamp()
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
 	long long milliseconds =
-		te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
+	        te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
 	return milliseconds;
 }
 
@@ -229,7 +229,7 @@ void writeToFile(const std::string &prefix)
 }
 
 void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENUM,
-		   long long readTime, long long sortTime, long long writeTime)
+                   long long readTime, long long sortTime, long long writeTime)
 {
 	std::ofstream outputFile;
 	outputFile.open(prefix + "-metadata.json");
@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
 {
 	if (argc < 3) {
 		std::cerr << argv[0]
-			  << ": usage: ./sanitize <path to graph.txt> <# edges> <do union?>\n";
+		          << ": usage: ./sanitize <path to graph.txt> <# edges> <do union?>\n";
 		exit(1);
 	}
 	bool dounion = argc > 3 && !strncmp(argv[3], "true", 4);

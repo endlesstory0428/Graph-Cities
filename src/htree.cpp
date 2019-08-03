@@ -25,7 +25,7 @@ long long currentTimeStamp()
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
 	long long milliseconds =
-		te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
+	        te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
 	return milliseconds;
 }
 
@@ -81,13 +81,13 @@ void readGraph(const std::string &inputFile, const std::string &ccfile)
 }
 
 void writeToFile(std::ofstream &outputFile, unsigned int layer,
-		 std::vector<unsigned int> &components)
+                 std::vector<unsigned int> &components)
 {
 	graph_t g = G[layer];
 	for (unsigned int i = 0; i < num_vertices(g); i++) {
 		if (degree(i, g) > 0)
 			outputFile << i << "," << ccs[i] << "," << layer << "," << components[i]
-				   << "\n";
+			           << "\n";
 	}
 }
 
@@ -114,8 +114,8 @@ int main(int argc, char *argv[])
 {
 	if (argc < 3) {
 		std::cerr << argv[0]
-			  << ": usage: ./cc-layers-mat <path to graph> <path to connected "
-			     "components>\n";
+		          << ": usage: ./cc-layers-mat <path to graph> <path to connected "
+		             "components>\n";
 		exit(1);
 	}
 	std::string prefix = argv[1];

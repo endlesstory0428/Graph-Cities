@@ -51,7 +51,7 @@ long long currentTimeStamp()
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
 	long long milliseconds =
-		te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
+	        te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
 	return milliseconds;
 }
 
@@ -83,7 +83,7 @@ void createMemoryMap(const char *fileName)
 	assert(stat(fileName, &sizeResults) == 0);
 	fileSizeInByte = sizeResults.st_size;
 	g.edgeList = (edge *)mmap(NULL, fileSizeInByte, PROT_READ | PROT_WRITE, MAP_SHARED,
-				  binFile, 0);
+	                          binFile, 0);
 	close(binFile);
 }
 
@@ -268,8 +268,8 @@ void scan(unsigned int *deg, unsigned int level, unsigned int *curr, long *currT
 }
 
 void processSubLevel(unsigned int *curr, long currTail, unsigned int *deg,
-		     unsigned int *edgeLabels, unsigned int level, unsigned int *next,
-		     long *nextTailPtr)
+                     unsigned int *edgeLabels, unsigned int level, unsigned int *next,
+                     long *nextTailPtr)
 {
 	// Size of cache line
 	const long BUFFER_SIZE_BYTES = 2048;
@@ -291,20 +291,20 @@ void processSubLevel(unsigned int *curr, long currTail, unsigned int *deg,
 					unsigned int u = (g.edgeList + j)->tgt;
 					if (deg[u] > level) {
 						unsigned int du =
-							__sync_fetch_and_sub(&deg[u], 1);
+						        __sync_fetch_and_sub(&deg[u], 1);
 						if (du == (level + 1)) {
 							buff[index] = u;
 							index++;
 							if (index >= BUFFER_SIZE) {
 								long tempIdx =
-									__sync_fetch_and_add(
-										nextTailPtr,
-										BUFFER_SIZE);
+								        __sync_fetch_and_add(
+								                nextTailPtr,
+								                BUFFER_SIZE);
 								for (long bufIdx = 0;
 								     bufIdx < BUFFER_SIZE;
 								     bufIdx++)
 									next[tempIdx + bufIdx] =
-										buff[bufIdx];
+									        buff[bufIdx];
 								index = 0;
 							}
 						}
@@ -355,7 +355,7 @@ void parKCore(unsigned int *deg, unsigned int *edgeLabels)
 				todo = todo - currTail;
 
 				processSubLevel(curr, currTail, deg, edgeLabels, level, next,
-						&nextTail);
+				                &nextTail);
 
 				if (tid == 0) {
 					unsigned int *tempCurr = curr;
@@ -378,7 +378,7 @@ void parKCore(unsigned int *deg, unsigned int *edgeLabels)
 }
 
 unsigned int labelEdgesAndUpdateDegree(unsigned int peel, boost::dynamic_bitset<> *isFinalNode,
-				       unsigned int *degree, unsigned int *edgeLabels)
+                                       unsigned int *degree, unsigned int *edgeLabels)
 {
 	unsigned int numEdges = 0;
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
@@ -418,14 +418,14 @@ void writeToFile(unsigned int *edgeIndices, unsigned int *edgeLabels)
 	outputFile.open("graph-decomposition.csv");
 	for (unsigned int i = 0; i < g.EDGENUM; i++) {
 		outputFile << (g.edgeList + edgeIndices[i])->src << ","
-			   << (g.edgeList + edgeIndices[i])->tgt << "," << edgeLabels[i]
-			   << "\n";
+		           << (g.edgeList + edgeIndices[i])->tgt << "," << edgeLabels[i]
+		           << "\n";
 	}
 	outputFile.close();
 }
 
 void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENUM,
-		   unsigned int maxdeg, long long preprocessingTime, long long algorithmTime)
+                   unsigned int maxdeg, long long preprocessingTime, long long algorithmTime)
 {
 	std::ofstream outputFile;
 	outputFile.open(prefix.substr(0, prefix.length() - 4) + "-decomposition-info.json");
@@ -452,17 +452,17 @@ void initNodeMap(char *inputFile, unsigned int *node2label)
 }
 
 void writeLayerToFile(const std::string &prefix, unsigned int topLayer, unsigned int layer,
-		      unsigned int *edgeLabels, unsigned int *node2label)
+                      unsigned int *edgeLabels, unsigned int *node2label)
 {
 	long long wtime = currentTimeStamp();
 	std::ofstream outputFile;
 	std::string prefixx;
 	if (topLayer != layer) {
 		prefixx = prefix.substr(0, prefix.length() - 4) + "_layers/layer-" +
-			  std::to_string(layer) + "-" + std::to_string(topLayer);
+		          std::to_string(layer) + "-" + std::to_string(topLayer);
 	} else {
 		prefixx = prefix.substr(0, prefix.length() - 4) + "_layers/layer-" +
-			  std::to_string(layer);
+		          std::to_string(layer);
 	}
 	outputFile.open(prefixx + ".csv");
 	/* outputFile<<"# source_vertex,target_vertex,layer\n"; */
@@ -470,7 +470,7 @@ void writeLayerToFile(const std::string &prefix, unsigned int topLayer, unsigned
 		unsigned int label = edgeLabels[i];
 		if (label >= layer && label <= (topLayer))
 			outputFile << node2label[(g.edgeList + i)->src] << ","
-				   << node2label[(g.edgeList + i)->tgt] << "," << label << "\n";
+			           << node2label[(g.edgeList + i)->tgt] << "," << label << "\n";
 	}
 	outputFile.close();
 	ioTime += currentTimeStamp() - wtime;
@@ -481,7 +481,7 @@ void writeLayerToFile(const std::string &prefix, unsigned int topLayer, unsigned
 }
 
 void writeLayerMetaData(std::ofstream &outputFile, unsigned int layer, unsigned int prev,
-			unsigned int NODENUM, unsigned int EDGENUM)
+                        unsigned int NODENUM, unsigned int EDGENUM)
 {
 	outputFile << '"' << layer << '"' << ": {\n";
 	outputFile << "\t\"vertices\":" << NODENUM << ",\n";
@@ -493,8 +493,8 @@ int main(int argc, char *argv[])
 {
 	if (argc < 6) {
 		std::cerr << argv[0]
-			  << ": usage: ./buffkcore <path to graph.bin> <# edges> <# nodes> "
-			     "<path to graph.cc> <largest node label>\n";
+		          << ": usage: ./buffkcore <path to graph.bin> <# edges> <# nodes> "
+		             "<path to graph.cc> <largest node label>\n";
 		exit(1);
 	}
 	std::string prefix = argv[1];
@@ -553,7 +553,7 @@ int main(int argc, char *argv[])
 		if (DEBUG)
 			std::cout << "CURRENT MAXIMUM CORE : " << mc << "\n";
 		boost::dynamic_bitset<> *isFinalNode =
-			new boost::dynamic_bitset<>(g.NODENUM + 1);
+		        new boost::dynamic_bitset<>(g.NODENUM + 1);
 		// std::fill_n(isFinalNode, g.NODENUM + 1, false);
 		numVerts = 0;
 		for (unsigned int i = 0; i <= g.NODENUM; i++) {
@@ -571,7 +571,7 @@ int main(int argc, char *argv[])
 			 */
 			t.join();
 			t = std::thread(writeLayerToFile, prefix, topLayer, mc, edgeLabels,
-					node2label);
+			                node2label);
 			topLayer = 0;
 			numEdges = 0;
 		}
@@ -591,7 +591,7 @@ int main(int argc, char *argv[])
 	if (numEdges > 0)
 		writeLayerToFile(prefix, topLayer, mc, edgeLabels, node2label);
 	writeMetaData(prefix, g.NODENUM, g.EDGENUM / 2, maxdeg, preprocessingTime,
-		      algorithmTime);
+	              algorithmTime);
 	// remove(tmpFile);
 	delete[] core;
 	delete[] degree;

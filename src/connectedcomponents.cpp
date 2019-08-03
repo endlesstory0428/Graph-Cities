@@ -27,7 +27,7 @@ long long currentTimeStamp()
 	struct timeval te;
 	gettimeofday(&te, NULL); // get current time
 	long long milliseconds =
-		te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
+	        te.tv_sec * 1000LL + te.tv_usec / 1000; // calculate milliseconds
 	return milliseconds;
 }
 
@@ -92,7 +92,7 @@ void readGraph(const std::string &inputFile)
 void readGraphBin(const std::string &fileName)
 {
 	unsigned int *node2label =
-		initNodeMap(fileName.substr(0, fileName.length() - 4) + ".nodemap");
+	        initNodeMap(fileName.substr(0, fileName.length() - 4) + ".nodemap");
 	std::ifstream is;
 	is.open(fileName, std::ios::in | std::ios::binary);
 	is.seekg(0, is.end);
@@ -121,7 +121,7 @@ void writeToFile(const std::string &prefix, std::vector<unsigned int> components
 }
 
 void writeMetaData(const std::string &prefix, unsigned int num_components,
-		   long long preprocessingTime, long long algorithmTime)
+                   long long preprocessingTime, long long algorithmTime)
 {
 	std::ofstream outputFile;
 	outputFile.open(prefix + "-decomposition-info.json");
@@ -133,7 +133,7 @@ void writeMetaData(const std::string &prefix, unsigned int num_components,
 }
 
 void writeCCMetaData(std::ofstream &outputFile, unsigned int cc, unsigned int NODENUM,
-		     unsigned int EDGENUM)
+                     unsigned int EDGENUM)
 {
 	outputFile << '"' << cc << '"' << ": {\n";
 	outputFile << "\t\"vertices\":" << NODENUM << ",\n";
@@ -144,8 +144,8 @@ int main(int argc, char *argv[])
 {
 	if (argc < 4) {
 		std::cerr << argv[0]
-			  << ": usage: ./connectedcomponents <path to graph> <layer> <path to "
-			     "layers dir>\n";
+		          << ": usage: ./connectedcomponents <path to graph> <layer> <path to "
+		             "layers dir>\n";
 		exit(1);
 	}
 	std::string prefix = argv[1];
