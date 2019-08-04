@@ -552,7 +552,7 @@ void writeToFile(const std::string &prefix, uint32_t *node2label, uint32_t *wave
 	for (uint32_t i = 1; i <= g.NODENUM; i++) {
 		if (startwave[i] != 0)
 			outputFile << node2label[i] << "," << startwave[i] << ","
-			           << startlevel[i] << "\n";
+			           << startlevel[i]-1 << "\n";
 	}
 	outputFile.close();
 	outputFile.open(prefix + "-waves.csv");
