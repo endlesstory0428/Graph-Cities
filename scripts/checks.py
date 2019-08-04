@@ -187,7 +187,7 @@ for layer, val0 in wavesinfo.items():
                                 ERR, graph_name, 'Wave-CC', wave, '-', cc, 'CCs of Layer',
                                 layer, 'Edges: FAILED', levedges, '!=', ccval['edges'], CLR
                             )
-                        if lesources == ccval['vertices']:
+                        if lesources <= ccval['vertices']:
                             print(
                                 graph_name, 'Wave-CC', wave, '-', cc, 'of Layer', layer,
                                 'Vertices: PASSED'

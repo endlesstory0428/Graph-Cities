@@ -320,12 +320,17 @@ void findWaves(uint32_t *deg, uint32_t *waves, uint32_t *levels)
 			// Do nothing if node doesn't exist in the graph
 			if (false && g.start_indices[v] == 0 && g.end_indices[v] == 0) {
 				;
-				std::cerr << "Test\n";
+				std::cerr << "Test: " << v << "\n";
 			} else {
 				// std::cerr<<"i3: "<<i<<"\n";
 				// std::cerr<<v<<": "<<deg[v]<<", "<<waves[v]<<"\n";
-				waves[v] = wave;
-				levels[v] = level;
+				if (deg[v] != 0) {
+					waves[v] = wave;
+					levels[v] = level;
+				} else {
+					waves[v] = 0;
+					levels[v] = 0;
+				}
 				deg[v] = ENULL;
 				// std::cerr<<v<<": "<<deg[v]<<", "<<waves[v]<<"\n";
 				// std::cerr<<"i4: "<<i<<"\n";
@@ -455,7 +460,7 @@ void buildWavesAndLabel(std::ofstream &outputFile, uint32_t *waves, uint32_t *le
 		uint32_t num_edges = 0;
 		uint32_t num_verts = 0;
 		uint32_t prevSrc = -1;
-		uint32_t maxLevel = 0;
+		// uint32_t maxLevel = 0;
 		boost::graph_traits<graph_t>::edge_iterator ei, ei_end;
 		for (boost::tie(ei, ei_end) = boost::edges(gr->second); ei != ei_end; ++ei) {
 			uint32_t src = boost::source(*ei, gr->second);
@@ -475,13 +480,15 @@ void buildWavesAndLabel(std::ofstream &outputFile, uint32_t *waves, uint32_t *le
 			if (vert_level[src][levels[i]] == 0) {
 				if (startwave[src] == wave && startlevel[src] == levels[i])
 					source_freq[components[src]][levels[i]]++;
+				// if (startwave[src] > wave && startlevel[src] == 1)
+				//         source_freq[components[src]][num-1]++;
 				level_vfreq[components[src]][levels[i]]++;
 				if (levels[i] > compLevel[components[src]])
 					compLevel[components[src]] = levels[i];
 				vert_level[src][levels[i]] = 1;
 			}
-			if (levels[i] > maxLevel)
-				maxLevel = levels[i];
+			// if (levels[i] > maxLevel)
+			//         maxLevel = levels[i];
 		}
 
 		outputFile << '"' << wave << '"' << ": {\n";
@@ -494,17 +501,19 @@ void buildWavesAndLabel(std::ofstream &outputFile, uint32_t *waves, uint32_t *le
 			// outputFile<<"\t\t\"levels\":"<<compLevel[i]<<"\n\t},\n";
 			outputFile << "\t\t\"fragments\": {\n";
 			uint32_t last = compLevel[i];
-			if (last == maxLevel)
-				last++;
-			uint32_t ssum = compVerts[i];
+			// if (wave != G.begin()->first && last == maxLevel)
+			//         last++;
+			// uint32_t ssum = compVerts[i];
 			for (uint32_t j = 1; j <= last; j++) {
-				if (j < last)
-					ssum -= source_freq[i][j];
+				// if (j < last)
+				//         ssum -= source_freq[i][j];
 				outputFile << "\t\t\t\"" << j - 1 << "\": {\n";
 				outputFile << "\t\t\t\t\"sources\":"
-				           << (j < last ? source_freq[i][j] : ssum) << ",\n";
-				outputFile << "\t\t\t\t\"vertices\":"
-				           << (j < last ? level_vfreq[i][j] : ssum) << ",\n";
+				           << (j <= compLevel[i] ? source_freq[i][j]
+				                                 : source_freq[i][num-1])
+				           << ",\n";
+				outputFile << "\t\t\t\t\"vertices\":" << level_vfreq[i][j]
+				           << ",\n";
 				outputFile << "\t\t\t\t\"edges\":" << level_efreq[i][j] / 2
 				           << "\n\t\t\t}";
 				if (j < last)
@@ -541,8 +550,9 @@ void writeToFile(const std::string &prefix, uint32_t *node2label, uint32_t *wave
 	// outputFile.close();
 	outputFile.open(prefix + "-wave-sources.csv");
 	for (uint32_t i = 1; i <= g.NODENUM; i++) {
-		outputFile << node2label[i] << "," << startwave[i] << "," << ccs[i] << ","
-		           << startlevel[i] << "\n";
+		if (startwave[i] != 0)
+			outputFile << node2label[i] << "," << startwave[i] << ","
+			           << startlevel[i] << "\n";
 	}
 	outputFile.close();
 	outputFile.open(prefix + "-waves.csv");
