@@ -22,7 +22,7 @@ cclayers = pd.read_csv(
     usecols=['vertex', 'Layer', 'cc']
 ).query('Layer==@layer').transpose()
 # cclayers.sort_values(by='vertex', inplace=True)
-cclayers.columns = cclayers.loc['vertex'].get_values()
+cclayers.columns = cclayers.loc['vertex'].values
 
 waves = pd.read_csv(
     wavecsvfile,
@@ -36,7 +36,7 @@ with open(waveinfofile) as f:
     ccwaves = json.load(f)
 
 print('making map')
-for s, w, c in waves.get_values():
+for s, w, c in waves.values:
     ccwaves[str(w)][str(c)]['layer-cc'] = int(cclayers[s].cc)
 print('done making map')
 
