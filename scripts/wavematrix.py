@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import sys
 import json
 import pandas as pd
 
@@ -52,7 +51,7 @@ def getWaveMatrix(g, l, w, wcc):
         setlen = len(inter)
         assert (setlen > 0)
         checkcount += setlen
-        wavemat['sets'][frag] = inter
+        wavemat['sets'][frag] = list(inter)
     # lastset = set(waves.query('wave>@w')['source']).intersection(set(waves['source']))
     lastset = set(wavesets.query('wave>@w')['vertex']).intersection(set(waves['source']))
     for x in lastset:
@@ -62,7 +61,7 @@ def getWaveMatrix(g, l, w, wcc):
     # print(len(lastset))
     assert (checkcount + len(lastset) <= len(waves))
     if len(lastset) > 0:
-        wavemat['sets'][len(wavemat['sets'])] = lastset
+        wavemat['sets'][len(wavemat['sets'])] = list(lastset)
 
     # print(v2f)
     wavemat['adj'] = {x: {} for x in range(len(wavemat['sets']))}
@@ -71,8 +70,64 @@ def getWaveMatrix(g, l, w, wcc):
         if s in v2f and t in v2f:
             wavemat['adj'][v2f[s]][v2f[t]] = wavemat['adj'][v2f[s]].get(v2f[t], 0) + 1
 
-    return wavemat
+    return json.dumps(wavemat)
     # print('writing', waveinfofile)
     # with open(waveinfofile, 'w') as outfile:
     #     json.dump(ccwaves, outfile, indent='\t')
     # print('wrote', waveinfofile)
+
+
+def getFragmentDist(g, l, w, wcc):
+    graph = g
+    graph += '/' + graph
+    layer = l
+
+    graph += '_waves/layer-' + str(layer)
+    wavecsvfile = graph + '-waves.csv'
+
+    print('reading', wavecsvfile)
+    iter_csv = pd.read_csv(
+        wavecsvfile,
+        header=None,
+        names=['source', 'target', 'wave', 'wcc', 'fragment'],
+        usecols=['source', 'target', 'wave', 'wcc', 'fragment'],
+        iterator=True
+    )
+    waves = pd.concat(
+        [chunk[(chunk['wave'] == w) & (chunk['wcc'] == wcc)] for chunk in iter_csv]
+    )
+    waves.drop(['wave', 'wcc'], axis=1, inplace=True)
+    print('read', wavecsvfile)
+
+    frags = waves.groupby(['fragment'])
+    sizes = frags.size()
+    return sizes
+
+
+def getFragments(g, l, w, wcc):
+    graph = g
+    graph += '/' + graph
+    layer = l
+
+    graph += '_waves/layer-' + str(layer)
+    wavecsvfile = graph + '-waves.csv'
+
+    print('reading', wavecsvfile)
+    iter_csv = pd.read_csv(
+        wavecsvfile,
+        header=None,
+        names=['source', 'target', 'wave', 'wcc', 'fragment'],
+        usecols=['source', 'target', 'wave', 'wcc', 'fragment'],
+        iterator=True
+    )
+    waves = pd.concat(
+        [chunk[(chunk['wave'] == w) & (chunk['wcc'] == wcc)] for chunk in iter_csv]
+    )
+    waves.drop(['wave', 'wcc'], axis=1, inplace=True)
+    print('read', wavecsvfile)
+
+    frags = waves.groupby(['fragment'])
+    jfrags = {}
+    for frag, edges in frags:
+        jfrags[frag] = list(edges.drop('fragment', axis=1).to_records(index=False))
+    return jfrags
