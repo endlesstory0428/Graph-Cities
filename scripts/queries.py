@@ -10,6 +10,29 @@ import pandas as pd
 
 
 def getWaveMatrix(g, l, w, wcc):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+            w   = wave number
+            wcc = wave connected component id
+
+        Outputs: json
+            {
+                "sets":
+                    [
+                        "0" : [vertex, #, ...],
+                        "1" : [#, #, ...],
+                        ...
+                    ],
+                "adj":
+                    {
+                        "0" : {{"0":weight}, {"1":#}, ...},
+                        "1" : {{"0":#}, {"1":#}, ...},
+                        ...
+                    }
+            }
+    """
+
     graph = g
     graph += '/' + graph
     layer = l
@@ -80,6 +103,20 @@ def getWaveMatrix(g, l, w, wcc):
 
 
 def getFragmentDist(g, l, w, wcc):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+            w   = wave number
+            wcc = wave connected component id
+
+        Outputs: json
+            {
+                "0": size,
+                "1": #,
+                ...
+            }
+    """
+
     graph = g
     graph += '/' + graph
     layer = l
@@ -107,6 +144,20 @@ def getFragmentDist(g, l, w, wcc):
 
 
 def getFragments(g, l, w, wcc):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+            w   = wave number
+            wcc = wave connected component id
+
+        Outputs: json
+            {
+                "0": "src,tgt\n#,#\n...",
+                "1": "#,#\n#,#\n...",
+                ...
+            }
+    """
+
     graph = g
     graph += '/' + graph
     layer = l
@@ -136,6 +187,19 @@ def getFragments(g, l, w, wcc):
 
 
 def getFragment(g, l, w, wcc, f):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+            w   = wave number
+            wcc = wave connected component id
+            f   = fragment number
+
+        Outputs: csv
+            src,tgt
+            #,#
+            ...
+    """
+
     graph = g
     graph += '/' + graph
     layer = l
@@ -164,6 +228,20 @@ def getFragment(g, l, w, wcc, f):
 
 
 def getWaveCCDist(g, l, lcc, w):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+            lcc = layer connected component id
+            w   = wave number
+
+        Outputs: json
+            {
+                "wave_cc_id": size,
+                "#": #,
+                ...
+            }
+    """
+
     graph = g
     graph += '/' + graph
     layer = l
@@ -204,6 +282,20 @@ def getWaveCCDist(g, l, lcc, w):
 
 
 def getWaveCCs(g, l, lcc, w):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+            lcc = layer connected component id
+            w   = wave number
+
+        Outputs: json
+            {
+                "wave_cc_id": "src,tgt\n#,#\n...",
+                "#": "#,#\n#,#\n...",
+                ...
+            }
+    """
+
     graph = g
     graph += '/' + graph
     layer = l
@@ -246,6 +338,18 @@ def getWaveCCs(g, l, lcc, w):
 
 
 def getWaveCC(g, l, w, wcc):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+            w   = wave number
+            wcc = wave connected component id
+
+        Outputs: csv
+            src,tgt
+            #,#
+            ...
+    """
+
     graph = g
     graph += '/' + graph
     layer = l
@@ -269,6 +373,19 @@ def getWaveCC(g, l, w, wcc):
 
 
 def getWaveDist(g, l, lcc):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+            lcc = layer connected component id
+
+        Outputs: json
+            {
+                "1": size,
+                "2": #,
+                ...
+            }
+    """
+
     graph = g
     graph += '/' + graph
     layer = l
@@ -306,6 +423,19 @@ def getWaveDist(g, l, lcc):
 
 
 def getWaves(g, l, lcc):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+            lcc = layer connected component id
+
+        Outputs: json
+            {
+                "1": "src,tgt\n#,#\n...",
+                "2": "#,#\n#,#\n...",
+                ...
+            }
+    """
+
     graph = g
     graph += '/' + graph
     layer = l
@@ -345,6 +475,18 @@ def getWaves(g, l, lcc):
 
 
 def getWave(g, l, lcc, w):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+            lcc = layer connected component id
+            w   = wave number
+
+        Outputs: csv
+            src,tgt
+            #,#
+            ...
+    """
+
     graph = g
     graph += '/' + graph
     layer = l
@@ -383,6 +525,18 @@ def getWave(g, l, lcc, w):
 
 
 def getLayerCCDist(g, l):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+
+        Outputs: json
+            {
+                "layer_cc_id": size,
+                "#": #,
+                ...
+            }
+    """
+
     graph = g
     graph += '/' + graph
     layer = l
@@ -424,6 +578,19 @@ def getLayerCCDist(g, l):
 
 
 def getLayerCCs(g, l, lcc):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+            lcc = layer connected component id
+
+        Outputs: json
+            {
+                "layer_cc_id": "src,tgt\n#,#\n...",
+                "#": "#,#\n#,#\n...",
+                ...
+            }
+    """
+
     graph = g
     graph += '/' + graph
     layer = l
@@ -467,6 +634,17 @@ def getLayerCCs(g, l, lcc):
 
 
 def getLayerCC(g, l, lcc):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+            lcc = layer connected component id
+
+        Outputs: csv
+            src,tgt
+            #,#
+            ...
+    """
+
     graph = g
     graph += '/' + graph
     layer = l
@@ -505,6 +683,17 @@ def getLayerCC(g, l, lcc):
 
 
 def getLayerDist(g):
+    """ Inputs:
+            g   = graph_name
+
+        Outputs: json
+            {
+                "layer_number": size,
+                "#": #,
+                ...
+            }
+    """
+
     graph = g
     graph += '/' + graph
 
@@ -520,6 +709,17 @@ def getLayerDist(g):
 
 
 def getLayers(g):
+    """ Inputs:
+            g   = graph_name
+
+        Outputs: json
+            {
+                "1": "src,tgt\n#,#\n...",
+                "2": "#,#\n#,#\n...",
+                ...
+            }
+    """
+
     graph = g
     graph += '/' + graph
 
@@ -546,6 +746,16 @@ def getLayers(g):
 
 
 def getLayer(g, l):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+
+        Outputs: csv
+            src,tgt
+            #,#
+            ...
+    """
+
     graph = g
     graph += '/' + graph
     layer = l
