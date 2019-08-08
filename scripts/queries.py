@@ -138,7 +138,7 @@ def getDCFragmentDist(g, l, w, size_type='edges'):
         for frag, size in info['fragments'].items():
             sizes[int(frag)] = sizes.get(int(frag), 0) + size['edges']
 
-    return sizes
+    return json.dumps(sizes)
 
 
 def getDCFragments(g, l, w):
@@ -250,7 +250,7 @@ def getFragmentDist(g, l, w, wcc, size_type='edges'):
     for frag, size in fragdist['fragments'].items():
         sizes[int(frag)] = size['edges']
 
-    return sizes
+    return json.dumps(sizes)
 
 
 def getFragments(g, l, w, wcc):
@@ -370,7 +370,7 @@ def getWaveCCDist(g, l, lcc, w, size_type='edges'):
         if info['layer-cc'] == lcc:
             sizes[int(wcc)] = info['edges']
 
-    return sizes
+    return json.dumps(sizes)
 
 
 def getWaveCCs(g, l, lcc, w):
@@ -493,7 +493,7 @@ def getDCWaveDist(g, l, size_type='edges'):
     for wave, info in wavedist.items():
         sizes[int(wave)] = info['edges']
 
-    return sizes
+    return json.dumps(sizes)
 
 
 def getDCWaves(g, l):
@@ -630,7 +630,7 @@ def getWaveDist(g, l, lcc, size_type='edges'):
             if size['layer-cc'] == lcc:
                 sizes[int(wave)] = sizes.get(int(wave), 0) + size['edges']
 
-    return sizes
+    return json.dumps(sizes)
 
 
 def getWaves(g, l, lcc):
