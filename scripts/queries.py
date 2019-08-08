@@ -15,7 +15,7 @@ def getWaveMatrix(g, l, w, wcc, just_adj=True):
             l   = layer number
             w   = wave number
             wcc = wave connected component id
-            ret_sets = whether or not to return just the adjancency list
+            just_adj = whether or not to return just the adjancency list
 
         Outputs: json
             {
@@ -125,24 +125,20 @@ def getDCFragmentDist(g, l, w, size_type='edges'):
     graph += '/' + graph
     layer = l
 
-    graph += '_waves/layer-' + str(layer)
-    wavecsvfile = graph + '-waves.csv'
+    wavedistfile = graph + '_waves/layer-' + str(layer) + '-waves-info.json'
+    print('reading', wavedistfile)
+    with open(wavedistfile) as f:
+        fragdist = json.load(f)[str(w)]
+        del fragdist['vertices']
+        del fragdist['edges']
+    print('read', wavedistfile)
 
-    print('reading', wavecsvfile)
-    iter_csv = pd.read_csv(
-        wavecsvfile,
-        header=None,
-        names=['source', 'target', 'wave', 'wcc', 'fragment'],
-        usecols=['source', 'target', 'wave', 'fragment'],
-        iterator=True
-    )
-    waves = pd.concat([chunk[chunk['wave'] == w] for chunk in iter_csv])
-    waves.drop(['wave'], axis=1, inplace=True)
-    print('read', wavecsvfile)
+    sizes = {}
+    for wcc, info in fragdist.items():
+        for frag, size in info['fragments'].items():
+            sizes[int(frag)] = sizes.get(int(frag), 0) + size['edges']
 
-    frags = waves.groupby(['fragment'])
-    sizes = frags.size() // 2
-    return sizes.to_json()
+    return sizes
 
 
 def getDCFragments(g, l, w):
@@ -242,26 +238,19 @@ def getFragmentDist(g, l, w, wcc, size_type='edges'):
     graph += '/' + graph
     layer = l
 
-    graph += '_waves/layer-' + str(layer)
-    wavecsvfile = graph + '-waves.csv'
+    wavedistfile = graph + '_waves/layer-' + str(layer) + '-waves-info.json'
+    print('reading', wavedistfile)
+    with open(wavedistfile) as f:
+        fragdist = json.load(f)[str(w)][str(wcc)]
+        del fragdist['vertices']
+        del fragdist['edges']
+    print('read', wavedistfile)
 
-    print('reading', wavecsvfile)
-    iter_csv = pd.read_csv(
-        wavecsvfile,
-        header=None,
-        names=['source', 'target', 'wave', 'wcc', 'fragment'],
-        usecols=['source', 'target', 'wave', 'wcc', 'fragment'],
-        iterator=True
-    )
-    waves = pd.concat(
-        [chunk[(chunk['wave'] == w) & (chunk['wcc'] == wcc)] for chunk in iter_csv]
-    )
-    waves.drop(['wave', 'wcc'], axis=1, inplace=True)
-    print('read', wavecsvfile)
+    sizes = {}
+    for frag, size in fragdist['fragments'].items():
+        sizes[int(frag)] = size['edges']
 
-    frags = waves.groupby(['fragment'])
-    sizes = frags.size() // 2
-    return sizes.to_json()
+    return sizes
 
 
 def getFragments(g, l, w, wcc):
@@ -368,39 +357,20 @@ def getWaveCCDist(g, l, lcc, w, size_type='edges'):
     graph += '/' + graph
     layer = l
 
-    with open(graph + '-layer-info.json') as f:
-        file_suffix = json.load(f)[str(layer)]['file_suffix']
-    cclayerfile = glob.glob(graph + '_layers/*-' + str(file_suffix) + '.cc-layers')[0]
-    wavecsvfile = graph + '_waves/layer-' + str(layer) + '-waves.csv'
+    wavedistfile = graph + '_waves/layer-' + str(layer) + '-waves-info.json'
+    print('reading', wavedistfile)
+    with open(wavedistfile) as f:
+        wccdist = json.load(f)[str(w)]
+        del wccdist['vertices']
+        del wccdist['edges']
+    print('read', wavedistfile)
 
-    print('reading', cclayerfile)
-    verts = set(
-        pd.read_csv(
-            cclayerfile,
-            header=None,
-            names=['vertex', 'CC', 'layer', 'cc'],
-            usecols=['vertex', 'layer', 'cc']
-        ).query('(layer==@layer) & (cc==@lcc)')['vertex']
-    )
-    print('read', cclayerfile)
+    sizes = {}
+    for wcc, info in wccdist.items():
+        if info['layer-cc'] == lcc:
+            sizes[int(wcc)] = info['edges']
 
-    print('reading', wavecsvfile)
-    iter_csv = pd.read_csv(
-        wavecsvfile,
-        header=None,
-        names=['source', 'target', 'wave', 'wcc', 'fragment'],
-        usecols=['source', 'target', 'wave', 'wcc'],
-        iterator=True
-    )
-    waves = pd.concat(
-        [chunk[chunk['source'].isin(verts) & (chunk['wave'] == w)] for chunk in iter_csv]
-    )
-    waves.drop(['wave'], axis=1, inplace=True)
-    print('read', wavecsvfile)
-
-    wgps = waves.groupby(['wcc'])
-    sizes = wgps.size() // 2
-    return sizes.to_json()
+    return sizes
 
 
 def getWaveCCs(g, l, lcc, w):
@@ -512,36 +482,18 @@ def getDCWaveDist(g, l, size_type='edges'):
     graph += '/' + graph
     layer = l
 
-    with open(graph + '-layer-info.json') as f:
-        file_suffix = json.load(f)[str(layer)]['file_suffix']
-    cclayerfile = glob.glob(graph + '_layers/*-' + str(file_suffix) + '.cc-layers')[0]
-    wavecsvfile = graph + '_waves/layer-' + str(layer) + '-waves.csv'
+    wavedistfile = graph + '_waves/layer-' + str(layer) + '-waves-info.json'
+    print('reading', wavedistfile)
+    with open(wavedistfile) as f:
+        wavedist = json.load(f)
+        del wavedist['0']
+    print('read', wavedistfile)
 
-    print('reading', cclayerfile)
-    verts = set(
-        pd.read_csv(
-            cclayerfile,
-            header=None,
-            names=['vertex', 'CC', 'layer', 'cc'],
-            usecols=['vertex', 'layer']
-        ).query('layer==@layer')['vertex']
-    )
-    print('read', cclayerfile)
+    sizes = {}
+    for wave, info in wavedist.items():
+        sizes[int(wave)] = info['edges']
 
-    print('reading', wavecsvfile)
-    iter_csv = pd.read_csv(
-        wavecsvfile,
-        header=None,
-        names=['source', 'target', 'wave', 'wcc', 'fragment'],
-        usecols=['source', 'target', 'wave'],
-        iterator=True
-    )
-    waves = pd.concat([chunk[chunk['source'].isin(verts)] for chunk in iter_csv])
-    print('read', wavecsvfile)
-
-    wgps = waves.groupby(['wave'])
-    sizes = wgps.size() // 2
-    return sizes.to_json()
+    return sizes
 
 
 def getDCWaves(g, l):
@@ -663,36 +615,22 @@ def getWaveDist(g, l, lcc, size_type='edges'):
     graph += '/' + graph
     layer = l
 
-    with open(graph + '-layer-info.json') as f:
-        file_suffix = json.load(f)[str(layer)]['file_suffix']
-    cclayerfile = glob.glob(graph + '_layers/*-' + str(file_suffix) + '.cc-layers')[0]
-    wavecsvfile = graph + '_waves/layer-' + str(layer) + '-waves.csv'
+    wavedistfile = graph + '_waves/layer-' + str(layer) + '-waves-info.json'
+    print('reading', wavedistfile)
+    with open(wavedistfile) as f:
+        wavedist = json.load(f)
+        del wavedist['0']
+    print('read', wavedistfile)
 
-    print('reading', cclayerfile)
-    verts = set(
-        pd.read_csv(
-            cclayerfile,
-            header=None,
-            names=['vertex', 'CC', 'layer', 'cc'],
-            usecols=['vertex', 'layer', 'cc']
-        ).query('(layer==@layer) & (cc==@lcc)')['vertex']
-    )
-    print('read', cclayerfile)
+    sizes = {}
+    for wave, info in wavedist.items():
+        del info['vertices']
+        del info['edges']
+        for wcc, size in info.items():
+            if size['layer-cc'] == lcc:
+                sizes[int(wave)] = sizes.get(int(wave), 0) + size['edges']
 
-    print('reading', wavecsvfile)
-    iter_csv = pd.read_csv(
-        wavecsvfile,
-        header=None,
-        names=['source', 'target', 'wave', 'wcc', 'fragment'],
-        usecols=['source', 'target', 'wave'],
-        iterator=True
-    )
-    waves = pd.concat([chunk[chunk['source'].isin(verts)] for chunk in iter_csv])
-    print('read', wavecsvfile)
-
-    wgps = waves.groupby(['wave'])
-    sizes = wgps.size() // 2
-    return sizes.to_json()
+    return sizes
 
 
 def getWaves(g, l, lcc):
