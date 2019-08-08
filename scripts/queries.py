@@ -102,7 +102,122 @@ def getWaveMatrix(g, l, w, wcc):
     return json.dumps(wavemat)
 
 
-def getFragmentDist(g, l, w, wcc):
+def getDCFragmentDist(g, l, w, size_type='edges'):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+            w   = wave number
+
+        Outputs: json
+            {
+                "0": size,
+                "1": #,
+                ...
+            }
+    """
+
+    graph = g
+    graph += '/' + graph
+    layer = l
+
+    graph += '_waves/layer-' + str(layer)
+    wavecsvfile = graph + '-waves.csv'
+
+    print('reading', wavecsvfile)
+    iter_csv = pd.read_csv(
+        wavecsvfile,
+        header=None,
+        names=['source', 'target', 'wave', 'wcc', 'fragment'],
+        usecols=['source', 'target', 'wave', 'fragment'],
+        iterator=True
+    )
+    waves = pd.concat([chunk[chunk['wave'] == w] for chunk in iter_csv])
+    waves.drop(['wave'], axis=1, inplace=True)
+    print('read', wavecsvfile)
+
+    frags = waves.groupby(['fragment'])
+    sizes = frags.size() // 2
+    return sizes.to_json()
+
+
+def getDCFragments(g, l, w):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+            w   = wave number
+
+        Outputs: json
+            {
+                "0": "src,tgt\n#,#\n...",
+                "1": "#,#\n#,#\n...",
+                ...
+            }
+    """
+
+    graph = g
+    graph += '/' + graph
+    layer = l
+
+    graph += '_waves/layer-' + str(layer)
+    wavecsvfile = graph + '-waves.csv'
+
+    print('reading', wavecsvfile)
+    iter_csv = pd.read_csv(
+        wavecsvfile,
+        header=None,
+        names=['source', 'target', 'wave', 'wcc', 'fragment'],
+        usecols=['source', 'target', 'wave', 'fragment'],
+        iterator=True
+    )
+    waves = pd.concat([chunk[chunk['wave'] == w] for chunk in iter_csv])
+    waves.drop(['wave'], axis=1, inplace=True)
+    print('read', wavecsvfile)
+
+    frags = waves.groupby(['fragment'])
+    jfrags = {}
+    for frag, edges in frags:
+        jfrags[frag] = edges.drop('fragment', axis=1).to_csv(header=False, index=False)
+    return json.dumps(jfrags)
+
+
+def getDCFragment(g, l, w, f):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+            w   = wave number
+            f   = fragment number
+
+        Outputs: csv
+            src,tgt
+            #,#
+            ...
+    """
+
+    graph = g
+    graph += '/' + graph
+    layer = l
+
+    graph += '_waves/layer-' + str(layer)
+    wavecsvfile = graph + '-waves.csv'
+
+    print('reading', wavecsvfile)
+    iter_csv = pd.read_csv(
+        wavecsvfile,
+        header=None,
+        names=['source', 'target', 'wave', 'wcc', 'fragment'],
+        usecols=['source', 'target', 'wave', 'fragment'],
+        iterator=True
+    )
+    frag = pd.concat(
+        [chunk[(chunk['wave'] == w) & (chunk['fragment'] == f)] for chunk in iter_csv]
+    )
+    frag.drop(['wave', 'fragment'], axis=1, inplace=True)
+    print('read', wavecsvfile)
+
+    return frag.to_csv(header=False, index=False)
+
+
+def getFragmentDist(g, l, w, wcc, size_type='edges'):
     """ Inputs:
             g   = graph_name
             l   = layer number
@@ -227,7 +342,7 @@ def getFragment(g, l, w, wcc, f):
     return frag.to_csv(header=False, index=False)
 
 
-def getWaveCCDist(g, l, lcc, w):
+def getWaveCCDist(g, l, lcc, w, size_type='edges'):
     """ Inputs:
             g   = graph_name
             l   = layer number
@@ -372,7 +487,7 @@ def getWaveCC(g, l, w, wcc):
     return wcc.to_csv(header=False, index=False)
 
 
-def getWaveDist(g, l, lcc):
+def getWaveDist(g, l, lcc, size_type='edges'):
     """ Inputs:
             g   = graph_name
             l   = layer number
@@ -524,7 +639,7 @@ def getWave(g, l, lcc, w):
     return waves.to_csv(header=False, index=False)
 
 
-def getLayerCCDist(g, l):
+def getLayerCCDist(g, l, size_type='edges'):
     """ Inputs:
             g   = graph_name
             l   = layer number
@@ -541,40 +656,15 @@ def getLayerCCDist(g, l):
     graph += '/' + graph
     layer = l
 
-    with open(graph + '-layer-info.json') as f:
-        file_suffix = json.load(f)[str(layer)]['file_suffix']
-    cclayerfile = glob.glob(graph + '_layers/*-' + str(file_suffix) + '.cc-layers')[0]
-    layercsvfile = glob.glob(graph + '_layers/*-' + str(file_suffix) + '.csv')[0]
+    with open(graph + '_layers/layer-' + str(l) + '.cc-info.json') as f:
+        layerCCdist = json.load(f)
 
-    print('reading', cclayerfile)
-    cclayers = pd.read_csv(
-        cclayerfile,
-        header=None,
-        names=['vertex', 'CC', 'layer', 'cc'],
-        usecols=['vertex', 'layer', 'cc']
-    ).query('layer==@layer')
-    cclayers.drop(['layer'], axis=1, inplace=True)
-    print('read', cclayerfile)
+    del layerCCdist['-1']
+    sizes = {}
+    for layer, info in layerCCdist.items():
+        sizes[int(layer)] = info['edges']
 
-    print('reading', layercsvfile)
-    iter_csv = pd.read_csv(
-        layercsvfile,
-        header=None,
-        names=['source', 'target', 'layer'],
-        usecols=['source', 'target', 'layer'],
-        iterator=True
-    )
-    layers = pd.concat([chunk[chunk['layer'] == l] for chunk in iter_csv])
-    layers.columns = ['source', 'target', 'lcc']
-    layers['lcc'] = -1
-    print('read', layercsvfile)
-
-    for lcc, verts in cclayers.groupby(['cc']):
-        layers['lcc'][layers['source'].isin(verts['vertex'])] = lcc
-
-    lgps = layers.groupby(['lcc'])
-    sizes = lgps.size() // 2
-    return sizes.to_json()
+    return json.dumps(sizes)
 
 
 def getLayerCCs(g, l, lcc):
@@ -682,7 +772,7 @@ def getLayerCC(g, l, lcc):
     return layers.to_csv(header=False, index=False)
 
 
-def getLayerDist(g):
+def getLayerDist(g, size_type='edges'):
     """ Inputs:
             g   = graph_name
 
