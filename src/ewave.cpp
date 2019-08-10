@@ -313,6 +313,8 @@ void findWaves(uint32_t *deg, uint32_t *waves, uint32_t *levels)
 		//     deg[v] = ENULL;
 		//     break;
 		// }
+
+		// Ignore 0 deg verts
 		for (uint32_t i = 1; i <= till; i++) {
 			/* std::cerr<<"i: "<<i<<"\n"; */
 			uint32_t v = vert[i];
@@ -324,13 +326,34 @@ void findWaves(uint32_t *deg, uint32_t *waves, uint32_t *levels)
 			} else {
 				// std::cerr<<"i3: "<<i<<"\n";
 				// std::cerr<<v<<": "<<deg[v]<<", "<<waves[v]<<"\n";
-				if (deg[v] != 0) {
-					waves[v] = wave;
-					levels[v] = level;
-				} else {
+				if (deg[v] == 0) {
 					waves[v] = 0;
 					levels[v] = 0;
+					deg[v] = ENULL;
 				}
+			}
+		}
+
+		for (uint32_t i = 1; i <= till; i++) {
+			/* std::cerr<<"i: "<<i<<"\n"; */
+			uint32_t v = vert[i];
+			// std::cerr<<"i2: "<<i<<", "<<deg[v]<<"\n";
+			// Do nothing if node doesn't exist in the graph
+			// if (false && g.start_indices[v] == 0 && g.end_indices[v] == 0) {
+			//         ;
+			//         std::cerr << "Test: " << v << "\n";
+			if (deg[v] == ENULL) {
+				;
+			} else {
+				// std::cerr<<"i3: "<<i<<"\n";
+				// std::cerr<<v<<": "<<deg[v]<<", "<<waves[v]<<"\n";
+				// if (deg[v] != 0) {
+				waves[v] = wave;
+				levels[v] = level;
+				// } else {
+				//         waves[v] = 0;
+				//         levels[v] = 0;
+				// }
 				deg[v] = ENULL;
 				// std::cerr<<v<<": "<<deg[v]<<", "<<waves[v]<<"\n";
 				// std::cerr<<"i4: "<<i<<"\n";
@@ -510,7 +533,7 @@ void buildWavesAndLabel(std::ofstream &outputFile, uint32_t *waves, uint32_t *le
 				outputFile << "\t\t\t\"" << j - 1 << "\": {\n";
 				outputFile << "\t\t\t\t\"sources\":"
 				           << (j <= compLevel[i] ? source_freq[i][j]
-				                                 : source_freq[i][num-1])
+				                                 : source_freq[i][num - 1])
 				           << ",\n";
 				outputFile << "\t\t\t\t\"vertices\":" << level_vfreq[i][j]
 				           << ",\n";
@@ -552,7 +575,7 @@ void writeToFile(const std::string &prefix, uint32_t *node2label, uint32_t *wave
 	for (uint32_t i = 1; i <= g.NODENUM; i++) {
 		if (startwave[i] != 0)
 			outputFile << node2label[i] << "," << startwave[i] << ","
-			           << startlevel[i]-1 << "\n";
+			           << startlevel[i] - 1 << "\n";
 	}
 	outputFile.close();
 	outputFile.open(prefix + "-waves.csv");
