@@ -29,6 +29,8 @@ def getFPDagCover(g, l, lcc, just_dag=False):
                         "0-1": "src,tgt\n#,#\n...",
                         "1-2": "#,#\n#,#\n...",
                         ...
+                        "(n-1)-n": "#,#\n#,#\n...",
+                        "n-n": "#,#\n#,#\n...",
                     }
             }
     """
@@ -118,14 +120,14 @@ def getFPDagCover(g, l, lcc, just_dag=False):
     # assert (checkcount + len(lastset) <= len(waves))
     # if len(lastset) > 0:
     #     wavemat['sets'][len(wavemat['sets'])] = list(lastset)
-    print(checkcount, len(waves['source']))
-    print(waves.query('source==108164817'))
-    print(wavesets.query('vertex==108164817'))
+    # print(checkcount, len(waves['source']))
+    # print(waves.query('source==108164817'))
+    # print(wavesets.query('vertex==108164817'))
 
     # print(v2f)
     # print(wavemat['dag'])
     maxset = max(v2set.values())
-    print(maxset)
+    # print(maxset)
     for s, t, w, wcc, f in waves.values:
         if s in v2set and t in v2set:
             if (v2set[s] + 1 == v2set[t]) or (v2set[s] == v2set[t] == maxset):
