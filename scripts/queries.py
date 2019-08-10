@@ -9,6 +9,135 @@ import pandas as pd
 # pass
 
 
+def getFPDagCover(g, l, lcc, just_dag=False):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+            lcc = layer connected component id
+            just_dag = whether or not to return just the dag
+
+        Outputs: json
+            {
+                "sets":
+                    [
+                        "0" : [vertex, #, ...],
+                        "1" : [#, #, ...],
+                        ...
+                    ],
+                "dag":
+                    {
+                        "0-1": "src,tgt\n#,#\n...",
+                        "1-2": "#,#\n#,#\n...",
+                        ...
+                    }
+            }
+    """
+
+    graph = g
+    graph += '/' + graph
+    layer = l
+
+    graph += '_waves/layer-' + str(layer)
+    wavecsvfile = graph + '-waves.csv'
+    wavesourcesfile = graph + '-wave-sources.csv'
+    wavedistfile = graph + '-waves-info.json'
+
+    print('reading', wavedistfile)
+    with open(wavedistfile) as infile:
+        wdist = json.load(infile)
+        del wdist['0']
+    print('read', wavedistfile)
+
+    wwccs = set()
+    for w, info in wdist.items():
+        del info['vertices']
+        del info['edges']
+        for wcc, winfo in info.items():
+            if winfo['layer-cc'] == lcc:
+                wwccs.add((int(w), int(wcc)))
+
+    print('reading', wavecsvfile)
+    iter_csv = pd.read_csv(
+        wavecsvfile,
+        header=None,
+        names=['source', 'target', 'wave', 'wcc', 'fragment'],
+        usecols=['source', 'target', 'wave', 'wcc', 'fragment'],
+        iterator=True
+    )
+    waves = pd.concat(
+        [
+            pd.concat(
+                [
+                    group if gind in wwccs else None
+                    for gind, group in chunk.groupby(['wave', 'wcc'])
+                ]
+            )
+            for chunk in iter_csv
+        ]
+    )
+    # waves.drop(['wcc'], axis=1, inplace=True)
+    print('read', wavecsvfile)
+
+    print('reading', wavesourcesfile)
+    iter_csv = pd.read_csv(
+        wavesourcesfile,
+        header=None,
+        names=['vertex', 'wave', 'fragment'],
+        usecols=['vertex', 'wave', 'fragment'],
+        iterator=True
+    )
+    wavesets = pd.concat([chunk for chunk in iter_csv])
+    # wavesets.drop(['wave'], axis=1, inplace=True)
+    print('read', wavesourcesfile)
+
+    wfsets = {}
+    for wf, v in wavesets.groupby(['wave', 'fragment']):
+        wfsets[wf] = set(v['vertex'])
+
+    wavemat = {'sets': {}, 'dag': {}}
+    checkcount = 0
+    numset = 0
+    v2set = {}
+    for wfrag, fg in waves.groupby(['wave', 'fragment']):
+        inter = set(fg['source']).intersection(wfsets[wfrag])
+        for x in inter:
+            v2set[x] = numset
+
+        setlen = len(inter)
+        assert (setlen > 0)
+        checkcount += setlen
+        wavemat['sets'][numset] = list(inter)
+        numset += 1
+    # lastset = set(waves.query('wave>@w')['source']).intersection(set(waves['source']))
+    # lastset = set(wavesets.query('wave>@w')['vertex']).intersection(set(waves['source']))
+    # for x in lastset:
+    #     v2f[x] = len(wavemat['sets'])
+    # assert(lastset == lastset2)
+    # print(checkcount + len(lastset), len(wcg))
+    # print(len(lastset))
+    # assert (checkcount + len(lastset) <= len(waves))
+    # if len(lastset) > 0:
+    #     wavemat['sets'][len(wavemat['sets'])] = list(lastset)
+    print(checkcount, len(waves['source']))
+    print(waves.query('source==108164817'))
+    print(wavesets.query('vertex==108164817'))
+
+    # print(v2f)
+    # print(wavemat['dag'])
+    maxset = max(v2set.values())
+    print(maxset)
+    for s, t, w, wcc, f in waves.values:
+        if s in v2set and t in v2set:
+            if (v2set[s] + 1 == v2set[t]) or (v2set[s] == v2set[t] == maxset):
+                key = '-'.join([str(v2set[s]), str(v2set[t])])
+                wavemat['dag'][key] = wavemat['dag'].get(key, '') + str(s) + ',' + str(t) + '\n'
+
+    if just_dag:
+        return json.dumps(wavemat['dag'])
+
+    return json.dumps(wavemat)
+
+
 def getDCWaveMatrix(g, l, w, just_adj=False):
     """ Inputs:
             g   = graph_name
@@ -1117,11 +1246,10 @@ def getLayerCCDist(g, l, size_type='edges'):
     return json.dumps(sizes)
 
 
-def getLayerCCs(g, l, lcc):
+def getLayerCCs(g, l):
     """ Inputs:
             g   = graph_name
             l   = layer number
-            lcc = layer connected component id
 
         Outputs: json
             {
