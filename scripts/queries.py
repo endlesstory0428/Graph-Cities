@@ -100,8 +100,10 @@ def getFPDagCover(g, l, lcc, just_dag=False):
     checkcount = 0
     numset = 0
     v2set = {}
+    cumset = set()
     for wfrag, fg in waves.groupby(['wave', 'fragment']):
         inter = set(fg['source']).intersection(wfsets[wfrag])
+        cumset.update(inter)
         for x in inter:
             v2set[x] = numset
 
@@ -110,19 +112,15 @@ def getFPDagCover(g, l, lcc, just_dag=False):
         checkcount += setlen
         wavemat['sets'][numset] = list(inter)
         numset += 1
-    # lastset = set(waves.query('wave>@w')['source']).intersection(set(waves['source']))
-    # lastset = set(wavesets.query('wave>@w')['vertex']).intersection(set(waves['source']))
-    # for x in lastset:
-    #     v2f[x] = len(wavemat['sets'])
-    # assert(lastset == lastset2)
-    # print(checkcount + len(lastset), len(wcg))
+    # lastset = set(waves['source']) - cumset
+    lastset = set(waves['source'].loc[waves['target'].isin(inter)]) - cumset
+    for x in lastset:
+        v2set[x] = len(wavemat['sets'])
+    # print(checkcount + len(lastset), len(set(waves['source'])))
     # print(len(lastset))
-    # assert (checkcount + len(lastset) <= len(waves))
-    # if len(lastset) > 0:
-    #     wavemat['sets'][len(wavemat['sets'])] = list(lastset)
-    # print(checkcount, len(waves['source']))
-    # print(waves.query('source==108164817'))
-    # print(wavesets.query('vertex==108164817'))
+    assert (checkcount + len(lastset) <= len(set(waves['source'])))
+    if len(lastset) > 0:
+        wavemat['sets'][len(wavemat['sets'])] = list(lastset)
 
     # print(v2f)
     # print(wavemat['dag'])
@@ -201,8 +199,10 @@ def getDCWaveMatrix(g, l, w, just_adj=False):
     wavemat = {'sets': {}, 'adj': {}}
     checkcount = 0
     v2f = {}
+    cumset = set()
     for frag, fg in waves.groupby(['fragment']):
         inter = set(fg['source']).intersection(wsgps[frag])
+        cumset.update(inter)
         for x in inter:
             v2f[x] = frag
 
@@ -211,13 +211,13 @@ def getDCWaveMatrix(g, l, w, just_adj=False):
         checkcount += setlen
         wavemat['sets'][frag] = list(inter)
     # lastset = set(waves.query('wave>@w')['source']).intersection(set(waves['source']))
-    lastset = set(wavesets.query('wave>@w')['vertex']).intersection(set(waves['source']))
+    # lastset = set(wavesets.query('wave>@w')['vertex']).intersection(set(waves['source']))
+    lastset = set(waves['source'].loc[waves['target'].isin(inter)]) - cumset
     for x in lastset:
         v2f[x] = len(wavemat['sets'])
-    # assert(lastset == lastset2)
-    # print(checkcount + len(lastset), len(wcg))
+    # print(checkcount + len(lastset), len(set(waves['source'])))
     # print(len(lastset))
-    assert (checkcount + len(lastset) <= len(waves))
+    assert (checkcount + len(lastset) <= len(set(waves['source'])))
     if len(lastset) > 0:
         wavemat['sets'][len(wavemat['sets'])] = list(lastset)
 
@@ -311,8 +311,10 @@ def getFPDCWaveMatrix(g, l, lcc, w, just_adj=False):
     wavemat = {'sets': {}, 'adj': {}}
     checkcount = 0
     v2f = {}
+    cumset = set()
     for frag, fg in waves.groupby(['fragment']):
         inter = set(fg['source']).intersection(wsgps[frag])
+        cumset.update(inter)
         for x in inter:
             v2f[x] = frag
 
@@ -321,10 +323,10 @@ def getFPDCWaveMatrix(g, l, lcc, w, just_adj=False):
         checkcount += setlen
         wavemat['sets'][frag] = list(inter)
     # lastset = set(waves.query('wave>@w')['source']).intersection(set(waves['source']))
-    lastset = set(wavesets.query('wave>@w')['vertex']).intersection(set(waves['source']))
+    # lastset = set(wavesets.query('wave>@w')['vertex']).intersection(set(waves['source']))
+    lastset = set(waves['source'].loc[waves['target'].isin(inter)]) - cumset
     for x in lastset:
         v2f[x] = len(wavemat['sets'])
-    # assert(lastset == lastset2)
     # print(checkcount + len(lastset), len(wcg))
     # print(len(lastset))
     assert (checkcount + len(lastset) <= len(waves))
@@ -408,8 +410,10 @@ def getWaveMatrix(g, l, w, wcc, just_adj=False):
     wavemat = {'sets': {}, 'adj': {}}
     checkcount = 0
     v2f = {}
+    cumset = set()
     for frag, fg in waves.groupby(['fragment']):
         inter = set(fg['source']).intersection(wsgps[frag])
+        cumset.update(inter)
         for x in inter:
             v2f[x] = frag
 
@@ -418,10 +422,10 @@ def getWaveMatrix(g, l, w, wcc, just_adj=False):
         checkcount += setlen
         wavemat['sets'][frag] = list(inter)
     # lastset = set(waves.query('wave>@w')['source']).intersection(set(waves['source']))
-    lastset = set(wavesets.query('wave>@w')['vertex']).intersection(set(waves['source']))
+    # lastset = set(wavesets.query('wave>@w')['vertex']).intersection(set(waves['source']))
+    lastset = set(waves['source'].loc[waves['target'].isin(inter)]) - cumset
     for x in lastset:
         v2f[x] = len(wavemat['sets'])
-    # assert(lastset == lastset2)
     # print(checkcount + len(lastset), len(wcg))
     # print(len(lastset))
     assert (checkcount + len(lastset) <= len(waves))
