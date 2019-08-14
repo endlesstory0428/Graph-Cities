@@ -19,11 +19,11 @@ def getFPDagCover(g, l, lcc, just_dag=False):
         Outputs: json
             {
                 "sets":
-                    [
+                    {
                         "0" : [vertex, #, ...],
                         "1" : [#, #, ...],
                         ...
-                    ],
+                    },
                 "dag":
                     {
                         "0-1": "src,tgt\n#,#\n...",
@@ -148,11 +148,11 @@ def getDCWaveMatrix(g, l, w, just_adj=False):
         Outputs: json
             {
                 "sets":
-                    [
+                    {
                         "0" : [vertex, #, ...],
                         "1" : [#, #, ...],
                         ...
-                    ],
+                    },
                 "adj":
                     {
                         "0" : {{"0":weight}, {"1":#}, ...},
@@ -245,11 +245,11 @@ def getFPDCWaveMatrix(g, l, lcc, w, just_adj=False):
         Outputs: json
             {
                 "sets":
-                    [
+                    {
                         "0" : [vertex, #, ...],
                         "1" : [#, #, ...],
                         ...
-                    ],
+                    },
                 "adj":
                     {
                         "0" : {{"0":weight}, {"1":#}, ...},
@@ -357,11 +357,11 @@ def getWaveMatrix(g, l, w, wcc, just_adj=False):
         Outputs: json
             {
                 "sets":
-                    [
+                    {
                         "0" : [vertex, #, ...],
                         "1" : [#, #, ...],
                         ...
-                    ],
+                    },
                 "adj":
                     {
                         "0" : {{"0":weight}, {"1":#}, ...},
@@ -1452,3 +1452,508 @@ def getLayer(g, l):
     print('read', layercsvfile)
 
     return layers.to_csv(header=False, index=False)
+
+
+# def getLayerSources(g, l):
+#     """ Inputs:
+#             g   = graph_name
+#             l   = layer number
+
+#         Outputs: json
+#             {
+#                 "0" : [vertex, #, ...],
+#                 "1" : [#, #, ...],
+#                 ...
+#             }
+#     """
+
+#     graph = g
+#     graph += '/' + graph
+#     layer = l
+
+#     graph += '_waves/layer-' + str(layer)
+#     wavecsvfile = graph + '-waves.csv'
+#     wavesourcesfile = graph + '-wave-sources.csv'
+#     wavedistfile = graph + '-waves-info.json'
+
+#     print('reading', wavedistfile)
+#     with open(wavedistfile) as infile:
+#         wdist = json.load(infile)
+#         del wdist['0']
+#     print('read', wavedistfile)
+
+#     wwccs = set()
+#     for w, info in wdist.items():
+#         del info['vertices']
+#         del info['edges']
+#         for wcc, winfo in info.items():
+#             if winfo['layer-cc'] == lcc:
+#                 wwccs.add((int(w), int(wcc)))
+
+#     print('reading', wavecsvfile)
+#     iter_csv = pd.read_csv(
+#         wavecsvfile,
+#         header=None,
+#         names=['source', 'target', 'wave', 'wcc', 'fragment'],
+#         usecols=['source', 'target', 'wave', 'wcc', 'fragment'],
+#         iterator=True
+#     )
+#     waves = pd.concat(
+#         [
+#             pd.concat(
+#                 [
+#                     group if gind in wwccs else None
+#                     for gind, group in chunk.groupby(['wave', 'wcc'])
+#                 ]
+#             )
+#             for chunk in iter_csv
+#         ]
+#     )
+#     # waves.drop(['wcc'], axis=1, inplace=True)
+#     print('read', wavecsvfile)
+
+#     print('reading', wavesourcesfile)
+#     iter_csv = pd.read_csv(
+#         wavesourcesfile,
+#         header=None,
+#         names=['vertex', 'wave', 'fragment'],
+#         usecols=['vertex', 'wave', 'fragment'],
+#         iterator=True
+#     )
+#     wavesets = pd.concat([chunk for chunk in iter_csv])
+#     # wavesets.drop(['wave'], axis=1, inplace=True)
+#     print('read', wavesourcesfile)
+
+#     wfsets = {}
+#     for wf, v in wavesets.groupby(['wave', 'fragment']):
+#         wfsets[wf] = set(v['vertex'])
+
+#     wavemat = {'sets': {}, 'dag': {}}
+#     checkcount = 0
+#     numset = 0
+#     v2set = {}
+#     cumset = set()
+#     for wfrag, fg in waves.groupby(['wave', 'fragment']):
+#         inter = set(fg['source']).intersection(wfsets[wfrag])
+#         cumset.update(inter)
+#         for x in inter:
+#             v2set[x] = numset
+
+#         setlen = len(inter)
+#         assert (setlen > 0)
+#         checkcount += setlen
+#         wavemat['sets'][numset] = list(inter)
+#         numset += 1
+#     # lastset = set(waves['source']) - cumset
+#     lastset = set(waves['source'].loc[waves['target'].isin(inter)]) - cumset
+#     for x in lastset:
+#         v2set[x] = len(wavemat['sets'])
+#     # print(checkcount + len(lastset), len(set(waves['source'])))
+#     # print(len(lastset))
+#     assert (checkcount + len(lastset) <= len(set(waves['source'])))
+#     if len(lastset) > 0:
+#         wavemat['sets'][len(wavemat['sets'])] = list(lastset)
+
+#     # print(v2f)
+#     # print(wavemat['dag'])
+#     maxset = max(v2set.values())
+#     # print(maxset)
+#     for s, t, w, wcc, f in waves.values:
+#         if s in v2set and t in v2set:
+#             if (v2set[s] + 1 == v2set[t]) or (v2set[s] == v2set[t] == maxset):
+#                 key = '-'.join([str(v2set[s]), str(v2set[t])])
+#                 wavemat['dag'][key] = wavemat['dag'].get(key, '') + str(s) + ',' + str(t) + '\n' # noqa
+
+#     if just_dag:
+#         return json.dumps(wavemat['dag'])
+
+#     return json.dumps(wavemat)
+
+
+def getFPSources(g, l, lcc):
+    """ Inputs:
+            g   = graph_name
+            l   = layer number
+            lcc = layer connected component id
+
+        Outputs: json
+            {
+                "0" : [vertex, #, ...],
+                "1" : [#, #, ...],
+                ...
+            }
+    """
+
+    graph = g
+    graph += '/' + graph
+    layer = l
+
+    graph += '_waves/layer-' + str(layer)
+    wavecsvfile = graph + '-waves.csv'
+    wavesourcesfile = graph + '-wave-sources.csv'
+    wavedistfile = graph + '-waves-info.json'
+
+    print('reading', wavedistfile)
+    with open(wavedistfile) as infile:
+        wdist = json.load(infile)
+        del wdist['0']
+    print('read', wavedistfile)
+
+    wwccs = set()
+    for w, info in wdist.items():
+        del info['vertices']
+        del info['edges']
+        for wcc, winfo in info.items():
+            if winfo['layer-cc'] == lcc:
+                wwccs.add((int(w), int(wcc)))
+
+    print('reading', wavecsvfile)
+    iter_csv = pd.read_csv(
+        wavecsvfile,
+        header=None,
+        names=['source', 'target', 'wave', 'wcc', 'fragment'],
+        usecols=['source', 'target', 'wave', 'wcc', 'fragment'],
+        iterator=True
+    )
+    waves = pd.concat(
+        [
+            pd.concat(
+                [
+                    group if gind in wwccs else None
+                    for gind, group in chunk.groupby(['wave', 'wcc'])
+                ]
+            )
+            for chunk in iter_csv
+        ]
+    )
+    # waves.drop(['wcc'], axis=1, inplace=True)
+    print('read', wavecsvfile)
+
+    print('reading', wavesourcesfile)
+    iter_csv = pd.read_csv(
+        wavesourcesfile,
+        header=None,
+        names=['vertex', 'wave', 'fragment'],
+        usecols=['vertex', 'wave', 'fragment'],
+        iterator=True
+    )
+    wavesets = pd.concat([chunk for chunk in iter_csv])
+    # wavesets.drop(['wave'], axis=1, inplace=True)
+    print('read', wavesourcesfile)
+
+    wfsets = {}
+    for wf, v in wavesets.groupby(['wave', 'fragment']):
+        wfsets[wf] = set(v['vertex'])
+
+    wavemat = {'sets': {}, 'dag': {}}
+    checkcount = 0
+    numset = 0
+    v2set = {}
+    cumset = set()
+    for wfrag, fg in waves.groupby(['wave', 'fragment']):
+        inter = set(fg['source']).intersection(wfsets[wfrag])
+        cumset.update(inter)
+        for x in inter:
+            v2set[x] = numset
+
+        setlen = len(inter)
+        assert (setlen > 0)
+        checkcount += setlen
+        wavemat['sets'][numset] = list(inter)
+        numset += 1
+    # lastset = set(waves['source']) - cumset
+    lastset = set(waves['source'].loc[waves['target'].isin(inter)]) - cumset
+    for x in lastset:
+        v2set[x] = len(wavemat['sets'])
+    # print(checkcount + len(lastset), len(set(waves['source'])))
+    # print(len(lastset))
+    assert (checkcount + len(lastset) <= len(set(waves['source'])))
+    if len(lastset) > 0:
+        wavemat['sets'][len(wavemat['sets'])] = list(lastset)
+
+    # print(v2f)
+    # print(wavemat['dag'])
+    # maxset = max(v2set.values())
+    # print(maxset)
+    # for s, t, w, wcc, f in waves.values:
+    #     if s in v2set and t in v2set:
+    #         if (v2set[s] + 1 == v2set[t]) or (v2set[s] == v2set[t] == maxset):
+    #             key = '-'.join([str(v2set[s]), str(v2set[t])])
+    #             wavemat['dag'][key] = wavemat['dag'].get(key, '') + str(s) + ',' + str(t) + '\n' # noqa
+
+    return json.dumps(wavemat['sets'])
+
+
+# def getDCWaveSources(g, l, w):
+#     """ Inputs:
+#             g   = graph_name
+#             l   = layer number
+#             w   = wave number
+
+#         Outputs: json
+#             {
+#                 "0" : [vertex, #, ...],
+#                 "1" : [#, #, ...],
+#                 ...
+#             }
+#     """
+
+#     graph = g
+#     graph += '/' + graph
+#     layer = l
+
+#     graph += '_waves/layer-' + str(layer)
+#     wavecsvfile = graph + '-waves.csv'
+#     wavesourcesfile = graph + '-wave-sources.csv'
+
+#     print('reading', wavecsvfile)
+#     iter_csv = pd.read_csv(
+#         wavecsvfile,
+#         header=None,
+#         names=['source', 'target', 'wave', 'wcc', 'fragment'],
+#         usecols=['source', 'target', 'wave', 'fragment'],
+#         iterator=True
+#     )
+#     waves = pd.concat([chunk.loc[chunk['wave'] == w] for chunk in iter_csv])
+#     waves.drop(['wave'], axis=1, inplace=True)
+#     print('read', wavecsvfile)
+
+#     print('reading', wavesourcesfile)
+#     iter_csv = pd.read_csv(
+#         wavesourcesfile,
+#         header=None,
+#         names=['vertex', 'wave', 'fragment'],
+#         usecols=['vertex', 'wave', 'fragment'],
+#         iterator=True
+#     )
+#     wavesets = pd.concat([chunk.loc[chunk['wave'] >= w] for chunk in iter_csv])
+#     # wavesets.drop(['wave'], axis=1, inplace=True)
+#     print('read', wavesourcesfile)
+
+#     wsgps = {x: set(y['vertex']) for x, y in wavesets.query('wave==@w').groupby(['fragment'])}
+
+#     wavemat = {'sets': {}, 'adj': {}}
+#     checkcount = 0
+#     v2f = {}
+#     cumset = set()
+#     for frag, fg in waves.groupby(['fragment']):
+#         inter = set(fg['source']).intersection(wsgps[frag])
+#         cumset.update(inter)
+#         for x in inter:
+#             v2f[x] = frag
+
+#         setlen = len(inter)
+#         assert (setlen > 0)
+#         checkcount += setlen
+#         wavemat['sets'][frag] = list(inter)
+#     # lastset = set(waves.query('wave>@w')['source']).intersection(set(waves['source']))
+#     # lastset = set(wavesets.query('wave>@w')['vertex']).intersection(set(waves['source']))
+#     lastset = set(waves['source'].loc[waves['target'].isin(inter)]) - cumset
+#     for x in lastset:
+#         v2f[x] = len(wavemat['sets'])
+#     # print(checkcount + len(lastset), len(set(waves['source'])))
+#     # print(len(lastset))
+#     assert (checkcount + len(lastset) <= len(set(waves['source'])))
+#     if len(lastset) > 0:
+#         wavemat['sets'][len(wavemat['sets'])] = list(lastset)
+
+#     # print(v2f)
+#     wavemat['adj'] = {x: {} for x in range(len(wavemat['sets']))}
+#     # print(wavemat['adj'])
+#     for s, t, f in waves.values:
+#         if s in v2f and t in v2f:
+#             wavemat['adj'][v2f[s]][v2f[t]] = wavemat['adj'][v2f[s]].get(v2f[t], 0) + 1
+
+#     if just_adj:
+#         return json.dumps(wavemat['adj'])
+
+#     return json.dumps(wavemat)
+
+# def getFPDCWaveSources(g, l, lcc, w):
+#     """ Inputs:
+#             g   = graph_name
+#             l   = layer number
+#             lcc = layer connected component id
+#             w   = wave number
+
+#         Outputs: json
+#             {
+#                 "0" : [vertex, #, ...],
+#                 "1" : [#, #, ...],
+#                 ...
+#             }
+#     """
+
+#     graph = g
+#     graph += '/' + graph
+#     layer = l
+
+#     graph += '_waves/layer-' + str(layer)
+#     wavecsvfile = graph + '-waves.csv'
+#     wavesourcesfile = graph + '-wave-sources.csv'
+#     wavedistfile = graph + '-waves-info.json'
+
+#     print('reading', wavedistfile)
+#     with open(wavedistfile) as infile:
+#         wccdist = json.load(infile)[str(w)]
+#         del wccdist['vertices']
+#         del wccdist['edges']
+#     print('read', wavedistfile)
+
+#     wccs = set()
+#     for wcc, info in wccdist.items():
+#         if info['layer-cc'] == lcc:
+#             wccs.add(int(wcc))
+
+#     print('reading', wavecsvfile)
+#     iter_csv = pd.read_csv(
+#         wavecsvfile,
+#         header=None,
+#         names=['source', 'target', 'wave', 'wcc', 'fragment'],
+#         usecols=['source', 'target', 'wave', 'wcc', 'fragment'],
+#         iterator=True
+#     )
+#     waves = pd.concat(
+#         [chunk.loc[chunk['wave'] == w].loc[chunk['wcc'].isin(wccs)] for chunk in iter_csv]
+#     )
+#     waves.drop(['wave', 'wcc'], axis=1, inplace=True)
+#     print('read', wavecsvfile)
+
+#     print('reading', wavesourcesfile)
+#     iter_csv = pd.read_csv(
+#         wavesourcesfile,
+#         header=None,
+#         names=['vertex', 'wave', 'fragment'],
+#         usecols=['vertex', 'wave', 'fragment'],
+#         iterator=True
+#     )
+#     wavesets = pd.concat([chunk.loc[chunk['wave'] >= w] for chunk in iter_csv])
+#     # wavesets.drop(['wave'], axis=1, inplace=True)
+#     print('read', wavesourcesfile)
+
+#     wsgps = {x: set(y['vertex']) for x, y in wavesets.query('wave==@w').groupby(['fragment'])}
+
+#     wavemat = {'sets': {}, 'adj': {}}
+#     checkcount = 0
+#     v2f = {}
+#     cumset = set()
+#     for frag, fg in waves.groupby(['fragment']):
+#         inter = set(fg['source']).intersection(wsgps[frag])
+#         cumset.update(inter)
+#         for x in inter:
+#             v2f[x] = frag
+
+#         setlen = len(inter)
+#         assert (setlen > 0)
+#         checkcount += setlen
+#         wavemat['sets'][frag] = list(inter)
+#     # lastset = set(waves.query('wave>@w')['source']).intersection(set(waves['source']))
+#     # lastset = set(wavesets.query('wave>@w')['vertex']).intersection(set(waves['source']))
+#     lastset = set(waves['source'].loc[waves['target'].isin(inter)]) - cumset
+#     for x in lastset:
+#         v2f[x] = len(wavemat['sets'])
+#     # print(checkcount + len(lastset), len(wcg))
+#     # print(len(lastset))
+#     assert (checkcount + len(lastset) <= len(waves))
+#     if len(lastset) > 0:
+#         wavemat['sets'][len(wavemat['sets'])] = list(lastset)
+
+#     # print(v2f)
+#     wavemat['adj'] = {x: {} for x in range(len(wavemat['sets']))}
+#     # print(wavemat['adj'])
+#     for s, t, f in waves.values:
+#         if s in v2f and t in v2f:
+#             wavemat['adj'][v2f[s]][v2f[t]] = wavemat['adj'][v2f[s]].get(v2f[t], 0) + 1
+
+#     if just_adj:
+#         return json.dumps(wavemat['adj'])
+
+#     return json.dumps(wavemat)
+
+# def getWaveSources(g, l, w, wcc):
+#     """ Inputs:
+#             g   = graph_name
+#             l   = layer number
+#             w   = wave number
+#             wcc = wave connected component id
+
+#         Outputs: json
+#             {
+#                 "0" : [vertex, #, ...],
+#                 "1" : [#, #, ...],
+#                 ...
+#             }
+#     """
+
+#     graph = g
+#     graph += '/' + graph
+#     layer = l
+
+#     graph += '_waves/layer-' + str(layer)
+#     wavecsvfile = graph + '-waves.csv'
+#     wavesourcesfile = graph + '-wave-sources.csv'
+
+#     print('reading', wavecsvfile)
+#     iter_csv = pd.read_csv(
+#         wavecsvfile,
+#         header=None,
+#         names=['source', 'target', 'wave', 'wcc', 'fragment'],
+#         usecols=['source', 'target', 'wave', 'wcc', 'fragment'],
+#         iterator=True
+#     )
+#     waves = pd.concat(
+#         [chunk.loc[chunk['wave'] == w].loc[chunk['wcc'] == wcc] for chunk in iter_csv]
+#     )
+#     waves.drop(['wave', 'wcc'], axis=1, inplace=True)
+#     print('read', wavecsvfile)
+
+#     print('reading', wavesourcesfile)
+#     iter_csv = pd.read_csv(
+#         wavesourcesfile,
+#         header=None,
+#         names=['vertex', 'wave', 'fragment'],
+#         usecols=['vertex', 'wave', 'fragment'],
+#         iterator=True
+#     )
+#     wavesets = pd.concat([chunk.loc[chunk['wave'] >= w] for chunk in iter_csv])
+#     # wavesets.drop(['wave'], axis=1, inplace=True)
+#     print('read', wavesourcesfile)
+
+#     wsgps = {x: set(y['vertex']) for x, y in wavesets.query('wave==@w').groupby(['fragment'])}
+
+#     wavemat = {'sets': {}, 'adj': {}}
+#     checkcount = 0
+#     v2f = {}
+#     cumset = set()
+#     for frag, fg in waves.groupby(['fragment']):
+#         inter = set(fg['source']).intersection(wsgps[frag])
+#         cumset.update(inter)
+#         for x in inter:
+#             v2f[x] = frag
+
+#         setlen = len(inter)
+#         assert (setlen > 0)
+#         checkcount += setlen
+#         wavemat['sets'][frag] = list(inter)
+#     # lastset = set(waves.query('wave>@w')['source']).intersection(set(waves['source']))
+#     # lastset = set(wavesets.query('wave>@w')['vertex']).intersection(set(waves['source']))
+#     lastset = set(waves['source'].loc[waves['target'].isin(inter)]) - cumset
+#     for x in lastset:
+#         v2f[x] = len(wavemat['sets'])
+#     # print(checkcount + len(lastset), len(wcg))
+#     # print(len(lastset))
+#     assert (checkcount + len(lastset) <= len(waves))
+#     if len(lastset) > 0:
+#         wavemat['sets'][len(wavemat['sets'])] = list(lastset)
+
+#     # print(v2f)
+#     wavemat['adj'] = {x: {} for x in range(len(wavemat['sets']))}
+#     # print(wavemat['adj'])
+#     for s, t, f in waves.values:
+#         if s in v2f and t in v2f:
+#             wavemat['adj'][v2f[s]][v2f[t]] = wavemat['adj'][v2f[s]].get(v2f[t], 0) + 1
+
+#     if just_adj:
+#         return json.dumps(wavemat['adj'])
+
+#     return json.dumps(wavemat)
