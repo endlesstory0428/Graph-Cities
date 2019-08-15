@@ -327,8 +327,8 @@ void findWaves(uint32_t *deg, uint32_t *waves, uint32_t *levels)
 				// std::cerr<<"i3: "<<i<<"\n";
 				// std::cerr<<v<<": "<<deg[v]<<", "<<waves[v]<<"\n";
 				if (deg[v] == 0) {
-					waves[v] = 0;
-					levels[v] = 0;
+					waves[v] = wave;
+					levels[v] = level;
 					deg[v] = ENULL;
 				}
 			}
