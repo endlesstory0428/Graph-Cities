@@ -899,7 +899,7 @@ def getWaveCCs(g, l, lcc, w):
         wavecsvfile,
         header=None,
         names=['source', 'target', 'wave', 'wcc', 'fragment'],
-        usecols=['source', 'target', 'wave', 'wcc'],
+        usecols=['source', 'target', 'wave', 'wcc', 'fragment'],
         iterator=True
     )
     waves = pd.concat(
@@ -940,7 +940,7 @@ def getWaveCC(g, l, w, wcc):
         wavecsvfile,
         header=None,
         names=['source', 'target', 'wave', 'wcc', 'fragment'],
-        usecols=['source', 'target', 'wave', 'wcc'],
+        usecols=['source', 'target', 'wave', 'wcc', 'fragment'],
         iterator=True
     )
     wcc = pd.concat(
@@ -1022,7 +1022,7 @@ def getDCWaves(g, l):
         wavecsvfile,
         header=None,
         names=['source', 'target', 'wave', 'wcc', 'fragment'],
-        usecols=['source', 'target', 'wave'],
+        usecols=['source', 'target', 'wave', 'fragment'],
         iterator=True
     )
     waves = pd.concat([chunk.loc[chunk['source'].isin(verts)] for chunk in iter_csv])
@@ -1072,7 +1072,7 @@ def getDCWave(g, l, w):
         wavecsvfile,
         header=None,
         names=['source', 'target', 'wave', 'wcc', 'fragment'],
-        usecols=['source', 'target', 'wave'],
+        usecols=['source', 'target', 'wave', 'fragment'],
         iterator=True
     )
     waves = pd.concat(
@@ -1160,7 +1160,7 @@ def getWaves(g, l, lcc):
         wavecsvfile,
         header=None,
         names=['source', 'target', 'wave', 'wcc', 'fragment'],
-        usecols=['source', 'target', 'wave'],
+        usecols=['source', 'target', 'wave', 'fragment'],
         iterator=True
     )
     waves = pd.concat([chunk.loc[chunk['source'].isin(verts)] for chunk in iter_csv])
@@ -1211,7 +1211,7 @@ def getWave(g, l, lcc, w):
         wavecsvfile,
         header=None,
         names=['source', 'target', 'wave', 'wcc', 'fragment'],
-        usecols=['source', 'target', 'wave'],
+        usecols=['source', 'target', 'wave', 'fragment'],
         iterator=True
     )
     waves = pd.concat(
