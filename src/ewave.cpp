@@ -573,6 +573,7 @@ void writeToFile(const std::string &prefix, uint32_t *node2label, uint32_t *wave
 	// outputFile.close();
 	outputFile.open(prefix + "-wave-sources.csv");
 	for (uint32_t i = 1; i <= g.NODENUM; i++) {
+		assert (startwave[i] != 0);
 		if (startwave[i] != 0)
 			outputFile << node2label[i] << "," << startwave[i] << ","
 			           << startlevel[i] - 1 << "\n";
