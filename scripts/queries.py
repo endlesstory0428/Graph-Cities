@@ -475,7 +475,7 @@ def getDCFragmentDist(g, l, w, size_type='edges'):
     sizes = {}
     for wcc, info in fragdist.items():
         for frag, size in info['fragments'].items():
-            sizes[int(frag)] = sizes.get(int(frag), 0) + size['edges']
+            sizes[int(frag)] = sizes.get(int(frag), 0) + size[size_type]
 
     return json.dumps(sizes)
 
@@ -589,7 +589,7 @@ def getFPDCFragmentDist(g, l, lcc, w, size_type='edges'):
     for wcc, info in fragdist.items():
         if info['layer-cc'] == lcc:
             for frag, size in info['fragments'].items():
-                sizes[int(frag)] = sizes.get(int(frag), 0) + size['edges']
+                sizes[int(frag)] = sizes.get(int(frag), 0) + size[size_type]
 
     return json.dumps(sizes)
 
@@ -734,7 +734,7 @@ def getFragmentDist(g, l, w, wcc, size_type='edges'):
 
     sizes = {}
     for frag, size in fragdist['fragments'].items():
-        sizes[int(frag)] = size['edges']
+        sizes[int(frag)] = size[size_type]
 
     return json.dumps(sizes)
 
@@ -854,7 +854,7 @@ def getWaveCCDist(g, l, lcc, w, size_type='edges'):
     sizes = {}
     for wcc, info in wccdist.items():
         if info['layer-cc'] == lcc:
-            sizes[int(wcc)] = info['edges']
+            sizes[int(wcc)] = info[size_type]
 
     return json.dumps(sizes)
 
@@ -979,7 +979,7 @@ def getDCWaveDist(g, l, size_type='edges'):
 
     sizes = {}
     for wave, info in wavedist.items():
-        sizes[int(wave)] = info['edges']
+        sizes[int(wave)] = info[size_type]
 
     return json.dumps(sizes)
 
@@ -1116,7 +1116,7 @@ def getWaveDist(g, l, lcc, size_type='edges'):
         del info['edges']
         for wcc, size in info.items():
             if size['layer-cc'] == lcc:
-                sizes[int(wave)] = sizes.get(int(wave), 0) + size['edges']
+                sizes[int(wave)] = sizes.get(int(wave), 0) + size[size_type]
 
     return json.dumps(sizes)
 
@@ -1247,7 +1247,7 @@ def getLayerCCDist(g, l, size_type='edges'):
     del layerCCdist['-1']
     sizes = {}
     for layer, info in layerCCdist.items():
-        sizes[int(layer)] = info['edges']
+        sizes[int(layer)] = info[size_type]
 
     return json.dumps(sizes)
 
@@ -1378,7 +1378,7 @@ def getLayerDist(g, size_type='edges'):
     del layerdist['0']
     sizes = {}
     for layer, info in layerdist.items():
-        sizes[int(layer)] = info['edges']
+        sizes[int(layer)] = info[size_type]
 
     return json.dumps(sizes)
 
