@@ -1,7 +1,6 @@
 # Atlas Edge Decomposition Algorithm + Waves decomposition
 
-This is the fast, scalable implementation of [edge decomposition based on fixed points of degree peeling][edge-decomp] used in [Atlas][atlas].
-This also includes the implementation for further decompositions of the peel layers into waves.
+This repo contains an implementation of an edge decomposition into waves. It also includes modifications of an implementation of an [edge decomposition based on fixed points of degree peeling][edge-decomp] used in [Atlas][atlas].
 
 ## Installation
 
@@ -139,9 +138,8 @@ MIT License. See [`LICENSE.md`](LICENSE.md).
 
 ## Contact
 
-For questions or support [open an issue][issues] or contact [Daniel Nakhimovich][dan].
+For questions or support open an issue or contact [Daniel Nakhimovich][dan].
 
 [edge-decomp]: https://link.springer.com/article/10.1007/s13278-014-0191-7
-[atlas]: https://github.com/DanManN/atlas
+[atlas]: https://github.com/fredhohman/atlas
 [dan]: mailto:dnahimov@gmail.com
-[issues]: https://github.com/DanManN/atlas-algorithm/issues
