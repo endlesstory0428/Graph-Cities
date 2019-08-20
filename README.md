@@ -1,6 +1,6 @@
 # Wave decomposition algorithm + k-core decomposition
 
-This repo contains an implementation of an edge decomposition into waves. It also includes modifications of an implementation of an [edge decomposition based on fixed points of degree peeling][edge-decomp] used in [Atlas][atlas].
+This repo contains an implementation of an edge decomposition into waves. The algorithm was developed by James Abello Monedero and implemented by Daniel Nakhimovich. We also include here modifications of an implementation of an [edge decomposition based on fixed points of degree peeling][edge-decomp] used in [Atlas][atlas].
 
 ## Installation
 
