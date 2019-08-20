@@ -1,4 +1,4 @@
-# Atlas Edge Decomposition Algorithm + Waves decomposition
+# Wave decomposition algorithm + k-core decomposition
 
 This repo contains an implementation of an edge decomposition into waves. It also includes modifications of an implementation of an [edge decomposition based on fixed points of degree peeling][edge-decomp] used in [Atlas][atlas].
 
