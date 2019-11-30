@@ -107,7 +107,7 @@ print('Collected metaedges')
 # print('Collected metaedges')
 
 print('Preparing metaedges')
-metaedges = pd.DataFrame.from_dict(medges, orient='index', columns=['w']).sort_index()
+metaedges = pd.DataFrame.from_dict(medges, orient='index').sort_index()
 metaedges.index = pd.MultiIndex.from_tuples(metaedges.index, names=['s', 't'])
 print('Prepared metaedges')
 
