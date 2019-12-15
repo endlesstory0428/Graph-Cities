@@ -5,8 +5,11 @@ import pandas as pd
 import plotly_express as px
 from plotly.offline import plot
 
+STAT=sys.argv[1]
+GRAPH=sys.argv[2]
+
 data = pd.read_json(
-    sys.argv[1] + '/' + sys.argv[1] + '-layer-info.json', orient='index'
+    GRAPH + '/' + GRAPH + '-layer-info.json', orient='index'
 ).dropna().astype(int).sort_index().drop(
     'file_suffix', axis=1
 )
@@ -15,9 +18,9 @@ x = data['vertices'].reset_index()
 x.columns = ['layers', 'size']
 y = data['edges'].reset_index()
 y.columns = ['layers', 'size']
-z = data['num_frags'].reset_index()
+z = data[STAT].reset_index()
 z.columns = ['layers', 'size']
-toplot = pd.concat([x, y, z], keys=['vertices', 'edges', 'fragments']).reset_index(level=0)
+toplot = pd.concat([x, y, z], keys=['vertices', 'edges', STAT]).reset_index(level=0)
 toplot.columns = ['# of', 'layers', 'size']
 
 plot(
@@ -31,8 +34,8 @@ plot(
         # line_group=,
         # line_shape="spline",
         # trendline='ols',
-        range_x=[64, 305],
+        # range_x=[0, 305],
         barmode='group',
-        title=f'{sys.argv[1]} Layers'
+        title=f'{GRAPH} Layers'
     )
 )
