@@ -357,7 +357,7 @@ let DataTemplates={//these functions all take a graph(that has a dataPath etc) n
 					let func=(subgraph)=>{
 						let vID=subgraph.vertices.id[0],oldindex=g.getVertexByID(vID);
 						let ccID=originalCCIDs[oldindex];
-						let ccV,ccE; if(originalCCs){ccV=originalCCs[ccID].vertices;ccE=originalCCs[ccID].edges;}
+						let ccV,ccE; if(originalCCs&&originalCCs[ccID]){ccV=originalCCs[ccID].vertices;ccE=originalCCs[ccID].edges;}
 						return {value:ccID,V:ccV,E:ccE};
 					};
 					saveSubgraphs(layer,"CC",result.subgraphs,{globalPartitionInfo:{CC:func}});
@@ -730,7 +730,7 @@ let DataTemplates={//these functions all take a graph(that has a dataPath etc) n
 		//here they are for the whole graph, not each wave. (bucketed waves would not have their own level subgraphs, to ensure all levels can be retrieved, we may need to save the levels of teh original graph again?)
 		deps:"graph,waveAndWaveLevel,waveSubgraphs2",files:["metagraphs/waveLevel","waveLevel"],//creates level subgraphs for wave subgraphs, and for the parent too?
 		condition:(g)=>{//if it has waves and wave edge subgraphs
-		return false;
+		//return false;
 			return true;
 		},
 		make:(g)=>{
@@ -1232,7 +1232,7 @@ async function loadAllFiles(datasetFiles,cachesToRefresh,noLoad){
 					graph.savedData[nextTemplate].files=expectedFiles;
 					graph.savedData[nextTemplate].updateTime=currentDataUpdateTime;
 					let now=new Date().getTime();
-					if(currentDataUpdateTime>now+5){//sometimes it's a fraction of a ms later
+					if(currentDataUpdateTime>now+timeTolerance){//sometimes it's a fraction of a ms later
 						throw Error("cache production time in the future: "+(currentDataUpdateTime-now)+"ms");
 					}
 				}
@@ -1437,13 +1437,42 @@ function stopAllStreaming(client){
 //
 //on demand stuff	
 var tempCustomDir="_custom_data_";
-function doCustomComputation(type,graph,options){
-	switch (type){
+function doCustomComputation(data){
+	switch (data.type){
 		case "sparsenet":
 			return new Promise((resolve,reject)=>{
-				let str=graph.toEdgeList(true);//now toEdgeList is using indices not ids by default, but the client is not sending ids, so using ids here would give correct indices on the client
+				let options=data.options;
+				let graph=new Graph();
+				if(typeof data.data=="string"){
+					graph.loadTextData(data.data);
+				}
+				else if(typeof data.data=="object"){
+					if(data.data.vertices)graph.loadVertices(data.data.vertices);
+					if(data.data.edges){graph.loadEdges(data.data.edges);}else{reject();return;}
+				}
+				else if(typeof data.dataPath=="string"){
+					graph.dataPath=data.dataPath;console.log("loading graph "+data.dataPath);
+					if(graph.dataPath.indexOf("+")==-1)loadAllProperties(graph);
+					else{
+						let graphPath=graph.dataPath;
+						let segments=graphPath.split("/");
+						let subgraphType=segments[segments.length-2];
+						let subgraphIDs=segments[segments.length-1];
+						let subgraphIDList=subgraphIDs.split("+").map(x=>Number(x)).sort(compareBy(x=>Number(x),true));//standardize, to make comparing equality easier
+						let originalGraph=segments.slice(0,segments.length-2).join("/");
+						//graphPath=originalGraph+"/"+subgraphType+"/"+subgraphIDList.join("+");
+						
+						graph=loadSubgraphUnion(originalGraph,subgraphType,subgraphIDList);
+					}
+				}
+				
+				console.log("loaded graph data");
+				let str;if(data.data){str=graph.toEdgeList(true);}//use sent data without original IDs
+				else{str=graph.toEdgeList();}
+				//now toEdgeList is using indices not ids by default, and true means use ids instead of indices, but the client is not sending ids if using text, so using ids here would give correct indices on the client
 				if(!fileExists(tempCustomDir))mkdir(tempCustomDir);
 				saveStr(tempCustomDir,"mappededgelist",str);
+				console.log("saved graph text");
 				let list=graph.vertices.id;
 				//if(graph.vertexCount<100){console.log(vertexMap);}
 				let path=getPath(tempCustomDir,"mappededgelist.txt");
@@ -1453,7 +1482,7 @@ function doCustomComputation(type,graph,options){
 					let sn=spawn(exePath,[path]);let success=true;
 					console.log("sparse net for custom graph");
 					sn.on('error', (err) => {
-						console.log('Failed to start subprocess.');success=false;reject();
+						console.log('Failed to start subprocess '+exePath);success=false;reject();
 					});
 					sn.on('close', (code) => {
 						console.log("SN exit code "+code);
@@ -1463,6 +1492,7 @@ function doCustomComputation(type,graph,options){
 						var lines=result.trim().split("\n");
 						for(let i=0;i<lines.length;i++){
 							lines[i]=lines[i].trim().split(" ");
+							
 							/*for(let j=0;j<lines[i].length;j++){
 								if((lines[i][j] in list) ==false)throw Error("invalid mapped vertex");
 								lines[i][j]=vertexMap[list[lines[i][j]]];
@@ -1487,6 +1517,10 @@ function saveCustomData(path,type,data){
 	let pathSegments=path.split("/");
 	saveObj.apply(null,pathSegments.concat([type,data]));
 	console.log("saved "+path+"/"+type);
+}
+function loadCustomData(path,type){
+	//if(!fileExists(path,type+".json.gz"))return null;
+	return loadObj(path,type);
 }
 
 
@@ -2106,6 +2140,7 @@ module.exports={
 	stopAllStreaming:stopAllStreaming,
 	doCustomComputation:doCustomComputation,
 	saveCustomData:saveCustomData,
+	loadCustomData:loadCustomData,
 	loadSummary:loadSummary,
 	loadProperty:loadProperty,
 	
