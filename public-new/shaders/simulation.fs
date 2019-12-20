@@ -3,6 +3,7 @@ uniform sampler2D tPositions;
 uniform sampler2D tPositionsPrev;
 uniform sampler2D nodeData;//layer, charge(was layerset ID),original ID, subgraph level
 uniform sampler2D nodePinData;
+uniform sampler2D nodePriorityData;
 uniform sampler2D nodeTargetRadiusData;
 uniform sampler2D nodeTargetAnglesData;
 uniform sampler2D clusteringData;
@@ -31,6 +32,8 @@ uniform float layerCount;
 uniform float logLayerHeightRatio;
 uniform float reverseHeight;
 
+
+
 uniform float radialLimit;
 uniform float radialLimitFactor;
 uniform float heightFactor;
@@ -49,7 +52,21 @@ uniform sampler2D layerHeights;
 uniform float layerHeightsSize;
 
 uniform sampler2D nodeSelectionData;
+
+//uniform mat4 modelViewMatrix;
+uniform mat4 cameraProjectionMatrix;
+uniform mat4 cameraMatrixWorld;
+uniform mat4 cameraMatrixWorldInverse;
+uniform mat4 nodeModelViewMatrix;
+
+uniform float screenWidth;
+uniform float screenHeight;
+uniform float radiusFactor;
+
 uniform vec3 nodeMovement;
+uniform vec3 nodeScreenTarget;
+uniform vec3 leftVector;
+uniform vec3 forwardVector;
 float pi=3.141592653589793;
 
 float getStartingEdgeIndex(vec2 uv){
@@ -77,6 +94,8 @@ void main(void) {
 	vec4 metanode = texture2D(metanodeData, vUv);
 	float layer=node.x,charge=node.y,original=node.z,subgraphLevel=node.w;//was ccsize but nt used now
 	
+	float thisPriority=texture2D(nodePriorityData, vUv).x;
+	float thisPriorityAbsolute=texture2D(nodePriorityData, vUv).y;
 	
 	float totalEdges=0.,totalVertices=0.;//sanity check
 	
@@ -97,6 +116,10 @@ void main(void) {
 			vec4 otherMetanodeData=texture2D(metanodeData,vec2(x, y));
 			float otherlayer=otherData.x,otherCharge=otherData.y,otheroriginal=otherData.z,otherccSize=otherData.w,otherMetanodeID=otherMetanodeData.x;
 			float otherSubgraphLevel=otherMetanodeData.w;
+			float otherPriority=texture2D(nodePriorityData,vec2(x, y)).x;
+			float otherPriorityAbsolute=texture2D(nodePriorityData,vec2(x, y)).y;
+			float minPriority=min(thisPriority,otherPriority);//relative priority - low priority nodes affect others and are affected less
+			float absPriorityFactor=1.;if(thisPriorityAbsolute>otherPriorityAbsolute)absPriorityFactor=0.;//absolute priority - higher priority nodes are not affected by lower, but the reverse is not true.
 			//if(otherlayer!=activeLayer)continue;
 			vec2 v = other.xy - r1;
 			//vec3 v=texture2D(tPositions, vUv + vec2(x, y)).xyz - r;//distance
@@ -105,7 +128,7 @@ void main(void) {
 			float isDifferent=step(0.01,abs(original-otheroriginal));
 			float subgraphChargeFactor=pow(0.8, subgraphLevel);//now if they have forces between, the subgraph levels have to be the same
 			vec2 force=(
-					(v/(a*sqrt(a)))*G*isDifferent*charge//subgraphChargeFactor //many-body, skipping forces between aligned nodes;
+					(v/(a*sqrt(a)))*G*isDifferent*charge*otherCharge//subgraphChargeFactor //many-body, skipping forces between aligned nodes;
 					//+(v*max(-150.,a-1000.*linkDistanceFactor)/(a+e2))*(e*edgeStrength*linkStrengthFactor)//link force, the expanding force of edges should not be too strong
 					+(v*max(0.,a-0.1)/(a+e2))*((1.-isDifferent)*alignmentStrength*realAlignmentFactor)//alignment force
 				)
@@ -113,6 +136,7 @@ void main(void) {
 				*step(0.,nodeCount-totalVertices)//ignore unused node slots
 				*isEqual(metanode.x,otherMetanodeID)//ignore if the two is not in the same subgraph
 				*(1.-step(-0.5,metanode.x)*0.5)//decrease force if they are in a subgraph (because the distance would need to be smaller)
+				*minPriority*absPriorityFactor
 			;
 			f+=force;
 				
@@ -138,12 +162,17 @@ void main(void) {
 			vec4 otherPos=texture2D(tPositions,otherUV);
 			vec4 otherData=texture2D(nodeData,otherUV);
 			float otherlayer=otherData.x,otherlayerSetID=otherData.y,otheroriginal=otherData.z,otherccSize=otherData.w;
+			float otherPriority=texture2D(nodePriorityData,otherUV).x;
+			float otherPriorityAbsolute=texture2D(nodePriorityData,otherUV).y;
+			float minPriority=min(thisPriority,otherPriority);//relative priority - low priority nodes affect others and are affected less
+			float absPriorityFactor=1.;if(thisPriorityAbsolute>otherPriorityAbsolute)absPriorityFactor=0.;
 			vec2 v = otherPos.xy - r1;
 			float a = dot(v, v) + e2;
 			float targetDistance=1000.*linkDistanceFactor*pow(0.1, subgraphLevel);//decrease link length if it's in a subgraph - todo better way
 			float subgraphStrengthFactor=pow(0.3, subgraphLevel);//now if they have forces between, the subgraph levels have to be the same
 			f+=(v*max(-100.,a-targetDistance)/(a+e2))*(eStrength*edgeStrength*subgraphStrengthFactor*linkStrengthFactor)//-150 is the max pushing force ab edge can exert?
 				*max(delta(activeLayerEnabled,1.),min(isEqual(otherlayer,activeLayer),isEqual(layer,activeLayer)))
+				*minPriority*absPriorityFactor
 			;
 		}
 	}
@@ -224,6 +253,7 @@ void main(void) {
 	if(length(nodeMovement)>0.&&nodeSelected.x>0.){
 		f=nodeMovement.xy;
 	}
+	//nodeScreenMovement is a screen-space override (values are in pixels) so happens later
 	
 
 	
@@ -242,7 +272,7 @@ void main(void) {
 	vec2 oldVelocity=r1-r;
 	
 	vec2 velocity=(r1-r)*factor+ f*dt2;//2.*r1 - r;// + f*dt2;//dt2=.00001;
-	if(dot(velocity,oldVelocity)<0.){velocity=velocity*0.5;}//if it's bouncing around, increase the decay
+	//if(dot(velocity,oldVelocity)<0.){velocity=velocity*0.5;}//if it's bouncing around, increase the decay
 	//velocity=normalize(velocity);//funny - if you normalize and then clamp it, nodes will always wiggle around in a funny way; but this shows that the length of velocity is usually much less than 1
 	
 	//velocity=normalize(velocity)*clamp(speed,0.,maxSpeed);//maybe the normalization is not a good idea for small velocities?  It will cause everything to disappear if not clamped component-wise.
@@ -255,8 +285,26 @@ void main(void) {
 	
 	//vec2 velocity=(r1-r)*factor+ f*dt2;float speed=length(velocity);
 	//vec2 r2=r1+normalize(velocity)*speed;//*clamp(speed,0.,maxSpeed);
-	
 	float layerHeight=getArrayValue(layerHeights,layerHeightsSize,layer).x*heightFactor;
+	if(nodeScreenTarget.z>0.&&nodeSelected.x>0.){
+		vec4 pos=cameraProjectionMatrix*(cameraMatrixWorldInverse*vec4(r2*radiusFactor, layerHeight,1.0));
+		
+		vec2 spos=pos.xy/pos.w;
+		spos.x*=screenWidth;
+		spos.y*=screenHeight;
+		spos/=2.;
+		
+		vec3 movement=(leftVector*(spos.x-nodeScreenTarget.x)+forwardVector*(nodeScreenTarget.y-spos.y));
+		r2=r1+0.05*movement.xy;;//movement.xy;
+		
+		
+		//vec3 pos = vertexPos.xyz;
+		//pos.xy*=radiusFactor;
+		//vec4 mvPosition = modelViewMatrix * vec4( pos, 1.0 );
+		//gl_Position = projectionMatrix * mvPosition;
+	}
+	
+	
 	gl_FragColor = vec4(r2, layerHeight,pos.w);
 	
 	

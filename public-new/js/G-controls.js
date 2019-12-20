@@ -69,16 +69,38 @@ G.addModule("controls",{
 		this.addSlider(styleControlsElem,"horizontal spread",(value)=>{G.controls.set("radiusFactor",value);},{min:1,max:60,default:1});
 		
 		//minimal UI: height, width, node size, link brightness
+		let minimalBar=getE("minimal-bar");
+		let minimalBarSelection=d3.select(minimalBar);
 		let minimalControlsElem=getE("minimal-style-controls-area");
-		this.addSlider(minimalControlsElem,"vertical spread",(value)=>{G.controls.set("heightFactor",value);},{min:0,max:5,default:1,});
-		this.addSlider(minimalControlsElem,"horizontal spread",(value)=>{G.controls.set("radiusFactor",value);},{min:1,max:60,default:1});
-		this.addSlider(minimalControlsElem,"node size",(value)=>{G.controls.set("nodeSizeFactor",value);},{min:0.1,max:10,default:1});
-		this.addSlider(minimalControlsElem,"link brightness",(value)=>{G.controls.set("linkBrightnessFactor",value);},{min:0.1,max:5,default:1});
-		this.addSlider(minimalControlsElem,"line brightness",(value)=>{G.controls.set("lineBrightnessFactor",value);},{min:0.1,max:20,default:1});
+		let minimalControlsSelection=d3.select(minimalControlsElem);
+		minimalControlsSelection.on("mouseout",()=>{
+			d3.event.stopPropagation();
+			minimalBarSelection.transition().style("transform","translate(0%,40px)").style("opacity",0.3); 
+		})
+		minimalControlsSelection.on("mouseover",()=>{
+			d3.event.stopPropagation();
+			minimalBarSelection.transition().style("transform","translate(0%,0)").style("opacity",1);
+		})
+		//auto-minimize the sliders area
+		
+		this.addSlider(minimalControlsElem,"vertical spread",(value)=>{G.controls.set("heightFactor",value);},{long:true,min:0,max:5,default:1,});
+		this.addSlider(minimalControlsElem,"horizontal spread",(value)=>{G.controls.set("radiusFactor",value);},{long:true,min:1,max:60,default:1});
+		this.addSlider(minimalControlsElem,"node size",(value)=>{G.controls.set("nodeSizeFactor",value);},{long:true,min:0.1,max:10,default:1});
+		this.addSlider(minimalControlsElem,"link brightness",(value)=>{G.controls.set("linkBrightnessFactor",value);},{long:true,min:0.1,max:5,default:1});
+		this.addSlider(minimalControlsElem,"line brightness",(value)=>{G.controls.set("lineBrightnessFactor",value);},{long:true,min:0.1,max:20,default:1});
+		this.addSlider(minimalControlsElem,"link strength",(value)=>{G.controls.set("linkStrengthFactor",value);},{long:true,min:1,max:500,default:10});
 		
 		
 		//right side
 		let controlsElem=getE("controls-menu");
+		//make it auto-hide when not in use to save space
+		let controlsElemSelection=d3.select(controlsElem);
+		controlsElemSelection.on("mouseout",()=>{
+			controlsElemSelection.transition().style("transform","translate(9%,0%)").style("opacity",0.3);
+		})
+		controlsElemSelection.on("mouseover",()=>{
+			controlsElemSelection.transition().style("transform","translate(0%,0%)").style("opacity",1);
+		})
 
 		let explorationElem=getE("exploration-area");
 		this.addDropdownMenu(controlsElem,"explore",{
@@ -216,6 +238,7 @@ G.addModule("controls",{
 				else{
 					G.graph.heightProperty="waveLevel";
 					G.graph.heightPropertyTypeHint="edges";
+					G.display(G.graph);
 					return;
 				}
 				
@@ -245,6 +268,20 @@ G.addModule("controls",{
 				let result=G.analytics.getRegionGraph(G.graph,{maxDistance:G.controls.get("regionMaxDistance")});
 				G.graph.representation="regionGraph";
 				G.display(G.graph);
+			},
+			"vertex partition CC metagraph":()=>{
+				//if(!(G.graph.modifiers&&G.graph.modifiers.DAGCover)){G.addLog("please enable DAG Cover first");return;}
+				//let name=G.graph.modifiers.DAGCover.property;
+				if(!(G.graph.heightProperty&&(G.graph.heightProperty in G.graph.vertices))){G.addLog("please enable heights first");return;}
+				let name=G.graph.heightProperty;
+				let metagraph=G.analytics.getVertexCCMetagraph(G.graph,name);
+				G.display(metagraph);
+			},
+			fragmentCCMetagraph:()=>{
+				let prop="waveLevel";
+				if("fragment" in G.graph.vertices){prop="fragment";}
+				let metagraph=G.analytics.getVertexCCMetagraph(G.graph,prop); 
+				G.display(metagraph);
 			},
 		};
 		this.add("regionMaxDistance",1,{min:1,max:10,type:"integer",lazy:true},(value)=>{
@@ -478,7 +515,16 @@ G.addModule("controls",{
 
 		
 		this.addButton(this.contextMenus.vertices,"add to SN",()=>G.analytics.addVertexToSparseNet(this.contextMenuTarget.original));
-		this.addButton(this.contextMenus.vertices,"display layer",()=>G.toggleActiveLayer(this.contextMenuTarget.height));
+		this.addButton(this.contextMenus.vertices,"draw subgraph by height",()=>{
+			if(!this.graph||!this.graph.heightProperty){G.addLog("no heights detected");return;}
+			let subgraph=Algs.getFilteredSubgraph(this.graph,this.graph.heightPropertyName,this.contextMenuTarget.height,this.graph.heightPropertyType);
+			subgraph.dataPath=this.graph.dataPath+"/customSubgraph/0";
+			subgraph.wholeGraph=this.graph.dataPath;
+			subgraph.isCustom=true;
+			G.loading.saveGraph(subgraph);
+			G.display(subgraph);
+			
+		});
 		this.addButton(this.contextMenus.vertices,"expand individually",()=>G.loading.expandVertex(this.contextMenuTarget.original,null,false));
 		this.addButton(this.contextMenus.vertices,"expand in place",()=>G.loading.expandVertex(this.contextMenuTarget.original,null,true));
 		
@@ -551,12 +597,58 @@ G.addModule("controls",{
 			newGraph.noCalculateLayers=true;
 			G.load(newGraph);
 		});
-		function drawSubgraph(){
+		let drawSubgraph=()=>{
 			if(!this.graph)return;
-			let obj=G.analytics.getGraph(false);
-			G.load(obj);
+			let subgraph=Algs.getInducedSubgraph(this.graph,this.graph.selectedVertices);
+			subgraph.dataPath=this.graph.dataPath+"/customSubgraph/0";
+			subgraph.wholeGraph=this.graph.dataPath;
+			subgraph.isCustom=true;
+			G.loading.saveGraph(subgraph);
+			G.display(subgraph);
 		}
-		this.addButton(this.contextMenus.empty,"draw subgraph",drawSubgraph);
+		this.addButton(this.contextMenus.empty,"draw selected subgraph",drawSubgraph);
+		let drawVisibleSubgraph=(subgraphName="customSubgraph")=>{
+			if(!this.graph||(!this.graph.links))return;
+			let values=this.graph.links.brightness;
+			if(this.graph.links.length!=this.graph.edges.length){return;}
+			let subgraph=Algs.getFilteredSubgraph(this.graph,values,(x)=>(x!=0),"edges");
+			//visible subgraph should be defined by visible edges; todo: handling if links do not correspond to all edges
+			//add useful properties and height -- todo: should have a better way to distinguish between original data properties and other stuff we added like degree
+			let str="";
+			str+=", vertices: ";
+			for(let name in this.graph.vertices.properties){
+				if(G.analytics.templates.vertices.properties[name]&&G.analytics.templates.vertices.properties[name].isPartition){
+					let values=this.graph.projectVertexProperty(subgraph,name);
+					subgraph.vertices.addProperty(name,this.graph.vertices.properties[name].type,values);
+					str+=name+", ";
+				}
+			}
+			str+=", edges: ";
+			for(let name in this.graph.edges.properties){
+				if(G.analytics.templates.edges.properties[name]&&G.analytics.templates.edges.properties[name].isPartition){
+					let values=this.graph.projectEdgeProperty(subgraph,name);
+					subgraph.edges.addProperty(name,this.graph.edges.properties[name].type,values);
+					str+=name+", ";
+				}
+			}
+			console.log("added properties "+str);
+			if(this.graph.heightProperty){
+				subgraph.heightProperty=this.graph.heightProperty;
+				if(this.graph.heightPropertyTypeHint){subgraph.heightPropertyTypeHint=this.graph.heightPropertyTypeHint;}
+			}
+			if(this.graph.modifiers&&this.graph.modifiers.nodeColor){
+				if(!subgraph.modifiers)subgraph.modifiers={};
+				subgraph.modifiers.nodeColor={};Object.assign(subgraph.modifiers.nodeColor,this.graph.modifiers.nodeColor);
+			}
+			subgraph.dataPath=this.graph.dataPath+"/"+subgraphName+"/0";
+			subgraph.wholeGraph=this.graph.dataPath;
+			subgraph.isCustom=true;
+			G.loading.saveGraph(subgraph);
+			G.display(subgraph);
+			return subgraph;
+		}
+		this.drawVisibleSubgraph=drawVisibleSubgraph;
+		this.addButton(this.contextMenus.empty,"draw visible subgraph",drawVisibleSubgraph);
 		
 		this.addKeyListener(G.canvasContainer,"!",drawSubgraph);
 		this.addKeyListener(G.canvasContainer," ",()=>{
@@ -566,8 +658,10 @@ G.addModule("controls",{
 					
 		});
 		this.addKeyListener(G.canvasContainer,"$",saveLayout);
-		this.addKeyListener(G.canvasContainer,"l",()=>{//what if teh user just wants to pause/unpause but doens't want to see labels??
-			G.ui.showLabels();
+		G.vertexLabels=G.ui.addMarkers();
+		G.vertexLabels.getLabels=G.ui.getSemantics;
+		this.addKeyListener(G.canvasContainer,"l",()=>{
+			G.vertexLabels.show();
 		});
 		
 		
@@ -605,6 +699,7 @@ G.addModule("controls",{
 		//graphFolder.add(G.analytics, 'doubleVertices');
 		//graphFolder.add(G.analytics, 'randomizeGraph');
 		graphFolder.add(G.ui, 'showEdgeListMenu');
+		graphFolder.add(G.ui, 'showTrapezoidsInput');
 		G.showWaveLevelTable=false;
 		graphFolder.add(G, 'showWaveLevelTable');
 		G.showSmallCCinWhole=true;
@@ -800,6 +895,9 @@ G.addModule("controls",{
 	addSmallButton(parentElem,text,func,rightclickfunc){
 		this.addButton(parentElem,text,func,rightclickfunc).attr("class","small material");
 	},
+	addMediumButton(parentElem,text,func,rightclickfunc){
+		this.addButton(parentElem,text,func,rightclickfunc).attr("class","medium material");
+	},
 	addButtonWithTextInput(parentElem,text,func,rightclickfunc){
 		let parentSelection=d3.select(parentElem);
 		let textSelection=parentSelection.append("input").style("width","60%");
@@ -835,34 +933,103 @@ G.addModule("controls",{
 		
 		
 		let s=d3.select(parentElem).append("div").attr("class","material-slider");
-		let elem=s.node();elem.__options=options;
+		if(options.long){s.attr("class","material-slider long");}
+		let elem=s.node();elem.__options=options;options.elem=elem;
 		
 		let label=s.append("p").attr("class","material-slider-label").text(text);
 		let barContainer=s.append("div").attr("class","material-slider-bar-container");
 		let pivot=barContainer.append("div").attr("class","material-slider-pivot");
 		let bar=barContainer.append("div").attr("class","material-slider-bar");
+		options.value=0;
 		let cb=function(data,i,elem){
 			let rect=barContainer.node().getBoundingClientRect();
 			
 			let width=clamp(d3.event.x,0,rect.width);//-rect.left;
 			let percent=Math.floor(100*(width)/rect.width)+"%";//-rect.left
 			let value=(options.max-options.min)*(width)/rect.width+options.min;//-rect.left
+			if(isNaN(value))return;//throw Error();
 			if(options.type=="integer"){
 				value=Math.round(value);
 			}
+			options.value=value;
 			bar.style("width",percent);
 			pivot.style("left",percent);
 			func(value);
 		};
+		let getValue=()=>options.value;
 		let onUpdate=function(value){
 			let percent=((options.max==options.min)?"100%":(Math.floor(100*(value-options.min)/(options.max-options.min))+"%"));
 			bar.style("width",percent);
 			pivot.style("left",percent);
+			options.value=value;
 		};
 		options.onUpdate=onUpdate;//call when the value is changed outside
+		options.getValue=getValue;//used to add step buttons
+		//I'm not sure why but it seems d3.drag is buggy with certain bigger graphs displayed??
+		/*if(options.lazy){
+			
+		}
+		else{
+			
+		}*/
 		if(options.lazy)pivot.call(d3.drag().on("end",cb));
 		else pivot.call(d3.drag().on("drag",cb).on("end",cb));
 		return options;
+	},
+	addSliderWithStepButtons(parentElem,text,func,options){
+		let obj=this.addSlider(parentElem,text,func,options);
+		
+		let elem=obj.elem,s=d3.select(elem);
+		
+		let stepButtonsAreaSelection=s.append("div").attr("class","step-buttons-area").style("width","30%");//.style("margin-top","3px");
+		let barSelection=s.select(".material-slider-bar-container");
+		barSelection.style("width","65%");
+		let stepButtonsArea=stepButtonsAreaSelection.node();
+		
+		let getStepFunc=(delta)=>{
+			return ()=>{
+				let target=this.modifierTarget;let end=false;
+				let value=obj.getValue();
+				value+=delta;
+				if(value<obj.min){value=obj.min;end=true;}
+				if(value>obj.max){value=obj.max;end=true;}
+				obj.onUpdate(value);//this updates the position of the slider
+				func(value);
+				return end;
+			}
+		};
+		let backwardFunc=getStepFunc(-1),forwardFunc=getStepFunc(1);
+		obj.timeoutFuncs={};
+		let getAnimateFunc=(delta)=>{
+			let stepFunc=getStepFunc(delta);
+			obj.timeoutFuncs[delta]=()=>{
+				let ended=stepFunc();
+				if(ended){obj.animating=false;}
+				if(obj.animating){obj.animateTimeout=setTimeout(obj.timeoutFuncs[delta],obj.animateInterval);}
+			};
+			return ()=>{
+				if(obj.animating){//stop
+					obj.animating=false;
+				}
+				else{//start a timeout that will set itself again if animating is true
+					obj.animating=true;
+					obj.animateDelta=delta;
+					obj.animateTimeout=setTimeout(obj.timeoutFuncs[delta],obj.animateInterval);
+				}
+			}
+			return obj.timeoutFuncs[delta];
+		};
+		
+		if(obj.noAnimate!=true){//right click animates; now allow animation by default, unless it's disabled because the operation is expensive or something
+			if(!obj.animateInterval)obj.animateInterval=1000;
+			this.addSmallButton(stepButtonsArea,"<",getStepFunc(-1),getAnimateFunc(-1));
+			this.addSmallButton(stepButtonsArea,">",getStepFunc(1),getAnimateFunc(1));
+		}
+		else{
+			this.addSmallButton(stepButtonsArea,"<",getStepFunc(-1));
+			this.addSmallButton(stepButtonsArea,">",getStepFunc(1));
+		}
+		
 	},
 	addRangeSlider(parentElem,text,func,options){
 		let min=0,max=1;let lazy=false;
@@ -1020,8 +1187,8 @@ G.addModule("controls",{
 			if(!initialValue)initialValue=value;
 			menuBody.append("div").attr("class","dropdown-select-item").text(toNormalText(value)).on("click",()=>{
 				options.value=value;
-				if(options.upward){menuTitle.text(value+" \u25b2");}
-				else{menuTitle.text(value+" \u25bc");}
+				if(options.upward){menuTitle.text(toNormalText(value)+" \u25b2");}
+				else{menuTitle.text(toNormalText(value)+" \u25bc");}
 				options.index=i;
 				if(func)func(item,i);
 				if(typeof item=="function")item();
@@ -1031,8 +1198,8 @@ G.addModule("controls",{
 		else{menuTitle.text(toNormalText(initialValue)+" \u25bc");}
 		let onUpdate=function(value){
 			options.value=value;
-			if(options.upward){menuTitle.text(value+" \u25b2");}
-			else{menuTitle.text(value+" \u25bc");}
+			if(options.upward){menuTitle.text(toNormalText(value)+" \u25b2");}
+			else{menuTitle.text(toNormalText(value)+" \u25bc");}
 			//options.index=i;
 		};
 		options.onUpdate=onUpdate;//call when the value is changed outside
@@ -1044,8 +1211,8 @@ G.addModule("controls",{
 				if(!initialValue)initialValue=value;
 				menuBody.append("div").attr("class","dropdown-select-item").text(toNormalText(value)).on("click",()=>{
 					options.value=value;
-					if(options.upward){menuTitle.text(value+" \u25b2");}
-					else{menuTitle.text(value+" \u25bc");}
+					if(options.upward){menuTitle.text(toNormalText(value)+" \u25b2");}
+					else{menuTitle.text(toNormalText(value)+" \u25bc");}
 					options.index=i;
 					if(func)func(item,i);
 					if(typeof item=="function")item();
@@ -1138,14 +1305,16 @@ G.addModule("controls",{
 					case "nodes":
 						let label;if(originalObjects.label)label=originalObjects.label[originalObjectID];
 						G.addLog("The "+" vertex "+originalObjectID+(label?(" ("+((label.length>35)?(label.substring(0,34)+"..."):label)+")"):"")); 
-						//G.toggleSelectNode(obj);
+						if(subgraphLevel==0)G.toggleSelectVertex(originalObjectID);
 					
 					break;
 					//G.addLog("The edge #"+obj.id+" between original vertices "+obj.source.original+" and "+obj.target.original+".");
 				}
+				G.broadcast("onUserEvent","click",result);
 			}
 			else
 			{
+				if(!G.view.graph)return;
 				G.clearVertexSelection();
 				//G.addLog("Clicked nothing");
 			}
@@ -1163,6 +1332,7 @@ G.addModule("controls",{
 						G.selectNodeNeighbors(obj);
 					break;
 				}
+				G.broadcast("onUserEvent","shiftclick",result);
 			}
 		}
 		G.onctrlclick=function(result){//select CC?
@@ -1178,6 +1348,7 @@ G.addModule("controls",{
 						G.selectNodeCC(obj);
 					break;
 				}
+				G.broadcast("onUserEvent","ctrlclick",result);
 			}
 		}
 		G.onrightclick=function (result){
@@ -1196,8 +1367,10 @@ G.addModule("controls",{
 						G.showContextMenu("waveLayers",obj);
 						break;
 				}
+				G.broadcast("onUserEvent","rightclick",result);
 			}
 			else{
+				if(!G.view.graph)return;
 				//allow contex menu on empty area
 				G.showContextMenu();
 			}
@@ -1229,6 +1402,7 @@ G.addModule("controls",{
 						else{G.addLog("cannot expand local rings");}
 						break;
 				}
+				G.broadcast("onUserEvent","dblclick",result);
 			}
 		}
 		G.onhover=function(result){
@@ -1279,9 +1453,14 @@ type: "nodes"*/
 							else{
 								vertices.waveLayersExpanded[originalObjectID]=false;
 							}
-							G.view.refreshStyles(true,true);
+							//G.view.refreshStyles(true,true);
 							return;
 						}
+						//highlight edges and neighhbors
+						
+						this.graph.hoveredVertex=originalObjectID;
+						
+						G.view.refreshStyles(true,true);
 				}
 			}
 			else{
@@ -1300,6 +1479,8 @@ type: "nodes"*/
 				switch (result.type)
 				{
 					case "nodes":
+						this.graph.hoveredVertex=undefined;
+						G.view.refreshStyles(true,true);
 						/*let vertex=originalObject;
 						if(vertex.isMetanode&&vertex.waveLayers){
 							if(vertex.isExpanded){
@@ -1400,13 +1581,14 @@ type: "nodes"*/
 			else{G.addLog("cannot redo anymore");}
 			G.updateSelection();
 		}
-		G.toggleSelectNode=function(node){//node is a clone -- todo for new system
+		G.toggleSelectNode=function(node){//node is a clone index
 			clearFutureHistory();
 			let selected=copyObj(this.graph.selectedVertices);
 			
-			if(typeof node!="object"){if(this.graph.clonedVertices[node]==undefined)throw Error("no such node "+node);node=this.graph.clonedVertices[node];}
-			if(!selected[node.original]){selected[node.original]={time:Date.now()};}
-			else{delete selected[node.original];}
+			let record=G.view.getOriginalObject("nodes",node);
+			
+			if(!selected[record.originalObjectID]){selected[record.originalObjectID]={time:Date.now()};}
+			else{delete selected[record.originalObjectID];}
 			this.graph.selectedVertices=selected;this.graph.selectHistory.unshift(selected);//index is still 0
 			G.updateSelection();
 		}
@@ -1414,19 +1596,28 @@ type: "nodes"*/
 			clearFutureHistory();
 			let selected=copyObj(this.graph.selectedVertices);
 			
-			if(typeof node!="object"){if(this.graph.clonedVertices[node]==undefined)throw Error("no such node "+node);node=this.graph.clonedVertices[node];}
-			if(!selected[node.original]){selected[node.original]={time:Date.now()};}
-			for(let neighbor in this.graph.vertices.edges[node.original]){if(!selected[neighbor])selected[neighbor]={time:Date.now()};}
+			let record=G.view.getOriginalObject("nodes",node);
+			let vertexID=record.originalObjectID;
+			if(!selected[vertexID]){selected[vertexID]={time:Date.now()};}
+			
+			for(let neighbor in this.graph.getNeighbors(vertexID)){if(!selected[neighbor])selected[neighbor]={time:Date.now()};}
 			//else{delete selected[node.original];}
 			this.graph.selectedVertices=selected;this.graph.selectHistory.unshift(selected);//index is still 0
 			G.updateSelection();
 		}
 		G.selectNodeCC=function(node){//selects within a layer!
+			if(!this.graph.vertices.cc)return;
 			clearFutureHistory();
 			let selected=copyObj(this.graph.selectedVertices);
-			if(typeof node!="object"){if(this.graph.clonedVertices[node]==undefined)throw Error("no such node "+node);node=this.graph.clonedVertices[node];}
-			let ccID=node.ccID;
-			for (let v in this.graph.vertices){if((node.layer in this.graph.vertices[v].clones) ==false)continue;if (this.graph.vertices[v].clones[node.layer].ccID==ccID){if(!selected[v])selected[v]={time:Date.now()};}}
+			//if(typeof node!="object"){if(this.graph.clonedVertices[node]==undefined)throw Error("no such node "+node);node=this.graph.clonedVertices[node];}
+			//let ccID=node.ccID;
+			let record=G.view.getOriginalObject("nodes",node);
+			let vertexID=record.originalObjectID;
+			let ccs=this.graph.vertices.cc;
+			let ccID=this.graph.vertices.cc[vertexID];
+			if(!selected[vertexID]){selected[vertexID]={time:Date.now()};}
+			
+			for (let i=0;i<this.graph.vertices.length;i++){if((ccs[i]==ccID)&&(!selected[i]))selected[i]={time:Date.now()};}
 
 			//else{delete selected[node.original];}
 			this.graph.selectedVertices=selected;this.graph.selectHistory.unshift(selected);//index is still 0
@@ -1434,11 +1625,11 @@ type: "nodes"*/
 		}
 		G.toggleSelectVertex=function(vertex){//now use index not ID
 			clearFutureHistory();
-			let selected=copyObj(G.view.graph.selectedVertices);
-			if(typeof vertex=="object"){let ID=G.view.graph.vertices.indexOf(vertex);if(ID==-1)throw Error("no such vertex "+vertex);vertex=ID;}
+			let selected=copyObj(this.graph.selectedVertices);
+			//if(typeof vertex=="object"){let ID=G.view.graph.vertices.indexOf(vertex);if(ID==-1)throw Error("no such vertex "+vertex);vertex=ID;}
 			if(!selected[vertex]){selected[vertex]={time:Date.now()};}
 			else{delete selected[vertex];}
-			G.view.graph.selectedVertices=selected;G.view.graph.selectHistory.unshift(selected);//index is still 0
+			this.graph.selectedVertices=selected;this.graph.selectHistory.unshift(selected);//index is still 0
 			G.updateSelection();
 		}
 		
@@ -1479,10 +1670,12 @@ type: "nodes"*/
 	initGestures:function(){
 		
 		let selectingRegion=document.getElementById("selecting-region");
+		let isDraggingObjects=false;
 		
 		const mouseDownPos = {x: -1,y: -1};
 		const mousePos = new THREE.Vector2();G.mousePos=mousePos;
 		const mouseScreenPos = new THREE.Vector2();G.mouseScreenPos=mouseScreenPos;
+		const mouseShaderPos = new THREE.Vector2();G.mouseShaderPos=mouseShaderPos;
 		mousePos.x = -2;// Initialize off canvas
 		mousePos.y = -2;
 		G.lastTouchedObj=null;
@@ -1500,6 +1693,8 @@ type: "nodes"*/
 			mousePos.y = - ( event.clientY / domElement.clientHeight ) * 2 + 1;
 			mouseScreenPos.x=event.clientX;
 			mouseScreenPos.y=event.clientY;
+			mouseShaderPos.x=event.clientX-domElement.clientWidth/2;//seems this is what the vs outputs
+			mouseShaderPos.y=domElement.clientHeight/2-event.clientY;
 			if(relPos.x + 200>G.view.canvasWidth){
 				G.toolTipElem.style.left="";
 				G.toolTipElem.style.right = (G.view.canvasWidth-(relPos.x - 20)) + 'px';
@@ -1545,11 +1740,49 @@ type: "nodes"*/
 				selectingRegion.style.right=(domElement.clientWidth-ev.x)+"px";
 				selectingRegion.style.top=ev.y+"px";
 				selectingRegion.style.bottom=(domElement.clientHeight-ev.y)+"px";
-				selectingRegion.style.display="block";}
+				selectingRegion.style.display="block";
+			}
+			//if there are selected vertices, first test if it may be the start of dragging of selected vertices
+			if(this.graph&&this.graph.selectedVertexCount>0){
+				const target=G.view.getObjectAtPos(mouseDownPos);
+				if(target&&(target.originalObjectType=="vertices")&&(target.originalObjectID in this.graph.selectedVertices)){isDraggingObjects=true;}
+				else{isDraggingObjects=false;}
+			
+			}
+			else{
 				
+			}
+			
 			if(ev.button>0){
 				//ev.stopPropagation();
 				ev.preventDefault();
+			}
+		});
+		var tempVector3=new THREE.Vector3();
+		domElement.addEventListener("mousemove", ev=>{
+			//if(ev.ctrlKey&&(ev.button==0)){
+			if((ev.button==0)&&(ev.buttons==1)&&G.controls.graph&&(G.controls.graph.selectedVertexCount>0)&&isDraggingObjects){
+				/*let moveLength=10;
+				if(Math.abs(ev.movementX)+Math.abs(ev.movementY)>0){
+					//move selected vertices
+					G.view.nodeMovement.set(0,0,0);
+					tempVector3.copy(G.cameraControls.leftVector).multiplyScalar(-ev.movementX*moveLength);
+					G.view.nodeMovement.add(tempVector3);
+					tempVector3.copy(G.cameraControls.forwardVector).multiplyScalar(-ev.movementY*moveLength);
+					G.view.nodeMovement.add(tempVector3);
+					G.cameraControls.stopMoving();
+				}
+				*/
+				G.view.nodeScreenTarget.x=mouseShaderPos.x;
+				G.view.nodeScreenTarget.y=mouseShaderPos.y;
+				G.view.nodeScreenTarget.z=1;
+				G.cameraControls.stopMoving();
+				
+				
+			}
+			else{
+				//G.view.nodeMovement.set(0,0,0);
+				G.view.nodeScreenTarget.z=0;
 			}
 		});
 		domElement.addEventListener("mousemove", ev=>{
@@ -1561,6 +1794,7 @@ type: "nodes"*/
 			else{selectingRegion.style.display="none";}
 		});
 		domElement.addEventListener("mouseup", ev=>{
+			isDraggingObjects=false;
 			if ((this.graph) && (G.onclick) && (mouseDownPos.y == mousePos.y) && (mouseDownPos.x == mousePos.x)) {
 				const target=G.view.getObjectAtPos(mouseDownPos);
 				if (target) {

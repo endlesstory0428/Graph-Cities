@@ -1,3 +1,6 @@
+#if (__VERSION__ == 300)
+#define texture2D texture
+#endif
 //put here for better syntax highlighting
 float rand(vec2 co){
 		return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
@@ -28,10 +31,11 @@ float isEqual(float x,float y){return step(0.999,1.-abs(x-y));}//only works for 
 float isLessThan(float x,float y){return step(0.001,x-y);}//only works for a difference >0.001
 
 
-vec4 getArrayValue(sampler2D texture,float size,float index){
-	return texture2D( texture, getUV(index,size) );
+
+vec4 getArrayValue(sampler2D t,float size,float index){
+	return texture2D( t, getUV(index,size) );
 }
-vec4 getScaleValue(sampler2D texture,float size,float count,float value){//value is scaled between [0,1); index=value*count
+vec4 getScaleValue(sampler2D t,float size,float count,float value){//value is scaled between [0,1); index=value*count
 	if(value<-0.5)return vec4(0.5,0.5,0.5,1.);
-	return texture2D( texture, getUV(value*count,size) );
+	return texture2D( t, getUV(value*count,size) );
 }

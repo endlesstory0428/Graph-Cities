@@ -16,6 +16,7 @@
 		<script type="text/javascript" src="lib/d3-tip.js"></script>
 		<script type="text/javascript" src="lib/d3-scale-chromatic.js"></script>
 		<script type="text/javascript" src="lib/colors.js"></script>
+		<script type="text/javascript" src="lib/union-find.js"></script>
 		
 		<script type="text/javascript" src="lib/three.js"></script>
 		<script type="text/javascript" src="lib/EffectComposer.js"></script>
@@ -28,8 +29,19 @@
 		
 		<script type="text/javascript" src="lib/util.js"></script>
 		<script type="text/javascript" src="lib/controls.js"></script>
-		
+
+		<script type="text/javascript" src="lib/sim.gl/util.js"></script>
+		<script type="text/javascript" src="lib/sim.gl/sim.js"></script>
+		<script type="text/javascript" src="lib/sim.gl/sim-object.js"></script>
+		<script type="text/javascript" src="lib/sim.gl/sim-attribute.js"></script>
+		<script type="text/javascript" src="lib/sim.gl/sim-program.js"></script>
+		<script type="text/javascript" src="lib/sim.gl/sim-program-RTT.js"></script>
+		<script type="text/javascript" src="lib/sim.gl/viz.js"></script>
+		<script type="text/javascript" src="lib/sim.gl/viz-object.js"></script>
+		<script type="text/javascript" src="lib/sim.gl/viz-camera.js"></script>
+
 		<script type="text/javascript" src="js/simulation.js"></script>
+		
 		<script type="text/javascript" src="lib/graph-new.js"></script>
 		<script type="text/javascript" src="lib/graph-algorithms.js"></script>
 		<script type="text/javascript" src="js/G.js"></script>
@@ -117,7 +129,7 @@
 		
 		
 		<div id="right-panel" class="simple column fixed" style="position:absolute;top:10%;height:80%;right:0;width:10%;min-width:170px;box-sizing: border-box;margin-right:1px;">
-			<div id="controls-menu" class="simple column scrolling-y" style="width:100%;">
+			<div id="controls-menu" class="simple column scrolling-y" style="width:100%;font-family: monospace;">
 				
 			</div>
 			
@@ -140,7 +152,7 @@
 		</div>
 		
 		
-		<div id="minimal-bar" class="simple fixed" style="display:none;position:absolute;bottom:0;height:8%;min-height:50px;width:100%;box-sizing: border-box;background-color:rgba(0,0,0,0.05)"> <!-- alternative minimal UI -->
+		<div id="minimal-bar" class="simple fixed" style="display:none;position:absolute;bottom:0;height:8%;min-height:55px;width:100%;box-sizing: border-box;background-color:rgba(0,0,0,0.05);font-family: monospace;"> <!-- alternative minimal UI -->
 			
 			<div id="minimal-style-controls-area" class="simple fixed minimal" style="display: flex;flex-flow: column wrap;
 		justify-self: center;
@@ -249,12 +261,73 @@
 			</div>
 		</div>
 		
+		<div id="trapezoid-menu" class="panel menu" style="overflow: visible;">
+			<button class="close-button material small" onclick="getE('trapezoid-menu').style.display='none';">×</button>
+			<p style="">trapezoids</p>
+			<div id="trapezoid-menu-content" class="dialog-content" style="overflow: visible;text-align:center;font-size:x-small;">
+			
+			</div>
+		</div>
+		<div id="trapezoid-input-menu" class="panel menu" >
+			<button class="close-button material small" onclick="getE('trapezoid-input-menu').style.display='none';">×</button>
+			<p style="">Input trapezoids data</p>
+			<textarea id="trapezoid-input-menu-content" class="dialog-content" style="height:80%;width:90%;font-size:x-small;">{"sets": {"0": [98397538], "1": [25022977, 16198754, 58507971, 91606375, 15258316, 67065236, 10092057, 80606654, 19774751]}, "adj": {"0": {"1": 9}, "1": {"0": 9}}}</textarea>
+
+			<button style="" onclick="let data=JSON.parse(getE('trapezoid-input-menu-content').value.trim());G.ui.showTrapezoids(data);">Go</button>
+			<input type="file" id="wave-metadata-file">upload file</>
+			<button style="" onclick="let fr = new FileReader();fr.onload = function(){let data=JSON.parse(fr.result);G.ui.showTrapezoids(data);};fr.readAsText(document.getElementById('wave-metadata-file').files[0]);">Use file</button>
+		</div>
+		
 		
 		<div id="edge-list-menu" class="panel menu">
 			<button class="close-button material small" onclick="getE('edge-list-menu').style.display='none';">×</button>
 			<p style="">Edgelist</p>
-			<textarea id="edge-list-menu-content" class="dialog-content" style="height:80%;width:90%;"></textarea>
-			<button style="float:right;" onclick="getE('edge-list-menu').style.display='none';let g=buildGraphFromText(null,getE('edge-list-menu-content').value.trim());g.name='Unnamed graph';G.load(g);">Go!</button>
+			<textarea id="edge-list-menu-content" class="dialog-content" style="height:70%;width:90%;"></textarea>
+			<button style="" onclick="getE('edge-list-menu').style.display='none';let g=buildGraphFromText(null,getE('edge-list-menu-content').value.trim());g.name='Custom graph';G.display(g);">Go!</button>
+			<input type="file" id="edge-list-file">upload file</>
+			<button style="" onclick="let fr = new FileReader();fr.onload = function(){getE('edge-list-menu').style.display='none';let g=buildGraphFromText(null,fr.result);g.name='Custom graph';G.display(g);};fr.readAsText(document.getElementById('edge-list-file').files[0]);">Use file</button>
+			
+			<button style="" onclick="let fr = new FileReader();fr.onload = function(){
+			getE('edge-list-menu').style.display='none';let obj;
+			let result=buildSubgraphsFromText(fr.result);
+			if(result.subgraphs.length>0){
+				let first=result.subgraphs[0];
+				first.heightProperty=null;first.nodeColorProperty='subgraph';
+				first.modifiers={subgraphRange:{min:first.subgraphID,max:first.subgraphID,IP:32768}};
+				G.display(result.subgraphs[0]);
+				let totalSize=arraySum(result.subgraphs.map(x=>x.edges.length));
+
+			}
+			else{G.addLog('no subgraphs found');}
+			};fr.readAsText(document.getElementById('edge-list-file').files[0]);">Use file with multiple graphs</button>
+			
+			<button style="" onclick="let fr = new FileReader();fr.onload = function(){
+			getE('edge-list-menu').style.display='none';let obj;
+			let result=buildSubgraphsFromText(fr.result);
+			if(result.subgraphs.length>0){
+				let first=result.subgraphs[0];
+				let last=result.subgraphs[result.subgraphs.length-1];
+				first.heightProperty=null;first.nodeColorProperty='subgraph';
+				first.modifiers={subgraphRange:{min:first.subgraphID,max:first.subgraphID,IP:32768}};
+				G.display(result.subgraphs[0]);
+				let totalSize=arraySum(result.subgraphs.map(x=>x.edges.length));
+				if(totalSize<32768){setTimeout(()=>{
+					first.modifiers.subgraphRange.min=first.subgraphID;
+					console.log(first.subgraphID,last.subgraphID);
+					first.modifiers.subgraphRange.max=last.subgraphID;
+					G.subview.onModifiersChanged('subgraphRange');},0)}
+			}
+			else{G.addLog('no subgraphs found');}
+			};fr.readAsText(document.getElementById('edge-list-file').files[0]);">Draw DAG Cover</button>
+			
+			<button style="" onclick="let fr = new FileReader();fr.onload = function(){
+				getE('edge-list-menu').style.display='none';
+				let g=G.graph;if(!g.vertices.isNew)g.vertices.addProperty('isNew','int');
+				if(!g.edges.isNew)g.edges.addProperty('isNew','int');
+				g.loadEdges(fr.result,{vertices:(vID,graph)=>{graph.vertices.isNew[vID]=1;},edges:(eID,graph)=>{graph.edges.isNew[eID]=1;}});
+				if(!g.modifiers)g.modifiers={};g.modifiers.highlight={property:'isNew',operator:'==',propertyValue:1,thicknessFactor:0.5};
+				G.display(g);
+			};fr.readAsText(document.getElementById('edge-list-file').files[0]);">Add edgelist to current graph</button>
 		</div>
 		
 		

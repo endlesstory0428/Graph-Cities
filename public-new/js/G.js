@@ -53,7 +53,8 @@ class Module{
 						if(_value.originalIndices){obj.originalIndices=_value.originalIndices;}
 						data[name].setLength(length);
 					}
-					if(_value)data[name]._value=_value;
+					if(_value){data[name]._value=_value;}
+					else{if(!data[name])throw Error();}
 				}
 				let objectData=data[name];
 				let propertiesObj=templateObj.properties;
@@ -114,6 +115,24 @@ class Module{
 					if(data.modifiers[name]){//but all modifiers from all modules can be put in the same place (and even shared)
 						//even if it's not there, we may need to call onupdate
 						let modData=data.modifiers[name];
+						//add missing parameters(so that its easier to add modifiers programmatically)
+						for(let dataName in modifier.params){
+							if(dataName in modData){
+								//shorthand: if the value of a button-type parameter is true, activate the function just once
+								if(modifier.params[dataName].type=="button"&&(modData[dataName])){
+									setTimeout(()=>{if(modifier.params[dataName].func)modifier.params[dataName].func(null,data,data.modifiers[name]);},0);
+									delete data.modifiers[name][dataName];
+								}
+								continue;
+							}
+							let value=modifier.params[dataName].value;
+							if(typeof value=="function"){value=modifier.params[dataName].value(data,modData);}
+							modData[dataName]=value;
+						}
+						if(modifier.description){
+							let desc=modifier.description;if(typeof desc=="function"){desc=desc(data,modData);}
+							modData.description=desc;
+						}
 						for(let dataName in modifier.data){
 							modData[dataName]=modifier.data[dataName](data,modData);
 						}
@@ -182,8 +201,18 @@ class Module{
 		}
 	}
 	onModifiersChanged(name){
-		G.broadcast("modifierUpdated",{target:this.target,modifier:name,params:(this.target&&this.target.modifiers&&this.target.modifiers[name])});
+		G.broadcast("modifierUpdated",{target:this.modifierTarget&&this.modifierTarget.dataPath,modifier:name,params:(this.modifierTarget&&this.modifierTarget.modifiers&&this.modifierTarget.modifiers[name])});
 	}//override if needed
+	onUserEvent(type,result){
+		if(!result.subview.graph.modifiers)return;
+		if(result.subview.graph!=this.modifierTarget)return;
+		for(let name in this.modifiers){
+			if(!result.subview.graph.modifiers[name])continue;
+			if(this.modifiers[name]["on"+type]){
+				this.modifiers[name]["on"+type](result,this.modifierTarget,this.modifierTarget.modifiers[name]);
+			}
+		}
+	}
 	initModifierControls(modMenuElem){
 		if(!modMenuElem)modMenuElem=getE("controls-menu");//getE("modifiers-menu");
 		let modMenuSelection=d3.select(modMenuElem);
@@ -195,101 +224,82 @@ class Module{
 		for(let name in this.modifiers){
 			let modObj=this.modifiers[name];
 			modObj.controlsSelection=modMenuSelection.append("div").attr("class","modifier-controls").style("display","none");
+			modObj.advancedControlsSelection=modObj.controlsSelection.append("div").attr("class","modifier-controls-advanced").style("display","none");
 			modObj.controlsElem=modObj.controlsSelection.node();
+			modObj.advancedControlsElem=modObj.advancedControlsSelection.node();
+			//only add a show more button if needed
 			modObj.modLabelSelection=modObj.controlsSelection.append("p").attr("class","modifier-controls-title").text(toNormalText(name)+" \u2716").on("click",()=>{
 				this.disableModifier(name);
 			});
+			let hasAdvancedControls=false;
 			modMenuElem.appendChild(modObj.controlsElem);
 			if(modObj.params){
 				for(let paramName in modObj.params){
 					let paramObj=modObj.params[paramName];
+					let displayName=paramObj.displayName?paramObj.displayName:paramName;
+					let container=paramObj.advanced?modObj.advancedControlsElem:modObj.controlsElem;
 					switch(paramObj.type){
 						case "integer":
 							paramObj.cache={min:0,max:1,type:"integer"};
 							if(paramObj.lazy==true){
 								paramObj.cache.lazy=true;
 							}
-							G.controls.addSlider(modObj.controlsElem,toNormalText(paramName),(value)=>{
+							if(paramObj.hidden){paramObj.cache.onUpdate=()=>{};continue;}
+							if(paramObj.advanced){hasAdvancedControls=true;}
+							G.controls.addSliderWithStepButtons(container,toNormalText(displayName),(value)=>{
 								let target=this.modifierTarget;
 								target.modifiers[name][paramName]=value;
 								if(paramObj.func)paramObj.func(value,target,target.modifiers[name]);
 								modObj.needsUpdate=true;this.onModifiersChanged(name);
 							},paramObj.cache);
-							let stepButtonsAreaSelection=modObj.controlsSelection.append("div").attr("class","step-buttons-area");
-							let stepButtonsArea=stepButtonsAreaSelection.node();
 							
-							let getStepFunc=(delta)=>{
-								return ()=>{
-									let target=this.modifierTarget;let end=false;
-									target.modifiers[name][paramName]+=delta;
-									if(target.modifiers[name][paramName]<paramObj.cache.min){target.modifiers[name][paramName]=paramObj.cache.min;end=true;}
-									if(target.modifiers[name][paramName]>paramObj.cache.max){target.modifiers[name][paramName]=paramObj.cache.max;end=true;}
-									paramObj.cache.onUpdate(target.modifiers[name][paramName]);//this updates the position of the slider
-									if(paramObj.func)paramObj.func(target.modifiers[name][paramName],target,target.modifiers[name]);
-									modObj.needsUpdate=true;this.onModifiersChanged(name);
-									return end;
-								}
-							};
-							let backwardFunc=getStepFunc(-1),forwardFunc=getStepFunc(1);
-							paramObj.timeoutFuncs={};
-							let getAnimateFunc=(delta)=>{
-								let stepFunc=getStepFunc(delta);
-								paramObj.timeoutFuncs[delta]=()=>{
-									let ended=stepFunc();
-									if(ended){paramObj.cache.animating=false;}
-									if(paramObj.cache.animating){paramObj.cache.animateTimeout=setTimeout(paramObj.timeoutFuncs[delta],paramObj.cache.animateInterval);}
-								};
-								return ()=>{
-									if(paramObj.cache.animating){//stop
-										paramObj.cache.animating=false;
-									}
-									else{//start a timeout that will set itself again if animating is true
-										paramObj.cache.animating=true;
-										paramObj.cache.animateDelta=delta;
-										paramObj.cache.animateTimeout=setTimeout(paramObj.timeoutFuncs[delta],paramObj.cache.animateInterval);
-									}
-								}
-								return paramObj.timeoutFuncs[delta];
-							};
-							
-							if(!(paramObj.noAnimate==true)){//right click animates; now allow animation by default, unless it's disabled because the oepration is expensive or something
-								paramObj.cache.animateInterval=paramObj.animateInterval?paramObj.animateInterval:1000;
-								G.controls.addSmallButton(stepButtonsArea,"<",getStepFunc(-1),getAnimateFunc(-1));
-								G.controls.addSmallButton(stepButtonsArea,">",getStepFunc(1),getAnimateFunc(1));
-							}
-							else{
-								G.controls.addSmallButton(stepButtonsArea,"<",getStepFunc(-1));
-								G.controls.addSmallButton(stepButtonsArea,">",getStepFunc(1));
-							}
 							break;
 						case "float":
 						case "number":
+							paramObj.cache={min:0,max:1,type:"float"};
+							if(paramObj.lazy==true){
+								paramObj.cache.lazy=true;
+							}
+							if(paramObj.hidden){paramObj.cache.onUpdate=()=>{};continue;}
+							if(paramObj.advanced){hasAdvancedControls=true;}
+							G.controls.addSlider(container,toNormalText(displayName),(value)=>{
+								let target=this.modifierTarget;
+								target.modifiers[name][paramName]=value;
+								if(paramObj.func)paramObj.func(value,target,target.modifiers[name]);
+								modObj.needsUpdate=true;this.onModifiersChanged(name);
+							},paramObj.cache);
 							break;
 						case "boolean":
+							if(paramObj.hidden){paramObj.cache={onUpdate:()=>{}};continue;}
+							if(paramObj.advanced){hasAdvancedControls=true;}
 							let checkCallback=(value)=>{
 								let target=this.modifierTarget;
 								target.modifiers[name][paramName]=value;
 								if(paramObj.func)paramObj.func(value,target,target.modifiers[name]);
 								modObj.needsUpdate=true;this.onModifiersChanged(name);
 							};
-							paramObj.cache=G.controls.addCheckbox(modObj.controlsElem,toNormalText(paramName),checkCallback);
+							paramObj.cache=G.controls.addCheckbox(container,toNormalText(displayName),checkCallback);
 							//just need a checkbox?
 							break;
 						case "select":
+							if(paramObj.hidden){paramObj.cache={onUpdate:()=>{}};continue;}
+							if(paramObj.advanced){hasAdvancedControls=true;}
 							let selectCallback=(value)=>{
 								let target=this.modifierTarget;
 								target.modifiers[name][paramName]=value;
 								if(paramObj.func)paramObj.func(value,target,target.modifiers[name]);
 								modObj.needsUpdate=true;this.onModifiersChanged(name);//if func is updating controls, it goes before onModifiersChanged
 							}
-							paramObj.cache=G.controls.addDropdownSelect(modObj.controlsElem,toNormalText(paramName),paramObj.options,selectCallback);
+							paramObj.cache=G.controls.addDropdownSelect(container,toNormalText(displayName),paramObj.options,selectCallback);
 							//dropdown select shows the current selected value, whereas dropdown menu doesn't
 							break;
 						case "button":
+							if(paramObj.hidden){paramObj.cache={onUpdate:()=>{}};continue;}
+							if(paramObj.advanced){hasAdvancedControls=true;}
 							paramObj.cache={};
 							let clickCallback=()=>{
 								let target=this.modifierTarget;
-								if(paramObj.func)paramObj.func(value,target,target.modifiers[name]);
+								if(paramObj.func)paramObj.func(null,target,target.modifiers[name]);
 								modObj.needsUpdate=true;this.onModifiersChanged(name);
 							};
 							let getAnimateCallback=(delta)=>{
@@ -311,14 +321,17 @@ class Module{
 							let animateCallback=getAnimateCallback();
 							if(!(paramObj.noAnimate==true)){//right click animates; now allow animation by default, unless it's disabled because the oepration is expensive or something
 								paramObj.cache.animateInterval=paramObj.animateInterval?paramObj.animateInterval:1000;
-								G.controls.addSmallButton(modObj.controlsElem,toNormalText(paramName),clickCallback,animateCallback);
+								G.controls.addMediumButton(container,toNormalText(displayName),clickCallback,animateCallback);
 							}
 							else{
-								G.controls.addSmallButton(modObj.controlsElem,toNormalText(paramName),clickCallback);
+								G.controls.addMediumButton(container,toNormalText(displayName),clickCallback);
 							}
 							
 							break;
 					}
+					
+				}
+				if(hasAdvancedControls){
 					
 				}
 
@@ -382,7 +395,14 @@ class Module{
 						//allow changing the list of options if options is a function
 						if(typeof modObj.params[paramName].options=="function"){
 							let newItems=modObj.params[paramName].options(target,modParamsObj);
-							paramObj.cache.updateItems(newItems);
+							let newValue=modParamsObj[paramName];
+							if(newValue==undefined){
+								newValue=modObj.params[paramName].value;
+								if(typeof newValue=="function"){newValue=newValue(target,modParamsObj);}
+							}
+							//let newValue=modObj.params[paramName].value;
+							//if(typeof newValue==function){newValue=newValue(target,modParamsObj);}
+							paramObj.cache.updateItems(newItems,newValue);
 							//dropdown select shows the current selected value, whereas dropdown menu doesn't
 						}
 						else{
@@ -443,7 +463,7 @@ class Module{
 						if(typeof min=="function"){min=min(target,modParamsObj);}
 						if(typeof max=="function"){max=max(target,modParamsObj);}
 						checkNumber(min);checkNumber(max);
-						paramObj.cache.min=min;paramObj.cache.max=max;
+						if(paramObj.cache){paramObj.cache.min=min;paramObj.cache.max=max;}
 						if(((oldValue<=max)&&(oldValue>=min))==false)oldValueValid=false;;
 						break;
 					case "float":
