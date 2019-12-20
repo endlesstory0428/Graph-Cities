@@ -10,6 +10,10 @@ var servers={
 		prefix:"public-new",
 		port:3010,
 	},
+	big:{
+		prefix:"public-big",
+		port:3011,
+	},
 }
 
 let cachesToRefresh={};//to deal with te situation where there's not enogh memory to refresh all of one kind of cache, we need to be able to specify only to refresh if teh cache is older than soem time, eg. 5 minutes (since the time when the whole processing started).  so instead of <cache>, <cache>:<number> means only refresh if it's older than <number> minutes.
@@ -372,20 +376,25 @@ function onSocketConnection(client) {
 		Datasets.saveCustomData((path?path:datasetID),type,data.data);
 	});
 	client.on("compute",function(data){
-		
-		let g=new Graph();
-		if(typeof data.data=="string"){
-			g.loadTextData(data.data);
+		//first try if there's existing result if it's a known graph
+		if(data.dataPath){
+			let result;
+			try{
+				result=Datasets.loadCustomData(data.dataPath,data.type);
+				this.emit("custom",{type:data.type,success:true,result:result});
+				return;
+			}
+			catch(e){console.log("no saved custom data "+data.type+" found for "+data.dataPath);}
 		}
-		else if(typeof data.data=="object"){
-			if(data.data.vertices)g.loadVertices(data.data.vertices);
-			if(data.data.edges)g.loadEdges(data.data.edges);else {this.emit("custom",{type:data.type,success:false,result:null});return;}
-		}
-		else return;
-		
-		Promise.resolve(Datasets.doCustomComputation(data.type,g,data.options)).then((result)=>{
+		Promise.resolve(Datasets.doCustomComputation(data)).then((result)=>{
+			if(data.dataPath)Datasets.saveCustomData(data.dataPath,data.type,result);
 			this.emit("custom",{type:data.type,success:true,result:result});
-		}).catch(()=>this.emit("custom",{type:data.type,success:false,result:null}));
+			console.log("computed custom data "+data.type);
+		}).catch((err)=>{
+			console.log(err);
+			this.emit("custom",{type:data.type,success:false,result:null});
+			console.log("failed to computed custom data "+data.type);
+		});
 	});
 	
 
