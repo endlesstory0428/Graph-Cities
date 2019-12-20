@@ -125,7 +125,7 @@ G.addModule("view",{
 		//debugging
 		this.testBuffer=new Float32Array( 4 );
 		
-		this.sim=new Sim();
+		//this.sim=new Sim();//test only
 		
 		
 		let objectOrder=Object.keys(this.templates).sort(compareBy((x)=>(this.templates[x].priority?this.templates[x].priority:0),true));
