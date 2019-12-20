@@ -61,7 +61,7 @@ void main()
 		standardColor=getScaleValue(colorList,colorListSize,colorListCount,colorValue).rgb;
 	}
 	vColor=mix(customColor,standardColor,clamp(linkLayerColorRatio-usingCustomColor,0.,1.));
-	if(usingCustomColor+sign(colorValue+0.5)<0.5)vColor=mix(normalize(vColor),vColor,0.5);
+	//if(usingCustomColor+sign(colorValue+0.5)<0.5)vColor=mix(normalize(vColor),vColor,0.8); 
 	//don't dampen layer colors when a custom or specific color is used.
 	
 	vec3 eye=camera-sourcePos;

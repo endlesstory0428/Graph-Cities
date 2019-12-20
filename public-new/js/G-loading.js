@@ -16,6 +16,7 @@ G.addModule("loading",{
 		G.display=this.display.bind(this);
 		G.getGraph=this.getGraph.bind(this);
 		G.hasGraph=this.hasGraph.bind(this);
+		G.saveGraph=this.saveGraph.bind(this);
 		G.getQueryVariable=getQueryVariable;
 		
 		prepareQueryVariables();
@@ -29,33 +30,113 @@ G.addModule("loading",{
 		}
 		let queryVariables=getQueryVariables();
 
-		let dataPath=getQueryVariable("dataPath");
-		if(dataPath){
-			dataPath=unescape(dataPath).trim();
-			//window.history.pushState("", "", "/");//remove the datapath from the URL for debugging
-			let options={};
-			
-			for(let name in queryVariables){
-				let value=queryVariables[name];
-				if(name=="dataPath")continue;//let the data itself decide what it's standard path is (in a special case, a dataset's directory was wrong and the file had to be soft linked)
-				if(name in modifiersMap){
-					//
-					options[name]=JSON.stringify(unescape(value).trim());
-				}
-				else{
-					options[name]=unescape(value).trim();
-				}
-				//extra processing
-				switch (name){
-					case "algorithm":{representation="null";break;}
-					case "representation":{if(options.representation=="null")options.representation=null;break;}
+		let variableDefs={
+			dataPath:{type:"string"},
+			dataURL:{type:"string"},
+			verticesDataURL:{type:"string"},
+			ignoreUnknownVertices:{type:"boolean"},
+			dataURLFunc:{type:"function"},
+			propertyColumns:{type:"object"},
+			verticesPropertyColumns:{type:"object"},
+			extraProperties:{type:"object"},
+			extraGraphs:{type:"object"},
+		};
+		
+		let variables={};
+		for(let name in variableDefs){
+			let type=variableDefs[name].type;
+			let raw=getQueryVariable(name);
+			if(!raw)continue;
+			let str=unescape(raw).trim();
+			switch(type){
+				case "string":variables[name]=str;break;
+				case "object":variables[name]=JSON.parse(str);break;
+				case "function":variables[name]=eval(str);break;
+				case "boolean":if(str=="True"||str=="true")variables[name]=true;if(str=="False"||str=="false")variables[name]=false;break;
+				//new Function(str)();break;//need to send a function that takes arguments, so 
+			}
+		}
+		let dataPath=variables.dataPath;
+		let dataURL=variables.dataURL;
+		let verticesDataURL=variables.verticesDataURL;
+		let dataURLFunc=variables.dataURLFunc;
+		let propertyColumns=variables.propertyColumns;
+		let verticesPropertyColumns=variables.verticesPropertyColumns;
+		let extraProperties=variables.extraProperties;
+		let filters=variables.filters;
+		let extraGraphs=variables.extraGraphs;
+		
+		
+		let options={};let modifiers={};
+		for(let name in queryVariables){
+			let value=queryVariables[name];
+			if(name =="dataPath")continue;
+			//if(name in variableDefs)continue;//let the data itself decide what its standard path is (in a special case, a dataset's directory was wrong and the file had to be soft linked)
+			if(name in modifiersMap){
+				modifiers[name]=JSON.parse(unescape(value).trim());
+				options.modifiers=modifiers;
+			}
+			else{
+				if(name in variables){options[name]=variables[name];}
+				else{options[name]=unescape(value).trim();}
+			}
+			//extra processing
+			switch (name){
+				case "algorithm":{options.representation=null;break;}//representation="null";
+				case "representation":{if(options.representation=="null")options.representation=null;break;}
+				case "filters":{
+					if(options.filters){
+						let old=JSON.parse(options.filters);
+						options.filters=[];
+						for(i=0;i<old.length;i++){
+							try{
+								options.filters.push(eval(old[i]));
+							}
+							catch(e){
+								console.log(e.stack);
+							}
+							
+						}
+					}
+					break;
 				}
 			}
-			this.display(dataPath,options).catch(()=>d3.json("datasets").then((d)=>this.showDatasetList(d)));
+		}
+		
+		if(variables.extraGraphs){//a way to pass in graph summaries for text-based graphs, when there's no easy way to get summaries of higher level graphs
+			for(let i in extraGraphs){
+				let obj=extraGraphs[i];
+				if(obj.dataPath==undefined){obj.dataPath=i;}
+				let g=new Graph();Object.assign(g,obj);
+				this.saveGraph(g);
+			}
+		}
+		if(dataURLFunc){//overrides normal loading paths
+			this.dataURLFunc=dataURLFunc;
+			//if(dataPath&&(!dataURL))dataURL=dataURLFunc(dataPath);//dataURL func should override dataPath in normal loading, for unions etc
+		}
+		if(dataURL){
+			this.loadURL(dataURL,options).then((g)=>{ //note that filters is not in variableDefs
+				if(dataPath){
+					g.dataPath=dataPath;
+					if(!g.subgraphType){
+						let segments=dataPath.split("/");
+						if(segments.length>2&&segments[segments.length-2]!="metagraphs"){
+							g.subgraphType=segments[segments.length-2];
+							g.subgraphID=parseInt(segments[segments.length-1]);
+							g.wholeGraph=segments.slice(0,segments.length-2).join("/");
+						}
+					}
+				}else{g.dataPath="custom";}
+				this.saveGraph(g);
+				this.display(g,options);
+			}).catch((err)=>{console.log(err);d3.json("datasets").then((d)=>this.showDatasetList(d))});;
+			
 		}
 		else{
-			d3.json("datasets").then((d)=>this.showDatasetList(d));
+			this.display(dataPath,options).catch(()=>d3.json("datasets").then((d)=>this.showDatasetList(d)));
 		}
+		
 		
 		//allow the including webpage to post messages to this if it's included as an iframe
 		window.addEventListener("message", function( event ) {
@@ -89,8 +170,8 @@ G.addModule("loading",{
 	},
 	modifierUpdated:function(obj){
 		let target=obj.target,modifier=obj.modifier,params=obj.params;
-		if(G.loading.parentWindow){
-			G.loading.parentWindow.postMessage({modifierUpdated:obj},G.loading.parentOrigin);
+		if(window!=window.top){
+			window.top.postMessage({modifierUpdated:obj},"*");
 		}
 	},
 	graphsCache:{},
@@ -101,7 +182,8 @@ G.addModule("loading",{
 		if(this.graphsCache[path])return this.graphsCache[path];
 		throw Error("missing "+path);
 	},
-	saveGraph:function(path,g){
+	saveGraph:function(g,path){
+		if(!path){path=g.dataPath;}
 		if(this.graphsCache[path]){console.warn("repeated graph path "+path);}
 		this.graphsCache[path]=g;console.log("saved "+path);
 		G.broadcast("loadGraph",g);
@@ -122,7 +204,15 @@ G.addModule("loading",{
 		if((g instanceof Graph)==false){throw Error();}
 		return g;
 	},
-	loadWhole:async function(g){//takes a path or a summary object, or a Graph with summary loaded
+	loadWhole:async function(g,options={}){//takes a path or a summary object, or a Graph with summary loaded
+		if(typeof g=="string"&&this.dataURLFunc){
+			if(this.hasGraph(g))return this.getGraph(g);
+			let dataPath=g;
+			let dataURL=this.dataURLFunc(dataPath);
+			g=await this.loadURL(dataURL,options);
+			g.dataPath=dataPath;
+			return g;
+		}
 		g=await this.loadSummary(g);
 		if(!g){return;}
 		//first load the topology(ids, sources, targets)
@@ -308,6 +398,41 @@ G.addModule("loading",{
 		
 		return g;
 	},
+	loadURL:async function(dataURL,options){
+		
+		let propertyColumns=options.propertyColumns||{},extraProperties=options.extraProperties||[],filters=options.filters||[],verticesDataURL=options.verticesDataURL||null;
+		
+		if(!dataURL){
+			console.warn("no URL to load");return;
+		}
+		
+		let results=[];let index=1;
+		let txt=await d3.text(dataURL);
+		let g;
+		if(verticesDataURL){
+			let txt2=await d3.text(verticesDataURL);
+			g=buildGraphFromText(txt2,txt,options);//{propertyColumns:propertyColumns,filters:filters});
+		}
+		else{
+			g=buildGraphFromText(null,txt,options);//{propertyColumns:propertyColumns,filters:filters});
+		}
+		for(let def of extraProperties){//[{URL:...,owner:...,name:...}]
+			if(def.type=="JSON"){
+				let result=await d3.json(def.URL);
+				if(def.owner=="vertices"){
+					g.loadVertexPropertyFromSets(def.name,result);//need the vertex IDs to load it
+				}
+			}
+			else if(def.type=="CSV"){
+				let result=await d3.csv(def.URL);
+				if(def.owner=="vertices"){
+					g.loadVertexPropertyFromSets(def.name,result);//need the vertex IDs to load it
+				}
+			}
+		}
+		g.isCustom=true;
+		return g;
+	},
 	load:async function(graph,options){//only returns the graph, does not start displayng it
 		//also loads the approppriate metagraph etc
 		//{inPlace:inPlace,metagraph:parentGraph,metanodeID:vertexID}
@@ -330,10 +455,9 @@ G.addModule("loading",{
 			//allow loading a data path directly?
 			let graphPath=graph;
 			//manage union loading in the client
+			let segments=graphPath.split("/");
 			if(graphPath.indexOf("+")!=-1){
 				//no LoadSummary
-				
-				let segments=graphPath.split("/");
 				let subgraphType=segments[segments.length-2];
 				let subgraphIDs=segments[segments.length-1];
 				let subgraphIDList=subgraphIDs.split("+").map(x=>Number(x)).sort(compareBy(x=>Number(x),true));//standardize, to make comparing equality easier
@@ -342,10 +466,15 @@ G.addModule("loading",{
 				if(this.graphsCache[graphPath])return this.graphsCache[graphPath];//as a special case, if this graph's dataset was renamed, the standardized path would use the renamed dataset name, not the intrinsic name in the data, cause here we don't know what is the intrinsic name
 				
 				//if(unionCachePath==originalGraph+"/"+subgraphType+"/"+subgraphIDList.join("+"))return unionCache;
-				let subgraphList=[];
+				let subgraphList=[];let isCustom=false;
 				for(let ID of subgraphIDList){
-					let subgraph=await this.loadWhole(originalGraph+"/"+subgraphType+"/"+ID);
+					let dataPath=originalGraph+"/"+subgraphType+"/"+ID;
+					let subgraph=await this.loadWhole(dataPath);
+					if(!subgraph.subgraphID){subgraph.subgraphID=ID;}
+					if(!subgraph.dataPath){subgraph.dataPath=dataPath;}
+					if(!subgraph.wholeGraph){subgraph.wholeGraph=originalGraph;}
 					subgraphList.push(subgraph);
+					if(subgraph.isCustom)isCustom=true;
 				}
 				//todo: correct way to get the partition name
 				let newPropertyName=subgraphType;
@@ -359,20 +488,39 @@ G.addModule("loading",{
 				}
 				result.dataPath=graphPath;
 				//unionCache=result;unionCachePath=result.dataPath;
+				if(isCustom){result.isCustom=true;}
 				result.datasetID=segments[0];
 				result.wholeGraph=originalGraph;
 				result.subgraphType=subgraphType;
+				result.subgraphID="union";
 				result.metagraph=subgraphList[0].metagraph;
 				result.subgraphIDMin=arrayMin(subgraphIDList);
 				result.subgraphIDMax=arrayMax(subgraphIDList);
 				graph=result;
 			}
 			else{
-				graph=await this.loadSummary(graphPath);
-				if(!graph){console.log("failed to load "+graphPath);return null;}
+				if(this.dataURLFunc){
+					let url=this.dataURLFunc(graphPath);
+					graph=await this.loadURL(url,options);
+					if(!graph){console.log("failed to load "+graphPath);return null;}
+					graph.dataPath=graphPath;
+				}
+				else{
+					graph=await this.loadSummary(graphPath);
+					if(!graph){console.log("failed to load "+graphPath);return null;}
+				}
+				
+			}
+			if(!graph.subgraphType){
+				if(segments.length>2&&segments[segments.length-2]!="metagraphs"){
+					graph.subgraphType=segments[segments.length-2];
+					graph.subgraphID=parseInt(segments[segments.length-1]);
+					graph.wholeGraph=segments.slice(0,segments.length-2).join("/");
+				}
 			}
 		}
 		Object.assign(graph,options);
+		
 		//now if a graph needs to be shown as a metagraph, we don't just display the metagraph, instead we mark the metagraph as a representation and "display" the abstract original graph.
 		//union graphs don't have "metagraphs"
 		let representation=graph.representation;
@@ -416,7 +564,7 @@ G.addModule("loading",{
 		}
 		if(graph.nodeColorProperty){
 			if(!graph.modifiers)graph.modifiers={};
-			graph.modifiers.nodeColor={property:graph.nodeColorProperty,colorScaleName:"lightBlueRed",linkColoring:"default"};//,colorScaleName:"custom"
+			graph.modifiers.nodeColor={property:graph.nodeColorProperty};//,colorScaleName:"custom"
 			if(graph.colorScaleName){graph.modifiers.nodeColor.colorScaleName=graph.colorScaleName;}
 		}
 		graph.parent=graph.metagraph||graph.originalGraph||graph.wholeGraph;
@@ -437,7 +585,11 @@ G.addModule("loading",{
 		graph=await this.load(graph,options);//assuming it's either a path or a fully loaded graph, not an abstract graph
 			//even if it's a loaded graph, we may want to reuse this to load its representation
 		//}
-		if(graph.vertices.layout)for(let i=0;i<graph.vertices.layout.length;i++){if(!graph.vertices.layout[i])throw Error();}
+		if(graph.vertices.layout){
+			let layoutOK=true;
+			for(let i=0;i<graph.vertices.layout.length;i++){if(!graph.vertices.layout[i]){layoutOK=false;break;;}}
+			if(!layoutOK)graph.vertices.removeProperty("layout");
+		}
 		if(options)Object.assign(graph,options);
 		console.log("displaying graph of |V| "+graph.vertices.length+", |E| "+graph.edges.length);
 	
@@ -689,172 +841,87 @@ function getColumnSep(text){
 
 
 function buildGraphFromText(vtext,etext,options){
-	if(!etext)return null;
-	let edata=d3.dsvFormat(getColumnSep(etext)).parseRows(etext);
-	let vdata=null;
-	if(vtext){vdata=d3.dsvFormat(getColumnSep(vtext)).parseRows(vtext);}
-	let graph={};
-	let vDefs={id:0};
-	let eDefs={s:0,t:1};//should map from prop names to columns not vice versa, since the column nane can later be a function
-	if(options){
-		if(options.vDefs)Object.assign(vDefs,options.vDefs);
-		if(options.eDefs)Object.assign(eDefs,options.eDefs);
-		if(options.startEdgeIndex||options.endEdgeIndex||options.edgeCountLimit){
-			let start=isNaN(options.startEdgeIndex)?0:Number(options.startEdgeIndex);
-			let end=isNaN(options.endEdgeIndex)?( isNaN(options.edgeCountLimit)?edata.length:(Number(options.edgeCountLimit)+start)  ):Number(options.endEdgeIndex);//end is the index after the last edge
-			edata=edata.slice(start,end);
-		}
-	}
-	
-	//by default, teh first column in the V file is metanode ID, others can have other meanings
-	function mapObjs(data,defs){
-		return data.map((d,index)=>{
-			let obj={};
-			for(let name in defs){
-				if(typeof defs[name]=="function"){obj[name]=defs[name](d);}
-				else{obj[name]=d[defs[name]];}
-			}
-			return obj;
-		});
-	}
+	//note: now not usig options like edge start 
+	let graph=new Graph();
 	
 	
-	graph.edges=mapObjs(edata,eDefs);
-	let duplicateWarned=false,oldEdgeCount=graph.edges.length,duplicateEdgeCount;
-	if(vdata){
-		graph.vertices=mapObjs(vdata,vDefs);
-		let vMap={},adjList={},vCount=0;graph.vMap=vMap;
-		graph.vertices.forEach((v)=>{
-			if((v.id in adjList)==false){adjList[v.id]={};}
-			if((v.id in vMap)==false){vMap[v.id]=vCount;vCount++;}
-		});
-		
-		graph.edges.forEach((e)=>{//these IDs are original vertex indices
-			if((e.s in vMap)==false||(e.t in vMap)==false){throw Error("invalid edge endpoints "+e.s+" "+e.t);}
-			if(adjList[e.s]&&adjList[e.s][e.t]){
-				e.duplicate=true;
-				if(!duplicateWarned){duplicateWarned=true;console.log("duplicate edge" +e.s+","+e.t);} 
-				return;
-			}//duplicate edge
-			adjList[e.s][e.t]=true;adjList[e.t][e.s]=true;
-			e.s=vMap[e.s];e.t=vMap[e.t];
-		});
-		graph.edges=graph.edges.filter((e)=>!e.duplicate);
-		
+	if(typeof etext!="string"){
+		graph.loadEdges(vtext,etext);//etext,options
 	}
 	else{
-		//create vertices
-		graph.vertices=[];
-		let vMap={},adjList={},vCount=0;graph.vMap=vMap;
-		oldEdgeCount=graph.edges.length;
-		graph.edges.forEach((e)=>{//these IDs are original vertex indices
-			if(adjList[e.s]&&adjList[e.s][e.t]){e.duplicate=true;if(!duplicateWarned){duplicateWarned=true;console.log("duplicate edge" +e.s+","+e.t);} return;}//duplicate edge
-			if((e.s in adjList)==false){adjList[e.s]={};}
-			if((e.t in adjList)==false){adjList[e.t]={};}
-			adjList[e.s][e.t]=true;adjList[e.t][e.s]=true;
-			if((e.s in vMap)==false){vMap[e.s]=vCount;vCount++;graph.vertices.push({id:e.s});}
-			if((e.t in vMap)==false){vMap[e.t]=vCount;vCount++;graph.vertices.push({id:e.t});}
-			e.s=vMap[e.s];e.t=vMap[e.t];
-		});
-		graph.edges=graph.edges.filter((e)=>!e.duplicate);
+		if(options.ignoreUnknownVertices){
+			graph.loadEdges(etext,options);
+			if(vtext)graph.loadVertices(vtext,options);
+		}
+		else{
+			if(vtext)graph.loadVertices(vtext,options);
+			graph.loadEdges(etext,options);
+		}
+		
 	}
-	duplicateEdgeCount=oldEdgeCount-graph.edges.length;
-	if(duplicateEdgeCount>0){console.log("duplicate edge count "+duplicateEdgeCount);}
-	if(options){
-		Object.assign(graph,options);
-		/*if(options.expansion){
-			graph.expandVertex=function(vertex){
-				G.showGraphFiles(graph,files,options.expansion);
-			}
-		}*/
-	}
-	
 	return graph;
 }
 
-function buildGraphFromText2(vtext,etext,options){
-	if(!etext)return null;
-	let edata=d3.dsvFormat(getColumnSep(etext)).parseRows(etext);
-	let vdata=null;
-	if(vtext){vdata=d3.dsvFormat(getColumnSep(vtext)).parseRows(vtext);}
-	let graph={};
-	let vDefs={id:0};
-	let eDefs={s:0,t:1};//should map from prop names to columns not vice versa, since the column nane can later be a function
-	if(options){
-		if(options.vDefs)Object.assign(vDefs,options.vDefs);
-		if(options.eDefs)Object.assign(eDefs,options.eDefs);
-		if(options.startEdgeIndex||options.endEdgeIndex||options.edgeCountLimit){
-			let start=isNaN(options.startEdgeIndex)?0:Number(options.startEdgeIndex);
-			let end=isNaN(options.endEdgeIndex)?( isNaN(options.edgeCountLimit)?edata.length:(Number(options.edgeCountLimit)+start)  ):Number(options.endEdgeIndex);//end is the index after the last edge
-			edata=edata.slice(start,end);
+
+
+
+function buildSubgraphsFromText(str){
+	let obj;
+	try{obj=JSON.parse(str);}catch(e){console.log(e.stack);return;}
+	let subgraphs={};
+	for(let name in obj){
+		if(typeof obj[name]=='string'){
+			subgraphs[name]={text:obj[name],name:name};
+		}
+		else{
+			if(typeof obj[name]=='object'){
+			let obj2=obj[name];
+				for(let name2 in obj2){
+					if(typeof obj2[name2]=='string'){
+						subgraphs[name+'_'+name2]={text:obj2[name2],name:name+'_'+name2};
+					}
+				}
+			}
 		}
 	}
+	//have to make sure they are in the right order - assuming there's some kind of numeric order
+	let pattern=/\d+/;let OK=true;
+	for(let name in subgraphs){
+		let match=name.match(pattern);
+		if(match){subgraphs[name].id=parseInt(match[0]);}
+		else{OK=false;}
+	}
+	let array=Object.values(subgraphs);
+	if(OK){array.sort(compareBy((x)=>x.id,true));}
+	else{array.forEach((x,index)=>{x.id=index;})}
 	
-	//by default, teh first column in the V file is metanode ID, others can have other meanings
-	function mapObjs(data,defs){
-		return data.map((d,index)=>{
-			let obj={};
-			for(let name in defs){
-				if(typeof defs[name]=="function"){obj[name]=defs[name](d);}
-				else{obj[name]=d[defs[name]];}
-			}
-			return obj;
-		});
+	for(let item of array){
+		let subgraph=new Graph();
+		subgraph.dataPath='custom/subgraph/'+item.id;
+		subgraph.wholeGraph='custom';
+		subgraph.subgraphType='subgraph';
+		subgraph.datasetID="custom";
+		subgraph.name=item.name;
+		subgraph.subgraphID=item.id;
+		subgraph.loadEdges(item.text);
+		subgraph.isCustom=true;
+		item.subgraph=subgraph;
 	}
 	
+	let parentGraph=new Graph();parentGraph.dataPath='custom';
+	parentGraph.isCustom=true;
+	parentGraph.subgraphs={};let ids=array.map(x=>x.id);
+	parentGraph.subgraphs.subgraph={fullSummary:array.map(x=>({vertices:x.subgraph.vertices.length,edges:x.subgraph.edges.length,subgraphID:x.id})),min:arrayMin(ids),max:arrayMax(ids),count:array.length,buckets:[],unbucketed:ids};
 	
-	graph.edges=mapObjs(edata,eDefs);
-	let duplicateWarned=false,oldEdgeCount=graph.edges.length,duplicateEdgeCount;
-	if(vdata){
-		graph.vertices=mapObjs(vdata,vDefs);
-		let vMap={},adjList={},vCount=0;graph.vMap=vMap;
-		graph.vertices.forEach((v)=>{
-			if((v.id in adjList)==false){adjList[v.id]={};}
-			if((v.id in vMap)==false){vMap[v.id]=vCount;vCount++;}
-		});
-		
-		graph.edges.forEach((e)=>{//these IDs are original vertex indices
-			if((e.s in vMap)==false||(e.t in vMap)==false){throw Error("invalid edge endpoints "+e.s+" "+e.t);}
-			if(adjList[e.s]&&adjList[e.s][e.t]){
-				e.duplicate=true;
-				if(!duplicateWarned){duplicateWarned=true;console.log("duplicate edge" +e.s+","+e.t);} 
-				return;
-			}//duplicate edge
-			adjList[e.s][e.t]=true;adjList[e.t][e.s]=true;
-			e.s=vMap[e.s];e.t=vMap[e.t];
-		});
-		graph.edges=graph.edges.filter((e)=>!e.duplicate);
-		
+	for(let item of array){
+		let subgraph=item.subgraph;
+		G.loading.saveGraph(subgraph);
 	}
-	else{
-		//create vertices
-		graph.vertices=[];
-		let vMap={},adjList={},vCount=0;graph.vMap=vMap;
-		oldEdgeCount=graph.edges.length;
-		graph.edges.forEach((e)=>{//these IDs are original vertex indices
-			if(adjList[e.s]&&adjList[e.s][e.t]){e.duplicate=true;if(!duplicateWarned){duplicateWarned=true;console.log("duplicate edge" +e.s+","+e.t);} return;}//duplicate edge
-			if((e.s in adjList)==false){adjList[e.s]={};}
-			if((e.t in adjList)==false){adjList[e.t]={};}
-			adjList[e.s][e.t]=true;adjList[e.t][e.s]=true;
-			if((e.s in vMap)==false){vMap[e.s]=vCount;vCount++;graph.vertices.push({id:e.s});}
-			if((e.t in vMap)==false){vMap[e.t]=vCount;vCount++;graph.vertices.push({id:e.t});}
-			e.s=vMap[e.s];e.t=vMap[e.t];
-		});
-		graph.edges=graph.edges.filter((e)=>!e.duplicate);
-	}
-	duplicateEdgeCount=oldEdgeCount-graph.edges.length;
-	if(duplicateEdgeCount>0){console.log("duplicate edge count "+duplicateEdgeCount);}
-	if(options){
-		Object.assign(graph,options);
-		/*if(options.expansion){
-			graph.expandVertex=function(vertex){
-				G.showGraphFiles(graph,files,options.expansion);
-			}
-		}*/
-	}
+	G.loading.saveGraph(parentGraph);
 	
-	return graph;
+	return {parentGraph:parentGraph,subgraphs:array.map(x=>x.subgraph)};
 }
+
 
 function showTable(tableDialogSelection,dataObj,rowMaps,rowOnclick,cellOnclick){
 	tableDialogSelection.style("display","block");
@@ -915,6 +982,7 @@ function showTable(tableDialogSelection,dataObj,rowMaps,rowOnclick,cellOnclick){
 function getVLogVKString(v,e){return (v>2)?(String(Math.log(e/v,Math.log(v))).substring(0,5)):"N/A";}
 function getNum(node,name){return Number(node.getAttribute(name));}
 
+/*
 let queryVariables={};
 
 function prepareQueryVariables(){
@@ -931,3 +999,5 @@ function getQueryVariable(variable)
 	return undefined;
 }
 function getQueryVariables(){return queryVariables;}
+
+*/

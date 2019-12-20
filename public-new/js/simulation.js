@@ -24,12 +24,15 @@ THREE.Simulation = function( renderer,initialDataBuffer,initialUniforms,vertexSh
 		
 	// Init RTT stuff
 	var gl = renderer.getContext();
-		
-	if( !gl.getExtension( "OES_texture_float" )) {
-		alert( "No OES_texture_float support for float textures!" );
-		//return;
-	}
+	
+	if(gl instanceof WebGL2RenderingContext==false){
+		if( !gl.getExtension( "OES_texture_float" )) {
+			alert( "No OES_texture_float support for float textures!" );
+			//return;
+		}
 
+	}
+	
 	if( gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS) == 0) {
 		alert( "No support for vertex shader textures!" );
 		//return;
@@ -85,7 +88,10 @@ THREE.Simulation = function( renderer,initialDataBuffer,initialUniforms,vertexSh
 	//this.cpu_gpu_material = cpu_gpu_material;
 	this.simulationShader = simulationShader;
 	this.initTexture = function initTexture(t) {
-		this.renderer.render(this.sceneRTTPos, this.cameraRTT, t, false);
+		let oldTarget=this.renderer.getRenderTarget();
+		this.renderer.setRenderTarget(t);
+		this.renderer.render(this.sceneRTTPos, this.cameraRTT );//t,false
+		this.renderer.setRenderTarget(oldTarget);
 	}
 	//this.cpu_gpu_material.uniforms.tPositions.value = texture;
 	
@@ -148,10 +154,12 @@ THREE.Simulation.prototype.pushDataToTexture = function(data, renderToTexture) {
 };
 
 THREE.Simulation.prototype.simulate = function(target) {
+	let oldTarget=this.renderer.getRenderTarget();
+	this.renderer.setRenderTarget(target);
 	this.renderer.render(
 		this.sceneRTTPos,
-		this.cameraRTT,
-		target, false);
+		this.cameraRTT);//, false
+	this.renderer.setRenderTarget(oldTarget);
 }
 
 THREE.Simulation.prototype.nextStep = function(target) {

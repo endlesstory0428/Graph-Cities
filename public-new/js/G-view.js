@@ -9,7 +9,7 @@ var greenColor=new THREE.Color(0,1,0);
 var whiteColor=new THREE.Color(1,1,1);
 var greyColor=new THREE.Color(0.5,0.5,0.5);
 
-var CAMERA_DISTANCE2NODES_FACTOR=150;
+var CAMERA_DISTANCE2NODES_FACTOR=90;
 let orangeTemp=d3.scaleSequential(d3.interpolateOranges);
 //let orangeTemp2=d3.scaleSequential(d3.interpolateYlOrRd);
 G.colorScales={ //[0,1], use with THREE.Color.setStyle()
@@ -25,12 +25,12 @@ G.colorScales={ //[0,1], use with THREE.Color.setStyle()
 	//blackRed:(value)=>orangeTemp(1-(value/2)),
 	blackRed:d3.scaleSequential(d3.interpolateCubehelix("#200000","#ff2020")),
 	//blueRed:d3.scaleSequential(d3.interpolateHslLong("#63daff","#ff2020")),
-	blueRed:d3.scaleSequential(d3.interpolateHslLong("hsl(216,85%,50%)","hsl(0,85%,50%)")),
+	blueRed:d3.scaleSequential(d3.interpolateHslLong("hsl(216,99%,50%)","hsl(0,99%,50%)")), 
 	//lightBlueRed:d3.scaleSequential(d3.interpolateHslLong("hsl(216,65%,82%)","hsl(0,65%,82%)")), //too dark links (their colors are normalized)
 	lightBlueRed:d3.scaleSequential(d3.interpolateHslLong("hsl(216,77%,70%)","hsl(0,77%,70%)")), 
 	
 };
-G.colorScale="spring";
+G.colorScale="lightBlueRed";
 G.brightColors=false;
 function onColorScaleUpdated(){
 	if(G.view.model){
@@ -49,7 +49,7 @@ function onColorScaleUpdated(){
 	G.view.sharedUniforms.colorList.needsUpdate=true;
 }
 function colorScale(value){
-	return G.colorScales[G.controls.get("colorScales","spring",G.colorScales,onColorScaleUpdated)](value);//controls getting of options returns the value of that option
+	return G.colorScales[G.controls.get("colorScales","lightBlueRed",G.colorScales,onColorScaleUpdated)](value);//controls getting of options returns the value of that option
 }
 
 
@@ -60,6 +60,7 @@ G.addModule("view",{
 	shaderSources:{
 	},
 	nodeMovement:new THREE.Vector3(),
+	nodeScreenTarget:new THREE.Vector3(),
 	loadShaders:function(){
 		if(this.shaderPromise)return this.shaderPromise;
 		let promises=[];
@@ -83,20 +84,23 @@ G.addModule("view",{
 			return Math.max(10000,maxHeight,maxRadius);
 		};
 		G.resetView=this.resetView;
+		let canvas=d3.select("#canvas").append("canvas").node();
+		let context=canvas.getContext("webgl2");//,{premultipliedAlpha: false});
+		if (!context){alert("This demo requires WebGL2, please use Chrome or Firefox");return;}
 		G.renderer = new THREE.WebGLRenderer( {
-			antialias: false, //canvas: canvas, context: context ,
+			antialias: false, canvas: canvas, context: context ,
 			clearColor: 0xffffff, //??
 			//clearAlpha: 0, 
 			preserveDrawingBuffer: true,
 		} );
-		var canvas=G.renderer.domElement;
-		var context = G.renderer.context;
+		//var canvas=G.renderer.domElement;
+		//var context = G.renderer.context;
 		//G.renderer=new THREE.WebGLRenderer( { antialias: false } );
 		G.renderer.setSize( window.innerWidth, window.innerHeight );
-		G.canvasContainer.appendChild( G.renderer.domElement );
+		//G.canvasContainer.appendChild( G.renderer.domElement );
 		G.canvasElement=G.renderer.domElement;
 		G.gl=G.renderer.getContext();
-		if ( ! G.gl.getExtension( 'OES_texture_float' ) ) {alert( 'Your browser does not support this application:  OES_texture_float is not available' );}
+		//if ( ! G.gl.getExtension( 'OES_texture_float' ) ) {alert( 'Your browser does not support this application:  OES_texture_float is not available' );}
 		this.maxTextureSize=G.gl.getParameter(G.gl.MAX_TEXTURE_SIZE);if(G.DEBUG)console.log("max texture size is "+this.maxTextureSize);
 		let maxVertexTextureImageUnits=G.gl.getParameter(G.gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS);
 		if (maxVertexTextureImageUnits==0){alert("Your browser does not support this application:  vertex texture image units is 0"); return;}else{if(G.DEBUG)console.log("max vertex texture image size is "+maxVertexTextureImageUnits);}
@@ -121,6 +125,9 @@ G.addModule("view",{
 		//debugging
 		this.testBuffer=new Float32Array( 4 );
 		
+		this.sim=new Sim();
+		
+		
 		let objectOrder=Object.keys(this.templates).sort(compareBy((x)=>(this.templates[x].priority?this.templates[x].priority:0),true));
 		for(let name of objectOrder){
 			let obj=this.templates[name];
@@ -131,20 +138,15 @@ G.addModule("view",{
 				obj.object3d.frustumCulled=false;//get rid of annoying disappearing problem -- the camera doesn't know the GPU-based positions!
 				G.scene.add(obj.object3d);
 			}
+			if(obj.simulate){
+				this.sim.addObject(name);//simulation is currently being used
+				
+			}
 		}
-		var composer = new THREE.EffectComposer(G.renderer);G.composer=composer;//, renderTarget
-		var renderPass = new THREE.RenderPass(scene,G.camera);
-		G.renderPass=renderPass;
-		//renderPass.renderToScreen = true;
-		composer.addPass(renderPass);
 		
 		dpr = 1;
 		if (window.devicePixelRatio !== undefined) {dpr = window.devicePixelRatio;}
 		
-		var effectFXAA = new THREE.ShaderPass(THREE.FXAAShader);G.effectFXAA=effectFXAA;
-		effectFXAA.uniforms['resolution'].value.set(1 / (G.canvasContainer.clientWidth * dpr), 1 / (G.canvasContainer.clientHeight * dpr));
-		effectFXAA.renderToScreen = true;
-		composer.addPass(effectFXAA);
 		
 		var stats = new Stats();G.stats=stats;
 		stats.showPanel( 0 );
@@ -175,7 +177,7 @@ G.addModule("view",{
 		//we need to calculate the real movemnet for it
 		
 		canvas.tabIndex=1;//to make it focusable and accept key events
-		let moveLength=10;
+		let moveLength=50;
 		G.controls.addKeyListener(canvas,37,()=>{G.view.nodeMovement.copy(G.cameraControls.leftVector).multiplyScalar(moveLength);},()=>{G.view.nodeMovement.set(0,0,0)});
 		G.controls.addKeyListener(canvas,38,()=>{G.view.nodeMovement.copy(G.cameraControls.forwardVector).multiplyScalar(moveLength);},()=>{G.view.nodeMovement.set(0,0,0)});
 		G.controls.addKeyListener(canvas,39,()=>{G.view.nodeMovement.copy(G.cameraControls.leftVector).multiplyScalar(-moveLength);},()=>{G.view.nodeMovement.set(0,0,0)});
@@ -203,9 +205,9 @@ G.addModule("view",{
 				}
 				
 				//try reusing parts of the old (main) layout if the new graph has no layout and there's a significant overlap (but if the overlap is tiny, don't reuse as it could make the layout look worse)
-				if(!newGraph.vertices.layout){
+				if((!newGraph.vertices.layout)&&(newGraph.datasetID==this.subviews[0].graph.datasetID)){
 					//here if it has a layout it should have been loaded
-					let newLayout=new Array(newGraph.vertices.length);let overlapCount=0;
+					let newLayout=new Array(newGraph.vertices.length);let overlapCount=0;let threshold=1;//newGraph.vertices.length*0.5;
 					let oldLayout=layouts[0],oldIDs=this.subviews[0].graph.vertices.id,oldIDMap=this.subviews[0].graph.vertexMap;
 					for(let i=0;i<newGraph.vertices.length;i++){
 						let id=newGraph.vertices.id[i];
@@ -214,7 +216,7 @@ G.addModule("view",{
 							overlapCount++;
 						}
 					}
-					if(overlapCount>newGraph.vertices.length*0.5){
+					if(overlapCount>=threshold){
 						for(let i=0;i<newGraph.vertices.length;i++){
 							if(newLayout[i])continue;
 							let v=new THREE.Vector3();newLayout[i]=v;
@@ -245,7 +247,7 @@ G.addModule("view",{
 		while(graph.representation)graph=G.getGraph(graph.dataPath+"/metagraphs/"+graph.representation);//only use the real displayed top level graph
 		
 		if(graph.vertices.id.isAbstract){console.log("warning: showing abstract graph");return;}
-		if(graph.dataPath&&graph.vertices.length>0&&(graph.vertices.layout===undefined)){//don't load layout for abstract top level
+		if(graph.dataPath&&graph.vertices.length>0&&(graph.vertices.layout===undefined)&&(!graph.isCustom)){//don't load layout for abstract top level
 			await d3.json("datasets/"+graph.dataPath+"/layout.json.gz").then((layout)=>{
 				if(!Array.isArray(layout)){
 					if(layout==null){}
@@ -326,7 +328,8 @@ G.addModule("view",{
 		G.stats.begin();
 		
 		if(!this.simulationShader){
-			G.composer.render(delta);
+			//G.composer.render(delta);
+			G.renderer.render( G.scene, G.camera );
 			return;
 		}
 		if(!this.model||!this.model.nodes){return;}
@@ -340,7 +343,8 @@ G.addModule("view",{
 		this.refreshStyles();
 		if(this.syncing)this.getPositions();
 		G.cameraControls.update();
-		G.composer.render(delta);//G.renderer.render( G.scene, G.camera );
+		//G.composer.render(delta);
+		G.renderer.render( G.scene, G.camera );
 		G.broadcast("animateFrame",this.graph,delta);
 		G.stats.end();
 	},
@@ -382,6 +386,16 @@ G.addModule("view",{
 				let nodes=model.nodes;let colorValues=nodes.colorValue;
 				let result=nodes.map((node,i,array)=>{
 					return {x:colorValues[i],y:0,z:0,w:0};
+				});
+				return result;
+			}
+		},
+		nodePriorityData:{
+			isArray:true,
+			value:(model)=>{
+				let nodes=model.nodes;let values=nodes.forceEffectiveness;let values2=nodes.forcePriority;
+				let result=nodes.map((node,i,array)=>{
+					return {x:values[i],y:values2[i],z:0,w:0};
 				});
 				return result;
 			}
@@ -457,7 +471,54 @@ G.addModule("view",{
 			value:()=>G.view.nodeMovement,
 			dynamic:true,
 		},
-		
+		nodeScreenTarget:{
+			value:()=>G.view.nodeScreenTarget,
+			dynamic:true,
+		},
+		leftVector:{
+			value:()=>G.cameraControls.leftVector,
+			dynamic:true,
+		},
+		forwardVector:{
+			value:()=>G.cameraControls.forwardVector,
+			dynamic:true,
+		},
+		screenWidth:{
+			value:()=>G.view.canvasWidth,
+			dynamic:true,
+		},
+		screenHeight:{
+			value:()=>G.view.canvasHeight,
+			dynamic:true,
+		},
+		mousePos:{
+			value:()=>G.mousePos,
+			dynamic:true,
+		},
+		mouseShaderPos:{
+			value:()=>G.mouseShaderPos,
+			dynamic:true,
+		},
+		mouseScreenPos:{
+			value:()=>G.mouseScreenPos,
+			dynamic:true,
+		},
+		cameraProjectionMatrix:{
+			value:()=>G.camera.projectionMatrix,
+			dynamic:true,
+		},
+		cameraMatrixWorld:{
+			value:()=>G.camera.matrixWorld,
+			dynamic:true,
+		},
+		cameraMatrixWorldInverse:{
+			value:()=>G.camera.matrixWorldInverse,
+			dynamic:true,
+		},
+		nodeModelViewMatrix:{
+			value:()=>G.view.templates.nodes.object3d.modelViewMatrix,
+			dynamic:true,
+		},
 		edgeList:{
 			isArray:true,
 			value:(model)=>{
@@ -521,8 +582,8 @@ G.addModule("view",{
 		nodeSizeFactor:{value:()=>G.controls.get("nodeSizeFactor"),dynamic:true},
 		linkBrightnessFactor:{value:()=>G.controls.get("linkBrightnessFactor"),dynamic:true},
 		linkDistanceFactor:{value:()=>G.controls.get("linkDistanceFactor"),dynamic:true},
-		linkStrengthFactor:{value:()=>G.controls.get("linkStrengthFactor",3),dynamic:true},
-		clusteringStrengthFactor:{value:()=>G.controls.get("clusteringStrengthFactor",10),dynamic:true},
+		linkStrengthFactor:{value:()=>G.controls.get("linkStrengthFactor",10),dynamic:true},
+		clusteringStrengthFactor:{value:()=>G.controls.get("clusteringStrengthFactor",1),dynamic:true},
 		alignmentStrengthFactor:{value:()=>G.controls.get("alignmentStrengthFactor",1),dynamic:true},
 		angleTargetStrengthFactor:{value:()=>G.controls.get("angleTargetStrengthFactor",1),dynamic:true},
 		camera:{value:()=>G.camera.position,dynamic:true},
@@ -538,7 +599,7 @@ G.addModule("view",{
 		layerHeights:{
 			isArray:true,
 			value:(model)=>{//assuming they are non negative, scale to between -0.5 and 0.5
-				let max=model.heights.max,min=model.heights.min,logLayerHeightRatio=((model.showingInterlayers||(model.layerHeightOption=="linear"))?0:G.controls.get("logLayerHeightRatio")),layerCount=Object.keys(model.heights).length;
+				let max=model.heights.max,min=model.heights.min,layerCount=Object.keys(model.heights).length,logLayerHeightRatio=((model.showingInterlayers||(model.layerHeightOption=="linear")||(layerCount==max+1))?0:G.controls.get("logLayerHeightRatio"));
 				if(getQueryVariable("linearHeight"))logLayerHeightRatio=0;
 				//allow forcing certain heights to be more separate from others? Or even just separate more at one height value (>=)?
 				let separateAtHeight=undefined;
@@ -577,7 +638,10 @@ G.addModule("view",{
 			object3dType:THREE.Points,priority:2,selectionPriority:1,
 			properties:{
 				metanodeID:{//global metanode ID in the list of nodes if applicable; if not, use -1
-					isArray:true,value:(model)=>[].concat.apply([], G.view.subviews.map((subview)=>new Array(subview.nodes.length).fill((subview.globalMetanodeID!==undefined)?subview.globalMetanodeID:-1))),
+					isArray:true,value:(model)=>{
+						let result=[].concat.apply([], G.view.subviews.map((subview)=>new Array(subview.nodes.length).fill((subview.globalMetanodeID!==undefined)?subview.globalMetanodeID:-1)));
+						return result;
+					},
 				},
 				subgraphLevel:{
 					isArray:true,value:(model)=>[].concat.apply([], G.view.subviews.map((subview)=>new Array(subview.nodes.length).fill(subview.subgraphLevel))),
@@ -621,8 +685,12 @@ G.addModule("view",{
 						let nodes=model.nodes,heights=nodes.height,metanodeIDs=nodes.metanodeID;
 						nodes.forEach((node,i,array)=>{
 							let value=heights[i];
-							if(value===undefined){let metanodeID=metanodeIDs[i];value=heights[metanodeID];}
-							if(value===undefined){value=0;}//undefined height is not allowed in the global view 
+							if(value===undefined){
+								let metanodeID=metanodeIDs[i];value=heights[metanodeID];
+							}
+							if(value===undefined){
+								value=0;
+							}//undefined height is not allowed in the global view 
 							heights[i]=value;//if a metagraph has heights and a second-level metagraph does not, the inherited height will not propagate to the subgraph of a second level metanode if property updates are not immediately replacing. so we have to use an array
 						});
 						return heights;
@@ -698,7 +766,7 @@ G.addModule("view",{
 			},
 			
 			uniforms:{//shared ones are automatically added
-				texture:   { type: "t", value: ()=>G.view.textures[G.view["node texture"]] },
+				t:   { type: "t", value: ()=>G.view.textures[G.view["node texture"]] },
 				pointSize: { type: "f", value: function(){return (250/Math.log2(16+this.simulationTextureSize)) }},
 				layerColorRatio:{ type: "f", value: function(){return G.nodeLayerColorRatio },dynamic:true},
 			},
@@ -774,8 +842,9 @@ G.addModule("view",{
 			value:(model)=>{
 				let colorList=[],colorValues=[];let scale=colorScale;//G.colorScale
 				let graph=G.view.graph;
-				if(graph.colorScaleName){scale=G.colorScales[G.view.graph.colorScaleName];}
+				
 				if(graph.heightProperty=="wave"||graph.heightProperty=="originalWaveLevel"||graph.embeddedWaveMap||graph.embeddedLevelMap){scale=G.colorScales.lightBlueRed;}
+				if(graph.colorScaleName){scale=G.colorScales[G.view.graph.colorScaleName];}
 				if(graph.colorScale){
 					let [begin,end]=graph.colorScale.split(":");
 					G.colorScales.dynamic=d3.scaleSequential(d3.interpolateHslLong(begin,end)),
@@ -1091,7 +1160,10 @@ G.addModule("view",{
 						let path;
 						if(newGraph.subgraphPrefix){
 							path=newGraph.subgraphPrefix+"/"+vs.id[vID];
-							queue.push(G.getGraph(path));
+							let subgraph=G.getGraph(path);
+							subgraph.currentParent=newGraph.dataPath;
+							subgraph.currentMetanodeID=vID;
+							queue.push(subgraph);
 						}
 						else console.warn("no subgraph prefix");
 					}
@@ -1109,15 +1181,15 @@ G.addModule("view",{
 			graphMap[g.dataPath]=graphID;
 			graphList.push(g);
 			let metanodeID=null,globalMetanodeID=null,subgraphLevel=0;
-			if(g.parent&&(g!=graph)){//don't reference the parent of the current top graph
-				let parentViewID=graphMap[g.currentMetagraph||g.parent];//graphMap[g.parent];
+			if(g.currentParent&&(g!=graph)){//don't reference the parent of the current top graph
+				let parentViewID=graphMap[g.currentParent];//graphMap[g.parent];
 				let parentView=subviews[parentViewID];
-				metanodeID=g.metanodeID;globalMetanodeID=metanodeID+offsets[parentViewID].nodes;//offset.nodes;
+				metanodeID=g.currentMetanodeID;globalMetanodeID=metanodeID+offsets[parentViewID].nodes;//offset.nodes;
 				subview.globalMetanodeID=globalMetanodeID;subview.metanodeID=metanodeID;
 				subgraphLevel=parentView.subgraphLevel+1;
 			}
 			subview.subgraphLevel=subgraphLevel;
-			for (let name in subview.properties){if(subview[name])addHiddenProperty(subview[name],"offset",offset[name]);}//offset is the offset before this subview is added
+			for (let name in subview){if(subview[name] instanceof DataObject&&name in offset)addHiddenProperty(subview[name],"offset",offset[name]);}//offset is the offset before this subview is added
 		}
 		if(graph.embeddedWaveMap||graph.embeddedLevelMap)model.layerHeightOption="linear";
 		return {subviews:subviews,model:model,offsets:offsets,graphList:graphList,graphMap:graphMap};
@@ -1223,8 +1295,9 @@ G.addModule("view",{
 		ortho.top=window.innerHeight/-2;
 		ortho.bottom=window.innerWidth/2;
 		ortho.updateProjectionMatrix();
-		G.effectFXAA.uniforms['resolution'].value.set(1 / (G.canvasContainer.clientWidth * dpr), 1 / (G.canvasContainer.clientHeight * dpr));
-		G.composer.setSize(G.canvasContainer.clientWidth * dpr, G.canvasContainer.clientHeight * dpr);
+		//G.effectFXAA.uniforms['resolution'].value.set(1 / (G.canvasContainer.clientWidth * dpr), 1 / (G.canvasContainer.clientHeight * dpr));
+		//G.composer.setSize(G.canvasContainer.clientWidth * dpr, G.canvasContainer.clientHeight * dpr);
+		G.renderer.setSize(G.canvasContainer.clientWidth, G.canvasContainer.clientHeight);// * dpr
 	},
 	getNodePos:function(nodeID){
 		//if((typeof node)!="object")node=G.graph.vArray[node];if(!node)return;
@@ -1304,7 +1377,6 @@ G.addModule("view",{
 		let selected={},pos=new THREE.Vector3();
 		let layout=this.getVerticesPos();if(!layout)return;//top level graph only?
 		for(let i=0;i<this.graph.vertices.length;i++){
-			let v=this.graph.nodes[i];
 			pos.copy(layout[i]);
 			let screenPos = pos.applyMatrix4(G.view.templates.nodes.object3d.matrixWorld).project(G.camera);
 			if(((screenPos.x-region.left)*(screenPos.x-region.right)<0)&&((screenPos.y-region.top)*(screenPos.y-region.bottom)<0)){
@@ -1326,7 +1398,7 @@ G.addModule("view",{
 				pos.x=buffer[i4];pos.y=buffer[i4+1];pos.z=buffer[i4+2];
 				let screenPos = pos.applyMatrix4(G.view.templates.nodes.object3d.matrixWorld).project(G.camera);
 				if(((screenPos.x-region.left)*(screenPos.x-region.right)<0)&&((screenPos.y-region.top)*(screenPos.y-region.bottom)<0)){
-					selected[i]=true;
+					selected[record.originalObjectID]=true;
 				}
 			}
 			
@@ -1362,6 +1434,7 @@ G.addModule("view",{
 				if(attr.isAttribute===false)return;;
 				let dimensions=attr.dimensions?attr.dimensions:1;
 				let propertyData=model[name][attrName];
+				
 				let bufferAttr=geometry.attributes[attrName];
 				let oldLength=(bufferAttr?(bufferAttr.array.length):null),newLength=length*dimensions*ppo;
 				if(oldLength!==newLength){
@@ -1375,6 +1448,9 @@ G.addModule("view",{
 				let buffer=bufferAttr.array;
 				if(attr.needsUpdate||updateAll){
 					var warned=false;
+					if(attrName=="color"){
+						console.log("attr from color for "+name);
+					}
 					propertyData.forEach((d,i,array)=>{
 						let offset=i*dimensions*ppo;
 						let value=attr.attrValue?attr.attrValue:d;//different from the property value, the attrValue function may return values per point.
@@ -1505,7 +1581,14 @@ G.addModule("view",{
 		G.cameraControls.target.y=0;
 		G.cameraControls.target.z=0;
 	},
-	
+	focusViewAtHeight:function(h){
+		let realHeight=this.sharedUniforms.layerHeights.dataCache[h];
+		let oldHeight=G.cameraControls.target.z;
+		for(let name in G.cameras){
+			G.cameras[name].position.z+=(realHeight-oldHeight);
+		}
+		G.cameraControls.target.z=realHeight;
+	},
 	sideView:function(){
 		G.cameraControls.reset();//necessary here
 		

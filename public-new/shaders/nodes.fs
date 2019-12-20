@@ -1,4 +1,4 @@
-uniform sampler2D texture;
+uniform sampler2D t;
 uniform float timer;
 
 varying vec2 vUv;
@@ -10,8 +10,8 @@ varying float vIsSelected;
 
 
 void main() {
-	float b=texture2D( texture, gl_PointCoord ).r;
-	//gl_FragColor = vec4( vColor, texture2D( texture, gl_PointCoord ).r);//sin(id+timer/10000.0)*0.5+0.5 );
+	float b=texture2D( t, gl_PointCoord ).r;
+	//gl_FragColor = vec4( vColor, texture2D( t, gl_PointCoord ).r);//sin(id+timer/10000.0)*0.5+0.5 );
 	vec2 pixelCoord=(gl_PointCoord-0.5)*2.;
 	float d2=1.-pixelCoord.y*pixelCoord.y-pixelCoord.x*pixelCoord.x;
 	//float circle=clamp(1.-d2*d2*900.,0.,1.)*0.25;//show rim;

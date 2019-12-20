@@ -33,6 +33,17 @@ varying vec3 vColor;
 varying float vIsExpanded;
 varying float vIsSelected;
 
+uniform vec2 mousePos;
+uniform vec2 mouseScreenPos;
+uniform vec2 mouseShaderPos;
+uniform mat4 cameraProjectionMatrix;
+uniform mat4 cameraMatrixWorld;
+uniform mat4 cameraMatrixWorldInverse;
+uniform mat4 nodeModelViewMatrix;
+
+uniform float screenWidth;
+uniform float screenHeight;
+
 
 void main() {
 	vec4 vertexPos=getArrayValue( layoutData, layoutDataSize, position.x);
@@ -65,7 +76,19 @@ void main() {
 	//gl_PointSize = pointSize;
 	//gl_Position =vec4(position,1.0);
 	
+	//gl_Position=cameraProjectionMatrix*cameraMatrixWorldInverse* vec4( pos, 1.0 );
 	gl_Position = projectionMatrix * mvPosition;
+	
+	vec2 spos=gl_Position.xy/gl_Position.w;
+	spos.x*=screenWidth;
+	spos.y*=screenHeight;
+	spos/=2.;
+	
+	if(length(mouseShaderPos-spos)<20.)gl_PointSize*=2.;
+	//if(dot(mousePos,gl_Position.xy*gl_Position.w)>0.)gl_PointSize*=2.;
+	//if(((gl_Position.x+gl_Position.y)>0.))gl_PointSize*=2.;
+	
+	//gl_Position = projectionMatrix * mvPosition;
 	
 	//gl_Position = projectionMatrix * modelViewMatrix * vec4( color, 1.0 );
 	//gl_Position = projectionMatrix * modelViewMatrix * vec4( position * 20.0, 1.0 );

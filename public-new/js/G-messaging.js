@@ -35,11 +35,13 @@ G.addModule("messaging",{
 		this.socket.emit(type,data);
 	},
 	customRequestHandlers:{},
-	requestCustomData:function(type,data,options,cb){
+	requestCustomData:function(type,obj,cb){
 		if((!cb)&&(typeof options=="function")){cb=options;options=null;}
 		if(!this.customRequestHandlers[type]){this.customRequestHandlers[type]=[];}
 		this.customRequestHandlers[type].push(cb);
-		this.socket.emit("compute",{type:type,data:data,options:options});
+		obj.type=type;//may send both or either of dataPath and data
+		this.socket.emit("compute",obj);
+		
 	},
 	//custom requests should come with a handler, instead of putting the handler here. and when the response comes, we assign it to the first appropriate handler(by type and graph id etc). Should handlers with a graph id different from the current one be removed?
 	

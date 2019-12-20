@@ -19,10 +19,12 @@ G.addModule("analytics",{
 		//now this only calculates graph-level analytics, not view-level stuff like clones
 		this.applyTemplates(graph);
 		//partitions and clones from vertex properties and edge properties 
+		/*
 		for(let name in this.templates.vertices.properties){
 			let templateObj=this.templates.vertices.properties[name];
 			if((!templateObj.isPartition))continue;
 			let array=graph.vertices[name];
+			if(!array)continue;
 			let result=this.getVertexPartition(graph,array);//{partitions:{1:{v:..,e:...}...},min:..,max:..,average:...,numValues:...}
 			assignHiddenProperties(array,result);
 		}
@@ -35,7 +37,7 @@ G.addModule("analytics",{
 			//{partitions:{1:{v:..,e:...}...},clones:[...],min:..,max:..,average:...,numValues:...}
 			assignHiddenProperties(array,result);
 		}
-		
+		*/
 		let endTime=new Date().getTime();
 		console.log("finished update in "+(endTime-startTime)+"ms");
 	},
@@ -48,12 +50,33 @@ G.addModule("analytics",{
 					value:(v,i,array)=>Math.max((array.V?(Math.log(array.V[i]+1)+0.3):1),(array.E?(Math.log(array.E[i]+1)+0.3):1)),
 				},
 				degree:{
-					type:"integer",value:(v,i,array)=>Object.keys(array.edges[i]).length,
+					type:"int",value:(v,i,array)=>Object.keys(array.edges[i]).length,
+				},
+				wave:{
+					type:"int",lazy:true,isPartition:true,isArray:true,
+					value:(g)=>Algs.getVertexWavesAndLevels(g).vertexWaves,
 				},
 				waveLevel:{
-					type:"integer",lazy:true, //properties should auto create partition analytics like max, min, |V| and |E| inside each partition and between partitions
+					type:"int",lazy:true, //properties should auto create partition analytics like max, min, |V| and |E| inside each partition and between partitions
 					isPartition:true,isArray:true,
 					value:(g)=>Algs.getVertexWavesAndLevels(g).vertexLayers,
+				},
+				/*originalWaveLevel:{//todo:this is incorrect in some cases
+					type:"int",lazy:true,isPartition:true,isArray:true,
+					value:(g)=>{
+						if(!g.edges.originalWaveLevel)return null;
+						let levelIDs=g.edges.originalWaveLevel;
+						let vertexLevelIDs=g.vertexPropertyFromEdgeProperty("originalWaveLevel");
+						return vertexLevelIDs;
+					},
+				},*/
+				fragment:{
+					type:"int",lazy:true,isPartition:true,isArray:true,
+				},
+				cc:{
+					type:"int",lazy:true, //properties should auto create partition analytics like max, min, |V| and |E| inside each partition and between partitions
+					isPartition:true,isArray:true,
+					value:(g)=>Algs.getCCIDs(g),
 				},
 				randomNumbers:{
 					isArray:true,
@@ -84,15 +107,15 @@ G.addModule("analytics",{
 		edges:{
 			properties:{
 				fixedPointLayer:{
-					type:"integer",lazy:true,isPartition:true,partitionDefaultValue:0,isArray:true,
+					type:"int",lazy:true,isPartition:true,partitionDefaultValue:0,isArray:true,
 					value:(g)=>{
 						//skip for single layer graphs
 						if(g.partitionInfo&&g.partitionInfo[g.partitionInfo.length-1].type=="layer")return null;
-						return G.analytics.getFixedPointLayers(g);
+						return Algs.getFixedPointLayers(g);
 					},//return an array that maps edges to layers. edge partitions should automatically create clones?
 				},
 				wave:{
-					type:"integer",lazy:true,isPartition:true,partitionDefaultValue:0,isArray:true,
+					type:"int",lazy:true,isPartition:true,partitionDefaultValue:0,isArray:true,
 					value:(g)=>{
 						if(!g.vertices.wave)return null;
 						let waveIDs=g.vertices.wave;
@@ -101,7 +124,7 @@ G.addModule("analytics",{
 					},//return an array that maps edges to waves
 				},
 				waveLevel:{
-					type:"integer",lazy:true,isPartition:true,partitionDefaultValue:0,isArray:true,
+					type:"int",lazy:true,isPartition:true,partitionDefaultValue:0,isArray:true,
 					value:(g)=>{
 						if(!g.vertices.waveLevel)return null;
 						let levelIDs=g.vertices.waveLevel;
@@ -110,13 +133,23 @@ G.addModule("analytics",{
 					},//return an array that maps edges to waves
 				},
 				originalWaveLevel:{
-					type:"integer",lazy:true,isPartition:true,partitionDefaultValue:0,isArray:true,
+					type:"int",lazy:true,isPartition:true,partitionDefaultValue:0,isArray:true,
 					value:(g)=>{
 						if(!g.vertices.originalWaveLevel)return null;
 						let levelIDs=g.vertices.originalWaveLevel;
 						let edgeLevelIDs=g.edgePropertyFromVertexProperty("originalWaveLevel");
 						return edgeLevelIDs;
 					},//return an array that maps edges to waves
+				},
+				fragment:{
+					type:"int",lazy:true,isPartition:true,partitionDefaultValue:0,isArray:true,
+					/*value:(g)=>{
+						if(!g.vertices.originalWaveLevel)return null;
+						let levelIDs=g.vertices.originalWaveLevel;
+						let edgeLevelIDs=g.edgePropertyFromVertexProperty("originalWaveLevel");
+						return edgeLevelIDs;
+					},//return an array that maps edges to waves
+					*/
 				},
 			},
 			getDescription:(e,eID,edges)=>{
@@ -302,11 +335,12 @@ G.addModule("analytics",{
 			edgeTargets[eID]=tCloneID;
 			partitions[layer].e++;
 		}
-		
+		let verticesWithClones=0;
 		//if valueForIsolatedVertices is given, create clones for them too
 		if(valueForIsolatedVertices!==undefined){
 			for(let vID=0;vID<g.vertices.length;vID++){
-				if(Object.keys(cloneMaps[vID]).length==0){
+				let count=Object.keys(cloneMaps[vID]).length;
+				if(count==0){
 					if((valueForIsolatedVertices in partitions)==false){
 						partitionCount++;
 						partitions[valueForIsolatedVertices]={v:0,e:0};
@@ -317,12 +351,39 @@ G.addModule("analytics",{
 					clones.push({original:vID,edges:{},value:valueForIsolatedVertices});
 					partitions[valueForIsolatedVertices].v++;
 				}
+				if(count>1){verticesWithClones++;}
 			}
 		}
-		return {cloneCount:cloneCount,cloneMaps:cloneMaps,clones:clones,edgeSources:edgeSources,edgeTargets:edgeTargets,partitions:partitions,partitionCount:partitionCount,max:max,min:min};
+		return {cloneCount:cloneCount,cloneMaps:cloneMaps,clones:clones,verticesWithClones:verticesWithClones,edgeSources:edgeSources,edgeTargets:edgeTargets,partitions:partitions,partitionCount:partitionCount,max:max,min:min};
 	},
 	
-	
+	getVertexCCMetagraph(g,propertyName){
+		if(!g)g=G.graph;
+		let results=Algs.getVertexCCPartition(g,g.vertices[propertyName]);
+		//metagraph,subgraphCCSummary,subgraphCCids,subgraphCCs,subgraphCCMetagraphs
+		let metagraph=results.metagraph;
+		if(g.colorScaleName){metagraph.colorScaleName=g.colorScaleName;}
+		if(g.dataPath){
+			metagraph.subgraphPrefix=g.dataPath+"/"+propertyName;
+			metagraph.dataPath=g.dataPath+"/metagraphs/"+propertyName+"CC";
+			metagraph.originalGraph=g.dataPath;
+			metagraph.isMetagraph=true;
+			metagraph.heightProperty="originalValue";
+			G.saveGraph(metagraph);
+			for(let subgraphID in results.subgraphCCs){
+				let ccs=results.subgraphCCs[subgraphID];
+				for(let ccID in ccs){
+					let cc=ccs[ccID];
+					if(cc.vertices.length==1)continue;//should skip these 1-vertex ccs because they are not expandable in the metagraph
+					cc.dataPath=g.dataPath+"/"+propertyName+"/"+subgraphID+"/CC/"+ccID;
+					G.saveGraph(cc);
+				}
+			}
+		}
+		Algs.getMetaedgeWeights(metagraph);
+		return metagraph;
+		
+	},
 	
 
 	
@@ -391,13 +452,12 @@ G.addModule("analytics",{
 		g2.dataPath=graph.dataPath+"/metagraphs/regionGraph";
 		g2.originalGraph=graph.dataPath;
 		g2.datasetID=graph.datasetID;
-		if(!G.loading.graphsCache[graph.dataPath])G.loading.saveGraph(graph.dataPath,graph);
-		G.loading.saveGraph(g2.dataPath,g2);
+		if(!G.loading.graphsCache[graph.dataPath])G.loading.saveGraph(graph);
+		G.loading.saveGraph(g2);
 		if(!graph.metagraphs){graph.metagraphs={};}
 		graph.metagraphs.regionGraph={V:g2.vertices.length,E:g2.edges.length};
 		return g2;
 	},
-
 
 	
 	computeXRay:function (g){
@@ -1556,7 +1616,12 @@ G.addModule("analytics",{
 	showSparseNet:function(graph){
 		if(!graph)graph=G.graph;
 		let vc=graph.vertices.length;let options=null;if(vc>G.controls.get("approximateSNThreshold",1)){options={variant:"approximate"};G.addLog("using approximate sparse net");}//todo: the exact SN code has a problem
-		if(!graph.snPaths){G.messaging.requestCustomData("sparsenet",this.getGraphVerticesAndEdges(graph),options,(result)=>{if(result&&result.length>0){graph.snPaths=result;G.enableModifier("sparsenet",graph);}else{G.addLog("invalid sparsenet result");}});}
+		let data={};
+		if((!graph.dataPath)||graph.isCustom){data.data=this.getGraphVerticesAndEdges(graph);}
+		if(graph.dataPath&&(graph.dataPath.indexOf("custom")==-1)){data.dataPath=graph.dataPath;}
+		
+		if(options)data.options=options;
+		if(!graph.snPaths){G.messaging.requestCustomData("sparsenet",data,(result)=>{if(result&&result.length>0){graph.snPaths=result;G.enableModifier("sparsenet",graph);}else{G.addLog("invalid sparsenet result");}});}
 		else{G.enableModifier("sparsenet",graph);}//this only sets snPaths, and other intermediate data are managed by the subview.
 	},
 	hideSparseNet:function(graph){
@@ -1820,7 +1885,12 @@ G.addModule("analytics",{
 		
 	},
 	
-	
+	getInducedSubgraph:function(){
+		
+	},
+	getSubgraphAtHeight:function(){
+		
+	},
 	
 	getGraph:function(saveWholeGraph=false,keepLayers=true){
 		let graph=G.graph;

@@ -1,9 +1,191 @@
-let graphInfoElement;
+//let graphInfoElement;
+class Markers{
+	constructor(){
+		this.containerSelection=d3.select(document.body).append("div").attr("class","canvas-marker-container simple fixed").style("visibility","hidden");
+		this.visible=false;
+		this.markerClass="graph-label";
+		this.viewportOnly=true;
+	}
+
+	show(input){
+		if(!G.graph)
+		{
+			//if(G.ui.needsResume){G.simulationRunning=true;G.ui.needsResume=false;}
+			this.visible=false;
+			this.containerSelection.style("visibility","hidden")
+			//this.containerSelection.selectAll("div").remove();
+		}
+		else{
+			this.visible=!this.visible;
+			if(typeof input!="undefined")this.visible=input;
+			if(this.visible){
+				if(G.simulationRunning){G.simulationRunning=false;G.ui.needsResume=true;}
+				this.visible=true;
+				this.containerSelection.style("visibility","");
+				this.containerSelection.selectAll("div").remove();
+				
+				
+			}
+			else{
+				if(G.ui.needsResume){G.simulationRunning=true;G.ui.needsResume=false;}
+				this.visible=false;
+				this.containerSelection.style("visibility","hidden")
+				this.containerSelection.selectAll("div").remove();
+			}
+			return this.visible;
+		}
+	}
+	hide(){
+		if(G.ui.needsResume){G.simulationRunning=true;G.ui.needsResume=false;}
+		this.visible=false;
+		this.containerSelection.selectAll("div").remove();
+	}
+}
+
+class VertexMarkers extends Markers{
+	constructor(){
+		super();
+	}
+	updatePosition(positions){
+		
+		//let chosenOnes=this.cachedLabeledVertices;//let texts=this.cachedLabelTexts;
+		let selection=this.selection;
+		if(this.from=="left"){selection.style("right",(i)=>(1-positions[i].x)*100/2+"%");}
+		else{selection.style("left",(i)=>(positions[i].x+1)*100/2+"%");}
+		selection.style("top",(i)=>(1-positions[i].y)*100/2+"%");
+	}
+	
+	updateSelection(){
+		//updates the selection, ensuring that no matter how many objects are chosen, the markers don't gte too dense. randomly choosing markers within the viewport that are spaced apart with existing markers, and keep existing markers in the selection as long as they are not too dense or outside of the viewport.
+		//for now, get one vertex in each of many rectangles on the screen?
+		let positions=G.view.getVerticesScreenPos();
+		let chosenOnes=[];let xGap=0.3,yGap=0.2;let maxItems=20;
+		if(G.ui.minimalUI){xGap=0.4;yGap=0.4;maxItems=10;}
+		let tryAdding=(i)=>{
+			let pos=positions[i];
+			if(this.viewportOnly&&(pos.y<-1||pos.x<-1||pos.x>1||pos.y>1)){return;}
+			let OK=true;
+			for(let otherID of chosenOnes){
+				let otherPos=positions[otherID];
+				if(Math.abs(otherPos.x-pos.x)<xGap&&Math.abs(otherPos.y-pos.y)<yGap){OK=false;break;}
+			}
+			if(OK){chosenOnes.push(i);}
+		}
+		if(this.cachedMarkedVertices){
+			for(let i of this.cachedMarkedVertices){
+				if(chosenOnes.length>=maxItems){break;}
+				if((typeof this.chosenVertices=="object")&&((i in this.chosenVertices)==false))continue;
+				tryAdding(i);
+			}
+		}
+		this.cachedMarkedVertices=chosenOnes;
+		if(typeof this.chosenVertices=="object"){
+			for(let i in this.chosenVertices){
+				if(chosenOnes.length>=maxItems){break;}
+				tryAdding(i);
+			}
+		}
+		else {//if (this.chosenVertices=="*")
+			for(let i=0;i<positions.length;i++){
+				if(chosenOnes.length>=maxItems){break;}
+				tryAdding(i);
+			}
+		}
+		
+	}
+	show(bool){
+		let result=super.show(bool);
+		if(result){
+			
+			let positions=G.view.getVerticesScreenPos();
+			this.updateSelection();
+			this.containerSelection.selectAll("div").remove();
+			let chosenOnes=this.cachedMarkedVertices;
+			
+			Promise.resolve(this.getLabels(chosenOnes)).then((texts)=>{
+				let validOnes=[],validTexts=[];
+				for(let i=0;i<chosenOnes.length;i++){if(texts[i]){validOnes.push(chosenOnes[i]);validTexts.push(texts[i]);}}
+				if(validOnes.length!=chosenOnes.length)console.log("chosen "+chosenOnes.length+", retrieved "+validOnes.length+" labels");
+				this.selection=this.containerSelection.selectAll("div").data(validOnes).enter().append("div");
+				this.selection.attr("class",this.markerClass);
+				this.updatePosition(positions);
+			});
+			//getLabels can return a promise or not
+		}
+	}
+}
+
+class RegionMarkers extends Markers{
+	constructor(){
+		super();
+		this.markerClass="region-marker";
+	}
+	updatePosition(positions){
+		//region markers are associated with array or map data, and the region should include each vertex in the array or map.
+		let selection=this.selection;
+		//default regions are rectangles
+
+		selection.style("top",(data)=>arrayMin(data.map((i)=>(1-positions[i].y)*100/2))-(500/G.view.canvasHeight)+"%")
+			.style("bottom",(data)=>arrayMin(data.map((i)=>(positions[i].y+1)*100/2))-(500/G.view.canvasHeight)+"%")
+			.style("left",(data)=>arrayMin(data.map((i)=>(positions[i].x+1)*100/2))-(500/G.view.canvasWidth)+"%")
+			.style("right",(data)=>arrayMin(data.map((i)=>(1-positions[i].x)*100/2))-(500/G.view.canvasWidth)+"%");
+	}
+	
+	updateSelection(){
+		//updates the selection, ensuring that no matter how many objects are chosen, the markers don't get too dense. randomly choosing markers within the viewport that are spaced apart with existing markers, and keep existing markers in the selection as long as they are not too dense or outside of the viewport.
+		//if there's only one region to show, it doesn't matter. If there are many, maybe avoid showing too many of them?
+		
+		//for now, show all regions?
+		//todo: arrows
+		let positions=G.view.getVerticesScreenPos();
+		let chosenOnes=[];let xGap=0.3,yGap=0.2;let maxItems=20;
+		if(G.ui.minimalUI){xGap=0.4;yGap=0.4;maxItems=10;}
+
+
+		this.cachedMarkedVertexSets=chosenOnes;
+		if(typeof this.chosenVertices=="object"){
+			if(Array.isArray(this.chosenVertices)){
+				//just one set
+				chosenOnes.push(this.chosenVertices);
+			}
+			else{
+				let setMap={};
+				for(let i in this.chosenVertices){
+					let setID=this.chosenVertices[i];
+					if(!setMap[setID]){setMap[setID]=[];setMap[setID].id=setID;}
+					setMap[setID].push(i);
+				}
+				for(let key in setMap){
+					chosenOnes.push(setMap[key]);
+				}
+			}
+			
+		}
+		else {throw Error("regions need sets of vertices");
+		}
+		
+	}
+	show(bool){
+		let result=super.show(bool);
+		if(result){
+			let positions=G.view.getVerticesScreenPos();
+			this.updateSelection();
+			this.containerSelection.selectAll("div").remove();
+			let chosenOnes=this.cachedMarkedVertexSets;
+			
+			//for regions there's no promise of metadata to wait on
+			this.selection=this.containerSelection.selectAll("div").data(chosenOnes).enter().append("div");
+			this.selection.attr("class",this.markerClass);
+			this.updatePosition(positions);
+			
+		}
+	}
+}
 
 G.addModule("ui",{
 	
 	init:function(){
-		graphInfoElement=document.getElementById("graph-info");
+		let graphInfoElement=document.getElementById("graph-info");
 		this.CCTooltipElement=this.makeTooltip("top-level-CC-tooltip");
 		let minimalUI=G.getQueryVariable("minimalUI");
 		if(minimalUI){
@@ -72,7 +254,7 @@ G.addModule("ui",{
 			
 			//let parent=graph.metagraph||graph.originalGraph||graph.wholeGraph;//either the metagraph it's expanded from, or the riginal graph hose metagraph it is, or the containing graph of the subgraph in cases where there is no metagraph (like user-selection subgraphs)
 			
-			if(parentPath){
+			if(parentPath&&G.hasGraph(parentPath)){
 				//if(G.loading.hasGraph(graph.datasetID))
 				let parent=G.getGraph(parentPath);
 				if(!parent.hierarchyPathContent)this.initHierarchyPathElems(parent);
@@ -96,7 +278,7 @@ G.addModule("ui",{
 			while(graph.hierarchyPathContent.childElementCount>0){
 				graph.hierarchyPathContent.removeChild(graph.hierarchyPathContent.firstElementChild);
 			}
-			if(parentPath){
+			if(parentPath&&G.hasGraph(parentPath)){
 				let parent=G.getGraph(parentPath);
 				parent.hierarchyPathContent.appendChild(graph.hierarchyPathElem);
 			}
@@ -114,14 +296,16 @@ G.addModule("ui",{
 			if(realName==
 		}*/
 		str=str.replaceAll("/"," ");
-		str=str.replaceAll("wave2","wave");
-		str=str.replace(/layer ([0-9]+) (CC|cc) ([0-9]+)/g,"connected fixed point $1");
+		str=str.replaceAll("wave2","wave");	
+		str=str.replace(/DAGCover ([0-9]+) metagraphs \w+(CC|cc)/g,"DAGCover metagraph");
+		str=str.replace(/layer ([0-9]+) (CC|cc) ([0-9]+)/g,"conn. FP $1");
 		str=str.replace(/layer ([0-9]+)/g,"fixed point $1");
 		str=str.replace(/wave ([0-9]+) (CC|cc) ([0-9]+)/g,"wave $1 subwave $3");
 		str=str.replace(/waveLevel/g,"fragment");
 		str=str.replace(/level/g,"fragment");
 		str=str.replace(/metagraphs/g,"metagraph of");
-		str=str.replace("wave","\nwave");//just one instance
+		//str=str.replace("wave","\nwave");//just one instance
+		str=str.replace("subwave","\nsubwave");//just one instance; line break before subwave to align with the trapezoids
 		//str=str.replaceAll("layer","fixed point");
 		str= str.replace(/(?<=[a-z])([A-Z/]+)/g, ' $1').replace("_"," ").replace(/^./, function(str){ return str.toUpperCase(); });
 		
@@ -133,15 +317,13 @@ G.addModule("ui",{
 		str=str.replaceAll("waveLevel","fragment");
 		return toNormalText(str);
 	},
-	displayGraph:async function(graph){
-		//hide existing labels
-		if(G.showingLabels){
-			this.showLabels(false);
-		}
+	modifierUpdated:function(obj){//update title texts
+		//if(obj.target==this.graph){
+			this.displayTitleText(this.graph);
+		//}
 		
-		let realGraph=graph;
-		while(graph.representation)graph=G.getGraph(graph.dataPath+"/metagraphs/"+graph.representation);//only use the real displayed top level graph
-		this.initHierarchyPathElems(graph);
+	},
+	displayTitleText:function(graph){
 		getE("graph-desc").innerText=G.analytics.getGraphSummary();
 		
 		let summaryText="";
@@ -159,18 +341,51 @@ G.addModule("ui",{
 				}
 			}
 		}
-		let title=this.graphPathToText(graph.dataPath);
+		else{
+			if(graph.edges.originalWaveLevel){summaryText=graph.edges.originalWaveLevel.partitionCount+" fragments";}
+			if(graph.edges.fragment){summaryText=graph.edges.fragment.partitionCount+" fragments";}
+		}
+		let title=graph.dataPath?this.graphPathToText(graph.dataPath):"Custom graph";
 		if(summaryText)title=title+" ("+summaryText+")";
 		getE("minimal-graph-title").innerText=title;
 		let V=graph.vertices.length,E=graph.edges.length;
 		let p=(E/(V*(V-1)/2)),k=Math.log(E/V)/Math.log(Math.log(V));
 		let VEText="|V|: "+V+", |E|: "+E;//+", avg. degree: "+shortStr(2*E/V)+", density: "+shortStr(p)+", sparsity:"+shortStr(k);
 		if(p==1){VEText+=" (complete)";}
-		if(graph.heightProperty&&(graph.nodes.length!=V)){VEText+=", clones: "+graph.nodes.length;}
-		
+		if(graph.heightPropertyType=="edges"&&(graph.nodes.length!=V)){VEText+=", clones: "+graph.edges[graph.heightPropertyName].verticesWithClones+ ", total clone multiplicity: "+graph.nodes.length;}
+		if(G.view.model){
+			let visibleNodes=0,size=G.view.model.nodes.size;
+			let visibleEdges=0,brightness=G.view.model.links.brightness,thickness=G.view.model.links.thickness;
+			for(let i=0;i<G.view.model.nodes.length;i++){
+				if(size[i]){visibleNodes++;}
+			}
+			for(let i=0;i<G.view.model.links.length;i++){
+				if(brightness[i]&&thickness[i]){visibleEdges++;}
+			}
+			
+			if(visibleNodes!=G.view.model.nodes.length){VEText+=", visible nodes: "+visibleNodes;}
+			if(visibleEdges!=E){VEText+=", visible edges: "+visibleEdges;}
+		}
+		for(let modifierName in graph.modifiers){
+			if(graph.modifiers[modifierName].description){
+				VEText+=", "+graph.modifiers[modifierName].description;
+			}
+		}
 		getE("minimal-graph-desc").innerText=VEText;
+	},
+	displayGraph:async function(graph){
+		//hide existing labels
+		if(G.showingLabels){
+			this.showLabels(false);
+		}
+		
+		let realGraph=graph;
+		while(graph.representation)graph=G.getGraph(graph.dataPath+"/metagraphs/"+graph.representation);//only use the real displayed top level graph
+		this.initHierarchyPathElems(graph);
+		this.graph=graph;
+		this.displayTitleText(graph);
 		//update text descriptions and ribbon
-		if(graph.datasetID!=this.topLevelGraphPath){
+		if(graph.datasetID&&G.hasGraph(graph.datasetID)&&(graph.datasetID!=this.topLevelGraphPath)){
 			this.showTopLevelGraphStats(G.getGraph(graph.datasetID));
 			this.topLevelGraphPath=graph.datasetID;
 		}
@@ -193,7 +408,7 @@ G.addModule("ui",{
 			this.ccRects.filter((data)=>data.key==str).select(".selector-bottom").style("visibility","visible");
 			this.ccRects.filter((data)=>data.key!=str).select(".selector-bottom").style("visibility","hidden");
 		}
-		else{this.ccRects.select(".selector-bottom").style("visibility","hidden");}
+		else{if(this.ccRects)this.ccRects.select(".selector-bottom").style("visibility","hidden");}
 
 		
 		//list the available metagraphs
@@ -264,76 +479,79 @@ G.addModule("ui",{
 		});
 		
 		
+		
 		let container=d3.select("#top-level-summary-area");
 		let ccSvg=d3.select("#top-level-cc-plot");
 		let ccSvg2=d3.select("#top-level-cc-plot2");
 		let ccRibbon=d3.select("#top-level-cc-ribbon-area");
 		
-			
-		let vdist=graph.subgraphs.CC.Vdist;let edist=graph.subgraphs.CC.Edist;let vedist=graph.subgraphs.CC.VEdist;
-		let vedistIDs=graph.subgraphs.CC.VEdistIDs;
-		let VERecords=Object.keys(vedist).map((str)=>{let [v,e]=str.split(","),count=vedist[str];v=Number(v),e=Number(e);return {key:str,v:v,e:e,avgDeg:2*e/v,count:count,totalV:v*count,totalE:e*count};}).sort(compareBy("e")).sort(compareBy("v"));
-		let maxAvgDeg=Math.max.apply(null,VERecords.map((x)=>x.avgDeg));
-		ccRibbon.selectAll("p").remove();
-		let ccRects=ccRibbon.selectAll("p").data(VERecords).enter().append("p");
-		ccRects.attr("class","bar-segment").style("color","black").style("background-color",(x)=>G.colorScales.lightSpectral(x.e/E)).style("height",(x)=>Math.ceil(x.avgDeg*100/maxAvgDeg)+"%").style("width",(x)=>Math.ceil(x.e*100/E)+"%" )/*.style("flex",(x)=>x.e/E+" 0 0")*/.text((x)=>{if(x.count==1&&(x.v>50||x.v>Math.log(V)))return "CC with |V|:"+x.v+", |E|:"+x.e;return x.count;});
-		//right now, only clicking a bucket with one unbucketed CC can display that CC; later we'll be able to open bucketed CCs
-		ccRects.on("click",(d)=>{
-			d3.event.stopPropagation();
-			if(d.key in vedistIDs&&vedistIDs[d.key].length==1){
-				let ccpath=graph.dataPath+"/cc/"+vedistIDs[d.key][0];
-				if(G.graph.dataPath==ccpath){G.display(graph.dataPath);}
-				else{G.display(ccpath);}
+		if(graph.subgraphs.CC){
+						let vdist=graph.subgraphs.CC.Vdist;let edist=graph.subgraphs.CC.Edist;let vedist=graph.subgraphs.CC.VEdist;
+			let vedistIDs=graph.subgraphs.CC.VEdistIDs;
+			let VERecords=Object.keys(vedist).map((str)=>{let [v,e]=str.split(","),count=vedist[str];v=Number(v),e=Number(e);return {key:str,v:v,e:e,avgDeg:2*e/v,count:count,totalV:v*count,totalE:e*count};}).sort(compareBy("e")).sort(compareBy("v"));
+			let maxAvgDeg=Math.max.apply(null,VERecords.map((x)=>x.avgDeg));
+			ccRibbon.selectAll("p").remove();
+			let ccRects=ccRibbon.selectAll("p").data(VERecords).enter().append("p");
+			ccRects.attr("class","bar-segment").style("color","black").style("background-color",(x)=>G.colorScales.lightSpectral(x.e/E)).style("height",(x)=>Math.ceil(x.avgDeg*100/maxAvgDeg)+"%").style("width",(x)=>Math.ceil(x.e*100/E)+"%" )/*.style("flex",(x)=>x.e/E+" 0 0")*/.text((x)=>{if(x.count==1&&(x.v>50||x.v>Math.log(V)))return "CC with |V|:"+x.v+", |E|:"+x.e;return x.count;});
+			//right now, only clicking a bucket with one unbucketed CC can display that CC; later we'll be able to open bucketed CCs
+			ccRects.on("click",(d)=>{
+				d3.event.stopPropagation();
+				if(d.key in vedistIDs&&vedistIDs[d.key].length==1){
+					let ccpath=graph.dataPath+"/cc/"+vedistIDs[d.key][0];
+					if(G.graph.dataPath==ccpath){G.display(graph.dataPath);}
+					else{G.display(ccpath);}
+				}
+				else{G.addLog("please select a single large CC");}
+			});
+			ccRects.append("span").attr("class","selector-bottom").text("\u25B2").style("color","white").style("visibility","hidden");
+			this.ccRects=ccRects;
+			let hoverOnCC=(obj)=>{
+				let data=obj.__data__;
+				let tip=this.CCTooltipElement;
+				let tipSelection=d3.select(tip);
+				let str=((data.count==1)?"CC ":(data.count+" CCs"))+", |V|: "+data.v+", |E|: "+data.e;
+				tipSelection.text(str);
+				this.showTooltip(tip);
+				//v and e distributions
 			}
-			else{G.addLog("please select a single large CC");}
-		});
-		ccRects.append("span").attr("class","selector-bottom").text("\u25B2").style("color","white").style("visibility","hidden");
-		this.ccRects=ccRects;
-		let hoverOnCC=(obj)=>{
-			let data=obj.__data__;
-			let tip=this.CCTooltipElement;
-			let tipSelection=d3.select(tip);
-			let str=((data.count==1)?"CC ":(data.count+" CCs"))+", |V|: "+data.v+", |E|: "+data.e;
-			tipSelection.text(str);
-			this.showTooltip(tip);
-			//v and e distributions
+			let hoverEndCC=()=>{
+				this.hideTooltip(this.CCTooltipElement);
+			}
+			addHoverListener(ccRects.nodes(),()=>G.hoverDelay,hoverOnCC,hoverEndCC);
+			//tipSelection.on("mouseout",hoverEnd);
+			
+			//ccSvg.style("display","");ccSvg2.style("display","");
+			//drawPlot("CC |V|","count",Object.keys(vdist),Object.values(vdist),ccSvg,190,50);
+			//drawPlot("CC |E|","count",Object.keys(edist),Object.values(edist),ccSvg2,190,50);
+			
+			/*
+			let totalCCs=Object.values(vdist).reduce((a,b)=>a+b,0);
+			topLevelSummary="";
+			if(V){topLevelSummary+=" |V|:"+V;}
+			if(E){topLevelSummary+=", |E|:"+E;}
+			if(totalCCs){topLevelSummary+=", CCs:"+totalCCs;}
+			getE("top-level-summary").textContent=topLevelSummary;
+			
+			let CCEdgeBuckets=[];
+			let CCSizes=Object.keys(edist).map((x)=>Number(x)).sort(compareBy((x=>x)));
+			let bucketSize=Math.pow(2,Math.ceil(Math.log(E)/(2*Math.log(2)))); //next power of 2 from sqrt(E)
+			let buckets=bucketizeArray(CCSizes,(s)=>edist[s]*s,bucketSize);//Math.pow(2,Math.sqrt(V)) ??
+			
+			let bucketsArea=getE("top-level-cc-buckets-area");
+			d3.select(bucketsArea).selectAll("div").remove();
+			d3.select(bucketsArea).selectAll("div").data(buckets).enter().append("div").style("flex",(bucket)=>Math.floor(bucket.totalSize*100/E)+" 0 auto").style("text-align","center").style("border",(bucket)=>"1px solid "+colorScale(bucket.totalSize/E)).text((bucket)=>(bucket.length==1)?("CC with "+bucket.totalSize+" edges"):(bucket.length+" CCs, "+bucket.totalSize+" total edges")).on("click",(bucket)=>{
+				if(bucket.length>1){G.addLog("please select a single CC instead");return;}
+				else{G.loading.showCC(graph.id,0);}
+			
+			});
+			*/
+			
+			//todo: get the correct CCID - the distribution doesn't abe individual CC identifers.
+			//.style("background-color",(bucket)=>colorScale(bucket.totalSize/E))
+			//style("display","inline-flex").
+			//});
+
 		}
-		let hoverEndCC=()=>{
-			this.hideTooltip(this.CCTooltipElement);
-		}
-		addHoverListener(ccRects.nodes(),()=>G.hoverDelay,hoverOnCC,hoverEndCC);
-		//tipSelection.on("mouseout",hoverEnd);
-		
-		//ccSvg.style("display","");ccSvg2.style("display","");
-		//drawPlot("CC |V|","count",Object.keys(vdist),Object.values(vdist),ccSvg,190,50);
-		//drawPlot("CC |E|","count",Object.keys(edist),Object.values(edist),ccSvg2,190,50);
-		
-		/*
-		let totalCCs=Object.values(vdist).reduce((a,b)=>a+b,0);
-		topLevelSummary="";
-		if(V){topLevelSummary+=" |V|:"+V;}
-		if(E){topLevelSummary+=", |E|:"+E;}
-		if(totalCCs){topLevelSummary+=", CCs:"+totalCCs;}
-		getE("top-level-summary").textContent=topLevelSummary;
-		
-		let CCEdgeBuckets=[];
-		let CCSizes=Object.keys(edist).map((x)=>Number(x)).sort(compareBy((x=>x)));
-		let bucketSize=Math.pow(2,Math.ceil(Math.log(E)/(2*Math.log(2)))); //next power of 2 from sqrt(E)
-		let buckets=bucketizeArray(CCSizes,(s)=>edist[s]*s,bucketSize);//Math.pow(2,Math.sqrt(V)) ??
-		
-		let bucketsArea=getE("top-level-cc-buckets-area");
-		d3.select(bucketsArea).selectAll("div").remove();
-		d3.select(bucketsArea).selectAll("div").data(buckets).enter().append("div").style("flex",(bucket)=>Math.floor(bucket.totalSize*100/E)+" 0 auto").style("text-align","center").style("border",(bucket)=>"1px solid "+colorScale(bucket.totalSize/E)).text((bucket)=>(bucket.length==1)?("CC with "+bucket.totalSize+" edges"):(bucket.length+" CCs, "+bucket.totalSize+" total edges")).on("click",(bucket)=>{
-			if(bucket.length>1){G.addLog("please select a single CC instead");return;}
-			else{G.loading.showCC(graph.id,0);}
-		
-		});
-		*/
-		
-		//todo: get the correct CCID - the distribution doesn't abe individual CC identifers.
-		//.style("background-color",(bucket)=>colorScale(bucket.totalSize/E))
-		//style("display","inline-flex").
-		//});
 		
 	
 		//layer ribbons
@@ -478,12 +696,15 @@ G.addModule("ui",{
 		if(lastlog&&(lastlog.style.display=="none")){logElem.removeChild(lastlog);}
 		
 		//labels
-		
-		if(G.graph&&(G.showingLabels)&&this.cachedLabelSelection){
-			let positions=G.view.getVerticesScreenPos();
-			//let chosenOnes=this.cachedLabeledVertices;//let texts=this.cachedLabelTexts;
-			let selection=this.cachedLabelSelection;
-			selection.style("left",(i)=>(positions[i].x+1)*100/2+"%").style("top",(i)=>(1-positions[i].y)*100/2+"%");
+		//all kinds of on-canvas HTML that depend on screen coordinates
+		if(G.graph){
+			for(let marker of this.canvasMarkers){
+				if(marker.visible&&marker.selection){
+					let positions=G.view.getVerticesScreenPos();
+					marker.updatePosition(positions);
+					
+				}
+			}
 		}
 	},
 	
@@ -499,42 +720,14 @@ G.addModule("ui",{
 	  }	
 	},
 	needsResume:false,
-	showLabels:function(){
-		if(G.graph&&(!G.showingLabels)){
-			if(G.simulationRunning){G.simulationRunning=false;this.needsResume=true;}
-			G.showingLabels=true;
-			//for now, get one vertex in each of many rectangles on the screen?
-			let positions=G.view.getVerticesScreenPos();
-			let chosenOnes=[];let xGap=0.3,yGap=0.2;let maxItems=20;
-			if(this.minimalUI){xGap=0.4;yGap=0.4;maxItems=10;}
-			this.cachedLabeledVertices=chosenOnes;
-			for(let i=0;i<positions.length;i++){
-				let pos=positions[i];
-				let OK=true;
-				for(let otherID of chosenOnes){
-					let otherPos=positions[otherID];
-					if(Math.abs(otherPos.x-pos.x)<xGap&&Math.abs(otherPos.y-pos.y)<yGap){OK=false;break;}
-				}
-				if(OK){chosenOnes.push(i);if(chosenOnes.length>=maxItems){break;}}
-			}
-			let labelContainerSelection=d3.select("#label-container");
-			labelContainerSelection.selectAll("div").remove();
-			this.getSemantics(chosenOnes).then((texts)=>{
-				let validOnes=[],validTexts=[];
-				for(let i=0;i<chosenOnes.length;i++){if(texts[i]){validOnes.push(chosenOnes[i]);validTexts.push(texts[i]);}}
-				if(validOnes.length!=chosenOnes.length)console.log("chosen "+chosenOnes.length+", retrieved "+validOnes.length+" labels");
-				let labelSelection=labelContainerSelection.selectAll("div").data(validOnes).enter().append("div");
-				this.cachedLabelSelection=labelSelection;
-				labelSelection.attr("class","graph-label").style("left",(i)=>(positions[i].x+1)*100/2+"%").style("top",(i)=>(1-positions[i].y)*100/2+"%").text((i,index)=>validTexts[index]);
-			});
-			
-		}
-		else{
-			if(this.needsResume){G.simulationRunning=true;this.needsResume=false;}
-			G.showingLabels=false;
-			let labelSelection=d3.select("#label-container");
-			labelSelection.selectAll("div").remove();
-		}
+	canvasMarkers:[],
+	addMarkers:function (){
+		let markers=new VertexMarkers();this.canvasMarkers.push(markers);
+		return markers;
+	},
+	addRegionMarkers:function (){
+		let markers=new RegionMarkers();this.canvasMarkers.push(markers);
+		return markers;
 	},
 	getSemantics:function(chosenOnes){
 		let datasetID=G.graph.datasetID;
@@ -607,7 +800,123 @@ G.addModule("ui",{
 	//this module should manage information on the UI, like tables and descriptions, not controls and gestures.
 	showEdgeListMenu:function(str){
 		getE("edge-list-menu").style.display="block";
-	}
+	},
+	
+	showTrapezoidsInput:function(data){
+		getE("trapezoid-input-menu").style.display="block";
+		getE("trapezoid-menu").style.display="none";
+	},
+	showTrapezoids:function(data,docked=false,callback){
+		getE("trapezoid-input-menu").style.display="none";
+		let trapezoidsMenu=getE("trapezoid-menu");
+		trapezoidsMenu.style.display="block";
+		if(docked){trapezoidsMenu.style.left="0";trapezoidsMenu.style.width="10%";trapezoidsMenu.style.bottom="10%";}
+		else{trapezoidsMenu.style.left="";trapezoidsMenu.style.width="";trapezoidsMenu.style.bottom="";}
+		let s=d3.select("#trapezoid-menu"),menuElem=s.node();
+		let containerElem=getE("trapezoid-menu-content");
+		let container=d3.select(containerElem);
+		let width=containerElem.clientWidth,height=containerElem.clientHeight;
+		container.selectAll("svg").remove();
+		let svg=container.append("svg").style("width","100%").style("height","100%").attr("width",width).attr("height",height);
+		
+		if(data.sets){
+			let realData={};
+			for(let key in data.sets){realData[key]={v:data.sets[key].length};}
+			for(let key in data.adj){realData[key].adj=data.adj[key];}
+			data=realData;
+		}
+		let keys=Object.keys(data),values=Object.values(data);
+		let maxKey=Math.max.apply(null,keys.map((d)=>parseInt(d)));
+		let maxV=Math.max.apply(null,values.map((d)=>d.v));
+		let logOffset=0.5;let i=0;let cumulativeHeight=0;
+		console.log("trapezoid keys",keys);
+		for([i,id] of keys.entries()){
+			let d=data[id];
+			d.index=i;
+			d.id=parseInt(id);
+			d.widthRatio=d.v/maxV;//Math.log(d.v+logOffset)/Math.log(maxVCount+logOffset);
+			d.widthPercentage=d.widthRatio*100+"%";
+			d.widthInPixels=d.widthRatio*width;
+			d.widthPx=Math.floor(d.widthInPixels)+"px";
+			d.edgesToNextLayer=((i<keys.length-1)&&d.adj&&d.adj[keys[i+1]])?d.adj[keys[i+1]]:0;
+			d.edgesToPreviousLayer=((i>0)&&d.adj&&d.adj[keys[i-1]])?d.adj[keys[i-1]]:0;
+			d.height=(i<keys.length-1)?(2*d.edgesToNextLayer/(d.v+data[keys[i+1]].v)):0;
+			d.cumulativeHeight=cumulativeHeight;
+			cumulativeHeight+=d.height;
+		}
+		let tempColor=new THREE.Color();
+		let barBorderFunc=(d)=>{
+			let ratio=d.id/maxKey;
+			
+			return G.colorScales.lightBlueRed(ratio);
+			//let h=ratio*0.85,s=0.7,l=0.75;
+			//tempColor.setHSL(h,s,l);
+			//return "#"+tempColor.getHexString();
+		};
+		for([i,id] of keys.entries()){
+			let d=data[id];
+			d.nextBarWidthDiff=(i==keys.length-1)?0:((d.widthRatio-data[keys[i+1]].widthRatio)*width);
+			d.heightRatio=(cumulativeHeight>0)?(d.height/cumulativeHeight):0;
+			d.cumulativeHeightRatio=(cumulativeHeight>0)?(d.cumulativeHeight/cumulativeHeight):0;
+			d.heightPercentage=d.heightRatio*100+"%";
+			d.cumulativeHeightPercentage=d.cumulativeHeightRatio*100+"%";
+			d.heightInPixels=d.heightRatio*height;
+			d.cumulativeHeightInPixels=d.cumulativeHeightRatio*height;
+			d.heightPx=Math.floor(d.heightInPixels)+"px";
+			d.cumulativeHeightPx=Math.floor(d.cumulativeHeightInPixels)+"px";
+			d.color=barBorderFunc(d);
+			d.isEndOfWave=(i==keys.length-1);
+		}
+		
+		let barsSelection=svg.selectAll("g").data(Object.values(data)).enter().append("g");//.attr("class","x-ray-layer");
+		
+		let bars=barsSelection.append("rect").attr("class","bar").style("x",(d)=>width/2-d.widthInPixels/2).style("y",(d)=>height-d.cumulativeHeightInPixels-2).style("width",(d)=>d.widthInPixels).style("height",(d)=>4)
+		.style("fill",(d)=>d.color);//.style("fill","#eee");
+		barsSelection.style("cursor","pointer");
+		
+		let trapezoids=barsSelection.append("path").attr("class","trapezoid")
+		.attr("d",(d)=>{
+			let nextWidth=(d.index==keys.length-1)?0:(data[keys[d.index+1]].widthInPixels);
+			return "M "+(width/2-d.widthInPixels/2)+" "+(height-d.cumulativeHeightInPixels)+" L "+(width/2+d.widthInPixels/2)+" "+(height-d.cumulativeHeightInPixels)+" L "+(width/2+(nextWidth)/2)+" "+(height-d.cumulativeHeightInPixels-d.heightInPixels)+" L "+(width/2-(nextWidth)/2)+" "+(height-d.cumulativeHeightInPixels-d.heightInPixels)+" Z";
+		})
+		.style("stroke",(d)=>d.color).style("fill","#eee");
+		
+		
+		//callback takes the object, that has the level and wave information (if the input has wave information).
+		//.style("width",(d)=>(d.nextLayerWidthDiff>0)?(Math.floor(d.widthInPixels-Math.abs(d.nextLayerWidthDiff))+"px"):d.widthPercentage)
+		//.style("border-top-color",(d)=>(d.index==keys.length-1)?("black"):(data[keys[d.index+1]].color))
+		//.style("border-bottom-color",(d)=>d.color)
+		//.style("border-left-width",(d)=>Math.floor(Math.abs(d.nextLayerWidthDiff)/2)+"px")
+		//.style("border-right-width",(d)=>Math.floor(Math.abs(d.nextLayerWidthDiff)/2)+"px")
+		//.style("border-top-width",(d)=>(d.nextLayerWidthDiff<0)?0:"40px")//if diff is positive, bottom should have a value and top should be 0
+		//.style("border-bottom-width",(d)=>(d.nextLayerWidthDiff>=0)?0:"40px")
+		//.style("height",(d)=>d.heightPx)
+		//.style("bottom",(d)=>d.cumulativeHeightPx)
+		//.style("visibility",(d)=>(d.isEndOfWave?"hidden":""));
+		
+		//trapezoids.append("p").style("position","absolute").style("top",(d)=>(d.nextLayerWidthDiff<0)?"":"-40px").style("bottom",(d)=>(d.nextLayerWidthDiff>=0)?"":"-40px").text(function(d){return "L "+d.index+" to "+(d.index+1)+", e: "+d.edgesToNextLayer+", d: "+d.nextInterlayerDensity.toString().substring(0,5);});
+		//remove last redundant element
+		//let lastLayer=containerElem.lastElementChild;lastLayer.removeChild(lastLayer.lastElementChild);
+		console.log(data);
+		if(!this.trapezoidArrow){
+			this.trapezoidArrow=container.append("div").attr("class","chosen-arrow").style("position","absolute").style("font-size","small").text("\u2192").style("left","0px").style("visibility","hidden").style("transform","translateY(-50%)");
+			this.showTrapezoidArrow=(i)=>{
+                this.trapezoidArrow.style("visibility","");
+                if(i!==undefined){
+                        let pos=height-values[i].cumulativeHeightInPixels;//-2;
+                        this.trapezoidArrow.style("top",pos+"px");
+                        this.trapezoidArrow.style("left",Math.max(0,Math.floor((width-values[i].widthInPixels)/2-15))+"px");
+                }
+			};
+			this.hideTrapezoidArrow=()=>{
+					this.trapezoidArrow.style("visibility","hidden");
+			}
+		}
+		this.hideTrapezoidArrow();
+		if(callback){barsSelection.on("click",(d,i)=>{callback(d);this.showTrapezoidArrow(i);});}
+		else{barsSelection.on("click",(d,i)=>{this.showTrapezoidArrow(i);});}
+        
+	},
 	
 });
 function drawPlot(xName,yName,xValues,yValues,svgSelection,totalWidth,totalHeight){
