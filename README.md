@@ -20,7 +20,7 @@ The server (app.js and datasets.js) does three things: preprocess plain text (CS
 
 ### loading data from external URLs
 
-If you don't want to preprocess data, and instead only want to use the client to visualize graph data (in text formats like CSV) directly from some external URL, just run `node app.js` and access the webpage at the default port (for example localhost:3010), and follow **using the client** below. A data/ directory is there for your convenience but you don't have to put anything in it. Note: some visualization caches (like node layouts) will be saved in the temp directory (default is temp/), even if you don't use preprocessed data, so you may want to specify a temp directory.
+If you don't want to preprocess data, and instead only want to use the client to visualize graph data (in text formats like CSV) directly from some external URL, just run `node app.js` and access the webpage at the default port (for example localhost:3010), and follow **using the client** below. You don't have to create a data directory. Note: some visualization caches (like node layouts) will be saved in the temp directory (default is temp/), even if you don't use preprocessed data, so you may want to specify a temp directory.
 
 ### preprocessing data
 

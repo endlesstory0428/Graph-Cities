@@ -47,6 +47,7 @@ function loadAllDatasets(d,c,callback,failure,cachesToRefresh,noDerived){
 
 function reloadAllDatasets(cachesToRefresh){
 	datasetFiles={};
+	if(fs.existsSync(dataDir)==false){return;}
 	checkFilesInDataDir(dataDir);
 	loadAllFiles(datasetFiles,cachesToRefresh).then(async(v)=>{
 		makeDatasetList();
@@ -57,6 +58,7 @@ function reloadAllDatasets(cachesToRefresh){
 	
 	
 function checkFilesInDataDir(dataDir){
+	if(fs.existsSync(dataDir)==false){console.log("data directory not found: "+dataDir);return;}
 	let stat=fs.statSync(dataDir);
 	if(stat.isDirectory()==false){throw Error("must have a data directory");}
 	fs.readdirSync(dataDir).forEach((f)=>checkDatasetTopLevel(dataDir+"/"+f,f));//path.sep 
