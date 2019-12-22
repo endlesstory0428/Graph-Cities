@@ -14,7 +14,7 @@ If you want to use the C++-based sparsenet tools (currently, only needed if you 
 
 The server (app.js and datasets.js) does three things: preprocess plain text (CSV,TSV etc) edgelist files, serves the webpages and processed data files, and saves some visualization data (like node layouts) so they can be reused. The basic command is:
 
- `node app.js (and optional arguments, se below)`
+ `node app.js (and optional arguments, see below)`
 
  (On Linux, to run the server after the terminal is closed, you can use `nohup`, for example `nohup node app.js <arguments>`)
 
@@ -26,7 +26,7 @@ If you don't want to preprocess data, and instead only want to use the client to
 
 If you want to preprocess data files to use the client to navigate a hierarchy of decomposed data: first put all edgelist text files in a directory (default is data/), and choose a temporary data directory for preprocessed files (default is temp/, will be created if not present). Pass these paths in the arguments, and run the command with arguments you need, for example `node app.js dataDir=data2 tempDir=temp2 port=8000`. And they will be automatically processed. And if there are datasets larger than about 100MB, you may need to increase the Node.js memory limit like this: `node --max-old-space-size=<memory in MBs> app.js <other arguments>` because the default Node.js memory limit may be too tight.
 
-The text data files can be CSV, TSV, or space-separated (will be auto-detected). Each line should have 2 rows, source and target, which become vertex IDs. Extra columns are ignored. A header line (must be first line is present) with column names including source and target is allowed (and can be used to control which columns are treated as the source and target), but other kinds of comments are not understood. Each file is treated as one dataset and its filename(ignoring extensions) will be the dataset name for UI purposes.
+The text data files can be CSV, TSV, or space-separated (will be auto-detected). Each line should have 2 columns, source and target, which become vertex IDs. Extra columns are ignored. A header line (must be first line is present) with column names including source and target is allowed (and can be used to control which columns are treated as the source and target), but other kinds of comments are not understood. Each file is treated as one dataset and its filename(ignoring extensions) will be the dataset name for UI purposes.
 
 Server command-line arguments:
 - dataDir=(...): specifies the data files directory. Can be a relative or absolute path.
@@ -73,7 +73,7 @@ List of useful URL parameters:
 - algorithm=(name): executes the algorithm (as if using the "algorithm" menu from the UI); disables representation too because otherwise there would be a conflict.
 - dimBelowHeight=(number): a shorthand for dimming below a height (the number is the value threshold for the current height-determining vertex or edge property, not absolute height in 3D space).
 
-There are also other parameters that directly control modifiers. If a parameter name matches the name of one of the modifiers in the system (the tools you can use via View Tools or Subview Tools menus), the value will be parsed as JSON and used to initialize that tool (a modifier on the styles). Examples: nodeColor and DAGCover. (see G-view.js and G-subview.js for modifiers definitions and their parameters). This is so that you don't need to add special parsing for a mew parameter when you add a style-modifying tool.
+There are also other parameters that directly control modifiers. If a parameter name matches the name of one of the modifiers in the system (the tools you can use via View Tools or Subview Tools menus), the value will be parsed as JSON and used to initialize that tool (a modifier on the styles). Examples: nodeColor and DAGCover. (see G-view.js and G-subview.js for modifiers definitions and their parameters). This is so that you don't need to add special parsing for a new parameter when you add a style-modifying tool.
 
 
 
