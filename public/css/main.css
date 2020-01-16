@@ -893,7 +893,7 @@ div.material-slider{
 
 
 p.material-slider-label{
-	position:absolute;
+	/*position:absolute;*/
 	width:35%;
 	font-size:xx-small;
 	/*text-transform:uppercase;*/

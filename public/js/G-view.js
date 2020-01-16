@@ -85,8 +85,15 @@ G.addModule("view",{
 		};
 		G.resetView=this.resetView;
 		let canvas=d3.select("#canvas").append("canvas").node();
+		//add listeners before context creation
+		canvas.addEventListener("webglcontextlost", function(event) {
+			event.preventDefault();
+			alert("Sorry, WebGL crashed because the hardware couldn't handle this view. Please refresh the page."); 
+		}, false);
 		let context=canvas.getContext("webgl2");//,{premultipliedAlpha: false});
 		if (!context){alert("This demo requires WebGL2, please use Chrome or Firefox");return;}
+		
+			
 		G.renderer = new THREE.WebGLRenderer( {
 			antialias: false, canvas: canvas, context: context ,
 			clearColor: 0xffffff, //??
@@ -479,6 +486,10 @@ G.addModule("view",{
 		},
 		forwardVector:{
 			value:()=>G.cameraControls.forwardVector,
+			dynamic:true,
+		},
+		screenUpVector:{
+			value:()=>G.cameraControls.screenUpVector,
 			dynamic:true,
 		},
 		screenWidth:{

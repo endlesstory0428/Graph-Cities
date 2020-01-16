@@ -67,6 +67,7 @@ uniform vec3 nodeMovement;
 uniform vec3 nodeScreenTarget;
 uniform vec3 leftVector;
 uniform vec3 forwardVector;
+uniform vec3 screenUpVector;
 float pi=3.141592653589793;
 
 float getStartingEdgeIndex(vec2 uv){
@@ -294,7 +295,7 @@ void main(void) {
 		spos.y*=screenHeight;
 		spos/=2.;
 		
-		vec3 movement=(leftVector*(spos.x-nodeScreenTarget.x)+forwardVector*(nodeScreenTarget.y-spos.y));
+		vec3 movement=(leftVector*(spos.x-nodeScreenTarget.x)+screenUpVector*(nodeScreenTarget.y-spos.y));
 		r2=r1+0.05*movement.xy;;//movement.xy;
 		
 		
