@@ -670,6 +670,9 @@ G.addModule("view",{
 				isExpanded:{
 					value:(node,i,array)=>array.isExpanded?array.isExpanded[i]:0,
 				},
+				isSelected:{
+					value:(node,i,array)=>array.isSelected?array.isSelected[i]:0,
+				},
 				size:{
 					value:(node,i,array)=>{
 						let result=array.size[i];

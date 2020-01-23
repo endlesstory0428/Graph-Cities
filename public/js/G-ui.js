@@ -280,6 +280,9 @@ G.addModule("ui",{
 			}
 			if(parentPath&&G.hasGraph(parentPath)){
 				let parent=G.getGraph(parentPath);
+				while(parent.hierarchyPathContent.childElementCount>0){//also remove current children in the parent's element - they may exist because of expansion via another path, like graph -> subgraph -> metagraph
+					parent.hierarchyPathContent.removeChild(parent.hierarchyPathContent.firstElementChild);
+				}
 				parent.hierarchyPathContent.appendChild(graph.hierarchyPathElem);
 			}
 		}
@@ -421,7 +424,7 @@ G.addModule("ui",{
 		let listElem=getE("graph-metagraph-list");
 		d3.select(listElem).selectAll("span").remove();
 		d3.select(listElem).selectAll("span").data(metagraphs).enter().append("span");
-		d3.select(listElem).selectAll("span").attr("class","metagraph-item").text((d)=>" "+toNormalText(d.type)+" metagraph - |V|: "+d.V+", |E|: "+d.E+" ").on("click",(d)=>{
+		d3.select(listElem).selectAll("span").attr("class","metagraph-item").text((d)=>{if (d.type=="(original)"){return " (original graph) - |V|: "+d.V+", |E|: "+d.E+" ";}else {return " "+toNormalText(d.type)+" metagraph - |V|: "+d.V+", |E|: "+d.E+" ";}}).on("click",(d)=>{
 			if(d.type=="(original)"){realGraph.representation=null;}
 			else {realGraph.representation=d.type;}
 			G.display(realGraph);

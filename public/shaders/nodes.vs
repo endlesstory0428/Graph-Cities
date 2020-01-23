@@ -84,7 +84,8 @@ void main() {
 	spos.y*=screenHeight;
 	spos/=2.;
 	
-	if(length(mouseShaderPos-spos)<20.)gl_PointSize*=2.;
+	
+	
 	//if(dot(mousePos,gl_Position.xy*gl_Position.w)>0.)gl_PointSize*=2.;
 	//if(((gl_Position.x+gl_Position.y)>0.))gl_PointSize*=2.;
 	
@@ -94,8 +95,14 @@ void main() {
 	//gl_Position = projectionMatrix * modelViewMatrix * vec4( position * 20.0, 1.0 );
 	vec3 standardColor=getScaleValue(colorList,colorListSize,colorListCount,colorValue).rgb;
 	
+	if(length(mouseShaderPos-spos)<10.){
+		gl_PointSize*=1.2;
+	}
+	
 	vColor=mix(standardColor,customColor,min(usingCustomColor,layerColorRatio));//only use custom color if it's marked as available
 	//vColor=getArrayValue( layerColors,layerColorsSize,0.).rgb;
+	
+	
 	
 	vIsExpanded=isExpanded;
 	vIsSelected=isSelected;

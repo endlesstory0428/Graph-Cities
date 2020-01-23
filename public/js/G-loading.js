@@ -119,14 +119,6 @@ G.addModule("loading",{
 			this.loadURL(dataURL,options).then((g)=>{ //note that filters is not in variableDefs
 				if(dataPath){
 					g.dataPath=dataPath;
-					if(!g.subgraphType){
-						let segments=dataPath.split("/");
-						if(segments.length>2&&segments[segments.length-2]!="metagraphs"){
-							g.subgraphType=segments[segments.length-2];
-							g.subgraphID=parseInt(segments[segments.length-1]);
-							g.wholeGraph=segments.slice(0,segments.length-2).join("/");
-						}
-					}
 				}else{g.dataPath="custom";}
 				this.saveGraph(g);
 				this.display(g,options);
@@ -197,8 +189,11 @@ G.addModule("loading",{
 		if(typeof g=="string"){
 			if(this.graphsCache[g])return this.graphsCache[g];
 			let path=g;g=new Graph();let loadedSummary=false;
-			await d3.json("datasets/"+path+"/summary.json.gz").then((summary)=>{if(summary){g.loadSummary(summary);loadedSummary=true;}}).catch((error)=>{console.log("cannot load summary "+path);return;});;
-			if(loadedSummary==false)return;
+			await d3.json("datasets/"+path+"/summary.json.gz").then((summary)=>{if(summary){g.loadSummary(summary);loadedSummary=true;}}).catch((error)=>{console.error("cannot load summary "+path);return;});;
+			if(loadedSummary==false){
+				throw Error();
+				return;
+			}
 			this.graphsCache[g.dataPath]=g;console.log("saved "+g.dataPath);
 			if(!g.name)g.name=pathToText(g.dataPath);//??
 			//also load summary of the original (for metagraphs) or metagraph (for subgraphs)
@@ -499,22 +494,16 @@ G.addModule("loading",{
 				if(this.dataURLFunc){
 					let url=this.dataURLFunc(graphPath);
 					graph=await this.loadURL(url,options);
-					if(!graph){console.log("failed to load "+graphPath);return null;}
+					if(!graph){console.error("failed to load "+graphPath);return null;}
 					graph.dataPath=graphPath;
 				}
 				else{
 					graph=await this.loadSummary(graphPath);
-					if(!graph){console.log("failed to load "+graphPath);return null;}
+					if(!graph){console.error("failed to load "+graphPath);return null;}
 				}
 				
 			}
-			if(!graph.subgraphType){
-				if(segments.length>2&&segments[segments.length-2]!="metagraphs"){
-					graph.subgraphType=segments[segments.length-2];
-					graph.subgraphID=parseInt(segments[segments.length-1]);
-					graph.wholeGraph=segments.slice(0,segments.length-2).join("/");
-				}
-			}
+			this.checkNames(graph);
 		}
 		Object.assign(graph,options);
 		
@@ -570,6 +559,17 @@ G.addModule("loading",{
 		G.broadcast("loadGraph",graph);//now loading and displaying graphs are different messages. preprocessing & analytics etc apply to all loaded graphs in the hierarchy, but display only affects the view and is applied to the top level graph.
 		return graph;
 	},
+	checkNames:(g)=>{
+		if(!g.dataPath)throw Error();
+		if(!g.subgraphType){
+			let segments=g.dataPath.split("/");
+			if(segments.length>2&&segments[segments.length-2]!="metagraphs"){
+				g.subgraphType=segments[segments.length-2];
+				g.subgraphID=parseInt(segments[segments.length-1]);
+				g.wholeGraph=segments.slice(0,segments.length-2).join("/");
+			}
+		}
+	},
 	display:async function(graph,options){//if it's displayed in place, don't call this, just load and attach it
 		if(graph instanceof Promise)graph=await graph;
 		
@@ -582,6 +582,7 @@ G.addModule("loading",{
 		graph=await this.load(graph,options);//assuming it's either a path or a fully loaded graph, not an abstract graph
 			//even if it's a loaded graph, we may want to reuse this to load its representation
 		//}
+		this.checkNames(graph);
 		if(graph.vertices.layout){
 			let layoutOK=true;
 			for(let i=0;i<graph.vertices.layout.length;i++){if(!graph.vertices.layout[i]){layoutOK=false;break;;}}
@@ -646,6 +647,7 @@ G.addModule("loading",{
 			let path=parentGraph.subgraphPrefix+"/"+str;
 			
 			if(inPlace){this.load(path,{currentMetagraph:parentGraph.dataPath,metanodeID:vertexID}).then((g)=>{
+				if(!g)throw Error();
 				G.preprocessing.loadGraph(g);//todo: remove hack
 				parentGraph.vertices.isExpanded[vertexID]=true;
 				G.view.displayGraph(G.graph);
