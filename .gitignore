@@ -6,6 +6,8 @@ data*/
 testing/
 test/
 public-*/
+public/files/
+report/
 
 run*.sh
 run*.cmd

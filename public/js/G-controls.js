@@ -600,6 +600,13 @@ G.addModule("controls",{
 		let drawSubgraph=()=>{
 			if(!this.graph)return;
 			let subgraph=Algs.getInducedSubgraph(this.graph,this.graph.selectedVertices);
+			subgraph.modifiers={};
+			if(this.graph.modifiers.nodeColor){}
+			if(this.graph.modifiers.nodeColor){subgraph.modifiers.nodeColor=copyObj(this.graph.modifiers.nodeColor);}
+			if(this.graph.colorScaleName){subgraph.colorScaleName=this.graph.colorScaleName;}
+			if(this.graph.cloneProperty){subgraph.cloneProperty=this.graph.cloneProperty;}
+			if(this.graph.heightProperty){subgraph.heightProperty=this.graph.heightProperty;}
+			if(this.graph.heightPropertyTypeHint){subgraph.heightPropertyTypeHint=this.graph.heightPropertyTypeHint;}
 			subgraph.dataPath=this.graph.dataPath+"/customSubgraph/0";
 			subgraph.wholeGraph=this.graph.dataPath;
 			subgraph.isCustom=true;
@@ -607,6 +614,19 @@ G.addModule("controls",{
 			G.display(subgraph);
 		}
 		this.addButton(this.contextMenus.empty,"draw selected subgraph",drawSubgraph);
+		this.addButton(this.contextMenus.empty,"go to parent",()=>G.showMetagraph());
+		let togglePinSelection=()=>{
+			if(!this.graph)return;
+			for(let i in this.graph.selectedVertices){this.graph.vertices.userPinned[i]=!this.graph.vertices.userPinned[i];}
+			G.view.refreshStyles(true,true);
+		}
+		this.addButton(this.contextMenus.empty,"(un)pin selected vertices",togglePinSelection);
+		let unpinAllVertices=()=>{
+			if(!this.graph)return;
+			for(let i=0;i<this.graph.vertices.length;i++){this.graph.vertices.userPinned[i]=false;}
+			G.view.refreshStyles(true,true);
+		}
+		this.addButton(this.contextMenus.empty,"unpin all vertices",unpinAllVertices);
 		let drawVisibleSubgraph=(subgraphName="customSubgraph")=>{
 			if(!this.graph||(!this.graph.links))return;
 			let values=this.graph.links.brightness;
@@ -651,6 +671,7 @@ G.addModule("controls",{
 		this.addButton(this.contextMenus.empty,"draw visible subgraph",drawVisibleSubgraph);
 		
 		this.addKeyListener(G.canvasContainer,"!",drawSubgraph);
+		this.addKeyListener(G.canvasContainer,"p",togglePinSelection);
 		this.addKeyListener(G.canvasContainer," ",()=>{
 			//unpause/pause, and also show labels if pausing, and hide labels if pausing (if it was paused for otehr reasons, G.ui.showLabels() wll not unpause)	
 			if(G.simulationRunning){G.simulationRunning=false;}
@@ -1004,12 +1025,19 @@ G.addModule("controls",{
 			let stepFunc=getStepFunc(delta);
 			obj.timeoutFuncs[delta]=()=>{
 				let ended=stepFunc();
-				if(ended){obj.animating=false;}
-				if(obj.animating){obj.animateTimeout=setTimeout(obj.timeoutFuncs[delta],obj.animateInterval);}
+				if(ended){obj.animating=false;delete obj.currentAnimateInterval;}
+				if(obj.animating){
+					if(obj.animationAcceleration){//animated intervals decrease by (divided by) this factor each time
+						if(!obj.currentAnimateInterval){obj.currentAnimateInterval=obj.animateInterval;}
+						else{obj.currentAnimateInterval/=obj.animationAcceleration;if(obj.currentAnimateInterval<1)obj.currentAnimateInterval=1;}
+						obj.animateTimeout=setTimeout(obj.timeoutFuncs[delta],obj.currentAnimateInterval);
+					}
+					else{obj.animateTimeout=setTimeout(obj.timeoutFuncs[delta],obj.animateInterval);}
+				}
 			};
 			return ()=>{
 				if(obj.animating){//stop
-					obj.animating=false;
+					obj.animating=false;delete obj.currentAnimateInterval;
 				}
 				else{//start a timeout that will set itself again if animating is true
 					obj.animating=true;
@@ -1338,14 +1366,14 @@ G.addModule("controls",{
 		G.onctrlclick=function(result){//select CC?
 			if(result)
 			{
-				let objID=result.objectID,obj=G.view.model[result.type][objID];
+				let objID=result.objectID;
 				let originalObjectID=result.originalObjectID,originalObjectType=result.originalObjectType,originalObject=result.originalObjectType?result.subview.graph[originalObjectType][originalObjectID]:null;
 				let subgraphLevel=result.subview.subgraphLevel;let subgraph=result.subview.graph;
 				switch (result.type)
 				{
 					case "nodes":
-						G.addLog("Selecting the connected component of a clone of the "+" vertex "+obj.original+" within layer "+obj.layer+"."); 
-						G.selectNodeCC(obj);
+						G.addLog("Selecting the connected component of a clone of the "+" vertex "+originalObjectID+"."); 
+						G.selectNodeCC(result);
 					break;
 				}
 				G.broadcast("onUserEvent","ctrlclick",result);
@@ -1354,10 +1382,10 @@ G.addModule("controls",{
 		G.onrightclick=function (result){
 			if(result)
 			{
-				let objID=result.objectID,obj=G.view.model[result.type].getObj(objID);//G.view.model[result.type][objID];
+				let objID=result.objectID,obj=G.view.model[result.type].getObj(objID);
 				let originalObjectID=result.originalObjectID,originalObjectType=result.originalObjectType,originalObject=result.originalObjectType?result.subview.graph[originalObjectType][originalObjectID]:null;
 				let subgraphLevel=result.subview.subgraphLevel;let subgraph=result.subview.graph;
-				G.showContextMenu("vertices",obj);
+				G.showContextMenu("vertices");
 				switch (result.type)
 				{
 					case "nodes":
@@ -1416,7 +1444,7 @@ type: "nodes"*/
 			{
 				//the description comes in two parts, the original object (eg.vertices) description if available from the analytics, and the view object(eg node) description defined in the view or subview(if the view defines it it takes priority over the subview one).
 				
-				let objID=result.objectID,obj=G.view.model[result.type][objID];let type=result.type;
+				let objID=result.objectID;let type=result.type;
 				let originalObjectID=result.originalObjectID,originalObjectType=result.originalObjectType,originalObject=result.originalObject,originalObjects=result.originalObjects;
 				let originalTypeSingular=null;
 				if(originalObjectType&&G.analytics.templates[originalObjectType]){originalTypeSingular=G.analytics.templates[originalObjectType].singularName;}
@@ -1605,13 +1633,12 @@ type: "nodes"*/
 			this.graph.selectedVertices=selected;this.graph.selectHistory.unshift(selected);//index is still 0
 			G.updateSelection();
 		}
-		G.selectNodeCC=function(node){//selects within a layer!
+		G.selectNodeCC=function(record){//selects within a layer!
 			if(!this.graph.vertices.cc)return;
 			clearFutureHistory();
 			let selected=copyObj(this.graph.selectedVertices);
 			//if(typeof node!="object"){if(this.graph.clonedVertices[node]==undefined)throw Error("no such node "+node);node=this.graph.clonedVertices[node];}
 			//let ccID=node.ccID;
-			let record=G.view.getOriginalObject("nodes",node);
 			let vertexID=record.originalObjectID;
 			let ccs=this.graph.vertices.cc;
 			let ccID=this.graph.vertices.cc[vertexID];

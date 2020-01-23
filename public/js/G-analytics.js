@@ -82,6 +82,7 @@ G.addModule("analytics",{
 					isArray:true,
 					value:(g)=>g.vertices.map(Math.random),
 				},
+				userPinned:{lazy:true,value:function(){return false;}},
 
 			},
 			getDescription:(v,vertexID,vertices)=>{

@@ -15,14 +15,19 @@ void main() {
 	vec2 pixelCoord=(gl_PointCoord-0.5)*2.;
 	float d2=1.-pixelCoord.y*pixelCoord.y-pixelCoord.x*pixelCoord.x;
 	//float circle=clamp(1.-d2*d2*900.,0.,1.)*0.25;//show rim;
+	float x=pixelCoord.x,y=pixelCoord.y;
 	float circle=clamp(1.-d2*d2*900.,0.,1.)*1.;//show rim;
+	float marker=clamp(1.-min(abs(x),abs(y))*7.,0.,1.)*1.;
+	//clamp(1.-(abs(abs(x)-abs(y)))*7.,0.,1.)*1.;//cross marker
 	if(vIsExpanded>0.){
 		b=circle;
 	}
 	if(vIsSelected>0.){
-		b+=circle;
+		b+=marker;//gl_FragColor.r=1.;
 	}
+	
 	gl_FragColor=vec4(vColor,clamp(b,0.,1.));
+	
 	//gl_FragColor=gl_FragColor;;
 	//gl_FragColor=vec4( 0.5,0.5,0.5,1);
 

@@ -136,7 +136,8 @@ G.addModule("subview",{
 					isArray:true,value:(graph)=>{
 						let vertices=graph.vertices,nodes=graph.nodes;return nodes.map((node,i,array)=>{
 							let vertexID=array.original[i];
-							return (graph.selectedVertices&&vertexID in graph.selectedVertices);
+							if(graph.selectedVertices&&vertexID in graph.selectedVertices)return 1;
+							else return 0;//note: an attribute has to be numeric not boolean
 						});
 					},
 				},
@@ -185,6 +186,8 @@ G.addModule("subview",{
 						}
 						else{//if there's no height, use subgraphID/parent subgraph count of that type if it's a subgraph
 							if(graph.subgraphID!=undefined&&G.loading.hasGraph(graph.wholeGraph)){
+								let parent=G.loading.getGraph(graph.wholeGraph);
+								if(!parent.subgraphs||!parent.subgraphs[graph.subgraphType])return graph.nodes.map(()=>undefined);;
 								let max=G.loading.getGraph(graph.wholeGraph).subgraphs[graph.subgraphType].max;
 								let value;
 								if(max==0)value=0;
@@ -239,7 +242,15 @@ G.addModule("subview",{
 					scaling:(graph)=>{let obj={targetAvg:1};if(!graph.isMetagraph){obj.maxScaled=0.6;}return obj;}//shouldn't we scale at the global level???
 				},
 				color:{dimensions:3,value:function(node){return null;}},
-				pinned:{value:function(node){return false;}},
+				//userPinnded is in analytics
+				pinned:{isArray:true,
+					value:function(graph){
+						let vertices=graph.vertices,nodes=graph.nodes;let userPinned=vertices.userPinned;
+						let arr= nodes.map((node,i,array)=>{if(userPinned[i])return true;return false;});
+						return arr;
+					}
+				},//pinned is calculated from user manual pinning and style-based pinning
+				
 				clusterCenter:{reference:"nodes",value:function(node){return null;}},
 				
 				//hack: global rings are always before other rings, so vertex.ringID is the subview ring ID, and currently there are no vertices on local rings, and no subview global rings, and the correct radius can be calculated by targetRadius*radialLimit*radialLimitFactor
@@ -516,8 +527,14 @@ G.addModule("subview",{
 				},
 				coord:{dimensions:3,perPoint:true,value:quadCoordFunc,},//this reuse is OK because it's the same value for all
 				direction:{
-					type:"int8",
-					value:(d,i,array)=>(array.direction)?array.direction[i]:0,
+					type:"int8",isArray:true,
+					value:(graph)=>{
+						return graph.links.map((link,i,links)=>{
+							
+							if(links.direction)return links.direction[i];
+							return 0;
+						});
+					}
 				},
 			},
 		},
@@ -1422,8 +1439,9 @@ G.addModule("subview",{
 						G.display(G.graph);
 					}
 				},
-				extraEdgesProgressive:{
+				pumping:{
 					type:"button",
+					animationAcceleration:1.1,
 					func:(value,g,params)=>{
 						let max=maxPropertyValue(g.edges,params.property),min=minPropertyValue(g.edges,params.property);
 						if(!params.showOther){
@@ -1449,8 +1467,9 @@ G.addModule("subview",{
 						G.subview.refreshModifierControls('DAGCover');
 					}
 				},
-				extraEdgesCumulative:{
+				pumpingCumulative:{
 					type:"button",
+					animationAcceleration:1.1,
 					func:(value,g,params)=>{
 						let max=maxPropertyValue(g.edges,params.property),min=minPropertyValue(g.edges,params.property);
 						if(!params.showOther){
@@ -2750,6 +2769,64 @@ G.addModule("subview",{
 					]
 				}
 			}
+		},
+		directions:{
+			onEnable:(g,params)=>{
+				
+			},
+			onUpdate:(graph,params)=>{
+				G.view.sharedUniforms.edgeList.needsUpdate=true;
+				G.view.sharedUniforms.nodePinData.needsUpdate=true;
+				G.view.sharedUniforms.clusteringData.needsUpdate=true;
+				G.view.sharedUniforms.nodePriorityData.needsUpdate=true;
+			},
+			params:{
+				property:{
+					displayName:"input",
+					value:"waveLevel",
+					type:"select",
+					options:(graph,params)=>{
+						let items=[];
+						if(graph.heightProperty){items.push("height");}
+						for(let name in graph.vertices.properties){
+							if(graph.vertices.properties[name].type!="int")continue;
+							items.push(name);
+						}
+						return items;
+					},
+					//["height","cloneCount","degree","originalWaveLevel","levelCCid"],//note these proeprties belong to nodes, not vertices. should all vertex-based modifiers be in subview?
+				},
+				ascending:{type:"boolean",value:false,},
+				selectionOnly:{type:"boolean",value:true,},
+				
+				enabled:{type:"boolean",value:true,},
+				
+			},
+			effects:{
+				links:{
+					direction:[
+						(data,oldValue,link,index,array,graph)=>{
+							if(!data.enabled)return;
+							if(!graph.vertices[data.property])return;
+							
+							let values=graph.vertices[data.property];
+							let edgeID=index;//G.subview.templates.links.getOriginalObjectID(graph,index);
+							let edge=graph.edges[edgeID],svID=graph.edges.source[edgeID],tvID=graph.edges.target[edgeID];
+							if(data.selectionOnly){
+								if(svID in graph.selectedVertices==false)return;
+								if(tvID in graph.selectedVertices==false)return;
+							}
+							let sValue=values[svID],tValue=values[tvID];
+							if(data.ascending){
+								if(sValue>tValue)return 1;if(sValue<tValue)return -1;return 0;
+							}
+							else{
+								if(sValue>tValue)return -1;if(sValue<tValue)return 1;return 0;
+							}
+						},
+					],
+				},
+			},
 		},
 		/*
 		leaves:{
