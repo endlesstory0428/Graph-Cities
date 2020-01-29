@@ -16,6 +16,8 @@ lcc = 0
 wave = 0
 iwcc = 0
 fg = 0
+num_frags = 0
+num_waves = 0
 for fw in wavefiles:
     layer = int(fw.split('-')[-3])
     # print(layer, fw)
@@ -36,5 +38,7 @@ for fw in wavefiles:
                     fg = frag
                     frags = finfo['edges']
                     # print(finfo)
+                    num_frags = len(wccd['fragments'])
+                    num_waves = len(wdata)
 
-print(l, lcc, wave, wcc, fg, 'size: ', frags)
+print(l, lcc, wave, wcc, fg, 'size: ', frags, 'num: ', num_waves, num_waves)
