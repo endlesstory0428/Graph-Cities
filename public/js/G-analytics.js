@@ -2149,6 +2149,20 @@ G.addModule("analytics",{
 			},
 		}
 	},
+	randomGraph:function(n,p){
+		let g= new Graph();
+		g.dataPath="randomGraph";
+		for(let i=0;i<n;i++){
+			g.addVertex(i);
+			for(let j=0;j<i;j++){
+				if(Math.random()<p){
+					g.addEdge(i,j);
+				}
+			}
+		}
+		return g;
+		
+	}
 
 	
 

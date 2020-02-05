@@ -691,29 +691,37 @@ G.addModule("controls",{
 		//old controls
 		var gui = new dat.GUI({autoPlace:false});
 		G.gui = gui;this.gui=gui;
+		
 		getE("style-menu").appendChild(gui.domElement);
 		gui.domElement.style.zIndex=4;
+		gui.domElement.style.width="100%";
 				var graphFolder = gui.addFolder('Graph');//a few parameters that control the p in different ways - the plain p value is too imprecise in a slider when we want very small values, so I think adding np(or 1/n) and logn/n scales are better.
-		G.analytics.edgeProbability=0.1;G.analytics.np=5;G.analytics.npOverLogn=5;//just default values; will be updated when the data is shown
+		G.analytics.edgeProbability=0.1;G.analytics.np=5;G.analytics.npOverLogn=5;G.analytics.vertexCount="100";//just default values; will be updated when the data is shown
+		graphFolder.add(G.analytics, 'vertexCount', 0.00000001, 1).onFinishChange(function(value) {
+			let n=parseInt(G.analytics.vertexCount);
+			G.analytics.np=G.analytics.edgeProbability*n;
+			G.analytics.npOverLogn=G.analytics.np/Math.log(n);
+			G.display(G.analytics.randomGraph(n,G.analytics.edgeProbability));
+		}).listen();
 		graphFolder.add(G.analytics, 'edgeProbability', 0.00000001, 1).onFinishChange(function(value) {
 			let n=G.graph.vertices.length;
 			G.analytics.np=G.analytics.edgeProbability*n;
 			G.analytics.npOverLogn=G.analytics.np/Math.log(n);
-			G.analytics.randomizeGraph(n,G.analytics.edgeProbability);
+			G.display(G.analytics.randomGraph(n,G.analytics.edgeProbability));
 		}).listen();
 		graphFolder.add(G.analytics, 'np', 0, 10).onFinishChange(function(value) {
 			
 			let n=G.graph.vertices.length;
 			G.analytics.edgeProbability=G.analytics.np/n;
 			G.analytics.npOverLogn=G.analytics.np/Math.log(n);
-			G.analytics.randomizeGraph(n,G.analytics.edgeProbability);
+			G.display(G.analytics.randomGraph(n,G.analytics.edgeProbability));
 		}).listen();
 		graphFolder.add(G.analytics, 'npOverLogn', 0, 10).onFinishChange(function(value) {
 			
 			let n=G.graph.vertices.length;
 			G.analytics.np=G.analytics.npOverLogn*Math.log(n);
 			G.analytics.edgeProbability=G.analytics.np/n;
-			G.analytics.randomizeGraph(n,G.analytics.edgeProbability);//
+			G.display(G.analytics.randomGraph(n,G.analytics.edgeProbability));
 		}).listen();
 		//buttons
 		//graphFolder.add(G.analytics, 'halfVertices');
