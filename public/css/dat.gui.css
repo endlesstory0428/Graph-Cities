@@ -29,6 +29,8 @@
     /** Exclude mains in ac so that we don't hide close button */
     overflow: hidden; }
   .dg.main {
+	  width: 100%;
+	  max-width:200px;
 	  overflow-y: scroll;
     -webkit-transition: opacity 0.1s linear;
     -o-transition: opacity 0.1s linear;

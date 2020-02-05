@@ -959,12 +959,14 @@ G.addModule("subview",{
 	},
 	onModifiersChanged:function(name){
 		G.broadcast("modifierUpdated",{target:this.modifierTarget&&this.modifierTarget.dataPath,modifier:name,params:(this.modifierTarget&&this.modifierTarget.modifiers&&this.modifierTarget.modifiers[name])});
-		G.view.refreshStyles(true,true);
+		if(this.modifiers[name].refreshAll!==false){G.view.refreshStyles(true,true);}
+		else{G.view.refreshStyles();}
+		
 	},
 	
 	modifiers:{
 		nodeColor:{
-			
+			//refreshAll:false,//todo: doesn't work, don't use yet
 			onEnable:(graph,params)=>{
 				if(!graph.colorScaleName){graph.colorScaleName=params.colorScaleName;G.display(G.graph);}
 			},
