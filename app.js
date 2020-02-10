@@ -5,18 +5,16 @@ var dataDir=
 "./data";
 var tempDir="./temp";
 
-var servers={
-	normal:{
-		prefix:"public",
-		port:3010,
-	},
-	/*
-	test:{
-		prefix:"public-test",
-		port:3011,
-	},
-	*/
-}
+//now all subdirectories starting with "public" are assumed to be client branches and will be served on different ports. So be sure that enough ports starting from the specified port (default 3010) are available.
+var servers={};
+let currentPort=3010;
+fs.readdirSync("./").forEach((f)=>{
+	if(f.indexOf("public")!=0)return;
+	let stat=fs.statSync("./"+f);
+	if(stat.isDirectory()==false)return;
+	servers[f]={prefix:f,port:currentPort};
+	currentPort++;
+});//path.sep 
 
 let cachesToRefresh={};//to deal with te situation where there's not enogh memory to refresh all of one kind of cache, we need to be able to specify only to refresh if teh cache is older than soem time, eg. 5 minutes (since the time when the whole processing started).  so instead of <cache>, <cache>:<number> means only refresh if it's older than <number> minutes.
 let noDerived=false;
