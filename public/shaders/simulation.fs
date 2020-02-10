@@ -272,7 +272,7 @@ void main(void) {
 	//r2=r1+clamp(r2-r1,-maxSpeed,maxSpeed);//this will clamp componets separately, leading to a square shape at the beginning
 	vec2 oldVelocity=r1-r;
 	
-	vec2 velocity=(r1-r)*factor+ f*dt2;//2.*r1 - r;// + f*dt2;//dt2=.00001;
+	vec2 velocity=(r1-r)*factor+ f*.0005;//2.*r1 - r;// + f*dt2;//dt2=.00001;
 	//if(dot(velocity,oldVelocity)<0.){velocity=velocity*0.5;}//if it's bouncing around, increase the decay
 	//velocity=normalize(velocity);//funny - if you normalize and then clamp it, nodes will always wiggle around in a funny way; but this shows that the length of velocity is usually much less than 1
 	
@@ -289,15 +289,15 @@ void main(void) {
 	float layerHeight=getArrayValue(layerHeights,layerHeightsSize,layer).x*heightFactor;
 	if(nodeScreenTarget.z>0.&&nodeSelected.x>0.){
 		vec4 pos=cameraProjectionMatrix*(cameraMatrixWorldInverse*vec4(r2*radiusFactor, layerHeight,1.0));
-		
+
 		vec2 spos=pos.xy/pos.w;
 		spos.x*=screenWidth;
 		spos.y*=screenHeight;
 		spos/=2.;
-		
+
 		vec3 movement=(leftVector*(spos.x-nodeScreenTarget.x)+screenUpVector*(nodeScreenTarget.y-spos.y));
 		r2=r1+0.05*movement.xy;;//movement.xy;
-		
+
 		
 		//vec3 pos = vertexPos.xyz;
 		//pos.xy*=radiusFactor;

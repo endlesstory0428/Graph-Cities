@@ -2271,7 +2271,7 @@ G.addModule("subview",{
 					min:(graph,params)=>{return G.getGraph(graph.wholeGraph).subgraphs[graph.subgraphType].min;},
 					max:(graph,params)=>{return G.getGraph(graph.wholeGraph).subgraphs[graph.subgraphType].max;},
 					func:(value,graph,params)=>{
-						if(params.max<params.min)return true;//todo: maybe disable the graph update in this case, but should allow the UI change because it's annoying to not let the user drag all the way to the start if he wanted to start over; or at least change min/max to be consistent
+						if(params.max<params.min)return true;//todo: maybe disable the graph update in this case, but should allow the UI change because it's annoying to not let the user §§§§drag all the way to the start if he wanted to start over; or at least change min/max to be consistent
 						if(params.IPWindow){
 							let IP=params.IP,realMax;
 							let fullSummary=G.getGraph(graph.wholeGraph).subgraphs[graph.subgraphType].fullSummary;

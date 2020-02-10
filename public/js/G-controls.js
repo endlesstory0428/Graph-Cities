@@ -1761,7 +1761,7 @@ type: "nodes"*/
 		domElement.addEventListener("mousedown", ev=>{
 			mouseDownPos.x = mousePos.x;
 			mouseDownPos.y = mousePos.y;
-			if(ev.shiftKey&&(ev.button==0)){
+			if((ev.button==0)){
 				G.regionStartPos.x=ev.x;G.regionStartPos.y=ev.y;
 				selectingRegion.style.left=ev.x+"px";
 				selectingRegion.style.right=(domElement.clientWidth-ev.x)+"px";
@@ -1798,13 +1798,13 @@ type: "nodes"*/
 					tempVector3.copy(G.cameraControls.forwardVector).multiplyScalar(-ev.movementY*moveLength);
 					G.view.nodeMovement.add(tempVector3);
 					G.cameraControls.stopMoving();
-				}
+				}G.simulationRunning=true;
 				*/
 				G.view.nodeScreenTarget.x=mouseShaderPos.x;
 				G.view.nodeScreenTarget.y=mouseShaderPos.y;
 				G.view.nodeScreenTarget.z=1;
 				G.cameraControls.stopMoving();
-				
+
 				
 			}
 			else{
@@ -1814,11 +1814,25 @@ type: "nodes"*/
 		});
 		domElement.addEventListener("mousemove", ev=>{
 			if(ev.shiftKey&&(ev.button==0)){
-				if(ev.x>G.regionStartPos.x){selectingRegion.style.left=G.regionStartPos.x+"px";selectingRegion.style.right=(domElement.clientWidth-ev.x)+"px";}else{selectingRegion.style.right=(domElement.clientWidth-G.regionStartPos.x)+"px";selectingRegion.style.left=ev.x+"px";}
-				if(ev.y>G.regionStartPos.y){selectingRegion.style.bottom=(domElement.clientHeight-ev.y)+"px";selectingRegion.style.top=G.regionStartPosy+"px";}else{selectingRegion.style.top=ev.y+"px";selectingRegion.style.bottom=(domElement.clientHeight-G.regionStartPos.y)+"px";}
+				if(ev.x>G.regionStartPos.x){
+					selectingRegion.style.left=G.regionStartPos.x+"px";
+					selectingRegion.style.right=(domElement.clientWidth-ev.x)+"px";
+				}else{
+					selectingRegion.style.right=(domElement.clientWidth-G.regionStartPos.x)+"px";
+					selectingRegion.style.left=ev.x+"px";
+				}
+				if(ev.y>G.regionStartPos.y){
+					selectingRegion.style.bottom=(domElement.clientHeight-ev.y)+"px";
+					selectingRegion.style.top=G.regionStartPosy+"px";
+				}else{
+					selectingRegion.style.top=ev.y+"px";
+					selectingRegion.style.bottom=(domElement.clientHeight-G.regionStartPos.y)+"px";
+				}
 				
 			}
-			else{selectingRegion.style.display="none";}
+			else{
+				selectingRegion.style.display="none";
+			}
 		});
 		domElement.addEventListener("mouseup", ev=>{
 			isDraggingObjects=false;
@@ -1867,9 +1881,9 @@ type: "nodes"*/
 			
 		}
 		, false);
-		
-		
-		
+
+
+
 		G.hoverDelay=1000;
 		function hoverOnCurrentObject(obj){
 			//if(obj){
