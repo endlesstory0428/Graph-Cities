@@ -592,7 +592,6 @@ span.selector{
 }
 span.selector-bottom{
 	margin:0;padding:0;
-	position: absolute;
 	z-index:3;
 }
 span.metagraph-item{
