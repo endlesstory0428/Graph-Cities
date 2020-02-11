@@ -2,18 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="5e4e19f6-07d1-456e-afdc-c39803d15653" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/datasets.js" beforeDir="false" afterPath="$PROJECT_DIR$/datasets.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/colors.js" beforeDir="false" afterPath="$PROJECT_DIR$/lib/colors.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/css/dat.gui.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/css/dat.gui.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/public/css/main.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/css/main.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/js/G-controls.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/js/G-controls.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/js/G-subview.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/js/G-subview.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/public/index.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/public/js/G-ui.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/js/G-ui.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/js/G-view.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/js/G-view.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/shaders/lines.vs" beforeDir="false" afterPath="$PROJECT_DIR$/public/shaders/lines.vs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/shaders/nodes.fs" beforeDir="false" afterPath="$PROJECT_DIR$/public/shaders/nodes.fs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/shaders/nodes.vs" beforeDir="false" afterPath="$PROJECT_DIR$/public/shaders/nodes.vs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/shaders/simulation.fs" beforeDir="false" afterPath="$PROJECT_DIR$/public/shaders/simulation.fs" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -25,40 +16,16 @@
     <option name="testRunner" value="GRADLE" />
     <option name="delegatedBuild" value="true" />
   </component>
+  <component name="FavoritesManager">
+    <favorites_list name="graph-strata" />
+  </component>
   <component name="FileEditorManager">
     <leaf>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/public/js/G-loading.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="5122">
-              <caret line="550" column="34" selection-start-line="550" selection-start-column="17" selection-end-line="550" selection-end-column="34" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/lib/colors.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="150">
-              <caret line="10" column="14" selection-start-line="10" selection-start-column="14" selection-end-line="10" selection-end-column="14" />
-            </state>
-          </provider>
-        </entry>
-      </file>
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/lib/controls.js">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="-1837">
               <caret column="13" selection-start-column="11" selection-end-column="13" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/lib/three.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="6181">
-              <caret line="41688" column="24" selection-start-line="41688" selection-start-column="24" selection-end-line="41688" selection-end-column="24" />
             </state>
           </provider>
         </entry>
@@ -76,16 +43,69 @@
         <entry file="file://$PROJECT_DIR$/public/js/G-view.js">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="195">
-              <caret line="128" column="26" selection-start-line="128" selection-start-column="26" selection-end-line="128" selection-end-column="26" />
+              <caret line="128" column="25" lean-forward="true" selection-start-line="128" selection-start-column="25" selection-end-line="128" selection-end-column="25" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/public/index.html">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="156">
+              <caret line="109" column="55" selection-start-line="109" selection-start-column="55" selection-end-line="109" selection-end-column="55" />
+              <folding>
+                <element signature="n#style#0;n#div#0;n#div#0;n#div#4;n#body#0;n#html#0;n#!!top" expanded="true" />
+                <element signature="n#style#0;n#p#0;n#div#0;n#div#4;n#body#0;n#html#0;n#!!top" expanded="true" />
+                <element signature="n#style#0;n#p#1;n#div#0;n#div#4;n#body#0;n#html#0;n#!!top" expanded="true" />
+                <element signature="n#style#0;n#svg#0;n#div#0;n#div#4;n#body#0;n#html#0;n#!!top" expanded="true" />
+                <element signature="n#style#0;n#div#0;n#svg#0;n#div#0;n#div#4;n#body#0;n#html#0;n#!!top" expanded="true" />
+                <element signature="n#style#0;n#div#1;n#svg#0;n#div#0;n#div#4;n#body#0;n#html#0;n#!!top" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/public/js/G-ui.js">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="90">
+              <caret line="487" column="88" selection-start-line="487" selection-start-column="80" selection-end-line="487" selection-end-column="88" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/public/css/main.css">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="150">
+              <caret line="594" column="13" selection-start-line="594" selection-start-column="12" selection-end-line="594" selection-end-column="13" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/public/shaders/nodes.vs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="234">
-              <caret line="101" lean-forward="true" selection-start-line="101" selection-end-line="101" />
+            <state relative-caret-position="220">
+              <caret line="95" column="36" selection-start-line="95" selection-start-column="23" selection-end-line="95" selection-end-column="36" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/public/shaders/stars.fs">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="150">
+              <caret line="10" column="1" lean-forward="true" selection-start-line="10" selection-start-column="1" selection-end-line="10" selection-end-column="1" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/public/shaders/waveArcLinks.vs">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="205">
+              <caret line="67" column="4" selection-start-line="67" selection-start-column="4" selection-end-line="67" selection-end-column="4" />
             </state>
           </provider>
         </entry>
@@ -101,41 +121,10 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/lib/dat.gui.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="51405">
-              <caret line="3428" column="11" lean-forward="true" selection-start-line="3428" selection-start-column="11" selection-end-line="3428" selection-end-column="11" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/public/js/G-subview.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="767">
-              <caret line="1753" column="24" selection-start-line="1753" selection-start-column="24" selection-end-line="1753" selection-end-column="24" />
-            </state>
-          </provider>
-        </entry>
-      </file>
     </leaf>
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>vPosition</find>
-      <find>top-level-cc-ribbon-area</find>
-      <find>weight</find>
-      <find>ccRibbon</find>
-      <find>node</find>
-      <find>colorValue</find>
-      <find>grey</find>
-      <find>nodes</find>
-      <find>new THREE.Color</find>
-      <find>animateOnce</find>
-      <find>mo</find>
-      <find>dt</find>
-      <find>colorVal</find>
       <find>dt2</find>
       <find>Node Color</find>
       <find>Subview Tools</find>
@@ -149,15 +138,28 @@
       <find>lightBlueRed</find>
       <find>graph.modifiers.nodeColor.colorScaleName</find>
       <find>co</find>
-      <find>clearColor: 0xffffff,</find>
-      <find>standardColor</find>
       <find>vColor</find>
       <find>colorList</find>
+      <find>standardColor</find>
+      <find>vColo</find>
+      <find>ribbon</find>
+      <find>transform: translateX(50%);font-size:x-small;</find>
+      <find>clearColor: 0xffffff,</find>
+      <find>p.bar-se</find>
+      <find>bar-segment</find>
+      <find>ribbon-scale</find>
+      <find>top-level-cc-ribbon-area</find>
+      <find>span.selector-bottom</find>
+      <find>ccRibbon</find>
+      <find>padding-to</find>
+      <find>selector-bottom</find>
+      <find>ribbon-menu-contents</find>
+      <find>selector</find>
     </findStrings>
     <dirStrings>
       <dir>$PROJECT_DIR$/lib</dir>
-      <dir>$PROJECT_DIR$/public/shaders</dir>
       <dir>$PROJECT_DIR$/public/js</dir>
+      <dir>$PROJECT_DIR$/public/shaders</dir>
       <dir>$PROJECT_DIR$</dir>
     </dirStrings>
   </component>
@@ -177,15 +179,16 @@
         <option value="$PROJECT_DIR$/public/js/G-controls.js" />
         <option value="$PROJECT_DIR$/data2/p2p-Gnutella31.txt" />
         <option value="$PROJECT_DIR$/public/js/G-subview.js" />
-        <option value="$PROJECT_DIR$/public/js/G-ui.js" />
         <option value="$PROJECT_DIR$/data2/Dhaka_Edgelist.csv" />
         <option value="$PROJECT_DIR$/public/shaders/simulation.fs" />
         <option value="$PROJECT_DIR$/lib/colors.js" />
-        <option value="$PROJECT_DIR$/public/css/main.css" />
         <option value="$PROJECT_DIR$/public/js/G-loading.js" />
         <option value="$PROJECT_DIR$/lib/d3-scale-chromatic.js" />
         <option value="$PROJECT_DIR$/public/js/G-view.js" />
         <option value="$PROJECT_DIR$/public/shaders/nodes.vs" />
+        <option value="$PROJECT_DIR$/public/index.html" />
+        <option value="$PROJECT_DIR$/public/css/main.css" />
+        <option value="$PROJECT_DIR$/public/js/G-ui.js" />
       </list>
     </option>
   </component>
@@ -276,6 +279,7 @@
   </component>
   <component name="PropertiesComponent">
     <property name="ASKED_SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="aspect.path.notification.shown" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$/data2" />
@@ -316,12 +320,12 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1580836598980</updated>
-      <workItem from="1580836600642" duration="55945000" />
+      <workItem from="1580836600642" duration="64402000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="55945000" />
+    <option name="totallyTimeSpent" value="64402000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="23" y="23" width="1124" height="763" extended-state="0" />
@@ -331,9 +335,9 @@
       <window_info id="Designer" />
       <window_info id="UI Designer" />
       <window_info id="Capture Tool" />
-      <window_info id="Favorites" side_tool="true" />
-      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.8689655" visible="true" weight="0.37615526" />
-      <window_info id="Structure" order="1" sideWeight="0.13103448" side_tool="true" visible="true" weight="0.37615526" />
+      <window_info id="Favorites" sideWeight="0.15862069" side_tool="true" weight="0.17837338" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.8321839" visible="true" weight="0.17837338" />
+      <window_info id="Structure" order="1" sideWeight="0.16781609" side_tool="true" visible="true" weight="0.17837338" />
       <window_info anchor="bottom" id="Docker" show_stripe_button="false" />
       <window_info anchor="bottom" id="Database Changes" />
       <window_info anchor="bottom" id="Version Control" />
@@ -361,13 +365,6 @@
     <option name="version" value="1" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/lib/dat.gui.css">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="211">
-          <caret line="179" column="28" lean-forward="true" selection-start-line="179" selection-start-column="28" selection-end-line="179" selection-end-column="28" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/public/js/simulation.js">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="78">
@@ -437,13 +434,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/public/shaders/stars.fs">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="150">
-          <caret line="10" column="1" lean-forward="true" selection-start-line="10" selection-start-column="1" selection-end-line="10" selection-end-column="1" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/public/shaders/simulation.vs">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="60">
@@ -484,13 +474,6 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/data2/RoadNetworkMod.csv">
       <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/public/js/G-ui.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1006">
-          <caret line="612" column="11" selection-start-line="612" selection-start-column="11" selection-end-line="612" selection-end-column="11" />
-        </state>
-      </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/lib/graph-algorithms.js">
       <provider selected="true" editor-type-id="text-editor">
@@ -543,20 +526,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="217">
           <caret line="274" column="39" selection-start-line="274" selection-start-column="39" selection-end-line="274" selection-end-column="39" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/public/index.html">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="120">
-          <caret line="113" column="34" selection-start-line="113" selection-start-column="21" selection-end-line="113" selection-end-column="34" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/public/css/main.css">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="418">
-          <caret line="477" column="9" selection-start-line="477" selection-start-column="4" selection-end-line="477" selection-end-column="9" />
         </state>
       </provider>
     </entry>
@@ -664,17 +633,60 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/public/js/G-view.js">
+    <entry file="file://$PROJECT_DIR$/public/shaders/nodes.vs">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="195">
-          <caret line="128" column="26" selection-start-line="128" selection-start-column="26" selection-end-line="128" selection-end-column="26" />
+        <state relative-caret-position="220">
+          <caret line="95" column="36" selection-start-line="95" selection-start-column="23" selection-end-line="95" selection-end-column="36" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/public/shaders/nodes.vs">
+    <entry file="file://$PROJECT_DIR$/public/shaders/stars.fs">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="234">
-          <caret line="101" lean-forward="true" selection-start-line="101" selection-end-line="101" />
+        <state relative-caret-position="150">
+          <caret line="10" column="1" lean-forward="true" selection-start-line="10" selection-start-column="1" selection-end-line="10" selection-end-column="1" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/public/shaders/waveArcLinks.vs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="205">
+          <caret line="67" column="4" selection-start-line="67" selection-start-column="4" selection-end-line="67" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/public/js/G-view.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="195">
+          <caret line="128" column="25" lean-forward="true" selection-start-line="128" selection-start-column="25" selection-end-line="128" selection-end-column="25" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/public/css/main.css">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="150">
+          <caret line="594" column="13" selection-start-line="594" selection-start-column="12" selection-end-line="594" selection-end-column="13" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/public/index.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="156">
+          <caret line="109" column="55" selection-start-line="109" selection-start-column="55" selection-end-line="109" selection-end-column="55" />
+          <folding>
+            <element signature="n#style#0;n#div#0;n#div#0;n#div#4;n#body#0;n#html#0;n#!!top" expanded="true" />
+            <element signature="n#style#0;n#p#0;n#div#0;n#div#4;n#body#0;n#html#0;n#!!top" expanded="true" />
+            <element signature="n#style#0;n#p#1;n#div#0;n#div#4;n#body#0;n#html#0;n#!!top" expanded="true" />
+            <element signature="n#style#0;n#svg#0;n#div#0;n#div#4;n#body#0;n#html#0;n#!!top" expanded="true" />
+            <element signature="n#style#0;n#div#0;n#svg#0;n#div#0;n#div#4;n#body#0;n#html#0;n#!!top" expanded="true" />
+            <element signature="n#style#0;n#div#1;n#svg#0;n#div#0;n#div#4;n#body#0;n#html#0;n#!!top" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/public/js/G-ui.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="90">
+          <caret line="487" column="88" selection-start-line="487" selection-start-column="80" selection-end-line="487" selection-end-column="88" />
         </state>
       </provider>
     </entry>
