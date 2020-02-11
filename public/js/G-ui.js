@@ -332,10 +332,14 @@ G.addModule("ui", {
                 let parent = G.getGraph(parentPath);
                 if (!parent.hierarchyPathContent) this.initHierarchyPathElems(parent);
                 graph.hierarchyPathName.textContent = nameText;
-                while (parent.hierarchyPathContent.childElementCount > 0) {//remove all existing children of parent
-                    parent.hierarchyPathContent.removeChild(parent.hierarchyPathContent.firstElementChild);
+                if(parent.hierarchyPathContent) {
+                    while (parent.hierarchyPathContent.childElementCount > 0) {//remove all existing children of parent
+                        parent.hierarchyPathContent.removeChild(parent.hierarchyPathContent.firstElementChild);
+                    }
+                    parent.hierarchyPathContent.appendChild(graph.hierarchyPathElem);
+
                 }
-                parent.hierarchyPathContent.appendChild(graph.hierarchyPathElem);
+
             } else {
                 graph.hierarchyPathName.textContent = pathToText(graph.dataPath);
                 if (hierarchyPathElem.childElementCount > 0) {
@@ -351,10 +355,14 @@ G.addModule("ui", {
             }
             if (parentPath && G.hasGraph(parentPath)) {
                 let parent = G.getGraph(parentPath);
-                while (parent.hierarchyPathContent.childElementCount > 0) {//also remove current children in the parent's element - they may exist because of expansion via another path, like graph -> subgraph -> metagraph
-                    parent.hierarchyPathContent.removeChild(parent.hierarchyPathContent.firstElementChild);
+                if(parent.hierarchyPathContent) {
+                    while (parent.hierarchyPathContent.childElementCount > 0) {//also remove current children in the parent's element - they may exist because of expansion via another path, like graph -> subgraph -> metagraph
+                        parent.hierarchyPathContent.removeChild(parent.hierarchyPathContent.firstElementChild);
+                    }
+                    parent.hierarchyPathContent.appendChild(graph.hierarchyPathElem);
+
+
                 }
-                parent.hierarchyPathContent.appendChild(graph.hierarchyPathElem);
             }
         }
     },
