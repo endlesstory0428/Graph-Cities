@@ -614,7 +614,7 @@ G.addModule("ui", {
             let maxAvgDeg = Math.max.apply(null, VERecords.map((x) => x.avgDeg));
             ccRibbon.selectAll("p").remove();
             let ccRects = ccRibbon.selectAll("p").data(VERecords).enter().append("p");
-            ccRects.attr("class", "bar-segment").style("color", "black").style("background-color", (x) => G.colorScales.lightSpectral(x.e / E)).style("height", (x) => Math.ceil(x.avgDeg * 100 / maxAvgDeg) + "%").style("width", (x) => Math.ceil(x.e * 100 / E) + "%")/*.style("flex",(x)=>x.e/E+" 0 0")*/.text((x) => {
+            ccRects.attr("class", "bar-segment").style("color", "black").style("background-color", (x) => G.colorScales.lightSpectral(x.e / E)).style("width", (x) => Math.ceil(x.avgDeg * 100 / maxAvgDeg) + "%").style("height", "92%")/*.style("flex",(x)=>x.e/E+" 0 0")*/.text((x) => {
                 if (x.count == 1 && (x.v > 50 || x.v > Math.log(V))) return "CC with |V|:" + x.v + ", |E|:" + x.e;
                 return x.count;
             });
@@ -632,7 +632,7 @@ G.addModule("ui", {
                     G.addLog("please select a single large CC");
                 }
             });
-            ccRects.append("span").attr("class", "selector-bottom").text("\u25B2").style("color", "white").style("visibility", "hidden");
+            ccRects.append("span").attr("class", "selector-bottom").text("\u25c0").style("color", "black").style("visibility", "hidden");
             this.ccRects = ccRects;
             let hoverOnCC = (obj) => {
                 let data = obj.__data__;
