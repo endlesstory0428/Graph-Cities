@@ -1,28 +1,41 @@
 import sys
+import json
 from math import cos, sin, pi
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
-L = 36
-W = L / 1.618  # the golden rectangle ratio
-alpha = 30
-beta = 7.5
+datas = []
+
+for filename in sys.argv[1:]:
+    with open(sys.argv[1]) as f:
+        datas.append(json.load(f))
+
+max_rad = 0
+for data in datas:
+    test_max = max(data.values(), key=lambda x:x['vertices'])['vertices']
+    if test_max > max_rad:
+        max_rad = test_max
+
+L = max_rad
+W = L #/ 1.618  # the golden rectangle ratio
+alpha = L
+beta = L / 4
 
 # buckets = []
-buckets = range(int(sys.argv[1]))
+# buckets = range(len(sys.argv)-1)
 
 # plt.axes()
 
 acc_theta = 0
-for bucket in buckets:
+for filename in sys.argv[1:]:
     radius = alpha + beta * acc_theta
     x = radius * cos(acc_theta)
-    y = radius * sin(acc_theta) * 0.95
+    y = radius * sin(acc_theta) # * 0.95
     box_theta = acc_theta * 180 / pi + 90
-    d_theta = (L * 1.4) / radius
+    d_theta = (L * 1.7) / radius
     acc_theta += d_theta
 
     # plt.gca().add_patch(plt.Rectangle((x, y), L, W, box_theta))
-    print(plt.Rectangle((x, y), L, W, box_theta))
+    print(filename, x, y, box_theta)
 
 # plt.axis('scaled')
 # plt.show()
