@@ -49,7 +49,7 @@ for w, s in data.items():
 floor = 0
 accum_height = 0
 for i in range(1, num_waves + 1):
-    Volume = data[str(i)]['edges']
+    Volume = log2(data[str(i)]['edges'])
     H = 0
     r_upper = 0
     r_middle = 0
