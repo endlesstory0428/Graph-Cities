@@ -3,20 +3,22 @@ import json
 from math import cos, sin, pi
 # import matplotlib.pyplot as plt
 
-datas = []
+datas = {}
 
 for filename in sys.argv[1:]:
-    with open(sys.argv[1]) as f:
-        datas.append(json.load(f))
+    with open(filename) as f:
+        data = json.load(f)
+        edges = sum([x.get('edges', 0) for x in data.values()])
+        verts = max([x.get('vertices') for x in data.values()])
+        datas[filename] = {'edges': edges, 'rad': verts}  # , 'data': data)
 
 max_rad = 0
-for data in datas:
-    test_max = max(data.values(), key=lambda x:x['vertices'])['vertices']
-    if test_max > max_rad:
-        max_rad = test_max
+for data in datas.values():
+    if data['rad'] > max_rad:
+        max_rad = data['rad']
 
 L = max_rad
-W = L #/ 1.618  # the golden rectangle ratio
+W = L  # / 1.618  # the golden rectangle ratio
 alpha = L
 beta = L / 4
 
@@ -26,10 +28,10 @@ beta = L / 4
 # plt.axes()
 
 acc_theta = 0
-for filename in sys.argv[1:]:
+for filename in sorted(datas, key=lambda x: datas[x]['edges']):
     radius = alpha + beta * acc_theta
     x = radius * cos(acc_theta)
-    y = radius * sin(acc_theta) # * 0.95
+    y = radius * sin(acc_theta)  # * 0.95
     box_theta = acc_theta * 180 / pi + 90
     d_theta = (L * 1.7) / radius
     acc_theta += d_theta
@@ -37,5 +39,5 @@ for filename in sys.argv[1:]:
     # plt.gca().add_patch(plt.Rectangle((x, y), L, W, box_theta))
     print(filename, x, y, box_theta)
 
-# plt.axis('scaled')
-# plt.show()
+    # plt.axis('scaled')
+    # plt.show()
