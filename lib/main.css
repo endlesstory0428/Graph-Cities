@@ -1,5 +1,5 @@
 html , body {
-	margin: 0; 
+	margin: 0;
 	padding: 0;
 	width:100%;
 	height:100%;
@@ -9,7 +9,7 @@ html , body {
 
 #canvas {
 	position: absolute;
-	left: 0; right: 0; top: 0; bottom: 0; 
+	left: 0; right: 0; top: 0; bottom: 0;
 	margin: 0;
 	padding:0;
 	overflow:hidden;
@@ -78,7 +78,7 @@ div.graph-logs {
 	padding:0;
 	margin:0;
     text-align: center;
-    
+
     opacity: 0.7;
     font-size: 16px;
 }
@@ -130,7 +130,7 @@ div#top-title{
 	box-sizing: border-box;
 	/*left:15%;
 	right:15%;*/
-	
+
 }
 #graph-name
 {
@@ -138,7 +138,7 @@ div#top-title{
     height:100%;
 	padding-top: 10px;
     text-align: center;
-	
+
 }
 
 ul.hierarchy-path{
@@ -148,7 +148,7 @@ ul.hierarchy-path{
 div#X-ray-menu{
 	background-color:white;
 	top:10%;left:0;height:90%;width:10%;z-index:5;
-	
+
 }
 div#X-ray-menu-content{
 	text-align:center;
@@ -223,7 +223,7 @@ div#selected-vertices-ids{
 	left:16%;
 	z-index:5;
 }
-	
+
 div#new-graph-menu{
 	display:block;
 	position: absolute;
@@ -379,7 +379,7 @@ div#graph-info-area{
 table#graph-layers{
 	    width: 100%;
 	border-top:1px solid white;
-	
+
 }
 table#graph-layers tr.selected{
 	background-color:rgba(10,65,240,0.3);
@@ -440,11 +440,11 @@ div.panel>p{
 	margin-bottom:3px;
 	border-bottom:1px grey solid;
 	/*
-	box-shadow: 
-    inset hsla(0,0%,15%, .3) 0 -1px 2px 1px, 
-    inset hsla(0,0%,0%, .25) 0 -1px 0px 2px, 
-    inset hsla(0,0%,0%,.1) 0  1px 1px 2px, 
-    
+	box-shadow:
+    inset hsla(0,0%,15%, .3) 0 -1px 2px 1px,
+    inset hsla(0,0%,0%, .25) 0 -1px 0px 2px,
+    inset hsla(0,0%,0%,.1) 0  1px 1px 2px,
+
     inset hsla(200,100%,50%,0.15) 0 0px 0px 2px,
     hsla(200,100%,50%,0.5) 0  1px 1px 1px  ;
 	*/
@@ -511,3 +511,63 @@ button.material:active {
 circle.dot {
   stroke: #fff;
 }
+
+
+.a ,
+.first,
+.second {
+	position: absolute;
+}
+
+a {
+	margin: auto;
+	top: 0;
+	bottom: 0;
+	right: 0;
+	left: 0;
+	width: 170px;
+	height: 50px;
+	transition: all 0.3s ease;
+}
+
+.wrap {
+	width: 100%;
+	height: 50px;
+	transition: all 0.3s ease;
+}
+
+.first,
+.second {
+	width: 100%;
+	height: 50px;
+	transition: all 0.2s ease-in-out;
+	font-size: 17px;
+	text-transform: uppercase;
+	color: #FFF;
+	letter-spacing: 2px;
+	text-align: center;
+	vertical-align: middle;
+	line-height: 50px;
+}
+
+.second {
+	opacity: 0;
+}
+
+.a:hover {
+	width: 280px;
+}
+
+.wrap {
+	padding-bottom: 17px;
+}
+.first {
+	transform: translateY(-8px);
+	padding-top: 5px;
+}
+.second {
+	transform: translateY(20px);
+	opacity: 1;
+}
+
+

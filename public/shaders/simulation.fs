@@ -259,10 +259,10 @@ void main(void) {
 
 	
 	
-	float maxSpeed=100./(timer*5.+5.)+10.;//11 -> 1? 7.5 -> 5?
+	float maxSpeed=500./(timer*5.+5.)+10.;//11 -> 1? 7.5 -> 5?
 	//if(endeid==eid){maxSpeed*=0.01;}
 	//float maxSpeed=0.1;
-	float componentMaxSpeed=200.;//speed may be too large to clamp as a whole in some cases (overflow when squared?), so must clamp components first
+	float componentMaxSpeed=500.;//speed may be too large to clamp as a whole in some cases (overflow when squared?), so must clamp components first
 	//r =r+f*dt2; 
 	//vec3 r2=(r+r1)/2.;
 	//vec3 r2=2.*r1 - r;// + f*dt2;//2.*r1 - r;// + f*dt2;//dt2=.00001;
