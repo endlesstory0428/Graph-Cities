@@ -18,7 +18,7 @@ G.addModule("analytics",{
 		let startTime=new Date().getTime();
 		//now this only calculates graph-level analytics, not view-level stuff like clones
 		this.applyTemplates(graph);
-		//partitions and clones from vertex properties and edge properties 
+		//partitions and clones from vertex properties and edge properties
 		/*
 		for(let name in this.templates.vertices.properties){
 			let templateObj=this.templates.vertices.properties[name];
@@ -1122,7 +1122,7 @@ G.addModule("analytics",{
 		for(let i=0;i<vertexLevels.length;i++){
 			vertexWaves[i]=waveMap[vertexLevels[i]];
 		}
-		
+
 		let ccIDs=new Array(graph.vertices.length);
 		
 		let waveCCs=[],waveCCEdges=[];

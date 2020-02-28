@@ -1479,8 +1479,9 @@ type: "nodes"*/
 				switch (result.type)
 				{
 					case "nodes":
+						//$("#egonet").modal('show');
 						let nodes=G.view.model.nodes;
-						
+
 						let vertices=originalObjects;
 						if(vertices.waveLayers&&vertices.waveLayersExpanded){
 							if(!vertices.waveLayersExpanded[originalObjectID]){
@@ -1495,7 +1496,7 @@ type: "nodes"*/
 						//highlight edges and neighhbors
 						
 						this.graph.hoveredVertex=originalObjectID;
-						
+
 						G.view.refreshStyles(true,true);
 				}
 			}
@@ -1567,8 +1568,12 @@ type: "nodes"*/
 					graph.selectedVertexCount=1;
 					let selectedEdgeCount=0;
 					let sources=graph.edges.source,targets=graph.edges.target;
-					for(let i=0;i<graph.edges.length;i++){if((sources[i] in graph.egonet)&&(targets[i] in graph.egonet))selectedEdgeCount++;}
+					for(let i=0;i<graph.edges.length;i++){
+						if((sources[i] in graph.egonet)&&(targets[i] in graph.egonet))
+							selectedEdgeCount++;
+					}
 					graph.selectedEdgeCount=selectedEdgeCount;
+
 				}
 				else{graph.egonet=null;
 					G.avgLength=0;let selectedEdgeCount=0;
@@ -1582,6 +1587,7 @@ type: "nodes"*/
 				graph.selectedEdgeCount=0;
 			}
 			G.view.sharedUniforms.nodeSelectionData.needsUpdate=true;
+
 			G.view.refreshStyles(true,true);
 		};
 		
@@ -1619,6 +1625,9 @@ type: "nodes"*/
 		}
 		G.toggleSelectNode=function(node){//node is a clone index
 			clearFutureHistory();
+			if(!this.graph.selectedVertices) {
+				this.graph.selectedVertices={};
+			}
 			let selected=copyObj(this.graph.selectedVertices);
 			
 			let record=G.view.getOriginalObject("nodes",node);
@@ -1655,16 +1664,26 @@ type: "nodes"*/
 			for (let i=0;i<this.graph.vertices.length;i++){if((ccs[i]==ccID)&&(!selected[i]))selected[i]={time:Date.now()};}
 
 			//else{delete selected[node.original];}
-			this.graph.selectedVertices=selected;this.graph.selectHistory.unshift(selected);//index is still 0
+			this.graph.selectedVertices=selected;
+			if(this.graph.selectHistory) {
+				this.graph.selectHistory.unshift(selected);//index is still 0
+			}
 			G.updateSelection();
 		}
 		G.toggleSelectVertex=function(vertex){//now use index not ID
 			clearFutureHistory();
-			let selected=copyObj(this.graph.selectedVertices);
+			let selected = {}
+			if(this.graph.selectedVertices) {
+				selected=copyObj(this.graph.selectedVertices);
+			}
+
 			//if(typeof vertex=="object"){let ID=G.view.graph.vertices.indexOf(vertex);if(ID==-1)throw Error("no such vertex "+vertex);vertex=ID;}
 			if(!selected[vertex]){selected[vertex]={time:Date.now()};}
 			else{delete selected[vertex];}
-			this.graph.selectedVertices=selected;this.graph.selectHistory.unshift(selected);//index is still 0
+			this.graph.selectedVertices=selected;
+			if(this.graph.selectHistory) {
+				this.graph.selectHistory.unshift(selected);//index is still 0
+			}
 			G.updateSelection();
 		}
 		
@@ -1769,7 +1788,7 @@ type: "nodes"*/
 		domElement.addEventListener("mousedown", ev=>{
 			mouseDownPos.x = mousePos.x;
 			mouseDownPos.y = mousePos.y;
-			if((ev.button==0)){
+			if(ev.shiftKey&&(ev.button==0)){
 				G.regionStartPos.x=ev.x;G.regionStartPos.y=ev.y;
 				selectingRegion.style.left=ev.x+"px";
 				selectingRegion.style.right=(domElement.clientWidth-ev.x)+"px";
@@ -1806,7 +1825,7 @@ type: "nodes"*/
 					tempVector3.copy(G.cameraControls.forwardVector).multiplyScalar(-ev.movementY*moveLength);
 					G.view.nodeMovement.add(tempVector3);
 					G.cameraControls.stopMoving();
-				}G.simulationRunning=true;
+				}
 				*/
 				G.view.nodeScreenTarget.x=mouseShaderPos.x;
 				G.view.nodeScreenTarget.y=mouseShaderPos.y;

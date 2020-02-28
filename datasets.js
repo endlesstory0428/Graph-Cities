@@ -544,6 +544,8 @@ let DataTemplates = {//these functions all take a graph(that has a dataPath etc)
         },
         make: (g) => {
             let waveIDs = g.vertices.wave;
+            console.log("here");
+            console.log(waveIDs);
             let list = loadSubgraphs(g, "wave", true);//include bucketed
             let vertexCCIDs = new Array(g.vertices.length);
             for (let i = 0; i < vertexCCIDs.length; i++) {
@@ -2097,8 +2099,8 @@ function saveSubgraphs(g, type, subgraphs, options) {//auto buckets, takes array
     if ("bucketID" in g) {
         options.noBucketing = true;//don't do bucets for them
     }
-    let bucketVLimit = 16384;
-    let bucketELimit = 65536;
+    let bucketVLimit = 136701;
+    let bucketELimit = 206202;
     let unbucketedVLimit = 256, unbucketedELimit = 1024;//subgraphs larger tahn this will not be bucketed
     if (options.unbucketedVLimit) unbucketedVLimit = options.unbucketedVLimit;
     if (options.unbucketedELimit) unbucketedELimit = options.unbucketedELimit;
@@ -2580,6 +2582,7 @@ function deleteFolderRecursive(path) {
         fs.rmdirSync(path);
     }
 };
+
 
 module.exports = {
     loadAllDatasets: loadAllDatasets,

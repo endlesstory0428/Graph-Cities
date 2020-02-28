@@ -24,9 +24,8 @@ void main() {
 	}
 	if(vIsSelected>0.){
 		b+=marker;//gl_FragColor.r=1.;
-
-
 	}
+
 	gl_FragColor=vec4(vColor,clamp(b,0.,1.));
 	
 	//gl_FragColor=gl_FragColor;;

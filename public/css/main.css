@@ -892,7 +892,7 @@ div.material-slider{
 
 p.material-slider-label{
 	/*position:absolute;*/
-	width:35%;
+	width:4%;
 	font-size:xx-small;
 	float: left;
 	/*text-transform:uppercase;*/
@@ -937,7 +937,7 @@ div.material-slider-bar-container{
     border-top-right-radius: 5px;
     border-bottom-right-radius: 5px;
     border-bottom-left-radius: 5px;
-	
+	margin-bottom: 2px;
 }
 div.material-slider-bar{
 	position:absolute;left:0;

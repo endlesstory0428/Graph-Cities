@@ -473,13 +473,42 @@ G.addModule("subview",{
 					isArray:true,
 					value:(graph)=>{
 						let sources=graph.edges.source,targets=graph.edges.target;
+						let subgraph= null
+						graph.egonet={}
+						if(graph.hoveredVertex) {
+							//subgraph=Algs.getFilteredSubgraph(graph,graph.hoveredVertex,(x)=>(x!=0),"egonet");
+							n= graph.getNeighbors(graph.hoveredVertex).length
+							console.log(n);
+							if(n>25 && n<=57) {
+								const Graph = ForceGraph3D()
+								(document.getElementById('egonet_canvas'))
+									.graphData(graph.egonetMap[graph.hoveredVertex].initData)
+									.backgroundColor('#ffffff')
+									.nodeColor(node => 'gray')
+									.linkColor(link => 'maroon')
+									.nodeLabel(node => `<span style="color: red">${node.id}</span>`)
+									.width(400)
+									.height(400)
+								$("#egonet_id").text("Vertex " + graph.hoveredVertex + " Egonet" + "|V|" +graph.egonetMap[graph.hoveredVertex].vertices.length + "|E|" + graph.egonetMap[graph.hoveredVertex].edges.length);
+								$('#egonet').modal('show');
+							}
+
+
+						}
 						return graph.links.map((link,i,links)=>{
 							let result=1;
-							
 							let edgeID=i;
 							let source=sources[i],target=targets[i];//vertex indices
 							let hoverFactor=1;
-							if(graph.hoveredVertex==source||graph.hoveredVertex==target)hoverFactor=5;
+							if(graph.hoveredVertex){
+                                let hoveredEgonet=graph.egonetMap[graph.hoveredVertex];
+                                if(graph.hoveredVertex){
+                                    if(source in hoveredEgonet.vertices[hoveredEgonet.edges.source] && target in hoveredEgonet.vertices[hoveredEgonet.edges.target] ) {
+                                        hoverFactor=5;
+                                    }
+                                }
+							}
+
 							result*=hoverFactor;
 							return result;
 						});
@@ -505,7 +534,13 @@ G.addModule("subview",{
 							let edgeID=i;//G.subview.templates.links.getOriginalObjectID(graph,index);
 							let source=sources[i],target=targets[i];//vertex indices
 							let hoverFactor=1;
-							if(graph.hoveredVertex==source||graph.hoveredVertex==target)hoverFactor=2;
+							let hoveredEgonet=graph.egonetMap[graph.hoveredVertex];
+                            if(graph.hoveredVertex){
+                                if(source in hoveredEgonet.vertices[hoveredEgonet.edges.source] && target in hoveredEgonet.vertices[hoveredEgonet.edges.target] ) {
+                                    hoverFactor=5;
+                                }
+                            }
+
 							result*=hoverFactor;
 							return result;
 						});
@@ -1024,7 +1059,7 @@ G.addModule("subview",{
 								let vertexID=G.subview.templates.nodes.getOriginalObjectID(graph,index);if(data.property in graph.vertices){value=graph.vertices[data.property][vertexID];}
 							}
 							
-							let scaled=(data.max==data.min)?0.5:((value-data.min)/(data.max-data.min));
+							let scaled=(data.max==data.min)?3.5:((value-data.min)/(data.max-data.min));
 							return scaled;
 							
 						},
