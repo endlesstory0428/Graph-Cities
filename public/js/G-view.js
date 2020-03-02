@@ -822,11 +822,12 @@ G.addModule("view",{
 				customColor:{//put here to avoid having to specify these in subview modifier effects
 					dimensions:3,
 					value:(link,i,array)=>{
-						if(G.view.graph.egonet && Object.keys(G.graph.egonet).length>0) {
-							if(Object.keys(G.graph.egonet).indexOf(i.toString())!=-1){
-								return  redColor;
-							}
-						}
+                        if(G.view.graph.egonet && Object.keys(G.graph.egonet).length>0) {
+                            let source=G.view.graph.edges.source[i],target=G.view.graph.edges.target[i];
+                            if(G.view.graph.egonet.sources.indexOf(source.toString()) != -1 && G.view.graph.egonet.targets.indexOf(target.toString()) != -1) {
+                                return  redColor;
+                            }
+                        }
 
 						if((array.color[i])) {
 							return array.color[i];
