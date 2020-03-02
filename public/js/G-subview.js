@@ -476,10 +476,10 @@ G.addModule("subview",{
 						let subgraph= null
 						graph.egonet={}
 						if(graph.hoveredVertex) {
-							//subgraph=Algs.getFilteredSubgraph(graph,graph.hoveredVertex,(x)=>(x!=0),"egonet");
+                            graph.egonet=graph.egonetMap[graph.hoveredVertex];
+                            //subgraph=Algs.getFilteredSubgraph(graph,graph.hoveredVertex,(x)=>(x!=0),"egonet");
 							n= graph.getNeighbors(graph.hoveredVertex).length
-							console.log(n);
-							if(n>25 && n<=57) {
+							if(graph.egonetMap[graph.hoveredVertex].edges.length>=1000 && graph.egonetMap[graph.hoveredVertex].edges.length<2000) {
 								const Graph = ForceGraph3D()
 								(document.getElementById('egonet_canvas'))
 									.graphData(graph.egonetMap[graph.hoveredVertex].initData)
@@ -503,7 +503,7 @@ G.addModule("subview",{
 							if(graph.hoveredVertex){
                                 let hoveredEgonet=graph.egonetMap[graph.hoveredVertex];
                                 if(graph.hoveredVertex){
-                                    if(source in hoveredEgonet.vertices[hoveredEgonet.edges.source] && target in hoveredEgonet.vertices[hoveredEgonet.edges.target] ) {
+                                    if(hoveredEgonet.sources.indexOf(source) != -1 && hoveredEgonet.targets.indexOf(target) != -1) {
                                         hoverFactor=5;
                                     }
                                 }
@@ -536,7 +536,7 @@ G.addModule("subview",{
 							let hoverFactor=1;
 							let hoveredEgonet=graph.egonetMap[graph.hoveredVertex];
                             if(graph.hoveredVertex){
-                                if(source in hoveredEgonet.vertices[hoveredEgonet.edges.source] && target in hoveredEgonet.vertices[hoveredEgonet.edges.target] ) {
+                                if(hoveredEgonet.sources.indexOf(source.toString()) != -1 && hoveredEgonet.targets.indexOf(target.toString()) != -1) {
                                     hoverFactor=5;
                                 }
                             }
