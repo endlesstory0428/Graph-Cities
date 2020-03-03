@@ -1569,7 +1569,7 @@ G.addModule("analytics",{
 		G.layerBorderFunc=layerBorderFunc;G.infoDivs=infoDivs;//change the borders later
 		infoDivs.append("p").text((d)=>"L"+d.index+", v: "+d.v+", e: "+d.e+", d: "+d.density.toString().substring(0,5)+" , forward e: "+d.forwardEdges);
 		
-		infoBarHoverDelay=300;
+		infoBarHoverDelay=0;
 		function hoverOnInfoBar(obj){
 			let data=obj.__data__;
 			G.graph.highlightedWaveLayer=data.layer;

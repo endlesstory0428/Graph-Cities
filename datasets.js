@@ -2017,7 +2017,7 @@ function loadTopology(g) {//the save/load tool functions will convert it to a pa
     //g.loadObjects(loadObj(g.dataPath,"graph"));
     //use the default JSON parsing anyway, then convert it to typed arrays inside loadObjects for now?
     if ("bucketID" in g) return;
-    let ids = loadObj(g.dataPath, "vertices.id");//{type:.,value:[...]} and type is not used here
+    let ids =     loadObj(g.dataPath, "vertices.id");//{type:.,value:[...]} and type is not used here
     let sources = loadObj(g.dataPath, "edges.source");
     let targets = loadObj(g.dataPath, "edges.target");
     g.loadVerticesAndEdges(ids.value, sources.value, targets.value);

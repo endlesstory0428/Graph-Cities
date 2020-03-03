@@ -474,22 +474,69 @@ G.addModule("subview",{
 					value:(graph)=>{
 						let sources=graph.edges.source,targets=graph.edges.target;
 						let subgraph= null
-						graph.egonet={}
-						if(graph.hoveredVertex) {
-                            graph.egonet=graph.egonetMap[graph.hoveredVertex];
-                            //subgraph=Algs.getFilteredSubgraph(graph,graph.hoveredVertex,(x)=>(x!=0),"egonet");
-							n= graph.getNeighbors(graph.hoveredVertex).length
+                        graph.egonet={}
+						let color = 'maroon'
+                        if(graph.links.color) {
+
+                        }
+						if(graph.hoveredVertex && graph.showingEdonets) {
+						    if(graph.egonetMap[graph.hoveredVertex] == undefined) {
+                                Algs.getFilteredSubgraph(graph,graph.hoveredVertex,(x)=>(x!=0),"egonet");
+                            } else {
+						        graph.egonet = graph.egonetMap[graph.hoveredVertex];
+                            }
 							if(graph.egonetMap[graph.hoveredVertex].edges.length>=1000 && graph.egonetMap[graph.hoveredVertex].edges.length<2000) {
-								const Graph = ForceGraph3D()
-								(document.getElementById('egonet_canvas'))
-									.graphData(graph.egonetMap[graph.hoveredVertex].initData)
-									.backgroundColor('#ffffff')
-									.nodeColor(node => 'gray')
-									.linkColor(link => 'maroon')
-									.nodeLabel(node => `<span style="color: red">${node.id}</span>`)
-									.width(400)
-									.height(400)
-								$("#egonet_id").text("Vertex " + graph.hoveredVertex + " Egonet" + "|V|" +graph.egonetMap[graph.hoveredVertex].vertices.length + "|E|" + graph.egonetMap[graph.hoveredVertex].edges.length);
+
+                                // const controls = { 'DAG Orientation': 'td'};
+                                // const gui = new dat.GUI({ autoPlace: false });
+                                // $('#egonet_layouts').append($(gui.domElement));
+                                // gui.add(controls, 'DAG Orientation', ['td', 'bu', 'lr', 'rl', 'zout', 'zin', 'radialout', 'radialin', null])
+                                //     .onChange(orientation => Graph && Graph.dagMode(orientation));
+
+                                const Graph = ForceGraph3D({ controlType: 'orbit' })
+                                    (document.getElementById('egonet_canvas'))
+                                        .graphData(graph.egonetMap[graph.hoveredVertex].initData)
+                                        .backgroundColor('#ffffff')
+                                        .nodeColor(node => 'gray')
+                                        .linkColor(link => 'maroon' )
+                                        .nodeLabel(node => `<span style="color: black">${node.label}</span>`)
+                                        .enableNavigationControls(true)
+                                        .width(465)
+                                        .height(408)
+                                        .showNavInfo(false)
+                                        .onNodeClick(node => {
+                                            const distance = 40;
+                                            const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
+                                            Graph.cameraPosition(
+                                                { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, // new position
+                                                node,
+                                                300
+                                            );
+                                        });
+
+
+                                //Define GUI
+                                const Settings = function() {
+                                    this.edgeLength = 0;
+                                };
+
+                                const settings = new Settings();
+                                const linkForce = Graph
+                                    .d3Force('link')
+                                    .distance(settings.edgeLength);
+                                const gui = new dat.GUI({ autoPlace: false });
+                                $("#sett").html("");
+                                $('#sett').append($(gui.domElement));
+                                const controllerOne = gui.add(settings, 'edgeLength', 0, 300);
+
+                                controllerOne.onChange(updateLinkDistance);
+
+                                function updateLinkDistance() {
+                                    linkForce.distance(settings.edgeLength);
+                                    Graph.numDimensions(3); // Re-heat simulation
+                                }
+
+                                $("#egonet_id").text("Vertex " + G.view.graph.labels.find(record => record.new_id ==graph.hoveredVertex ).name + " Egonet" + "   |V|" + graph.egonetMap[graph.hoveredVertex].vertices.length + "|E|" + graph.egonetMap[graph.hoveredVertex].edges.length);
 								$('#egonet').modal('show');
 							}
 
@@ -500,14 +547,13 @@ G.addModule("subview",{
 							let edgeID=i;
 							let source=sources[i],target=targets[i];//vertex indices
 							let hoverFactor=1;
-							if(graph.hoveredVertex){
-                                let hoveredEgonet=graph.egonetMap[graph.hoveredVertex];
-                                if(graph.hoveredVertex){
-                                    if(hoveredEgonet.sources.indexOf(source) != -1 && hoveredEgonet.targets.indexOf(target) != -1) {
-                                        hoverFactor=5;
-                                    }
-                                }
-							}
+                            if(graph.hoveredVertex && graph.showingEdonets){
+                                if(Object.keys(graph.egonetMap[graph.hoveredVertex].vertexMap).indexOf(source.toString())!=-1 && Object.keys(graph.egonetMap[graph.hoveredVertex].vertexMap).indexOf(target.toString())!=-1  ){
+									hoverFactor=5;
+								}
+							} else {
+                                if(graph.hoveredVertex==source||graph.hoveredVertex==target)hoverFactor=5;
+                            }
 
 							result*=hoverFactor;
 							return result;
@@ -534,11 +580,12 @@ G.addModule("subview",{
 							let edgeID=i;//G.subview.templates.links.getOriginalObjectID(graph,index);
 							let source=sources[i],target=targets[i];//vertex indices
 							let hoverFactor=1;
-							let hoveredEgonet=graph.egonetMap[graph.hoveredVertex];
-                            if(graph.hoveredVertex){
-                                if(hoveredEgonet.sources.indexOf(source.toString()) != -1 && hoveredEgonet.targets.indexOf(target.toString()) != -1) {
+                            if(graph.hoveredVertex && graph.showingEdonets){
+                                if(Object.keys(graph.egonetMap[graph.hoveredVertex].vertexMap).indexOf(source.toString())!=-1 && Object.keys(graph.egonetMap[graph.hoveredVertex].vertexMap).indexOf(target.toString())!=-1  ){
                                     hoverFactor=5;
                                 }
+                            } else {
+                                if(graph.hoveredVertex==source||graph.hoveredVertex==target)hoverFactor=2;
                             }
 
 							result*=hoverFactor;
