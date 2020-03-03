@@ -808,7 +808,7 @@ G.addModule("ui", {
 		ribbonSelection.append("span").attr("class", "layer-cc-count").text((d) => d.count);
 
 
-		ribbonHoverDelay = 300;
+		ribbonHoverDelay = 0;
 
 		function hoverOnRibbon(obj) {
 			let data = obj.__data__;

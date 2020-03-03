@@ -838,6 +838,11 @@ G.addModule("controls",{
 		G.showingTooltip=false;
 		window.addEventListener("keydown", ev=>{
 			if ( ev.keyCode === 32) { }
+            if ( ev.key === 'e') {
+                if(G.graph.showingEdonets)
+                    G.graph.showingEdonets=false;
+                else G.graph.showingEdonets=true;
+            }
 			//removed moving
 		});
 		window.addEventListener("keyup", ev=>{
@@ -1458,22 +1463,22 @@ type: "nodes"*/
 				if(originalObjectType&&G.analytics.templates[originalObjectType]){originalTypeSingular=G.analytics.templates[originalObjectType].singularName;}
 				let subgraphLevel=result.subview.subgraphLevel;let subgraph=result.subview.graph;
 				
-				let originalDesc="";
-				if(originalObjectType){
-					originalDesc=((originalTypeSingular?toNormalText(originalTypeSingular):toSingularName(toNormalText(originalObjectType)))+" "+originalObjectID+(subgraphLevel?" (in subgraph "+subgraph.shortName+") ":""));
-					if(G.analytics.templates[originalObjectType]&&G.analytics.templates[originalObjectType].getDescription){
-						originalDesc+=G.analytics.templates[originalObjectType].getDescription(originalObject,originalObjectID,result.subview.graph[originalObjectType]);
-					}
-					originalDesc+="\n";
-				}
-				let viewTypeSingular=null;
-				if(G.view.templates[type].singularName){viewTypeSingular=G.view.templates[type].singularName;}
-				let viewDesc=(toNormalText((viewTypeSingular?viewTypeSingular:toSingularName(result.type)))+" "+objID);
-				if(G.view.templates[type]&&G.view.templates[type].getDescription){
-					viewDesc+=" "+G.view.templates[type].getDescription(obj,objID,G.view.model[result.type]);
-				}
+				// let originalDesc="";
+				// if(originalObjectType){
+				// 	originalDesc=((originalTypeSingular?toNormalText(originalTypeSingular):toSingularName(toNormalText(originalObjectType)))+" "+originalObjectID+(subgraphLevel?" (in subgraph "+subgraph.shortName+") ":""));
+				// 	if(G.analytics.templates[originalObjectType]&&G.analytics.templates[originalObjectType].getDescription){
+				// 		originalDesc+=G.analytics.templates[originalObjectType].getDescription(originalObject,originalObjectID,result.subview.graph[originalObjectType]);
+				// 	}
+				// 	originalDesc+="\n";
+				// }
+				// let viewTypeSingular=null;
+				// if(G.view.templates[type].singularName){viewTypeSingular=G.view.templates[type].singularName;}
+				// let viewDesc=(toNormalText((viewTypeSingular?viewTypeSingular:toSingularName(result.type)))+" "+objID);
+				// if(G.view.templates[type]&&G.view.templates[type].getDescription){
+				// 	viewDesc+=" "+G.view.templates[type].getDescription(obj,objID,G.view.model[result.type]);
+				// }
 				
-				G.toolTipElem.textContent = originalDesc+viewDesc;
+				G.toolTipElem.textContent = "Vertex: " +originalObjectID +" "+ G.view.graph.labels.find(record => record.new_id ==originalObjectID ).name
 				G.toolTipElem.style.display="";
 				
 				switch (result.type)
@@ -1911,7 +1916,7 @@ type: "nodes"*/
 
 
 
-		G.hoverDelay=1000;
+		G.hoverDelay=0;
 		function hoverOnCurrentObject(obj){
 			//if(obj){
 				if ((G.graph) && (G.onhover)) {

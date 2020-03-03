@@ -229,6 +229,13 @@ G.addModule("loading",{
 					console.log("missing ids");
 				}
 			});
+            await d3.csv("datasets/tvshow_ids.csv").then((data)=>{
+                if(typeof data=="string")data=JSON.parse(data);
+                labels=data;
+                if(!ids){
+                    console.log("missing ids");
+                }
+            });
 			await d3.json("datasets/"+g.dataPath+"/edges.source.json.gz").then((data)=>{
 				if(typeof data=="string")data=JSON.parse(data);
 				sources=data.value;
@@ -237,7 +244,7 @@ G.addModule("loading",{
 				if(typeof data=="string")data=JSON.parse(data);
 				targets=data.value;
 			});
-			g.loadVerticesAndEdges(ids,sources,targets);
+			g.loadVerticesAndEdges(ids,sources,targets,labels);
 		}
 			
 		for(let objName in g.objects){
