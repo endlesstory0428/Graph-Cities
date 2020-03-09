@@ -30,13 +30,16 @@ peels = {}
 
 
 def peel():
-    prev_deg = 1
+    prev_deg = -1
     while g.number_of_edges() > 0:
         e = minEdge(g)
         deg = edeg(g, *e)
         if deg > prev_deg:
             prev_deg = deg
+            peels[prev_deg] = nx.Graph()
+
         ean = set([tuple(sorted([e[0], x]))
-                   for x in g[e[0]]]).union([tuple(sorted([e[1], x])) for x in g[e[1]]])
-        peels[prev_deg] = peels.get(prev_deg, []) + list(ean)
+            for x in g[e[0]]]).union([tuple(sorted([e[1], x])) for x in g[e[1]]])
+
+        peels[prev_deg].add_edges_from(ean)
         g.remove_edges_from(ean)
