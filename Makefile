@@ -1,5 +1,6 @@
 SHELL := $(shell which bash)
 PYTHON := $(shell which python3)
+DIR := $(shell pwd)
 GRAPH := simplegraph
 LAYER := 0
 WAVE := 0
@@ -9,7 +10,7 @@ PRODUCT := preproc buffkcore ewave cc-layers-mat
 
 CXX := g++
 LINKER := g++
-CXXFLAGS := -Wall -Wextra -fopenmp -O3 -pthread -std=c++11 #-lboost_system
+CXXFLAGS := -Wall -Wextra -fopenmp -O3 -pthread -std=c++11 -I/$(DIR)/boost_1_69_0 -L/$(DIR)/boost_1_69_0/stage/lib
 
 SRCDIR := ./src
 SRCFILES := $(wildcard $(SRCDIR)/*.cpp)
