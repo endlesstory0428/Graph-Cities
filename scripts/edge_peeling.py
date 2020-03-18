@@ -21,8 +21,23 @@ delim = ' '
 if len(sys.argv) > 2:
     delim = sys.argv[2]
 
+wave = lambda x:True
+if len(sys.argv) > 3:
+    wave = lambda x: int(x[2]) == int(sys.argv[3])
+
+frag = lambda x:True
+if len(sys.argv) > 4:
+    frag = lambda x: int(x[4]) == int(sys.argv[4])
+
 with open(sys.argv[1]) as f:
-    elist = [' '.join(x.strip().split(delim)[:2]) for x in f.readlines()]
+    # elist = [' '.join(x.strip().split(delim)[:2]) for x in f.readlines()]
+    elist = []
+    for x in f.readlines():
+        xx = x.strip().split(delim)
+        # print(xx)
+        if wave(xx) and frag(xx):
+            elist.append(' '.join(xx[:2]))
+
 
 g = nx.parse_edgelist(elist, nodetype=int)
 
