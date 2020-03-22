@@ -52,6 +52,8 @@ function colorScale(value){
 }
 
 
+
+
 //note: the view doesn't care what's the logical top level graph, but only what's the displayed top level (meta)graph. So this.graph should be that graph.
 //some modules are basically processors of datasets that add stuff to it and pass it along; others create new data from it(subview); the view is only accepting it on displayGraph and (almost) not changing the data, like the UI module. However now I use the same pipeline and don't distinguish between the types of datasets explicitly. I guess others may have subclassed Dataset into Subview etc.
 G.addModule("view",{
@@ -89,6 +91,7 @@ G.addModule("view",{
 			event.preventDefault();
 			alert("Sorry, WebGL crashed because the hardware couldn't handle this view. Please refresh the page.");
 		}, false);
+
 		let context=canvas.getContext("webgl2");//,{premultipliedAlpha: false});
 		if (!context){alert("This demo requires WebGL2, please use Chrome or Firefox");return;}
 
@@ -822,7 +825,7 @@ G.addModule("view",{
 				customColor:{//put here to avoid having to specify these in subview modifier effects
 					dimensions:3,
 					value:(link,i,array)=>{
-                        if(G.view.graph.egonet && Object.keys(G.graph.egonet).length>0 && G.graph.showingEdonets) {
+                        if(G.view.graph.egonet && Object.keys(G.graph.egonet).length>0 && G.graph.showingEgonets) {
                             let source=G.view.graph.edges.source[i],target=G.view.graph.edges.target[i];
                             if(G.view.graph.egonet && Object.keys(G.graph.egonet).length>0) {
                                 if(Object.keys(G.graph.egonet.vertexMap).indexOf(source.toString())!=-1 && Object.keys(G.graph.egonet.vertexMap).indexOf(target.toString())!=-1  ){

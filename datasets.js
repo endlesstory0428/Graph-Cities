@@ -1765,7 +1765,7 @@ function doCustomComputation(data) {
                     let success = true;
                     console.log("sparse net for custom graph");
                     sn.on('error', (err) => {
-                        console.log('Failed to start subprocess ' + exePath);
+                        console.log('Failed to start subprocess ' + exePath + err);
                         success = false;
                         reject();
                     });

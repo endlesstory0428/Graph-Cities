@@ -65,9 +65,10 @@ G.addModule("controls",{
 		this.addButton(semanticsButtomsElem,"show labels",()=>{G.ui.showLabels()});
 		
 		//this.addSlider(styleControlsElem,"waves",(value)=>{G.controls.set("radialLimitFactor",value);},{min:1,max:60,default:1});
-		this.addSlider(styleControlsElem,"vertical spread",(value)=>{G.controls.set("heightFactor",value);},{min:0,max:5,default:1,});
-		this.addSlider(styleControlsElem,"horizontal spread",(value)=>{G.controls.set("radiusFactor",value);},{min:1,max:60,default:1});
-		
+		this.addSlider(styleControlsElem,"vertical spread",(value)=>{G.controls.set("heightFactor",value);},{min:0,max:5,default:1,},"1");
+		this.addSlider(styleControlsElem,"horizontal spread",(value)=>{G.controls.set("radiusFactor",value);},{min:1,max:60,default:1}, "2");
+        this.addSlider(styleControlsElem,"node size",(value)=>{G.controls.set("nodeSizeFactor",value);},{long:true,min:0.1,max:10,default:1});
+
 		//minimal UI: height, width, node size, link brightness
 		let minimalBar=getE("minimal-bar");
 		let minimalBarSelection=d3.select(minimalBar);
@@ -89,7 +90,8 @@ G.addModule("controls",{
 		this.addSlider(minimalControlsElem,"link brightness",(value)=>{G.controls.set("linkBrightnessFactor",value);},{long:true,min:0.1,max:5,default:1});
 		this.addSlider(minimalControlsElem,"line brightness",(value)=>{G.controls.set("lineBrightnessFactor",value);},{long:true,min:0.1,max:20,default:1});
 		this.addSlider(minimalControlsElem,"link strength",(value)=>{G.controls.set("linkStrengthFactor",value);},{long:true,min:1,max:500,default:10});
-		
+
+
 		
 		//right side
 		let controlsElem=getE("controls-menu");
@@ -297,7 +299,6 @@ G.addModule("controls",{
 			}
 		});
 		let algsMenu=this.addDropdownMenu(controlsElem,"algorithms",this.algorithms);
-		
 
 		
 									/*
@@ -514,7 +515,7 @@ G.addModule("controls",{
 		this.contextMenus.empty.onmouseout=hideFunc;
 
 		
-		this.addButton(this.contextMenus.vertices,"add to SN",()=>G.analytics.addVertexToSparseNet(this.contextMenuTarget.original));
+		this.addButton(this.contextMenus.vertices,"add to SN",()=>G.analytics.addVertexToSparseNet(this.contextMenuTarget));
 		this.addButton(this.contextMenus.vertices,"draw subgraph by height",()=>{
 			if(!this.graph||!this.graph.heightProperty){G.addLog("no heights detected");return;}
 			let subgraph=Algs.getFilteredSubgraph(this.graph,this.graph.heightPropertyName,this.contextMenuTarget.height,this.graph.heightPropertyType);
@@ -839,9 +840,22 @@ G.addModule("controls",{
 		window.addEventListener("keydown", ev=>{
 			if ( ev.keyCode === 32) { }
             if ( ev.key === 'e') {
-                if(G.graph.showingEdonets)
-                    G.graph.showingEdonets=false;
-                else G.graph.showingEdonets=true;
+                if(G.graph.showingEgonets)
+                    G.graph.showingEgonets=false;
+                else G.graph.showingEgonets=true;
+            }
+            if ( ev.key === 'n') {
+                if(G.graph.showingNeighbors)
+                    G.graph.showingNeighbors=false;
+                else G.graph.showingNeighbors=true;
+            }
+            if ( ev.key === 's') {
+                if(G.graph.showingSparsenet)
+                    G.graph.showingSparsenet=false;
+                else {
+                    G.graph.showingSparsenet = true;
+                    G.analytics.showSparseNet(G.graph);
+                }
             }
 			//removed moving
 		});
@@ -852,19 +866,71 @@ G.addModule("controls",{
 		} 
 		});
 		G.showingControls=false;
+        G.showingControls1=false;
+        G.showingControls2=false;
+        G.showingControls3=false;
 		window.addEventListener("keydown", ev=>{
 			if ( ev.key==="`" ) { }
 			//removed moving
 		});
 		window.addEventListener("keyup", ev=>{
-			if ( ev.key==="`" ) { 
+
+            if ( ev.key==="`" ) {
 				if(G.showingControls){G.showingControls=false;getE("graph-menu").style.display="none";getE("style-menu").style.display="none";}
 				else{G.showingControls=true;getE("graph-menu").style.display="block";getE("style-menu").style.display="block";}
 			}
 		});
-		
-		
-		this.initGestures();
+        let b=getE("panel-show");
+        document.getElementById("info-bar-show").addEventListener('click', function(){
+            if(G.showingControls1){
+                G.showingControls1=false;
+                getE("graph-info-bar").style.display="none";
+                getE("graph-info-bar").style.display="none";
+                getE("graph-plot-bar").style.display="none";
+            }
+            else{
+                getE("graph-plot-bar").style.display="none";
+                getE("graph-fork-bar").style.display="none";
+                getE("graph-info-bar").style.display="block";
+                G.showingControls1=true;
+                G.showingControls2=false;
+                G.showingControls3=false;
+            }
+        }, false);
+        document.getElementById("plot-bar-show").addEventListener('click', function(){
+            if(G.showingControls2){
+                G.showingControls2=false;
+                getE("graph-info-bar").style.display="none";
+                getE("graph-info-bar").style.display="none";
+                getE("graph-plot-bar").style.display="none";
+            }
+            else{
+                getE("graph-info-bar").style.display="none";
+                getE("graph-fork-bar").style.display="none";
+                G.showingControls2=true;
+                G.showingControls1=false;
+                G.showingControls3=false;
+                getE("graph-plot-bar").style.display="block";
+            }
+        }, false);
+        document.getElementById("fork-bar-show").addEventListener('click', function(){
+            if(G.showingControls3){
+                G.showingControls3=false;
+                getE("graph-fork-bar").style.display="none";
+                getE("graph-info-bar").style.display="none";
+                getE("graph-plot-bar").style.display="none";
+            }
+            else{
+                getE("graph-info-bar").style.display="none";
+                getE("graph-plot-bar").style.display="none";
+                G.showingControls3=true;
+                G.showingControls1=false;
+                G.showingControls2=false;
+                getE("graph-fork-bar").style.display="block";
+            }
+        }, false);
+
+        this.initGestures();
 		this.initInteractions();
 		
 	},
@@ -958,7 +1024,7 @@ G.addModule("controls",{
 		parentElem.appendChild(closeButton);
 		closeButton.onclick=function(e){if(func)func.call(this,e);parentElem.style.display="none";}
 	},
-	addSlider(parentElem,text,func,options){
+	addSlider(parentElem,text,func,options, num=""){
 		let min=0,max=1;let lazy=false;
 		if(!options)options={};
 		//allow changing the range later through this object
@@ -970,7 +1036,7 @@ G.addModule("controls",{
 		if(options.long){s.attr("class","material-slider long");}
 		let elem=s.node();elem.__options=options;options.elem=elem;
 		
-		let label=s.append("p").attr("class","material-slider-label").text(text);
+		let label=s.append("p").attr("id", num).attr("class","material-slider-label").text(text);
 		let barContainer=s.append("div").attr("class","material-slider-bar-container");
 		let pivot=barContainer.append("div").attr("class","material-slider-pivot");
 		let bar=barContainer.append("div").attr("class","material-slider-bar");
@@ -1188,6 +1254,7 @@ G.addModule("controls",{
 		for(let i in items){
 			let item=items[i];//for both list or object type input
 			let value=(typeof item=="function")?i:item;
+
 			menuBody.append("div").attr("class","dropdown-item").text(toNormalText(value)).on("click",()=>{
 				options.value=value;
 				options.index=i;
@@ -1477,8 +1544,19 @@ type: "nodes"*/
 				// if(G.view.templates[type]&&G.view.templates[type].getDescription){
 				// 	viewDesc+=" "+G.view.templates[type].getDescription(obj,objID,G.view.model[result.type]);
 				// }
-				
-				G.toolTipElem.textContent = "Vertex: " +originalObjectID +" "+ G.view.graph.labels.find(record => record.new_id ==originalObjectID ).name
+				if(G.view.graph.labels.columns != "null") {
+                    let label = "";
+                    if (G.view.graph.labels.find(record => record.new_id == originalObjectID)) {
+                        let a = G.view.graph.labels.find(record => record.new_id == originalObjectID);
+                        label = a.name;
+                    } else if(G.view.graph.labels.find(record => record.new_id == G.view.graph.vertices.id[originalObjectID])) {
+                        let a = G.view.graph.labels.find(record => record.new_id == G.view.graph.vertices.id[originalObjectID]);
+                        label = a.name;
+                    }
+                    G.toolTipElem.textContent = "Vertex: " + originalObjectID + " " + label;
+                }
+                else
+                    G.toolTipElem.textContent = "Vertex: " +originalObjectID;
 				G.toolTipElem.style.display="";
 				
 				switch (result.type)
