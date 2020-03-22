@@ -1,7 +1,7 @@
 //let graphInfoElement;
 class Markers {
-	constructor() {
-		this.containerSelection = d3.select(document.body).append("div").attr("class", "canvas-marker-container simple fixed").style("visibility", "hidden");
+    constructor() {
+        this.containerSelection = d3.select(document.body).append("div").attr("class", "canvas-marker-container simple fixed").style("visibility", "hidden");
 		this.visible = false;
 		this.markerClass = "graph-label";
 		this.viewportOnly = true;
@@ -317,6 +317,7 @@ G.addModule("ui", {
 			graph.hierarchyPathName.__obj = graph;
 			addHoverListener(graph.hierarchyPathName, () => G.hoverDelay, () => {
 				document.getElementById("graph-desc").innerText = G.analytics.getGraphSummary(graph);
+
 			}, () => {
 				document.getElementById("graph-desc").innerText = G.analytics.getGraphSummary();
 			});
@@ -488,6 +489,11 @@ G.addModule("ui", {
 			this.showTopLevelGraphStats(G.getGraph(graph.datasetID));
 			this.topLevelGraphPath = graph.datasetID;
 		}
+		if(graph.wholeGraph == undefined || graph.name == graph.wholeGraph) {
+            let degrees = Algs.getDegrees(graph).reduce((json, val) => ({...json, [val]: (json[val] | 0) + 1}), {});
+            degreePlot(false, "vertices", "count", degrees, Object.keys(degrees), Object.values(degrees), 300, 190);
+            degreePlot(true, "vertices", "count", degrees, Object.keys(degrees), Object.values(degrees), 300, 190);
+        }
 
 		//global partitions: CC and layer markers
 		//layers: use the triangle?
@@ -527,7 +533,10 @@ G.addModule("ui", {
 			if (d.type == "(original)") {
 				return " (original graph) - |V|: " + d.V + ", |E|: " + d.E + " ";
 			} else {
-				return " " + toNormalText(d.type) + " metagraph - |V|: " + d.V + ", |E|: " + d.E + " ";
+                let infoElem=getE("info-menu");
+                let metagraphMenu = ["|V| : " + d.V , "|E| : " + d.E ]
+                G.controls.addDropdownMenu(infoElem,toNormalText(d.type) + " Metagraph",metagraphMenu);
+                return " " + toNormalText(d.type) + " metagraph - |V|: " + d.V + ", |E|: " + d.E + " ";
 			}
 		}).on("click", (d) => {
 			if (d.type == "(original)") {
@@ -838,7 +847,6 @@ G.addModule("ui", {
 				drawPlot("vertices", "count", vDist, vDistValues, svg1, 190, 90);
 				drawPlot("edges", "count", eDist, eDistValues, svg2, 190, 90);
 			}
-
 
 			G.ui.showTooltip(tip);
 		}
@@ -1206,6 +1214,142 @@ function drawPlot(xName, yName, xValues, yValues, svgSelection, totalWidth, tota
 
 }
 
+function degreePlot(isLog, xName, yName, input, xValues, yValues, svgSelection, totalWidth, totalHeight) {
+
+
+    data = null;
+    inp = null;
+    out = null;
+    title = "";
+    if(isLog) {
+        title = "Degree Distribution Log scale"
+        $("#log-degree-plot").html("");
+        inp = Object.keys(input).map(Math.log);
+        out = Object.values(input).map(Math.log);
+        data = d3.range(Object.keys(input).length).map((d, i) => ({
+            x: Math.log(parseInt(Object.keys(input)[i])),
+            y: Math.log(Object.values(input)[i]),
+            id: parseInt(Object.keys(input)[i]),
+            label: `Degree ${Object.keys(input)[i]}`,
+        }));
+    } else {
+        title = "Degree Distribution"
+        $("#degree-plot").html("");
+        inp = Object.keys(input);
+        out = Object.values(input);
+        data = d3.range(Object.keys(input).length).map((d, i) => ({
+            x: parseInt(Object.keys(input)[i]),
+            y: Object.values(input)[i],
+            id: parseInt(Object.keys(input)[i]),
+            label: `Degree ${Object.keys(input)[i]}`,
+        }));
+    }
+
+    // outer svg dimensions
+    const width = 250;
+    const height = 150;
+
+// padding around the chart where axes will go
+    const padding = {
+        top: 20,
+        right: 20,
+        bottom: 40,
+        left: 30,
+    };
+    // inner chart dimensions, where the dots are plotted
+    const plotAreaWidth = width - padding.left - padding.right;
+    const plotAreaHeight = height - padding.top - padding.bottom;
+
+// radius of points in the scatterplot
+    const pointRadius = 3;
+
+    const xScale = d3.scaleLinear().domain([Math.min(...inp), Math.max(...inp)]).range([0, plotAreaWidth]);
+    const yScale = d3.scaleLinear().domain([Math.min(...out), Math.max(...out)]).range([plotAreaHeight, 0]);
+    const colorScale = d3.scaleLinear().domain([Math.min(...inp), Math.max(...inp)]).range(['#f7b6ab','#8d0089']);
+    // select the root container where the chart will be added
+    container = null;
+    if(isLog) {
+        container = d3.select('#log-degree-plot');
+    } else {
+        container = d3.select('#degree-plot');
+    }
+
+// initialize main SVG
+    const svg = container.append('svg')
+        .attr('width', width)
+        .attr('height', height);
+
+// the main g where all the chart content goes inside
+    const g = svg.append('g')
+        .attr('transform', `translate(${padding.left} ${padding.top})`);
+    // add in axis groups
+    const xAxisG = g.append('g').classed('x-axis', true)
+        .attr('transform', `translate(0 ${plotAreaHeight + pointRadius})`);
+
+// x-axis label
+    g.append('text')
+        .attr('transform', `translate(${plotAreaWidth / 2} ${plotAreaHeight + (padding.bottom)})`)
+        .attr('dy', -4) // adjust distance from the bottom edge
+        .attr('class', 'axis-label')
+        .attr('text-anchor', 'middle')
+        .text(title);
+
+    const yAxisG = g.append('g').classed('y-axis', true)
+        .attr('transform', `translate(${-pointRadius} 0)`);
+
+
+// set up axis generating functions
+    const xTicks = Math.round(plotAreaWidth / 50);
+    const yTicks = Math.round(plotAreaHeight / 50);
+
+    const xAxis = d3.axisBottom(xScale)
+        .ticks(xTicks)
+        .tickSizeOuter(0);
+
+    const yAxis = d3
+        .axisLeft(yScale)
+        .ticks(yTicks)
+        .tickSizeOuter(0);
+
+// draw the axes
+    yAxisG.call(yAxis);
+    xAxisG.call(xAxis);
+    // add in circles
+    const circles = g.append('g').attr('class', 'circles');
+
+    const binding = circles.selectAll('.data-point').data(data, d => d.id);
+
+    binding.enter().append('circle')
+        .classed('data-point', true)
+        .attr('r', pointRadius)
+        .attr('cx', d => xScale(d.x))
+        .attr('cy', d => yScale(d.y))
+        .attr('fill', d => colorScale(d.y));
+    const voronoiDiagram = d3.voronoi()
+        .x(d => xScale(d.x))
+        .y(d => yScale(d.y))
+        .size([plotAreaWidth, plotAreaHeight])(data);
+    // limit how far away the mouse can be from finding a Voronoi site
+    const voronoiRadius = plotAreaWidth / 10;
+
+// add a circle for indicating the highlighted point
+    g.append('text')
+        .attr('class', 'highlight-circle')
+        .style('fill', 'none')
+        .style('position','relative')
+        .style('display', 'none');
+
+
+
+// add the overlay on top of everything to take the mouse events
+    g.append('rect')
+        .attr('class', 'overlay')
+        .attr('width', plotAreaWidth)
+        .attr('height', plotAreaHeight)
+        .style('fill', '#f00')
+        .style('opacity', 0);
+
+}
 
 
 

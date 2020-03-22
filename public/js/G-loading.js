@@ -229,13 +229,17 @@ G.addModule("loading",{
 					console.log("missing ids");
 				}
 			});
-            await d3.csv("datasets/tvshow_ids.csv").then((data)=>{
-                if(typeof data=="string")data=JSON.parse(data);
-                labels=data;
-                if(!ids){
-                    console.log("missing ids");
-                }
-            });
+			if(g.wholeGraph == undefined || g.name == g.wholeGraph) {
+                await d3.csv("datasets/"+g.dataPath+"_labels.csv").then((data)=>{
+                    if(typeof data=="string")
+                        data=JSON.parse(data);
+                    labels=data;
+                    if(!ids){
+                        console.log("missing labels");
+                    }
+                });
+            }
+
 			await d3.json("datasets/"+g.dataPath+"/edges.source.json.gz").then((data)=>{
 				if(typeof data=="string")data=JSON.parse(data);
 				sources=data.value;
@@ -806,8 +810,8 @@ G.addModule("loading",{
 		});*/
 		
 	},
-
 });
+
 
 
 

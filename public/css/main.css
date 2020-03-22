@@ -558,6 +558,17 @@ div#graph-menu{
 	left:0%;
 	/*background:white;*/
 }
+div#graph-info-bar, div#graph-fork-bar, div#graph-plot-bar{
+    display:none;
+    width:20%;
+    position: absolute;
+    top:10%;
+    bottom:0;
+    text-align: center;
+    z-index: 4;
+    left:0%;
+    background:white;
+}
 div#style-menu{
 	display:none;
 	width:20%;
@@ -849,11 +860,13 @@ button.material:active {
     transition-delay: 0s;
 }
 
+
 div.material-slider{
 	position:relative;
 	box-sizing:border-box;
 	margin: 6px;
     margin-bottom: 0px;
+    padding: 5px;
 }
 .minimal>div.material-slider{
 	position:relative;
@@ -891,8 +904,8 @@ div.material-slider{
 
 
 p.material-slider-label{
-	/*position:absolute;*/
-	width:4%;
+	position:relative;
+	width:80px;
 	font-size:xx-small;
 	float: left;
 	/*text-transform:uppercase;*/
@@ -1203,4 +1216,7 @@ div.dropdown-select-item{
 
 circle.dot {
   stroke: #fff;
+}
+.modal-backdrop.show{
+    opacity: .1 !important;
 }

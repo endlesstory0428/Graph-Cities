@@ -444,13 +444,13 @@ G.addModule("subview",{
 				},
 				strength:{
 					value:(graph)=>{
-						let ex=G.controls.get("linkStrengthExponent",1.5),log=G.controls.get("logLinkStrength",false);
+						let ex=G.controls.get("linkStrengthExponent",1.3),log=G.controls.get("logLinkStrength",false);
 						return graph.links.map((link,i,links)=>{
 							let source=links.source[i],target=links.target[i];
 							let sDegree=graph.nodes.degree[source],tDegree=graph.nodes.degree[target];
-							let result=Math.max(Math.min(sDegree,tDegree),0.1);//todo: use weighted degree if available?
+							let result=Math.max(Math.min(sDegree,tDegree),0.05);//todo: use weighted degree if available?
 							if(ex!=1){result=Math.pow(result,ex);}
-							if(log){result=Math.log(result+1)+1;}
+							if(log){result=Math.log(result+0.05)+1;}
 							//return (("weight" in link)?(G.linkWeightAsStrength?(link.weight+0.1):(1/(link.weight+0.1))):1)/result;
 							return 1/result;
 						})
@@ -473,19 +473,19 @@ G.addModule("subview",{
 					isArray:true,
 					value:(graph)=>{
 						let sources=graph.edges.source,targets=graph.edges.target;
-						let subgraph= null
+						let b = false;
                         graph.egonet={}
 						let color = 'maroon'
                         if(graph.links.color) {
 
                         }
-						if(graph.hoveredVertex && graph.showingEdonets) {
+						if(graph.hoveredVertex && graph.showingEgonets) {
 						    if(graph.egonetMap[graph.hoveredVertex] == undefined) {
                                 Algs.getFilteredSubgraph(graph,graph.hoveredVertex,(x)=>(x!=0),"egonet");
                             } else {
 						        graph.egonet = graph.egonetMap[graph.hoveredVertex];
                             }
-							if(graph.egonetMap[graph.hoveredVertex].edges.length>=1000 && graph.egonetMap[graph.hoveredVertex].edges.length<2000) {
+							if(true) {
 
                                 // const controls = { 'DAG Orientation': 'td'};
                                 // const gui = new dat.GUI({ autoPlace: false });
@@ -494,7 +494,7 @@ G.addModule("subview",{
                                 //     .onChange(orientation => Graph && Graph.dagMode(orientation));
 
                                 const Graph = ForceGraph3D({ controlType: 'orbit' })
-                                    (document.getElementById('egonet_canvas'))
+                                    (document.getElementById('subgraph_canvas'))
                                         .graphData(graph.egonetMap[graph.hoveredVertex].initData)
                                         .backgroundColor('#ffffff')
                                         .nodeColor(node => 'gray')
@@ -537,19 +537,86 @@ G.addModule("subview",{
                                 }
 
                                 $("#egonet_id").text("Vertex " + G.view.graph.labels.find(record => record.new_id ==graph.hoveredVertex ).name + " Egonet" + "   |V|" + graph.egonetMap[graph.hoveredVertex].vertices.length + "|E|" + graph.egonetMap[graph.hoveredVertex].edges.length);
-								$('#egonet').modal('show');
+                                G.simulationRunning=false;
+                                document.getElementById("egonet-close").addEventListener('click', function(){
+                                    G.simulationRunning=true;
+                                });
+                                G.controls.set("nodeSizeFactor",0.1);
+                                $('#egonet').modal('show');
 							}
 
 
-						}
+						} else if(graph.hoveredVertex && graph.showingNeighbors) {
+                            ne_subgraph  = Algs.getFilteredSubgraph(graph,graph.hoveredVertex,(x)=>(x!=0),"neighbors");
+
+                            if(true) {
+
+                                // const controls = { 'DAG Orientation': 'td'};
+                                // const gui = new dat.GUI({ autoPlace: false });
+                                // $('#egonet_layouts').append($(gui.domElement));
+                                // gui.add(controls, 'DAG Orientation', ['td', 'bu', 'lr', 'rl', 'zout', 'zin', 'radialout', 'radialin', null])
+                                //     .onChange(orientation => Graph && Graph.dagMode(orientation));
+
+                                const Graph = ForceGraph3D({ controlType: 'orbit' })
+                                (document.getElementById('subgraph_canvas'))
+                                    .graphData(ne_subgraph.initData)
+                                    .backgroundColor('#ffffff')
+                                    .nodeColor(node => 'maroon')
+                                    .linkColor(link => 'gray' )
+                                    .nodeLabel(node => `<span style="color: black">${node.label}</span>`)
+                                    .enableNavigationControls(true)
+                                    .width(465)
+                                    .height(408)
+                                    .showNavInfo(false)
+                                    .onNodeClick(node => {
+                                        const distance = 40;
+                                        const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
+                                        Graph.cameraPosition(
+                                            { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, // new position
+                                            node,
+                                            300
+                                        );
+                                    });
+
+
+                                //Define GUI
+                                const Settings = function() {
+                                    this.edgeLength = 0;
+                                };
+
+                                const settings = new Settings();
+                                const linkForce = Graph
+                                    .d3Force('link')
+                                    .distance(settings.edgeLength);
+                                const gui = new dat.GUI({ autoPlace: false });
+                                $("#sett").html("");
+                                $('#sett').append($(gui.domElement));
+                                const controllerOne = gui.add(settings, 'edgeLength', 0, 300);
+
+                                controllerOne.onChange(updateLinkDistance);
+
+                                function updateLinkDistance() {
+                                    linkForce.distance(settings.edgeLength);
+                                    Graph.numDimensions(3); // Re-heat simulation
+                                }
+
+                                $("#egonet_id").text("Vertex " + G.view.graph.labels.find(record => record.new_id ==graph.hoveredVertex ).name + " Neighbors" + "   |V|" + ne_subgraph.vertices.length + "|E|" + ne_subgraph.edges.length);
+                                G.simulationRunning=false;
+                                $('#egonet').modal('show');
+                            }
+
+
+                        }
+						let coun=0;
 						return graph.links.map((link,i,links)=>{
 							let result=1;
 							let edgeID=i;
 							let source=sources[i],target=targets[i];//vertex indices
 							let hoverFactor=1;
-                            if(graph.hoveredVertex && graph.showingEdonets){
+                            if(graph.hoveredVertex && graph.showingEgonets){
                                 if(Object.keys(graph.egonetMap[graph.hoveredVertex].vertexMap).indexOf(source.toString())!=-1 && Object.keys(graph.egonetMap[graph.hoveredVertex].vertexMap).indexOf(target.toString())!=-1  ){
-									hoverFactor=5;
+									console.log(++coun);
+                                    hoverFactor=5;
 								}
 							} else {
                                 if(graph.hoveredVertex==source||graph.hoveredVertex==target)hoverFactor=5;
@@ -580,7 +647,7 @@ G.addModule("subview",{
 							let edgeID=i;//G.subview.templates.links.getOriginalObjectID(graph,index);
 							let source=sources[i],target=targets[i];//vertex indices
 							let hoverFactor=1;
-                            if(graph.hoveredVertex && graph.showingEdonets){
+                            if(graph.hoveredVertex && graph.showingEgonets){
                                 if(Object.keys(graph.egonetMap[graph.hoveredVertex].vertexMap).indexOf(source.toString())!=-1 && Object.keys(graph.egonetMap[graph.hoveredVertex].vertexMap).indexOf(target.toString())!=-1  ){
                                     hoverFactor=5;
                                 }
@@ -2536,7 +2603,16 @@ G.addModule("subview",{
 			},
 			params:{
 				pathSequence:{
-					value:(g,params)=>g.snPaths.length,
+                    value:(g,params)=>{
+                        if((Object.keys(g.selectedVertices)).length>0) {
+                            g.snPaths.map(function(town){
+                                if(town.indexOf(Object.keys(g.selectedVertices)[0])!=-1 )
+                                    return g.snPaths.indexOf(town);
+                            });
+                        }
+
+					    return g.snPaths.length;
+                    },
 					type:"integer",
 					min:(g,params)=>1,
 					max:(g,params)=>g.snPaths.length,
@@ -2555,7 +2631,7 @@ G.addModule("subview",{
 				},
 				showPathColors:{type:"boolean",value:true,},
 				randomPathColors:{type:"boolean",value:false,},
-				
+                selectionMode:{type:"boolean",value:false,},
 				pinned:{type:"boolean",value:false,},
 				unpinLastPath:{type:"boolean",value:false,},
 				enableForce:{type:"boolean",value:true,},
@@ -2564,7 +2640,7 @@ G.addModule("subview",{
 				showWorms:{type:"boolean",value:false,},
 				showPathAssignment:{type:"boolean",value:false,},//will show all edges between other vertices and the path it's asigned to, with teh color of that path. (unlike showing worms, which may show edges between a vertex and multiple paths
 				
-				showClustering:{type:"boolean",value:true,},
+				showClustering:{type:"boolean",value:false,},
 				clusteringType:{
 					type:"select",value:"landmarks",
 					options:["landmarks","endpoints","all points"],
@@ -2583,17 +2659,49 @@ G.addModule("subview",{
 					let snPaths=g.snPaths;
 					//let ratio=G.controls.get("snPathSequenceRatio",1);//hide those after this ratio
 					//let count=Math.ceil(snPaths.length*ratio);
+                    let ps=[];
 					params.attachmentSequence=Math.floor(params.attachmentSequence);//hack
-					return snPaths.slice(0,params.pathSequence);
+                    if((Object.keys(g.selectedVertices)).length>0) {
+                        for(let i=0; i<Object.keys(g.selectedVertices).length; i++) {
+                            g.snPaths.map(function(town){
+                                if(town.indexOf(Object.keys(g.selectedVertices)[i])!=-1 )
+                                    ps.push(g.snPaths.indexOf(town));
+                            });
+                        }
+                        params.attachmentSequence =ps.length;
+                        params.pathSequence = ps.length;
+                        let snp = []
+                        for(let i=0; i <ps.length;i++) {
+                            snp.push(snPaths[ps[i]])
+                        }
+                        params.selectionMode = true;
+                        params.enableForce = false;
+                        return snp;
+
+                    }
+                    params.attachmentSequence=Math.floor(params.attachmentSequence);//hack
+                    return snPaths.slice(0,params.pathSequence);
+
 				},
 				randomNumbers:(g,params)=>{return params.paths.map(()=>Math.random());},
 				pathColors:(g,params)=>{
 					if(!params.showPathColors){return new Array(params.paths.length).fill(redColor);}//to avoid red?
 					if(params.randomPathColors){return params.paths.map((path,i)=>{if(i==0)return redColor;let c=new THREE.Color();c.setHSL(params.randomNumbers[i]*0.7+0.15,1,0.5);return c;})}
-					else{return params.paths.map((path,i)=>{if(i==0)return redColor;let c=new THREE.Color();c.setHSL(((i/(params.paths.length))*0.7+0.1),1,0.5);return c;})}
+					else{
+					    return params.paths.map((path,i)=>{
+					        if(i==0)
+					            return redColor;
+					        // if(path.indexOf(Object.keys(g.selectedVertices)[0])!=-1) {
+                                let c = new THREE.Color();
+                                c.setHSL(((i / (params.paths.length)) * 0.7 + 0.1), 1, 0.5);
+                                return c;
+                            // }
+					    }
+					    )
+					}
 				},
 				vertexPaths:(g,params)=>{
-					let paths=params.paths;let snPathMap={};//map from in-net vertices to their path IDs
+					let paths=g.snPaths;let snPathMap={};//map from in-net vertices to their path IDs
 					for(let pathID=0;pathID<paths.length;pathID++){
 						let path=paths[pathID];
 						for(let i=0;i<path.length;i++){
@@ -2736,16 +2844,17 @@ G.addModule("subview",{
 				nodes:{
 					size:[
 						(data,oldValue,node,index,array,graph)=>{
-							if(!data.vertexPaths)return;
 							let vertexID=G.subview.templates.nodes.getOriginalObjectID(graph,index);
-							if(data.hideOtherLinks){
-								if(vertexID in data.vertexPaths)return;
-								if(data.showClustering)return;
-								if(data.showWorms||data.showPathAssignment){
-									if(data.pathAssignment[vertexID]!==undefined&&(data.pathAssignment[vertexID]<=data.attachmentSequence))return;
-								}
-								return 0;
-							}
+                            if(vertexID in data.vertexPaths)return;
+                            else if(data.selectionMode ) return 0.1;
+                            if(data.hideOtherLinks){
+                                if(vertexID in data.vertexPaths)return;
+                                if(data.showClustering)return;
+                                if(data.showWorms||data.showPathAssignment){
+                                    if(data.pathAssignment[vertexID]!==undefined&&(data.pathAssignment[vertexID]<=data.attachmentSequence))return;
+                                }
+                                return 0;
+                            }
 						}
 					//
 					],
@@ -2822,7 +2931,7 @@ G.addModule("subview",{
 								if(data.clusteringLinks){if(data.edgeClustering[index]!==undefined){return;}}
 								if(data.showPathAssignment){if(data.edgePathAssignment[index]!==undefined)return;}
 								if(data.showWorms){if(data.edgeAdjacentToPath[index]!==undefined){return;}}
-								if(data.hideOtherLinks)return 0;//showing other things overrides showing only paths?
+								if(data.hideOtherLinks && !data.selectionMode)return 0;//showing other things overrides showing only paths?
 							}
 						},
 					],
@@ -2845,8 +2954,9 @@ G.addModule("subview",{
 										if(data.edgeAdjacentToPath[index]!=-2)return;//is not a crossing edge
 										else return v;//decrease crossing edge strength, because they tend to destroy the layout
 									}}
-									if(data.hideOtherLinks)return 0;//showing other things overrides showing only paths?
-									return v;
+									if(data.selectionMode) return oldValue*G.controls.get("snStrengthFactor",3);//showing other things overrides showing only paths?
+                                    if(data.hideOtherLinks && !data.selectionMode)return 0;
+                                    return v;
 								}
 							}//this is the SN path strength
 						},

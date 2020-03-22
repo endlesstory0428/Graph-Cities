@@ -1,5 +1,6 @@
 'use strict';
 const Graph=require("./lib/graph.js"),Datasets=require("./datasets.js"),http = require('http'),util = require("util"),express = require('express'),zlib = require('zlib'),Buffer = require('buffer').Buffer,fs = require('node-fs'),path = require('path'),readline=require('readline'),{exec, spawn} = require('child_process'),io = require("socket.io");
+const cpp = require('compile-run');
 
 var dataDir= 
 "./data";
@@ -54,6 +55,14 @@ function init(){
 	process.on('warning', e => console.warn(e.stack));
 	startServers();//if it fails, it's better to fail early
 	if(noDerived){
+        let resultPromise = cpp.runFile('./bin/algorithm.cpp', { stdin:'3\n2 '});
+        resultPromise
+            .then(result => {
+                console.log(result);//result object
+            })
+            .catch(err => {
+                console.log(err);
+            });
 		Datasets.loadAllDatasets(dataDir,tempDir,bindHandlers,stopServer,cachesToRefresh,noDerived);
 	}
 	else{
@@ -78,6 +87,7 @@ function startServers(serverDef){
 function stopServer(){
 	process.exit(1);
 }
+
 function bindHandlers(datasetsList){
 	//note: express doesn't send files with relative paths, and it seems this means paths (eg tempDir) cannot include ../ if I want to use __dirName+"/"+tempDir to send files. Try resolve path?
 	let realTempDir;
@@ -380,7 +390,8 @@ function onSocketConnection(client) {
 		if(data.dataPath){
 			let result;
 			try{
-				result=Datasets.loadCustomData(data.dataPath,data.type);
+                console.log("Here")
+                result=Datasets.loadCustomData(data.dataPath,data.type);
 				this.emit("custom",{type:data.type,success:true,result:result});
 				return;
 			}

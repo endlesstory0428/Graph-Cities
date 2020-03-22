@@ -263,6 +263,19 @@ div#graph-menu{
 	left:0%;
 	background:white;
 }
+
+div#graph-info-bar, div#graph-fork-bar, div#graph-plot-bar{
+    display:none;
+    width:20%;
+    position: absolute;
+    top:10%;
+    bottom:0;
+    text-align: center;
+    z-index: 4;
+    left:0%;
+    background:white;
+}
+
 div#style-menu{
 	display:none;
 	width:20%;

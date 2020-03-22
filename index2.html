@@ -1,18 +1,25 @@
+
+<html>
 <head>
-  <style> body { margin: 0; } </style>
-
-  <script src="//unpkg.com/3d-force-graph"></script>
-  <!--<script src="../../dist/3d-force-graph.js"></script>-->
+    <style type="text/css">
+        #container {
+            max-width: 400px;
+            height: 400px;
+            margin: auto;
+        }
+    </style>
 </head>
-
 <body>
-  <div id="3d-graph"></div>
-
-  <script>
-    const Graph = ForceGraph3D()
-      (document.getElementById('3d-graph'))
-        .jsonUrl('./datasets/miserables.json')
-        .nodeLabel('id')
-        .nodeAutoColorBy('group');
-  </script>
+<div id="container"></div>
+<script src="./sigma.min.js"></script>
+<script src="./sigma.parsers.json.js"></script>
+<script>
+    sigma.parsers.json('data.json', {
+        container: 'container',
+        settings: {
+            defaultNodeColor: '#ec5148'
+        }
+    });
+</script>
 </body>
+</html>

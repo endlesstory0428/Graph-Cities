@@ -58,3 +58,6 @@ $RECYCLE.BIN/
 # Windows shortcuts
 
 *.lnk
+.idea/workspace.xml
+.DS_Store
+package.json

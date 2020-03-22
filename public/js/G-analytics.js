@@ -218,9 +218,16 @@ G.addModule("analytics",{
 			let V=graph.vertices.length,E=graph.edges.length;
 			let p=(E/(V*(V-1)/2)),k=Math.log(E/V)/Math.log(Math.log(V));
 			desc="|V|: "+V+", |E|: "+E+", avg. degree: "+shortStr(2*E/V)+", density: "+shortStr(p)+", sparsity:"+shortStr(k);
-			if(graph.heights){
-				if(graph.heights.count>1){desc+=", heights: "+graph.heights.count;}
-				if(graph.heights.max>0){desc+=", max height: "+graph.heights.max;}
+            originalGraphMenu = ["|V| : " + V , "|E| : " + E, "avg. degree : "+ shortStr(2*E/V), "density : " + shortStr(p), "sparsity : "+shortStr(k)  ]
+            if(graph.heights){
+				if(graph.heights.count>1){
+				    desc+=", heights: "+graph.heights.count;
+                    originalGraphMenu.push("heights : "+graph.heights.count);
+				}
+				if(graph.heights.max>0){
+				    desc+=", max height: "+graph.heights.max;
+                    originalGraphMenu.push("max height: "+graph.heights.max);
+				}
 			}
 			//+(graph.showingInterlayers?"":(", peel value:"+graph.maxLayer));
 			/*let layerCount=Object.keys(graph.layers).length;
@@ -235,12 +242,20 @@ G.addModule("analytics",{
 			for(let name in G.analytics.templates.vertices.properties){
 				if(!graph.vertices.properties[name])continue;
 				if(graph.vertices.properties[name].isAbstract)continue;
-				if(graph.vertices[name].max>1){desc+=", max "+toLowerCaseNormalText(name)+": "+graph.vertices[name].max;}
+				if(graph.vertices[name].max>1){
+				    desc+=", max "+toLowerCaseNormalText(name)+": "+graph.vertices[name].max;
+                    originalGraphMenu.push("max "+toLowerCaseNormalText(name)+" : "+graph.vertices[name].max);
+
+                }
 			}
 			for(let name in G.analytics.templates.edges.properties){
 				if(!graph.edges.properties[name])continue;
 				if(graph.edges.properties[name].isAbstract)continue;
-				if(graph.edges[name].max>1){desc+=", max "+toLowerCaseNormalText(name)+": "+graph.edges[name].max;}
+				if(graph.edges[name].max>1){
+				    desc+=", max "+toLowerCaseNormalText(name)+": "+graph.edges[name].max;
+                    originalGraphMenu.push("max "+toLowerCaseNormalText(name)+" : "+graph.edges[name].max);
+
+                }
 			}
 		}
 		if(graph.partitionInfo){
@@ -248,7 +263,9 @@ G.addModule("analytics",{
 				desc+=", "+toNormalText(item.type)+" "+item.value+((item.graph==graph.datasetID)?"":(" of "+pathToText(item.graph)));
 			}
 		}
-		return desc;
+        let infoElem=getE("info-menu");
+        G.controls.addDropdownMenu(infoElem,"Original Graph",originalGraphMenu);
+        return desc;
 	},
 	getDescription:function(result){
 		//this description is based on an original data object in a subgraph?
@@ -1622,7 +1639,14 @@ G.addModule("analytics",{
 		if(graph.dataPath&&(graph.dataPath.indexOf("custom")==-1)){data.dataPath=graph.dataPath;}
 		
 		if(options)data.options=options;
-		if(!graph.snPaths){G.messaging.requestCustomData("sparsenet",data,(result)=>{if(result&&result.length>0){graph.snPaths=result;G.enableModifier("sparsenet",graph);}else{G.addLog("invalid sparsenet result");}});}
+		if(!graph.snPaths){G.messaging.requestCustomData("sparsenet",data,(result)=>{
+		    if(result&&result.length>0){
+		        graph.snPaths=result;
+		        G.enableModifier("sparsenet",graph);
+		    }else{
+		        G.addLog("invalid sparsenet result");}
+		});
+		}
 		else{G.enableModifier("sparsenet",graph);}//this only sets snPaths, and other intermediate data are managed by the subview.
 	},
 	hideSparseNet:function(graph){
