@@ -44,6 +44,7 @@ num_waves = (len(data) + 1) // 2
 
 # if max_vertices / min_vertices > 100:
 for w, s in data.items():
+    data[w]['v'] = s['vertices']
     data[w]['vertices'] = log2(s['vertices'])
 
 floor = 0
@@ -54,14 +55,19 @@ for i in range(1, num_waves + 1):
     r_upper = 0
     r_middle = 0
     r_lower = 0
-    if num_waves == 1:
-        color = hslToRgb(0, 0.85, 0.5)
-    else:
-        color = hslToRgb((1 - (i - 1.01) / (num_waves - 1.01)) * 0.6, 0.85, 0.5)
+    Density = data[str(i)]['edges'] * 2.0 / (data[str(i)]['v'] * (data[str(i)]['v'] - 1))
+    # if num_waves == 1:
+    #     color = hslToRgb(0, 0.85, 0.5)
+    # else:
+    #     color = hslToRgb((1 - (i - 1.01) / (num_waves - 1.01)) * 0.6, 0.85, 0.5)
+    color = hslToRgb(Density, 0.85, 0.5)
 
     if i == 1:
-        r_upper = data[str(i) + '_' + str(i + 1)]['vertices']
         r_middle = data[str(i)]['vertices']
+        try:
+            r_upper = data[str(i) + '_' + str(i + 1)]['vertices']
+        except KeyError:
+            r_upper = r_middle
         if r_upper == r_middle:
             r_upper -= 0.01
         H = 3 * (Volume) / (
