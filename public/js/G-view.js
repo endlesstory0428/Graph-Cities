@@ -30,7 +30,7 @@ G.colorScales={ //[0,1], use with THREE.Color.setStyle()
 
 };
 G.colorScale="lightBlueRed";
-G.brightColors=false;
+G.brightColors=true;
 function onColorScaleUpdated(){
 	if(G.view.model){
 		/*for(let value in G.view.model.colorIndexMap){
@@ -80,7 +80,7 @@ G.addModule("view",{
 		window.addEventListener("resize", this.resizeCanvas, false);
 		this.loadShaders();
 		G.zoomOutDistance=()=>{
-			let maxHeight=G.view.model?(500.0*Math.sqrt(Math.log(G.view.model.heights.max+1.))*G.controls.get("heightFactor")+5000):0;
+			let maxHeight=G.view.model?(500.0*Math.sqrt(Math.log(G.view.model.heights.max+1.))*G.controls.get("heightFactor")+9000):0;
 			let maxRadius=G.view.model?(this.sharedUniforms.radialLimit.value()*G.controls.get("radialLimitFactor")*3+5000):0;//radialLimitFactor is 1 by default, it affects the heuristic-based radial limit force, but we want to use a plain stretching that doesn't affect the forces
 			return Math.max(10000,maxHeight,maxRadius);
 		};
@@ -161,7 +161,7 @@ G.addModule("view",{
 		stats.dom.style.top="";
 		stats.dom.style.bottom="5px";
 		stats.dom.style.left="5px";
-		document.querySelector("#graph-menu").appendChild( stats.dom );
+		document.querySelector("#graph-plot-bar").appendChild( stats.dom );
 		this.animateBound=this.animate.bind(this);
 		setTimeout(this.animateBound,0);//this may happen after a mouse event fires but it's OK because graph is not set at the start
 
@@ -679,6 +679,11 @@ G.addModule("view",{
 					value:(node,i,array)=>{
 						let result=array.size[i];
 						if(array.isExpanded[i]&&array.metanodeSize[i])result+=array.metanodeSize[i];
+                            if(G.view.graph.hoveredVertex && G.view.graph.showingEgonets && G.view.graph.hoveredVertex == i) {
+                                result=1;
+                            }
+
+
 						result=result*Math.pow(0.5,array.subgraphLevel[i]);
 						return result;
 					},
@@ -721,6 +726,9 @@ G.addModule("view",{
 								value=-1;
 								if(G.view.graph.colorScale){value=0.5;}
 							}//0 is the first color, -1 is a neutral color (grey?)
+                            if(G.view.graph.hoveredVertex && G.view.graph.showingEgonets && G.view.graph.hoveredVertex == i) {
+                                value = 2;
+                            }
 							colorValues[i]=value;
 						});
 						return colorValues;

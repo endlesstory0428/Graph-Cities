@@ -77,8 +77,11 @@
                 <a href="#" class="btn btn-circle" id="plot-bar-show" style="margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;">
                     <i class="fas fa-chart-scatter"></i>
                 </a>
-                <a href="#" class="btn btn-circle" id="fork-bar-show" style="margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;">
+                <a href="#" class="btn btn-circle" id="fork-bar-show" style="margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;z-index:3;">
                     <i class="fas fa-align-left"></i>
+                </a>
+                <a href="#" class="btn btn-circle" id="search-bar-show" style="z-index: 2;margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;">
+                    <i class="fas fa-search"></i>
                 </a>
 
 
@@ -183,31 +186,6 @@
 		</div>
 
 
-		<div id="graph-menu" class="panel" style="min-width:300px;">
-
-			<table id="graph-layers" style="display:none;" >
-				<thead>
-					<tr id="title"></tr>
-					<tr id="columns"></tr>
-				</thead>
-				<tbody></tbody>
-			</table>
-			<div>
-				<p id="selected-vertices">selected vertices</p>
-				<input type="text" id="select-vertex-input" value=""></input>
-				<div id="selection-buttons-area"></div>
-			</div>
-			<div id="subgraph-filtering-area">
-
-
-			</div>
-			<div id="item-bar-container" >
-				<div id= "item-bar-title"><p> Saved graphs </p></div>
-				<div id="item-bar" >
-				</div>
-			</div>
-
-		</div>
         <div id="graph-info-bar" class="panel" style="width:20%;height:555px;min-width:170px;overflow-y: scroll;">
             <div id="info-menu">
             </div>
@@ -240,10 +218,13 @@
 
             </div>
         </div>
-
-
-
-
+        <div id="graph-menu" class="panel" style="width:20%;height:555px;min-width:170px;overflow-y: scroll;">
+                <div>
+                    <p id="selected-vertices">selected vertices</p>
+                    <input type="text" id="select-vertex-input" value=""></input>
+                    <div id="selection-buttons-area"></div>
+                </div>
+        </div>
 
         <div id="style-menu" class="panel" style="min-width:300px;overflow-y: scroll;font-size: x-small;">
 
@@ -387,12 +368,12 @@
 			</div>
 		</div>
 		<div class="modal fade right" id="egonet" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
-			 aria-hidden="true" style="left: 30%; top: 4.5%;">
-			<div class="modal-dialog modal-side modal-top-right" role="document">
+			 aria-hidden="true">
+			<div id="egonet-modal-dialog" class="modal-dialog modal-side modal-top-right" role="document">
 				<div class="modal-content">
 					<div class="modal-header">
-						<h4 class="modal-title w-100" id="egonet_id"></h4>
-						<button id="egonet-close" type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <h4 class="modal-title w-100" id="egonet_id"></h4>
+                        <button id="egonet-close" type="button" class="close" data-dismiss="modal" aria-label="Close">
 							<span aria-hidden="true">&times;</span>
 						</button>
 					</div>

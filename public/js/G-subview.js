@@ -485,13 +485,16 @@ G.addModule("subview",{
                             } else {
 						        graph.egonet = graph.egonetMap[graph.hoveredVertex];
                             }
-							if(true) {
+							if(graph.egonetMap[graph.hoveredVertex].edges.length>=512 && graph.egonetMap[graph.hoveredVertex].edges.length<2048) {
 
+                                let vec=G.view.getNodePos(graph.hoveredVertex);
+                                G.cameraControls.setTarget(vec,true);
                                 // const controls = { 'DAG Orientation': 'td'};
                                 // const gui = new dat.GUI({ autoPlace: false });
                                 // $('#egonet_layouts').append($(gui.domElement));
                                 // gui.add(controls, 'DAG Orientation', ['td', 'bu', 'lr', 'rl', 'zout', 'zin', 'radialout', 'radialin', null])
                                 //     .onChange(orientation => Graph && Graph.dagMode(orientation));
+
 
                                 const Graph = ForceGraph3D({ controlType: 'orbit' })
                                     (document.getElementById('subgraph_canvas'))
@@ -536,12 +539,20 @@ G.addModule("subview",{
                                     Graph.numDimensions(3); // Re-heat simulation
                                 }
 
-                                $("#egonet_id").text("Vertex " + G.view.graph.labels.find(record => record.new_id ==graph.hoveredVertex ).name + " Egonet" + "   |V|" + graph.egonetMap[graph.hoveredVertex].vertices.length + "|E|" + graph.egonetMap[graph.hoveredVertex].edges.length);
+                                $("#egonet_id").text(G.view.graph.labels.find(record => record.new_id ==graph.hoveredVertex ).name);
                                 G.simulationRunning=false;
+                                G.resizeNodes = false;
                                 document.getElementById("egonet-close").addEventListener('click', function(){
                                     G.simulationRunning=true;
                                 });
-                                G.controls.set("nodeSizeFactor",0.1);
+                                let modalEgonet = document.getElementById("egonet");
+                                if(G.mouseScreenPos.x>700)
+                                    modalEgonet.style.left =-300 + "px";
+                                else modalEgonet.style.left =450 + "px";
+                                //G.controls.set("nodeSizeFactor",0.1);
+                                graph.nodes.size[graph.hoveredVertex]=10;
+                                console.log(G.mouseScreenPos.x);
+                                console.log(G.mouseScreenPos.y);
                                 $('#egonet').modal('show');
 							}
 
@@ -549,7 +560,7 @@ G.addModule("subview",{
 						} else if(graph.hoveredVertex && graph.showingNeighbors) {
                             ne_subgraph  = Algs.getFilteredSubgraph(graph,graph.hoveredVertex,(x)=>(x!=0),"neighbors");
 
-                            if(true) {
+                            if(ne_subgraph.edges.length>=512) {
 
                                 // const controls = { 'DAG Orientation': 'td'};
                                 // const gui = new dat.GUI({ autoPlace: false });
@@ -615,7 +626,6 @@ G.addModule("subview",{
 							let hoverFactor=1;
                             if(graph.hoveredVertex && graph.showingEgonets){
                                 if(Object.keys(graph.egonetMap[graph.hoveredVertex].vertexMap).indexOf(source.toString())!=-1 && Object.keys(graph.egonetMap[graph.hoveredVertex].vertexMap).indexOf(target.toString())!=-1  ){
-									console.log(++coun);
                                     hoverFactor=5;
 								}
 							} else {
@@ -1239,6 +1249,7 @@ G.addModule("subview",{
 				property:(g,params)=>{if(g.modifiers&&g.modifiers.nodeColor&&g.modifiers.nodeColor.property in g.vertices)return g.modifiers.nodeColor.property;},
 				max:(g,params)=>{
 					let values=g.vertices[params.property];let max=-Infinity;
+
 					for(let v in g.selectedVertices){
 						if(values[v]>max)max=values[v];
 					}
@@ -2591,6 +2602,7 @@ G.addModule("subview",{
 		},
 		
 		sparsenet:{
+
 			//condition:()=>(G.showingSparseNet&&G.graph.snPaths),//G.graph.snPaths
 			onEnable:(g,params)=>{
 				if(!g.snPaths){G.analytics.showSparseNet(g);return true;}
@@ -2603,16 +2615,7 @@ G.addModule("subview",{
 			},
 			params:{
 				pathSequence:{
-                    value:(g,params)=>{
-                        if((Object.keys(g.selectedVertices)).length>0) {
-                            g.snPaths.map(function(town){
-                                if(town.indexOf(Object.keys(g.selectedVertices)[0])!=-1 )
-                                    return g.snPaths.indexOf(town);
-                            });
-                        }
-
-					    return g.snPaths.length;
-                    },
+					value:(g,params)=>1,
 					type:"integer",
 					min:(g,params)=>1,
 					max:(g,params)=>g.snPaths.length,
@@ -2631,10 +2634,10 @@ G.addModule("subview",{
 				},
 				showPathColors:{type:"boolean",value:true,},
 				randomPathColors:{type:"boolean",value:false,},
-                selectionMode:{type:"boolean",value:false,},
+
 				pinned:{type:"boolean",value:false,},
 				unpinLastPath:{type:"boolean",value:false,},
-				enableForce:{type:"boolean",value:true,},
+				enableForce:{type:"boolean",value:false,},
 				prioritizeSNForce:{type:"boolean",value:true,},
 				hideOtherLinks:{type:"boolean",value:true,},
 				showWorms:{type:"boolean",value:false,},
@@ -2659,49 +2662,17 @@ G.addModule("subview",{
 					let snPaths=g.snPaths;
 					//let ratio=G.controls.get("snPathSequenceRatio",1);//hide those after this ratio
 					//let count=Math.ceil(snPaths.length*ratio);
-                    let ps=[];
 					params.attachmentSequence=Math.floor(params.attachmentSequence);//hack
-                    if((Object.keys(g.selectedVertices)).length>0) {
-                        for(let i=0; i<Object.keys(g.selectedVertices).length; i++) {
-                            g.snPaths.map(function(town){
-                                if(town.indexOf(Object.keys(g.selectedVertices)[i])!=-1 )
-                                    ps.push(g.snPaths.indexOf(town));
-                            });
-                        }
-                        params.attachmentSequence =ps.length;
-                        params.pathSequence = ps.length;
-                        let snp = []
-                        for(let i=0; i <ps.length;i++) {
-                            snp.push(snPaths[ps[i]])
-                        }
-                        params.selectionMode = true;
-                        params.enableForce = false;
-                        return snp;
-
-                    }
-                    params.attachmentSequence=Math.floor(params.attachmentSequence);//hack
-                    return snPaths.slice(0,params.pathSequence);
-
+					return snPaths.slice(0,params.pathSequence);
 				},
 				randomNumbers:(g,params)=>{return params.paths.map(()=>Math.random());},
 				pathColors:(g,params)=>{
 					if(!params.showPathColors){return new Array(params.paths.length).fill(redColor);}//to avoid red?
 					if(params.randomPathColors){return params.paths.map((path,i)=>{if(i==0)return redColor;let c=new THREE.Color();c.setHSL(params.randomNumbers[i]*0.7+0.15,1,0.5);return c;})}
-					else{
-					    return params.paths.map((path,i)=>{
-					        if(i==0)
-					            return redColor;
-					        // if(path.indexOf(Object.keys(g.selectedVertices)[0])!=-1) {
-                                let c = new THREE.Color();
-                                c.setHSL(((i / (params.paths.length)) * 0.7 + 0.1), 1, 0.5);
-                                return c;
-                            // }
-					    }
-					    )
-					}
+					else{return params.paths.map((path,i)=>{if(i==0)return redColor;let c=new THREE.Color();c.setHSL(((i/(params.paths.length))*0.7+0.1),1,0.5);return c;})}
 				},
 				vertexPaths:(g,params)=>{
-					let paths=g.snPaths;let snPathMap={};//map from in-net vertices to their path IDs
+					let paths=params.paths;let snPathMap={};//map from in-net vertices to their path IDs
 					for(let pathID=0;pathID<paths.length;pathID++){
 						let path=paths[pathID];
 						for(let i=0;i<path.length;i++){
@@ -2844,17 +2815,14 @@ G.addModule("subview",{
 				nodes:{
 					size:[
 						(data,oldValue,node,index,array,graph)=>{
+							if(!data.vertexPaths)return;
 							let vertexID=G.subview.templates.nodes.getOriginalObjectID(graph,index);
                             if(vertexID in data.vertexPaths)return;
-                            else if(data.selectionMode ) return 0.1;
-                            if(data.hideOtherLinks){
-                                if(vertexID in data.vertexPaths)return;
-                                if(data.showClustering)return;
-                                if(data.showWorms||data.showPathAssignment){
-                                    if(data.pathAssignment[vertexID]!==undefined&&(data.pathAssignment[vertexID]<=data.attachmentSequence))return;
-                                }
-                                return 0;
+                            if(data.showClustering)return;
+                            if(data.showWorms||data.showPathAssignment){
+                                if(data.pathAssignment[vertexID]!==undefined&&(data.pathAssignment[vertexID]<=data.attachmentSequence))return;
                             }
+                            return 0;
 						}
 					//
 					],
@@ -2924,14 +2892,31 @@ G.addModule("subview",{
 						},
 					],
 					thickness:[
-						(data,oldValue,link,index,array)=>{
+						(data,oldValue,link,index,array,graph)=>{
+                            let edgeID=index;//G.subview.templates.links.getOriginalObjectID(graph,index);
+                            let edge=graph.edges[edgeID],svID=graph.edges.source[edgeID],tvID=graph.edges.target[edgeID];
 							if(!data.edgePaths)return;
 							if(index in data.edgePaths)return oldValue+G.controls.get("snPathThickness",3);
 							else{//first see if it's shown for another reason, then return 0 if only paths are shown (it should be called hide other edges)
 								if(data.clusteringLinks){if(data.edgeClustering[index]!==undefined){return;}}
 								if(data.showPathAssignment){if(data.edgePathAssignment[index]!==undefined)return;}
-								if(data.showWorms){if(data.edgeAdjacentToPath[index]!==undefined){return;}}
-								if(data.hideOtherLinks && !data.selectionMode)return 0;//showing other things overrides showing only paths?
+								if(data.showWorms){
+
+                                    // for( i in Object.keys(data.pathAssignment)){
+                                    //     console.log(graph.getNeighborsByID(i));
+                                    // }
+								    if(data.edgeAdjacentToPath[index]!==undefined){return;}
+								}
+
+								if(data.hideOtherLinks) {
+                                    return 0;//showing other things overrides showing only paths?
+                                }
+								if(data.showWorms && !data.hideOtherLinks) {
+                                    if (Object.keys(data.pathAssignment).indexOf(svID.toString()) != -1 && Object.keys(data.pathAssignment).indexOf(tvID.toString()) != -1)
+                                        return;
+                                    else return 0;
+                                }
+
 							}
 						},
 					],
@@ -2944,7 +2929,7 @@ G.addModule("subview",{
 					strength:[
 						(data,oldValue,link,index,array)=>{
 							if(data.enableForce){
-								let factor=G.controls.get("snStrengthFactor",3);
+								let factor=G.controls.get("snStrengthFactor",.1);
 								if(index in data.edgePaths)return oldValue*factor;
 								else {
 									let v=oldValue/Math.max(factor,1);//the special edges should keep higher strength?
@@ -2952,11 +2937,12 @@ G.addModule("subview",{
 									if(data.showPathAssignment){if(data.edgePathAssignment[index]!==undefined)return ;}
 									if(data.showWorms){if(data.edgeAdjacentToPath[index]!==undefined){
 										if(data.edgeAdjacentToPath[index]!=-2)return;//is not a crossing edge
+                                        if (Object.keys(data.pathAssignment).indexOf(svID) != -1 && Object.keys(data.pathAssignment).indexOf(tvID) != -1)
+                                            return;
 										else return v;//decrease crossing edge strength, because they tend to destroy the layout
 									}}
-									if(data.selectionMode) return oldValue*G.controls.get("snStrengthFactor",3);//showing other things overrides showing only paths?
-                                    if(data.hideOtherLinks && !data.selectionMode)return 0;
-                                    return v;
+									if(data.hideOtherLinks)return 0;//showing other things overrides showing only paths?
+									return v;
 								}
 							}//this is the SN path strength
 						},

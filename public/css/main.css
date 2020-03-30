@@ -1218,5 +1218,5 @@ circle.dot {
   stroke: #fff;
 }
 .modal-backdrop.show{
-    opacity: .1 !important;
+    opacity: .05 !important;
 }

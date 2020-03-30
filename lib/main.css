@@ -261,7 +261,7 @@ div#graph-menu{
     text-align: center;
 	z-index: 4;
 	left:0%;
-	background:white;
+	background:white !important;
 }
 
 div#graph-info-bar, div#graph-fork-bar, div#graph-plot-bar{
