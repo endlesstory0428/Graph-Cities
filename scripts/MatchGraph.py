@@ -1,6 +1,10 @@
 import networkx as nx
 
 
+def maximal_matching(G):
+    return nx.maximal_matching(G)
+
+
 class MatchGraph(nx.Graph):
     def __init__(self):
         super().__init__()
@@ -53,9 +57,14 @@ class MatchGraph(nx.Graph):
             self.remove_edge(u, v)
 
     def matchAndMerge(self):
-        for x in nx.maximal_matching(self):
+        for x in maximal_matching(self):
             self.ds.union(*x)
         self.relabel(self.ds.parents)
+
+    def merge(self, nodes_to_merge):
+        self.ds.union(*nodes_to_merge)
+        self.relabel(self.ds.parents)
+        return self.ds.parents[nodes_to_merge[0]]
 
 
 # G = MatchGraph()
