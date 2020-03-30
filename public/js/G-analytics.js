@@ -183,7 +183,7 @@ G.addModule("analytics",{
 		selection:{
 			value:(graph)=>{
 				if(!graph.selectHistory){graph.selectHistory=[{}];graph.selectHistoryCurrentIndex=0;}
-				if(!graph.selectedVertices){graph.selectedVertices={};graph.selectedVertexCount=0;graph.selectHistory=[{}];graph.selectHistoryCurrentIndex=0;}
+				if(!graph.selectedVertices){graph.sparsenetSelectedVertices={},graph.selectedVertices={};graph.selectedVertexCount=0;graph.selectHistory=[{}];graph.selectHistoryCurrentIndex=0;}
 			}
 		},
 		sparsenet:{},
@@ -1633,6 +1633,7 @@ G.addModule("analytics",{
 	
 	showSparseNet:function(graph){
 		if(!graph)graph=G.graph;
+        graph.snPathsTemp=[];
 		let vc=graph.vertices.length;let options=null;if(vc>G.controls.get("approximateSNThreshold",1)){options={variant:"approximate"};G.addLog("using approximate sparse net");}//todo: the exact SN code has a problem
 		let data={};
 		if((!graph.dataPath)||graph.isCustom){data.data=this.getGraphVerticesAndEdges(graph);}

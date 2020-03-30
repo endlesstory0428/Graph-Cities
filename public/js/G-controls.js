@@ -12,7 +12,8 @@ G.addModule("controls",{
 		//bottom
 		let viewButtomsElem=getE("view-buttons-area");
 		let semanticsButtomsElem=getE("graph-semantics-buttons-area");
-		let styleControlsElem=getE("style-controls-area");
+		this.styleControlsElem=getE("style-controls-area");
+		let styleControlsElem = this.styleControlsElem;
 		
 		function saveLayout(){
 			let path=G.controls.graph.dataPath;
@@ -65,10 +66,9 @@ G.addModule("controls",{
 		this.addButton(semanticsButtomsElem,"show labels",()=>{G.ui.showLabels()});
 		
 		//this.addSlider(styleControlsElem,"waves",(value)=>{G.controls.set("radialLimitFactor",value);},{min:1,max:60,default:1});
-		this.addSlider(styleControlsElem,"vertical spread",(value)=>{G.controls.set("heightFactor",value);},{min:0,max:5,default:1,},"1");
-		this.addSlider(styleControlsElem,"horizontal spread",(value)=>{G.controls.set("radiusFactor",value);},{min:1,max:60,default:1}, "2");
+		this.addSlider(styleControlsElem,"vertical spread",(value)=>{G.controls.set("heightFactor",value);},{min:0,max:5,default:1,},"1","vertical");
+		this.addSlider(styleControlsElem,"horizontal spread",(value)=>{G.controls.set("radiusFactor",value);},{min:1,max:60,default:1}, "2", "horizontal");
         this.addSlider(styleControlsElem,"node size",(value)=>{G.controls.set("nodeSizeFactor",value);},{long:true,min:0.1,max:10,default:1});
-
 		//minimal UI: height, width, node size, link brightness
 		let minimalBar=getE("minimal-bar");
 		let minimalBarSelection=d3.select(minimalBar);
@@ -431,7 +431,17 @@ G.addModule("controls",{
 		this.addButton(itemsTitleElem,"+",saveGraph,()=>saveGraph(false,true));
 		
 		let selectionButtonsElem=getE("selection-buttons-area");
-		this.addButton(selectionButtonsElem,"select by ID",()=>{let value=getE('select-vertex-input').value;let result=this.graph.vertices.findIndex((v)=>(v.id==value));if(result!=-1)G.toggleSelectVertex(result);});
+		this.addButton(selectionButtonsElem,"select by ID",()=>{
+		    let value=getE('select-vertex-input').value;
+		    let result=this.graph.vertices.id.indexOf(value);
+		    if(result!=-1) {
+                let vec=G.view.getNodePos(value);
+                G.cameraControls.setTarget(vec,true);
+                G.toggleSelectVertex(value);
+            }
+
+
+		});
 		
 		let filteringElem=getE("subgraph-filtering-area");
 		function getPredicate(){
@@ -840,8 +850,10 @@ G.addModule("controls",{
 		window.addEventListener("keydown", ev=>{
 			if ( ev.keyCode === 32) { }
             if ( ev.key === 'e') {
-                if(G.graph.showingEgonets)
-                    G.graph.showingEgonets=false;
+                if(G.graph.showingEgonets) {
+                    G.graph.showingEgonets = false;
+                    G.cameraControls.setTarget(null);
+                }
                 else G.graph.showingEgonets=true;
             }
             if ( ev.key === 'n') {
@@ -850,10 +862,17 @@ G.addModule("controls",{
                 else G.graph.showingNeighbors=true;
             }
             if ( ev.key === 's') {
-                if(G.graph.showingSparsenet)
-                    G.graph.showingSparsenet=false;
+                if(G.graph.showingSparsenet) {
+                    G.graph.firstShowSparsenet = true;
+                    G.graph.showingSparsenet = false;
+                }
                 else {
                     G.graph.showingSparsenet = true;
+                    G.graph.showingSparsenet = true;
+                    document.getElementById("vertical").style.display="none";
+                    document.getElementById("horizontal").style.display="none";
+                    document.getElementById("path").style.display = "block"
+
                     G.analytics.showSparseNet(G.graph);
                 }
             }
@@ -887,10 +906,13 @@ G.addModule("controls",{
                 getE("graph-info-bar").style.display="none";
                 getE("graph-info-bar").style.display="none";
                 getE("graph-plot-bar").style.display="none";
+                getE("graph-menu").style.display="none";
+
             }
             else{
                 getE("graph-plot-bar").style.display="none";
                 getE("graph-fork-bar").style.display="none";
+                getE("graph-menu").style.display="none";
                 getE("graph-info-bar").style.display="block";
                 G.showingControls1=true;
                 G.showingControls2=false;
@@ -903,10 +925,13 @@ G.addModule("controls",{
                 getE("graph-info-bar").style.display="none";
                 getE("graph-info-bar").style.display="none";
                 getE("graph-plot-bar").style.display="none";
+                getE("graph-menu").style.display="none";
             }
             else{
                 getE("graph-info-bar").style.display="none";
                 getE("graph-fork-bar").style.display="none";
+                getE("graph-menu").style.display="none";
+
                 G.showingControls2=true;
                 G.showingControls1=false;
                 G.showingControls3=false;
@@ -919,14 +944,36 @@ G.addModule("controls",{
                 getE("graph-fork-bar").style.display="none";
                 getE("graph-info-bar").style.display="none";
                 getE("graph-plot-bar").style.display="none";
+                getE("graph-menu").style.display="none";
             }
             else{
                 getE("graph-info-bar").style.display="none";
                 getE("graph-plot-bar").style.display="none";
+                getE("graph-menu").style.display="none";
                 G.showingControls3=true;
                 G.showingControls1=false;
                 G.showingControls2=false;
                 getE("graph-fork-bar").style.display="block";
+            }
+        }, false);
+        document.getElementById("search-bar-show").addEventListener('click', function(){
+            if(G.showingControls4){
+                G.showingControls4=false;
+                getE("graph-fork-bar").style.display="none";
+                getE("graph-info-bar").style.display="none";
+                getE("graph-plot-bar").style.display="none";
+                getE("graph-menu").style.display="none";
+
+            }
+            else{
+                getE("graph-info-bar").style.display="none";
+                getE("graph-plot-bar").style.display="none";
+                getE("graph-fork-bar").style.display="none";
+                G.showingControls4=true;
+                G.showingControls1=false;
+                G.showingControls2=false;
+                G.showingControls3=false;
+                getE("graph-menu").style.display="block";
             }
         }, false);
 
@@ -1024,15 +1071,21 @@ G.addModule("controls",{
 		parentElem.appendChild(closeButton);
 		closeButton.onclick=function(e){if(func)func.call(this,e);parentElem.style.display="none";}
 	},
-	addSlider(parentElem,text,func,options, num=""){
+	addSlider(parentElem,text,func,options, num="", id=""){
 		let min=0,max=1;let lazy=false;
 		if(!options)options={};
 		//allow changing the range later through this object
 		if("min" in options==false)options.min=0;
 		if("max" in options==false)options.max=1;
-		
-		
-		let s=d3.select(parentElem).append("div").attr("class","material-slider");
+
+        let s=d3.select(parentElem).append("div").attr("class","material-slider");
+		if(id != "") {
+		    s.attr("id",id);
+		    if(id=="path"){
+                s.attr("style","display:none;");
+            }
+        }
+
 		if(options.long){s.attr("class","material-slider long");}
 		let elem=s.node();elem.__options=options;options.elem=elem;
 		
@@ -1077,15 +1130,20 @@ G.addModule("controls",{
 		return options;
 	},
 	addSliderWithStepButtons(parentElem,text,func,options){
-		let obj=this.addSlider(parentElem,text,func,options);
-		
+	    let obj = null;
+	    if(text == "Path Sequence") {
+            parentElem = this.styleControlsElem;
+            obj=this.addSlider(parentElem,text,func,options,"",'path');
+        } else {
+            obj=this.addSlider(parentElem,text,func,options,"");
+        }
 		let elem=obj.elem,s=d3.select(elem);
-		
+
 		let stepButtonsAreaSelection=s.append("div").attr("class","step-buttons-area").style("width","30%");//.style("margin-top","3px");
 		let barSelection=s.select(".material-slider-bar-container");
-		barSelection.style("width","65%");
+		barSelection.style("width","52%");
 		let stepButtonsArea=stepButtonsAreaSelection.node();
-		
+
 		let getStepFunc=(delta)=>{
 			return ()=>{
 				let target=this.modifierTarget;let end=false;
@@ -1126,7 +1184,7 @@ G.addModule("controls",{
 			}
 			return obj.timeoutFuncs[delta];
 		};
-		
+
 		if(obj.noAnimate!=true){//right click animates; now allow animation by default, unless it's disabled because the operation is expensive or something
 			if(!obj.animateInterval)obj.animateInterval=1000;
 			this.addSmallButton(stepButtonsArea,"<",getStepFunc(-1),getAnimateFunc(-1));
@@ -1136,7 +1194,7 @@ G.addModule("controls",{
 			this.addSmallButton(stepButtonsArea,"<",getStepFunc(-1));
 			this.addSmallButton(stepButtonsArea,">",getStepFunc(1));
 		}
-		
+
 	},
 	addRangeSlider(parentElem,text,func,options){
 		let min=0,max=1;let lazy=false;
@@ -1215,17 +1273,24 @@ G.addModule("controls",{
 		else {pivot1.call(d3.drag().on("drag",cb).on("end",cb));pivot2.call(d3.drag().on("drag",cb).on("end",cb));}
 		return options;
 	},
-	addCheckbox(parentElem,text,func,options){
-		if(!options)options={};
-		let s=d3.select(parentElem).append("div").attr("class","material-checkbox");
-		let label=s.append("p").attr("class","material-checkbox-label").text(text);
-		let checkbox=s.append("input").attr("type","checkbox").attr("class","material-checkbox");
-		let checkboxElem=checkbox.node();
-		checkbox.on("input",()=>func(checkboxElem.checked));
-		let onUpdate=function(value){checkboxElem.checked=value;};
-		options.onUpdate=onUpdate;//call when the value is changed outside
-		return options;
-	},
+    addCheckbox(parentElem, text, func, options) {
+        let arr = ["Show Path Colors", "Random Path Colors", "Pinned", "Unpin Last Path", "Enable Force", "Prioritize SNForce", "Show Path Assignment", "Show Clustering"];
+
+        if (!options) options = {};
+        let s = d3.select(parentElem).append("div").attr("class", "material-checkbox");
+        if(arr.indexOf(text)!=-1) {
+            s.attr("style","display:none;");
+        }
+        let label = s.append("p").attr("class", "material-checkbox-label").text(text);
+        let checkbox = s.append("input").attr("type", "checkbox").attr("class", "material-checkbox");
+        let checkboxElem = checkbox.node();
+        checkbox.on("input", () => func(checkboxElem.checked));
+        let onUpdate = function (value) {
+            checkboxElem.checked = value;
+        };
+        options.onUpdate = onUpdate;//call when the value is changed outside
+        return options;
+    },
 	addDropdownMenu(parentElem,title,items,func,options){
 		if(typeof func!="function"){options=func;func=undefined;}//may skip the callback if the items contain callbacks
 		if(!options)options={};
@@ -1579,7 +1644,6 @@ type: "nodes"*/
 						//highlight edges and neighhbors
 						
 						this.graph.hoveredVertex=originalObjectID;
-
 						G.view.refreshStyles(true,true);
 				}
 			}
@@ -1767,6 +1831,7 @@ type: "nodes"*/
 			if(this.graph.selectHistory) {
 				this.graph.selectHistory.unshift(selected);//index is still 0
 			}
+
 			G.updateSelection();
 		}
 		
@@ -1828,8 +1893,11 @@ type: "nodes"*/
 			};
 			mousePos.x = ( event.clientX / domElement.clientWidth ) * 2 - 1;
 			mousePos.y = - ( event.clientY / domElement.clientHeight ) * 2 + 1;
+			G.mouseScreenPos.x=event.clientX;
+            G.mouseScreenPos.y=event.clientY;
 			mouseScreenPos.x=event.clientX;
 			mouseScreenPos.y=event.clientY;
+
 			mouseShaderPos.x=event.clientX-domElement.clientWidth/2;//seems this is what the vs outputs
 			mouseShaderPos.y=domElement.clientHeight/2-event.clientY;
 			if(relPos.x + 200>G.view.canvasWidth){

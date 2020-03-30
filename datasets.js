@@ -2099,8 +2099,8 @@ function saveSubgraphs(g, type, subgraphs, options) {//auto buckets, takes array
     if ("bucketID" in g) {
         options.noBucketing = true;//don't do bucets for them
     }
-    let bucketVLimit = 136701;
-    let bucketELimit = 206202;
+    let bucketVLimit = 16384 ;
+    let bucketELimit = 32000;
     let unbucketedVLimit = 256, unbucketedELimit = 1024;//subgraphs larger tahn this will not be bucketed
     if (options.unbucketedVLimit) unbucketedVLimit = options.unbucketedVLimit;
     if (options.unbucketedELimit) unbucketedELimit = options.unbucketedELimit;

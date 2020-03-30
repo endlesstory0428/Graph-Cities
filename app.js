@@ -377,7 +377,7 @@ function onSocketConnection(client) {
 	});
 	client.on("disconnect",function onDisconnect(){
 		Datasets.stopAllStreaming(this);
-		delete mysockets.serverDef.clients[this.id];
+		delete mysockets.serverDef.clients  [this.id];
 	});
 	client.on("save",function(data){
 		let datasetID=data.datasetID;
