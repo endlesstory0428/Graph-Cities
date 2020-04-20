@@ -25,6 +25,10 @@ def hslToRgb(h, s, l):
     return [round(r * 255), round(g * 255), round(b * 255)]
 
 
+def frustumHeight(volume, r_upper, r_lower):
+    return 3 * volume / (pi * (r_upper**2 + r_upper * r_lower + r_lower**2))
+
+
 with open(sys.argv[1]) as f:
     data = json.load(f)
 
@@ -38,80 +42,38 @@ try:
 except Exception:
     colorfile = sys.stdout
 
-num_waves = (len(data) + 1) // 2
-# max_vertices = max(data.values(), key=lambda x: x['vertices'])['vertices']
-# min_vertices = min(data.values(), key=lambda x: x['vertices'])['vertices']
-
-# if max_vertices / min_vertices > 100:
-for w, s in data.items():
-    data[w]['v'] = s['vertices']
-    data[w]['vertices'] = log2(s['vertices'])
-
 floor = 0
 accum_height = 0
-for i in range(1, num_waves + 1):
-    Volume = log2(data[str(i)]['edges'])
-    H = 0
-    r_upper = 0
-    r_middle = 0
-    r_lower = 0
-    Density = data[str(i)]['edges'] * 2.0 / (data[str(i)]['v'] * (data[str(i)]['v'] - 1))
-    # if num_waves == 1:
-    #     color = hslToRgb(0, 0.85, 0.5)
-    # else:
-    #     color = hslToRgb((1 - (i - 1.01) / (num_waves - 1.01)) * 0.6, 0.85, 0.5)
-    color = hslToRgb(Density, 0.85, 0.5)
+for w in range(1, len(data) + 1):
+    info = data[str(w)]
+    volume = log2(info[f'e->w{w+1}']) if w < len(data) else log2(info['ie'])
+    r_lower = info['s']
+    r_upper = info['t']
+    h = frustumHeight(volume, r_upper, r_lower)
+    print(floor, accum_height, r_lower, file=floorfile)
 
-    if i == 1:
-        r_middle = data[str(i)]['vertices']
-        try:
-            r_upper = data[str(i) + '_' + str(i + 1)]['vertices']
-        except KeyError:
-            r_upper = r_middle
-        if r_upper == r_middle:
-            r_upper -= 0.01
-        H = 3 * (Volume) / (
-            pi * ((r_upper * r_upper + r_upper * r_middle + r_middle * r_middle))
-        )
-        print(floor, accum_height, r_middle, file=floorfile)
-        accum_height += H
-        floor += 1
-        print(floor - 1, floor, *color, file=colorfile)
-    elif i == num_waves:
-        r_middle = data[str(i)]['vertices']
-        r_lower = data[str(i - 1) + '_' + str(i)]['vertices']
-        if r_lower == r_middle:
-            r_lower -= 0.01
-        H = 3 * (Volume) / (
-            pi * ((r_middle * r_middle + r_middle * r_lower + r_lower * r_lower))
-        )
-        print(floor, accum_height, r_lower, file=floorfile)
-        accum_height += H
-        floor += 1
-        print(floor - 1, floor, *color, file=colorfile)
-        print(floor, accum_height, r_middle, file=floorfile)
-    else:
-        r_upper = data[str(i) + '_' + str(i + 1)]['vertices']
-        r_middle = data[str(i)]['vertices']
-        r_lower = data[str(i - 1) + '_' + str(i)]['vertices']
-        if r_upper == r_middle: r_middle -= 0.01
-        if r_middle == r_lower: r_lower -= 0.01
-        if r_lower == r_upper: r_lower -= 0.02
-        H = 3 * (Volume) / (
-            pi * (
-                (r_upper * r_upper + r_upper * r_middle + r_middle * r_middle) +
-                (r_middle * r_middle + r_middle * r_lower + r_lower * r_lower)
-            )
-        )
+    v = info['ss']
+    ie = info['ie']
+    dense_disc = 2 * ie / float(v * (v - 1)) if ie > 0 else 0
+    color_disc = hslToRgb(dense_disc, 0.85, 0.5)
+    print(floor, floor, 'disc', *color_disc, file=colorfile)
 
-        print(floor, accum_height, r_lower, file=floorfile)
-        accum_height += H
-        floor += 1
-        print(floor - 1, floor, *color, file=colorfile)
-        print(floor, accum_height, r_middle, file=floorfile)
-        accum_height += H
-        floor += 1
-        print(floor - 1, floor, *color, file=colorfile)
+    if w < len(data):
+        e2n = info[f'e->w{w+1}']
+        vn = data[str(w + 1)]['ss']
+        dense_inner = 2 * e2n / float(v * vn)
+        color_inner = hslToRgb(dense_inner, 0.85, 0.5)
+        print(floor, floor + 1, 'inner', *color_inner, file=colorfile)
+
+    vo = info['t']
+    ee = info['ee']
+    dense_outer = 2 * ee / float(v * vo)
+    color_outer = hslToRgb(dense_outer, 0.85, 0.5)
+    print(floor, floor + 1, 'outer', *color_outer, file=colorfile)
+
+    accum_height += h
+    floor += 1
+    print(floor, accum_height, r_upper, file=floorfile)
 
 if floorfile is not sys.stdout:
     floorfile.close()
