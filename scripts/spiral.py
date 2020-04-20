@@ -28,7 +28,7 @@ beta = L / 4
 # plt.axes()
 
 acc_theta = 0
-for filename in sorted(datas, key=lambda x: datas[x]['edges']):
+for filename in sorted(datas, key=lambda x: datas[x]['edges'], reverse=True):
     radius = alpha + beta * acc_theta
     x = radius * cos(acc_theta)
     y = radius * sin(acc_theta)  # * 0.95
