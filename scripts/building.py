@@ -46,7 +46,10 @@ floor = 0
 accum_height = 0
 for w in range(1, len(data) + 1):
     info = data[str(w)]
-    volume = log2(info[f'e->w{w+1}']) if w < len(data) else log2(info['ie'])
+    if sum(info.values()) == 0:
+        continue
+
+    volume = log2(info[f'e->w{w+1}'] + 1) if w < len(data) else log2(info['ie'] + 1)
     r_lower = info['s']
     r_upper = info['t']
     h = frustumHeight(volume, r_upper, r_lower)
@@ -61,13 +64,13 @@ for w in range(1, len(data) + 1):
     if w < len(data):
         e2n = info[f'e->w{w+1}']
         vn = data[str(w + 1)]['ss']
-        dense_inner = 2 * e2n / float(v * vn)
+        dense_inner = 2 * e2n / float(v * vn) if e2n > 0 else 0
         color_inner = hslToRgb(dense_inner, 0.85, 0.5)
         print(floor, floor + 1, 'inner', *color_inner, file=colorfile)
 
     vo = info['t']
     ee = info['ee']
-    dense_outer = 2 * ee / float(v * vo)
+    dense_outer = 2 * ee / float(v * vo) if ee > 0 else 0
     color_outer = hslToRgb(dense_outer, 0.85, 0.5)
     print(floor, floor + 1, 'outer', *color_outer, file=colorfile)
 
