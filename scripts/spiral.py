@@ -8,8 +8,10 @@ datas = {}
 for filename in sys.argv[1:]:
     with open(filename) as f:
         data = json.load(f)
-        edges = sum([x.get('edges', 0) for x in data.values()])
-        verts = max([x.get('vertices') for x in data.values()])
+        # edges = sum([x.get('edges', 0) for x in data.values()])
+        # verts = max([x.get('vertices') for x in data.values()])
+        edges = sum([x.get('ee') + x.get('ie') for x in data.values()])
+        verts = max([x.get('ss') + x.get('t') for x in data.values()])
         datas[filename] = {'edges': edges, 'rad': verts}  # , 'data': data)
 
 max_rad = 0
