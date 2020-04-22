@@ -18,30 +18,64 @@
 			renderer.setSize( window.innerWidth, window.innerHeight );
 			document.body.appendChild( renderer.domElement );
 
-			var floor1 = new THREE.CylinderGeometry(0.1, 0.2, 1.5, 16, 16);
-			floor1.translate(2,0,0);
-			var floor2 = new THREE.CylinderGeometry(0.2, 0.3, 1.5, 16, 16);
-			var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
+			// var floor1 = new THREE.CylinderGeometry(0.1, 0.2, 1.5, 16, 16);
+			// floor1.translate(2,0,0);
+			// var floor2 = new THREE.CylinderGeometry(0.2, 0.3, 1.5, 16, 16);
+
+			var heights = [0,0.0877794886782907,0.13128609409319691,0.1747926995081031,0.22819410025109796,0.2815955009940928,0.35019479832400946,0.4187940956539261,0.6061428892410488];
+			for(var i=0;i<heights.length;i++){
+				heights[i]*=10;
+			}
+			var radius = [6.066089190457772,3.0,3.4594316186372973,2.321928094887362,2.584962500721156,0.98,2.0,1.0,1.584962500721156];
+			var floor1 = new THREE.CylinderGeometry(radius[1], radius[0], heights[1]-heights[0], 16, 16);
+			floor1.translate(0,heights[1]/2,0);
+			var floor2 = new THREE.CylinderGeometry(radius[2], radius[1], heights[2]-heights[1], 16, 16);
+			floor2.translate(0,heights[1]+(heights[2]-heights[1])/2,0);
+			var floor3 = new THREE.CylinderGeometry(radius[3], radius[2], heights[3]-heights[2], 16, 16);
+			floor3.translate(0,heights[2]+(heights[3]-heights[2])/2,0);
+			var floor4 = new THREE.CylinderGeometry(radius[4], radius[3], heights[4]-heights[3], 16, 16);
+			floor4.translate(0,heights[3]+(heights[4]-heights[3])/2,0);
+			var floor5 = new THREE.CylinderGeometry(radius[5], radius[4], heights[5]-heights[4], 16, 16);
+			floor5.translate(0,heights[4]+(heights[5]-heights[4])/2,0);
+			var floor6 = new THREE.CylinderGeometry(radius[6], radius[5], heights[6]-heights[5], 16, 16);
+			floor6.translate(0,heights[5]+(heights[6]-heights[5])/2,0);
+			var floor7 = new THREE.CylinderGeometry(radius[7], radius[6], heights[7]-heights[6], 16, 16);
+			floor7.translate(0,heights[6]+(heights[7]-heights[6])/2,0);
+			// Colors
+			var material1 = new THREE.MeshBasicMaterial({color:0xEC3613});
+			var material2 = new THREE.MeshBasicMaterial({color:0xECA113});
+			var material3 = new THREE.MeshBasicMaterial({color:0xC1EC13});
+			var material4 = new THREE.MeshBasicMaterial({color:0x13EC13});
+			var material5 = new THREE.MeshBasicMaterial({color:0x1313EC});
 			
 			// Mesh
-			var frustum_mesh_1 = new THREE.Mesh(floor1, material);
-			// var frustum_mesh_2 = new THREE.Mesh(floor2, material);
-			// frustum_mesh_1.position.x=1
-			var building1 = new THREE.Geometry();
-			building1.merge(floor1);
-			building1.merge(floor2);
-			var building_mesh_1 = new THREE.Mesh(building1,material);
-			scene.add(building_mesh_1);
-			// scene.add(frustum_mesh_1);
-			// scene.add(frustum_mesh_2);
-
-			camera.position.z = 10;
+			var frustum_mesh_1 = new THREE.Mesh(floor1, material1);
+			var frustum_mesh_2 = new THREE.Mesh(floor2, material2);
+			var frustum_mesh_3 = new THREE.Mesh(floor3, material2);
+			var frustum_mesh_4 = new THREE.Mesh(floor4, material3);
+			var frustum_mesh_5 = new THREE.Mesh(floor5, material3);
+			var frustum_mesh_6 = new THREE.Mesh(floor6, material4);
+			var frustum_mesh_7 = new THREE.Mesh(floor7, material5);
+			// var frustum_mesh_3 = new THREE.Mesh(floor2, material2);
+			// var building_mesh_1 = new THREE.Mesh(THREE.Geometry());
+			// building_mesh_1.merge(floor1);
+			// building_mesh_1.merge(floor2);
+			// var building_mesh_1 = new THREE.Mesh(building1,material1);
+			// scene.add(building_mesh_1);
+			scene.add(frustum_mesh_1);
+			scene.add(frustum_mesh_2);
+			scene.add(frustum_mesh_3);
+			scene.add(frustum_mesh_4);
+			scene.add(frustum_mesh_5);
+			scene.add(frustum_mesh_6);
+			scene.add(frustum_mesh_7);
+			
+			camera.position.z = 15;
+			camera.position.y = 2;
 			var animate = function () {
 				requestAnimationFrame( animate );
-				// cylinder.rotation.x += 0.01;
-				// cylinder.rotation.y += 0.01;
-				// cylinder.rotation.z += 0.01;
-
+				// building_mesh_1.rotation.x += 0.01;
+				// building_mesh_1.rotation.y += 0.01;
 				renderer.render( scene, camera );
 			};
 
