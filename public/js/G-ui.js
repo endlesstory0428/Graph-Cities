@@ -436,7 +436,7 @@ G.addModule("ui", {
 		if (summaryText) title = title + " (" + summaryText + ")";
 		getE("minimal-graph-title").innerText = title;
 		let V = graph.vertices.length, E = graph.edges.length;
-		let p = (E / (V * (V - 1) / 2)), k = Math.log(E / V) / Math.log(Math.log(V));
+		let p = (2*E / (V * (V - 1))), k = Math.log(E / V) / Math.log(Math.log(V));
 		let VEText = "|V|: " + V + ", |E|: " + E;//+", avg. degree: "+shortStr(2*E/V)+", density: "+shortStr(p)+", sparsity:"+shortStr(k);
 		if (p == 1) {
 			VEText += " (complete)";
@@ -750,11 +750,12 @@ G.addModule("ui", {
 
 
 		let xLinear = d3.scaleLinear().domain([0, maxCount]).range([0, 1]);
+        let lin = d3.scaleLinear().domain([0, 56]).range([0, 1]);
 		let xLog = d3.scaleLog().domain([0, maxCount]).range([0, 1])
 
 		let ribbonMenuSelection = d3.select("#ribbon-menu-contents");
 		ribbonMenuSelection.selectAll("div").remove();
-		let ribbonSelection = ribbonMenuSelection.selectAll("div").data(layersArray).enter().append("div").attr("class", "ribbon").style("margin-top", (d) => Math.floor(Math.log(Math.max(d.upperGap, 1)) * 20 + 2) + "px").on("click", (d) => {
+		let ribbonSelection = ribbonMenuSelection.selectAll("div").data(layersArray).enter().append("div").attr("class", "ribbon").on("click", (d) => {
 
 			if (G.graph.dataPath == graph.dataPath + "/layer/" + d.layer) {
 				//displaying this layer; show top level instead
@@ -792,25 +793,18 @@ G.addModule("ui", {
 		ribbonSelection.append("span").attr("class", "selector").text("\u25C0").style("visibility", "hidden");//"\u25BA" //was rightward
 		ribbonSelection.append("span").attr("class", "layer-number").text((d) => d.layer);
 		let barContainerSelection = ribbonSelection.append("div").attr("class", "layer-bar-container");
-		barContainerSelection.append("span").attr("class", "layer-edge-bar").text(" ").style("width", (d) => Math.floor(xLinear(d.E) * 100) + "%").style("background-image", (d) => {
-			let edgeDetails = d.Edist;
-			let ccRegions = [];
-			for (let e in edgeDetails) {
-				ccRegions.push({e: Number(e), totalE: Number(e) * edgeDetails[e], count: edgeDetails[e]});
-			}
-			ccRegions.sort(compareBy((x) => Number(x.e)));
-			let total = 0, maxDensity = 0;
-			for (let r of ccRegions) {
-				total += r.totalE;
-				r.cumulativeE = total;
-				r.density = r.count / r.totalE;
-				if (r.density > maxDensity) {
-					maxDensity = r.density;
-				}
-			}
-			let layerE = d.E;
-			let str = "linear-gradient(to right, #fff 0%, " + ccRegions.map((d) => getRGBFromDensity(d.density / maxDensity) + " " + Math.floor(d.cumulativeE * 100 / layerE) + "% , " + "rgb(128,128,128) " + Math.floor(d.cumulativeE * 100 / layerE) + "%").join(",") + ")";
-			return str;
+		let index =0;
+        let heights=graph.nodes.height;
+        const distinct = (value, index,self) => {
+            return self.indexOf(value) === index;
+        };
+        let max=arrayMax(heights);
+        let min=arrayMin(heights);
+        arr = heights.map((x)=>(min==max)?(0.5):((x-min)/(max-min)));
+        arr = (arr.filter(distinct)).sort(function(a, b){return b-a});
+        barContainerSelection.append("span").attr("class", "layer-edge-bar").text(" ").style("width", (d) => Math.floor(xLinear(d.E) * 100) + "%")
+            .style("background", (d) => {
+                return G.colorScales.orange((1-(arr[index++])));
 		});
 		barContainerSelection.append("span").attr("class", "layer-vertex-bar").text(" ").style("width", (d) => Math.floor(xLinear(d.V) * 100) + "%");
 		//barContainerSelection.append("span").attr("class","layer-clones-bar").text(" ").style("left",(d)=>Math.floor(xLinear(d.nodesWithClones)*100)+"%");

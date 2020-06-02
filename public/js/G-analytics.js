@@ -216,7 +216,7 @@ G.addModule("analytics",{
 		}
 		else{
 			let V=graph.vertices.length,E=graph.edges.length;
-			let p=(E/(V*(V-1)/2)),k=Math.log(E/V)/Math.log(Math.log(V));
+			let p=(2*E / (V * (V - 1))),k=Math.log(E/V)/Math.log(Math.log(V));
 			desc="|V|: "+V+", |E|: "+E+", avg. degree: "+shortStr(2*E/V)+", density: "+shortStr(p)+", sparsity:"+shortStr(k);
             originalGraphMenu = ["|V| : " + V , "|E| : " + E, "avg. degree : "+ shortStr(2*E/V), "density : " + shortStr(p), "sparsity : "+shortStr(k)  ]
             if(graph.heights){
@@ -264,6 +264,7 @@ G.addModule("analytics",{
 			}
 		}
         let infoElem=getE("info-menu");
+        $("#info-menu").html("");
         G.controls.addDropdownMenu(infoElem,"Original Graph",originalGraphMenu);
         return desc;
 	},
@@ -372,7 +373,7 @@ G.addModule("analytics",{
 				if(count>1){verticesWithClones++;}
 			}
 		}
-		return {cloneCount:cloneCount,cloneMaps:cloneMaps,clones:clones,verticesWithClones:verticesWithClones,edgeSources:edgeSources,edgeTargets:edgeTargets,partitions:partitions,partitionCount:partitionCount,max:max,min:min};
+        return {cloneCount:cloneCount,cloneMaps:cloneMaps,clones:clones,verticesWithClones:verticesWithClones,edgeSources:edgeSources,edgeTargets:edgeTargets,partitions:partitions,partitionCount:partitionCount,max:max,min:min};
 	},
 	
 	getVertexCCMetagraph(g,propertyName){
@@ -1219,7 +1220,7 @@ G.addModule("analytics",{
 			edgeLayers[i]=null;
 		}
 		var remainingEdges=graph.edges.length;var done,peeled,minDegree;var peelValues;var degreeDone;
-		let percentage=0,lastPercentage=0,increment=(edgeCount>1000000)?5:20;
+		let percentage=0,lastPercentage=0,increment=(edgeCount>1000000)?0:0;
 		while(remainingEdges>0){//each iteration removes one layer of edges
 			if(edgeCount>100){//show progress for bigger graphs
 				let edgesPeeled=edgeCount-remainingEdges;

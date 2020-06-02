@@ -54,7 +54,6 @@
 
 	<body>
 		<div id="canvas" ></div>
-
 		<div id="label-container" class="simple fixed" style="background:transparent;width:100%;height:100%;pointer-events:none;"></div>
 
 		<!-- grid-like controls -->
@@ -70,24 +69,24 @@
 			<!-- #122933; -->
 				<!--div id="graph-buttons-area"></div-->
                 <img id="overview-image" class="simple" style="display:none;border:1px solid #37474F;width:100%;height:100%;" src="images/blank.png"></img>
-
+                <a href="#" class="btn btn-circle" id="dataset-bar-show" style="z-index: 2;margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;">
+                    <i class="fas fa-database"></i>
+                </a>
                 <a href="#" class="btn  btn-circle" id="info-bar-show" style="margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;" >
                     <i class="fas fa-info-circle"></i>
                 </a>
-                <a href="#" class="btn btn-circle" id="plot-bar-show" style="margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;">
+                <a href="#" class="btn btn-circle" id="plot-bar-show" style="margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;z-index: 3;">
                     <i class="fas fa-chart-scatter"></i>
                 </a>
                 <a href="#" class="btn btn-circle" id="fork-bar-show" style="margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;z-index:3;">
                     <i class="fas fa-align-left"></i>
                 </a>
                 <a href="#" class="btn btn-circle" id="search-bar-show" style="z-index: 2;margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;">
-                    <i class="fas fa-search"></i>
+                    <i class="fas fa-cog"></i>
                 </a>
-
-
 			</div>
 
-			<div id="top-middle-area" class="simple fixed" style="display: flex;flex-flow: column;top:0;height: 100%;left:10%;right:10%;background: #37474F;color:white;font-size:larger;">
+			<div id="top-middle-area" class="simple fixed" style="display: flex;flex-flow: column;top:0;height: 100%;left:10%;right:0%;background: #37474F;color:white;font-size:larger;">
 
                 <div id="top-level-summary-area" class="simple" style="display:flex;flex-flow:column;text-align:center;height:62%;">
 					<div  class="simple">
@@ -186,15 +185,15 @@
 		</div>
 
 
-        <div id="graph-info-bar" class="panel" style="width:20%;height:555px;min-width:170px;overflow-y: scroll;">
+        <div id="graph-info-bar" class="panel" style="width:20%;height: 655px;min-width:170px;overflow-y: scroll;">
             <div id="info-menu">
             </div>
         </div>
-        <div id="graph-fork-bar" class="panel" style="width:20%;height:555px;min-width:170px;overflow-y: scroll;">
+        <div id="graph-fork-bar" class="panel" style="width:20%;height: 655px;min-width:170px;overflow-y: scroll;">
                 <div id="ribbon-menu" class="simple column" style="overflow-x:visible;overflow-y:auto;border:none;width:100%;height: 100%;">
                     <div style="width:100%;">
                         <p style="float:left;font-size:x-small;">Layer</p>
-                        <p style="transform: translateX(45%);font-size:x-small;"># CCs</p>
+                        <p style="transform: translateX(15%);font-size:x-small;"># CCs</p>
                     </div>
 <!--                    <svg id="ribbon-scale" width="100" height="30" style="width:100%;height:30px;"/>-->
                     <div id="ribbon-menu-contents" class="menu-content" style="overflow-x:visible;overflow-y:auto;padding-bottom: 55px;">
@@ -208,7 +207,7 @@
 
                 </div>
         </div>
-        <div id="graph-plot-bar" class="panel" style="width:20%;height:555px;min-width:170px;overflow-y: scroll;">
+        <div id="graph-plot-bar" class="panel" style="width:20%;height: 655px;min-width:170px;overflow-y: scroll;">
             <div id="degree-plot" style="padding-top: 20px;padding-bottom: 20px;">
 
 
@@ -218,17 +217,47 @@
 
             </div>
         </div>
-        <div id="graph-menu" class="panel" style="width:20%;height:555px;min-width:170px;overflow-y: scroll;">
+        <div id="graph-menu" class="panel" style="width:20%;height: 655px;min-width:170px;overflow-y: scroll;background: white;">
                 <div>
                     <p id="selected-vertices">selected vertices</p>
                     <input type="text" id="select-vertex-input" value=""></input>
                     <div id="selection-buttons-area"></div>
+
                 </div>
+                <div id="drawing-buttons-area" style="margin-top: 50px;">
+                    <p id="drawing-graph">Next Drawing Options</p>
+                </div>
+                <div>
+                    <p id="showing-paths"></p>
+                </div>
+                <div id="rotate-buttons-area" style="margin-top: 50px;">
+                    <p id="rotate-graph">Rotation Options</p>
+                </div>
+
+                <div id="rotate_speed">
+                    <div class="custom-control custom-checkbox" style="padding-right: 10rem;">
+                        <input type="checkbox" class="custom-control-input" id="rotate_option">
+                        <label class="custom-control-label" for="rotate_option">Rotate</label>
+                    </div>
+                </div>
+
         </div>
 
-        <div id="style-menu" class="panel" style="min-width:300px;overflow-y: scroll;font-size: x-small;">
+        <div id="style-menu" class="panel" style="min-width:300px;height: 655px;overflow-y: scroll;font-size: x-small;">
 
 		</div>
+        <div id="graph-dataset-bar" class="panel" style="min-width:300px;height: 655px;overflow-y: scroll;font-size: x-small;display:block;">
+                <div id="dataset-menu-1">
+                </div>
+                <div class="custom-control custom-checkbox" style="padding-right: 5rem;">
+                    <input type="checkbox" class="custom-control-input" id="drawing_option_1">
+                    <label class="custom-control-label" for="drawing_option_1" style="font-size: medium;">Using SparseNet Display</label>
+                </div>
+                <div class="custom-control custom-checkbox" style="padding-right: 7.8rem;">
+                    <input type="checkbox" class="custom-control-input" id="drawing_option_2">
+                    <label class="custom-control-label" for="drawing_option_2" style="font-size: medium;" >Using Fixed Points</label>
+                </div>
+        </div>
 
 
 		<div id="ribbon-tooltip" class="tooltip">
@@ -241,25 +270,9 @@
 
 		<div id="selecting-region" style="display:none"></div>
 
-		<div id="dataset-menu" class="modal fade" id="datasetsModal" tabindex="-1" role="dialog" aria-labelledby="datasetsModalLabel" aria-hidden="true">
-			<div class="modal-dialog" role="document">
-				<div class="modal-content">
-					<div class="modal-header">
-						<h5 class="modal-title" id="datasetsModalLabel">Datasets</h5>
-						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
-							<span aria-hidden="true">&times;</span>
-						</button>
-					</div>
-					<div id="dataset-menu-content" class="modal-body">
-					</div>
-					<div class="modal-footer">
-						<button type="submit" class="btn btn-primary mb-2">Close</button>
-					</div>
-				</div>
-			</div>
-		</div>
+
 		<div id="layer-menu" class="panel menu" >
-			<p style="font-size: 24px;padding:10px;">Choose Layer</span>
+			<p style="font-size: 24px;padding:10px;">Choose Layer</p>
 			<button class="close-button material small" onclick="selectE('layer-menu').style('display','none');">×</button>
 			<div id="layer-menu-content" class="dialog-content">
 

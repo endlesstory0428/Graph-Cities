@@ -21,6 +21,8 @@ uniform float radiusFactor;
 
 uniform float activeLayer;
 uniform float activeLayerEnabled;
+uniform sampler2D layerHeights;
+uniform float layerHeightsSize;
 
 
 attribute vec3 customColor;
@@ -34,6 +36,7 @@ varying float bright;
 //to signal that we should not dim the endpoints for segments that are supposed to connect to other segments
 varying float beginExtend;
 varying float endExtend;
+uniform float heightFactor;
 
 vec3 golden = vec3(1.,1.,0.5);//customColor; // set color associated to vertex; use later in fragment shader
 //Math.pow(Math.abs(2*r-1),3)
@@ -51,6 +54,7 @@ void main()
 	float layer1=sourceData.x,layerSetID=sourceData.y,original=sourceData.z,ccSize=sourceData.w;
 	float layer2=targetData.x,layerSetID2=targetData.y,original2=targetData.z,ccSize2=targetData.w;
 	//other's layer?
+
 
 	float colorMixRatio=max(coord.x,0.);
 

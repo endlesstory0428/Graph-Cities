@@ -544,7 +544,6 @@ let DataTemplates = {//these functions all take a graph(that has a dataPath etc)
         },
         make: (g) => {
             let waveIDs = g.vertices.wave;
-            console.log("here");
             console.log(waveIDs);
             let list = loadSubgraphs(g, "wave", true);//include bucketed
             let vertexCCIDs = new Array(g.vertices.length);

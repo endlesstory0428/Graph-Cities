@@ -43,6 +43,9 @@ uniform mat4 nodeModelViewMatrix;
 
 uniform float screenWidth;
 uniform float screenHeight;
+uniform sampler2D layerHeights;
+uniform float layerHeightsSize;
+uniform float heightFactor;
 
 
 void main() {
@@ -53,8 +56,10 @@ void main() {
 	vec3 pos = vertexPos.xyz;
 	pos.xy*=radiusFactor;
 
+
 	id=original;
 
+	float layerHeight=getArrayValue(layerHeights,layerHeightsSize,layer).x*heightFactor;
 	//vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
 	vec4 mvPosition = modelViewMatrix * vec4( pos, 1.0 );
 	//vec4 mvPosition = modelViewMatrix * vec4( vUv*100.0,1.0,1.0 );
@@ -85,7 +90,6 @@ void main() {
 	spos/=2.;
 
 
-
 	//if(dot(mousePos,gl_Position.xy*gl_Position.w)>0.)gl_PointSize*=2.;
 	//if(((gl_Position.x+gl_Position.y)>0.))gl_PointSize*=2.;
 
@@ -102,7 +106,6 @@ void main() {
 
 	vColor=mix(standardColor,customColor,min(usingCustomColor,layerColorRatio));//only use custom color if it's marked as available
 	//vColor=getArrayValue( layerColors,layerColorsSize,0.).rgb;
-
 
 
 	vIsExpanded=isExpanded;
