@@ -82,7 +82,7 @@ vec4 getEdgeData(float eid){
 	return texture2D(edgeList,getUV(eid,edgeListSize));
 }
 
-const float d = 1./textureSize, e2 = 0.1,  dt2 = .001,G=-10000.,edgeStrength=1.0,clusteringStrength=2.0,alignmentStrength=20.0,radialLimitStrength=0.5, decay=0.05,factor=1.-decay;
+const float d = 1./textureSize, e2 = 0.1,  dt2 = .014,G=-10000.,edgeStrength=.5,clusteringStrength=2.0,alignmentStrength=20.0,radialLimitStrength=0.5, decay=0.05,factor=1.-decay;
 void main(void) {
 	vec4 pos = texture2D( tPositionsPrev, vUv );
 	vec2 r = pos.xy;
@@ -259,10 +259,10 @@ void main(void) {
 
 	
 	
-	float maxSpeed=500./(timer*5.+5.)+10.;//11 -> 1? 7.5 -> 5?
+	float maxSpeed=100./(timer*5.+5.)+10.;//11 -> 1? 7.5 -> 5?
 	//if(endeid==eid){maxSpeed*=0.01;}
 	//float maxSpeed=0.1;
-	float componentMaxSpeed=500.;//speed may be too large to clamp as a whole in some cases (overflow when squared?), so must clamp components first
+	float componentMaxSpeed=200.;//speed may be too large to clamp as a whole in some cases (overflow when squared?), so must clamp components first
 	//r =r+f*dt2; 
 	//vec3 r2=(r+r1)/2.;
 	//vec3 r2=2.*r1 - r;// + f*dt2;//2.*r1 - r;// + f*dt2;//dt2=.00001;
@@ -272,7 +272,7 @@ void main(void) {
 	//r2=r1+clamp(r2-r1,-maxSpeed,maxSpeed);//this will clamp componets separately, leading to a square shape at the beginning
 	vec2 oldVelocity=r1-r;
 	
-	vec2 velocity=(r1-r)*factor+ f*.0005;//2.*r1 - r;// + f*dt2;//dt2=.00001;
+	vec2 velocity=(r1-r)*factor+ f*dt2;//2.*r1 - r;// + f*dt2;//dt2=.00001;
 	//if(dot(velocity,oldVelocity)<0.){velocity=velocity*0.5;}//if it's bouncing around, increase the decay
 	//velocity=normalize(velocity);//funny - if you normalize and then clamp it, nodes will always wiggle around in a funny way; but this shows that the length of velocity is usually much less than 1
 	

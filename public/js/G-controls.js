@@ -10,6 +10,7 @@ G.addModule("controls",{
 		
 		
 		//bottom
+        this.index=1;
 		let viewButtomsElem=getE("view-buttons-area");
 		let semanticsButtomsElem=getE("graph-semantics-buttons-area");
 		this.styleControlsElem=getE("style-controls-area");
@@ -30,7 +31,7 @@ G.addModule("controls",{
 		G.saveLayout=saveLayout;
 		
 		function saveImage(){
-			let path=this.graph.datasetID;//this.graph.dataPath;
+			let path=this.graph.dataPath;
 			if(path){
 				G.messaging.sendCustomData("save",{type:"image",path:path,data:G.renderer.domElement.toDataURL("image/png")});
 				G.addLog("saved");
@@ -69,7 +70,10 @@ G.addModule("controls",{
 		this.addSlider(styleControlsElem,"vertical spread",(value)=>{G.controls.set("heightFactor",value);},{min:0,max:5,default:1,},"1","vertical");
 		this.addSlider(styleControlsElem,"horizontal spread",(value)=>{G.controls.set("radiusFactor",value);},{min:1,max:60,default:1}, "2", "horizontal");
         this.addSlider(styleControlsElem,"node size",(value)=>{G.controls.set("nodeSizeFactor",value);},{long:true,min:0.1,max:10,default:1});
-		//minimal UI: height, width, node size, link brightness
+        let styleRotateElem=getE("rotate_speed");
+        this.addSlider(styleRotateElem,"rotate speed",(value)=>{G.animation["rotate speed"]=value;},{long:true,min:-1,max:1,default:0});
+
+        //minimal UI: height, width, node size, link brightness
 		let minimalBar=getE("minimal-bar");
 		let minimalBarSelection=d3.select(minimalBar);
 		let minimalControlsElem=getE("minimal-style-controls-area");
@@ -434,14 +438,44 @@ G.addModule("controls",{
 		this.addButton(selectionButtonsElem,"select by ID",()=>{
 		    let value=getE('select-vertex-input').value;
 		    let result=this.graph.vertices.id.indexOf(value);
+            G.cameraControls.setTarget(null);
 		    if(result!=-1) {
                 let vec=G.view.getNodePos(value);
                 G.cameraControls.setTarget(vec,true);
                 G.toggleSelectVertex(value);
             }
-
-
 		});
+
+            let drawingButtonsElem = getE("drawing-buttons-area");
+            let drawingGraphText = getE("drawing-graph");
+            this.addButton(drawingButtonsElem, "Next Neighbors", () => {
+                const distinct = (value, index, self) => {
+                    return self.indexOf(value) === index;
+                };
+                let arr = []
+                for (let node = 0; node < G.graph.snPathsFlat.length; node++) {
+                    let neighbors = G.graph.getNeighbors(G.graph.snPathsFlat[node]);
+                    arr.push(neighbors);
+                }
+                G.graph.snPathsNeigbors = arr.flat(1);
+                G.graph.snPathsNeigbors = G.graph.snPathsNeigbors.filter(distinct);
+                G.graph.showingNeighbors = true;
+                G.view.refreshStyles(true, true);
+                //G.graph.showingNeighbors = false;
+                G.graph.trackIndex++;
+
+            });
+
+            this.addButton(drawingButtonsElem, "Next Paths", () => {
+                G.graph.snPathsFlat = (G.graph.snPathsFlat.concat(G.graph.snPaths.slice(this.index, this.index + 1))).flat(1);
+                this.index = this.index+ 1;
+                getE("showing-paths").textContent=""+this.index+" sparesnet paths out of " + G.graph.snPaths.length;
+                G.graph.showingPaths = true;
+                G.view.refreshStyles(true, true);
+                G.graph.showingPaths = false;
+
+            });
+
 		
 		let filteringElem=getE("subgraph-filtering-area");
 		function getPredicate(){
@@ -857,9 +891,41 @@ G.addModule("controls",{
                 else G.graph.showingEgonets=true;
             }
             if ( ev.key === 'n') {
-                if(G.graph.showingNeighbors)
-                    G.graph.showingNeighbors=false;
-                else G.graph.showingNeighbors=true;
+                if(G.graph.showingNeighbors) {
+                    G.graph.showingNeighbors = false;
+                    const distinct = (value, index,self) => {
+                        return self.indexOf(value) === index;
+                    };
+                    // if(G.graph.snPathsFlat && G.graph.snPathsTemp)
+                    //     G.graph.snPathsFlat = G.graph.snPathsFlat.concat(G.graph.snPathsTemp)
+                    //     G.graph.snPathsFlat = G.graph.snPathsFlat.filter(distinct);
+                }
+                else {
+                    G.graph.showingNeighbors = true;
+
+                }
+
+            }
+            if ( ev.key === 'm') {
+                if(G.graph.showingPaths) {
+                    G.graph.showingPaths = false;
+                }
+                else {
+                    G.graph.snPathsTemp = (G.graph.snPathsTemp.concat(G.graph.snPaths.slice(this.index, this.index+1))).flat(1);
+                    this.index +=1;
+                    getE("showing-paths").textContent=""+this.index+" sparesnet paths out of " + G.graph.snPaths.length;
+
+                    G.graph.showingPaths = true;
+                    G.graph.showingNeighbors = false;
+                    const distinct = (value, index,self) => {
+                        return self.indexOf(value) === index;
+                    };
+                    if(G.graph.snPathsFlat && G.graph.snPathsTemp)
+                        G.graph.snPathsFlat = G.graph.snPathsFlat.concat(G.graph.snPathsTemp)
+                        G.graph.snPathsFlat = G.graph.snPathsFlat.filter(distinct);
+
+                }
+
             }
             if ( ev.key === 's') {
                 if(G.graph.showingSparsenet) {
@@ -903,9 +969,10 @@ G.addModule("controls",{
         document.getElementById("info-bar-show").addEventListener('click', function(){
             if(G.showingControls1){
                 G.showingControls1=false;
-                getE("graph-info-bar").style.display="none";
+                getE("graph-plot-bar").style.display="none";
                 getE("graph-info-bar").style.display="none";
                 getE("graph-plot-bar").style.display="none";
+                getE("graph-dataset-bar").style.display="none";
                 getE("graph-menu").style.display="none";
 
             }
@@ -913,10 +980,13 @@ G.addModule("controls",{
                 getE("graph-plot-bar").style.display="none";
                 getE("graph-fork-bar").style.display="none";
                 getE("graph-menu").style.display="none";
+                getE("graph-dataset-bar").style.display="none";
                 getE("graph-info-bar").style.display="block";
                 G.showingControls1=true;
                 G.showingControls2=false;
                 G.showingControls3=false;
+                G.showingControls4=false;
+                G.showingControls5=false;
             }
         }, false);
         document.getElementById("plot-bar-show").addEventListener('click', function(){
@@ -925,16 +995,20 @@ G.addModule("controls",{
                 getE("graph-info-bar").style.display="none";
                 getE("graph-info-bar").style.display="none";
                 getE("graph-plot-bar").style.display="none";
+                getE("graph-dataset-bar").style.display="none";
                 getE("graph-menu").style.display="none";
             }
             else{
                 getE("graph-info-bar").style.display="none";
                 getE("graph-fork-bar").style.display="none";
+                getE("graph-dataset-bar").style.display="none";
                 getE("graph-menu").style.display="none";
 
                 G.showingControls2=true;
                 G.showingControls1=false;
                 G.showingControls3=false;
+                G.showingControls4=false;
+                G.showingControls5=false;
                 getE("graph-plot-bar").style.display="block";
             }
         }, false);
@@ -944,15 +1018,19 @@ G.addModule("controls",{
                 getE("graph-fork-bar").style.display="none";
                 getE("graph-info-bar").style.display="none";
                 getE("graph-plot-bar").style.display="none";
+                getE("graph-dataset-bar").style.display="none";
                 getE("graph-menu").style.display="none";
             }
             else{
                 getE("graph-info-bar").style.display="none";
                 getE("graph-plot-bar").style.display="none";
+                getE("graph-dataset-bar").style.display="none";
                 getE("graph-menu").style.display="none";
                 G.showingControls3=true;
                 G.showingControls1=false;
                 G.showingControls2=false;
+                G.showingControls4=false;
+                G.showingControls5=false;
                 getE("graph-fork-bar").style.display="block";
             }
         }, false);
@@ -962,6 +1040,7 @@ G.addModule("controls",{
                 getE("graph-fork-bar").style.display="none";
                 getE("graph-info-bar").style.display="none";
                 getE("graph-plot-bar").style.display="none";
+                getE("graph-dataset-bar").style.display="none";
                 getE("graph-menu").style.display="none";
 
             }
@@ -969,14 +1048,60 @@ G.addModule("controls",{
                 getE("graph-info-bar").style.display="none";
                 getE("graph-plot-bar").style.display="none";
                 getE("graph-fork-bar").style.display="none";
+                getE("graph-dataset-bar").style.display="none";
+                getE("graph-info-bar").style.display="none";
+                getE("graph-menu").style.display="block";
+
                 G.showingControls4=true;
                 G.showingControls1=false;
                 G.showingControls2=false;
                 G.showingControls3=false;
-                getE("graph-menu").style.display="block";
+                G.showingControls5=false;
             }
         }, false);
+        G.showingControls5=true;
+        document.getElementById("dataset-bar-show").addEventListener('click', function(){
+            if(G.showingControls5){
+                G.showingControls5=false;
+                getE("graph-info-bar").style.display="none";
+                getE("graph-info-bar").style.display="none";
+                getE("graph-plot-bar").style.display="none";
+                getE("graph-menu").style.display="none";
+                getE("graph-dataset-bar").style.display="none";
 
+            }
+            else{
+                getE("graph-plot-bar").style.display="none";
+                getE("graph-fork-bar").style.display="none";
+                getE("graph-menu").style.display="none";
+                getE("graph-dataset-bar").style.display="block";
+                getE("graph-info-bar").style.display="none";
+
+                G.showingControls5=true;
+                G.showingControls4=false;
+                G.showingControls2=false;
+                G.showingControls3=false;
+                G.showingControls1=false;
+            }
+        }, false);
+        G.drawsparsenet = false;
+        document.getElementById("drawing_option_1").addEventListener('click', function(){
+            G.drawsparsenet = true;
+        }, false);
+        G.drawFixedPoints = false;
+        document.getElementById("drawing_option_2").addEventListener('click', function(){
+            G.drawFixedPoints = true;
+        }, false);
+        document.getElementById("rotate_option").addEventListener('click', function(){
+            if(G.animation.rotate) {
+                G.animation.rotate=false;
+                G.animation["rotate speed"]=0;
+            }else {
+                G.animation.rotate=true;
+                G.animation["rotate speed"]=0.3;
+            }
+
+        }, false);
         this.initGestures();
 		this.initInteractions();
 		
@@ -1031,6 +1156,9 @@ G.addModule("controls",{
 	},
 	addButton(parentElem,text,func,rightclickfunc){
 		let s=d3.select(parentElem).append("button").attr("class","material").text(text);
+        if(text == "Next Neighbors") {
+            s.attr("style", "margin-right: 20px;");
+        }
 		let buttonElem=s.node();
 		s.on("click",()=>func());
 		if(rightclickfunc){
@@ -1826,7 +1954,10 @@ type: "nodes"*/
 
 			//if(typeof vertex=="object"){let ID=G.view.graph.vertices.indexOf(vertex);if(ID==-1)throw Error("no such vertex "+vertex);vertex=ID;}
 			if(!selected[vertex]){selected[vertex]={time:Date.now()};}
-			else{delete selected[vertex];}
+			else{
+			    delete selected[vertex];
+                G.cameraControls.setTarget(null);
+			}
 			this.graph.selectedVertices=selected;
 			if(this.graph.selectHistory) {
 				this.graph.selectHistory.unshift(selected);//index is still 0

@@ -31,6 +31,13 @@ G.colorScales={ //[0,1], use with THREE.Color.setStyle()
 };
 G.colorScale="lightBlueRed";
 G.brightColors=true;
+Object.cast = function cast(rawObj, constructor)
+{
+    var obj = new constructor();
+    for(var i in rawObj)
+        obj[i] = rawObj[i];
+    return obj;
+}
 function onColorScaleUpdated(){
 	if(G.view.model){
 		/*for(let value in G.view.model.colorIndexMap){
@@ -250,8 +257,46 @@ G.addModule("view",{
 	},
 	displayGraph:async function(graph,options){
 		if(!options)options={};
-		if(graph.vertices.layout)for(let i=0;i<graph.vertices.layout.length;i++){if(!graph.vertices.layout[i])throw Error();}
+		if(G.drawFixedPoints) {
+            graph.colorScaleName = "orange";
+        }
+		if(G.drawFixedPoints && G.drawsparsenet){
+            graph.colorScaleName = "blueRed";
+        }
+
+        if(graph.vertices.layout)for(let i=0;i<graph.vertices.layout.length;i++){if(!graph.vertices.layout[i])throw Error();}
 		while(graph.representation)graph=G.getGraph(graph.dataPath+"/metagraphs/"+graph.representation);//only use the real displayed top level graph
+        graph.snPathsTemp=[];
+        graph.snPathsNeigbors = [];
+        graph.trackIndex = 0;
+        let vc=graph.vertices.length;
+        let options2=null;if(vc>G.controls.get("approximateSNThreshold",1)){options={variant:"approximate"};}//todo: the exact SN code has a problem
+        let data={};
+        if((!graph.dataPath)||graph.isCustom){
+            data.data=this.getGraphVerticesAndEdges(graph);
+        }
+        if(graph.dataPath&&(graph.dataPath.indexOf("custom")==-1)){
+            data.dataPath=graph.dataPath;}
+
+        if(options2)data.options=options2;
+        const distinct = (value, index,self) => {
+            return self.indexOf(value) === index;
+        };
+        if(G.drawsparsenet) {
+        if(!graph.snPaths) {
+            G.messaging.requestCustomData("sparsenet", data, (result) => {
+                if (result && result.length > 0) {
+                    graph.snPaths = result;
+                    graph.snPathsFlat = graph.snPaths.slice(0, 1).flat(1);
+                    if(graph.snPaths){
+                        getE("showing-paths").textContent=""+1+" sparesnet paths out of " + graph.snPaths.length;
+                    }
+                } else {
+                    G.addLog("invalid sparsenet result");
+                }
+            });
+        }
+        }
 
 		if(graph.vertices.id.isAbstract){console.log("warning: showing abstract graph");return;}
 		if(graph.dataPath&&graph.vertices.length>0&&(graph.vertices.layout===undefined)&&(!graph.isCustom)){//don't load layout for abstract top level
@@ -273,62 +318,76 @@ G.addModule("view",{
 		}
 		this.beforeDisplayGraph(graph);
 
+            // subgraph = Algs.getInducedSubgraph(graph, graph.snPaths, this.indexCount);
+            // this.indexCount += 10;
+            // if(graph.wholeGraph == undefined) {
+            //     graph.wholeGraph = Object.cast(JSON.parse(JSON.stringify(graph)), Graph);
+            // }
+            // graph.vertices = subgraph.vertices;
+            // graph.edges = subgraph.edges;
+            // graph.vertexMap = subgraph.vertexMap;
+            // graph.vertices = subgraph.vertices;
+            this.step = 0;
+            this.timer = 0;//reset the time since simulation started
+            if ((this.graph != graph) && (!options.noMoveCamera)) G.resetView();//exclude expansion in-place
+            this.graph = graph;
 
-		this.step=0;
-		this.timer=0;//reset the time since simulation started
-		if((this.graph!=graph)&&(!options.noMoveCamera))G.resetView();//exclude expansion in-place
-		this.graph=graph;
+            if(G.drawFixedPoints){
+                graph.heightProperty="fixedPointLayer";
+            }
+            let heightPropertyName = graph.heightProperty, heightPropertyType;
+            if (heightPropertyName) {
+                if (heightPropertyName in graph.edges.properties) {
+                    heightPropertyType = "edges";//??!!
+                    if (graph.heightPropertyTypeHint) {
+                        heightPropertyType = graph.heightPropertyTypeHint;
+                    }
+                } else heightPropertyType = "vertices";
+            }
+            graph.heightPropertyType = heightPropertyType;
+            graph.heightPropertyName = heightPropertyName;
+            let results = this.getObjectsFromHierarchy(graph);
+            Object.assign(this, results);//model etc are now defined globally on the view module
+            this.setModifiersTarget(this.model);//the global modifiers are different from local ones;
 
+            this.applyTemplates(this.model, true);//subviews are applied on each graph and do not contain attrs and uniforms, but the global template is applied on the global model (and we use that for attrs and uniforms)
+            G.subview.setModifiersTarget(this.graph);//target the top graph by default
+            var simulationUniforms = {
+                timer: {type: "f", value: 0},
+            };
+            for (let uniformName in this.sharedUniforms) {
+                let uniform = this.sharedUniforms[uniformName];//every one must be created, even dynamic ones
+                uniform.needsUpdate = true;
+                if (uniform.noSimulate) continue;//must skip the ones that cannot be used in the simulation, ie its own output
+                this.initUniform(uniform, this.model);
+                this.updateUniform(uniform, simulationUniforms, uniformName, this.model);
+            }
+            await this.loadShaders();
 
-		let heightPropertyName=graph.heightProperty,heightPropertyType;
-		if(heightPropertyName){
-			if(heightPropertyName in graph.edges.properties){
-				heightPropertyType="edges";//??!!
-				if (graph.heightPropertyTypeHint){
-					heightPropertyType=graph.heightPropertyTypeHint;
-				}
-			}
-			else heightPropertyType="vertices";
-		}
-		graph.heightPropertyType=heightPropertyType;graph.heightPropertyName=heightPropertyName;
-		let results=this.getObjectsFromHierarchy(graph);
-		Object.assign(this,results);//model etc are now defined globally on the view module
-		this.setModifiersTarget(this.model);//the global modifiers are different from local ones;
-		this.applyTemplates(this.model,true);//subviews are applied on each graph and do not contain attrs and uniforms, but the global template is applied on the global model (and we use that for attrs and uniforms)
-		G.subview.setModifiersTarget(this.graph);//target the top graph by default
+            this.refreshUniforms(true);
+            this.refreshAttrs(true);//they do not use the textureSize constant
 
-		var simulationUniforms={
-			timer: { type: "f", value: 0},
-		};
-		for(let uniformName in this.sharedUniforms){
-			let uniform=this.sharedUniforms[uniformName];//every one must be created, even dynamic ones
-			uniform.needsUpdate=true;
-			if(uniform.noSimulate)continue;//must skip the ones that cannot be used in the simulation, ie its own output
-			this.initUniform(uniform,this.model);
-			this.updateUniform(uniform,simulationUniforms,uniformName,this.model);
-		}
+            var textureSize = Math.max(1, Math.ceil(Math.sqrt(this.model.nodes.length)));
+            this.simulationTextureSize = textureSize;//stupid bug: using graph.nodes.length like before we had a model, would break the simulation but only when subgraphs increase the texture size!
+            //but the simulation shader uses the constant so we have to set it before creating the simulation.
+            let vertexShader = this.getVertexShader("simulation"),
+                fragmentShader = this.getFragmentShader("simulation");
+            var sim = new THREE.Simulation(G.renderer, G.view.templates.nodes.object3d.geometry.attributes.initialPosition.array, simulationUniforms, vertexShader, fragmentShader);
+            this.simulation = sim;
+            this.simulationShader = sim.simulationShader;
 
-		await this.loadShaders();
+            G.cameraControls.setTarget(null);//stop zooming into the old node
+            G.cameraControls.lastZoomTime = new Date().getTime();//prevent immediate zoom-out due to camera position
 
-		this.refreshUniforms(true);
-		this.refreshAttrs(true);//they do not use the textureSize constant
+            if (this.model.nodes.length > 10000) {
+                G.simulationRunning = false;
+            } else {
+                G.simulationRunning = true;
+            }
 
-		var textureSize=Math.max(1,Math.ceil(Math.sqrt(this.model.nodes.length)));this.simulationTextureSize=textureSize;//stupid bug: using graph.nodes.length like before we had a model, would break the simulation but only when subgraphs increase the texture size!
-		//but the simulation shader uses the constant so we have to set it before creating the simulation.
-		let vertexShader=this.getVertexShader("simulation"),fragmentShader= this.getFragmentShader("simulation");
-		var sim = new THREE.Simulation(G.renderer,G.view.templates.nodes.object3d.geometry.attributes.initialPosition.array,simulationUniforms,vertexShader,fragmentShader);
-		this.simulation=sim;
-		this.simulationShader=sim.simulationShader;
-
-		G.cameraControls.setTarget(null);//stop zooming into the old node
-		G.cameraControls.lastZoomTime=new Date().getTime();//prevent immediate zoom-out due to camera position
-
-		if(this.model.nodes.length>10000){G.simulationRunning=false;}
-		else{G.simulationRunning=true;}
-
-		this.clock.getDelta();
-		this.animateOnce(); //it only animates one frame, and doesn't create an (extra) requestAnimationFrame loop for itself. without this, between load graph and the next animate() frame, a mouse event may happen and get invalid positions.
-	},
+            this.clock.getDelta();
+            this.animateOnce(); //it only animates one frame, and doesn't create an (extra) requestAnimationFrame loop for itself. without this, between load graph and the next animate() frame, a mouse event may happen and get invalid positions.
+		},
 	step:0,
 	simulationStarted:false,
 	animateOnce:function animateOnce() {
@@ -593,7 +652,7 @@ G.addModule("view",{
 		nodeSizeFactor:{value:()=>G.controls.get("nodeSizeFactor"),dynamic:true},
 		linkBrightnessFactor:{value:()=>G.controls.get("linkBrightnessFactor"),dynamic:true},
 		linkDistanceFactor:{value:()=>G.controls.get("linkDistanceFactor"),dynamic:true},
-		linkStrengthFactor:{value:()=>G.controls.get("linkStrengthFactor",10),dynamic:true},
+		linkStrengthFactor:{value:()=>G.controls.get("linkStrengthFactor",3),dynamic:true},
 		clusteringStrengthFactor:{value:()=>G.controls.get("clusteringStrengthFactor",1),dynamic:true},
 		alignmentStrengthFactor:{value:()=>G.controls.get("alignmentStrengthFactor",1),dynamic:true},
 		angleTargetStrengthFactor:{value:()=>G.controls.get("angleTargetStrengthFactor",1),dynamic:true},
@@ -1590,6 +1649,7 @@ G.addModule("view",{
 		}//todo: what should be kept?
 
 		this.applyTemplates(this.model,updateAll?true:false);
+
 		this.refreshAttrs(updateAll);
 		this.refreshUniforms(updateAll);
 	},

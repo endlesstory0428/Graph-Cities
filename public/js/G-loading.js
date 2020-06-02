@@ -3,12 +3,10 @@ let datasetMenu,layerMenu;
 
 G.addModule("loading",{
 	init:function(){
-		datasetMenu=d3.select("#dataset-menu");
 		layerMenu=d3.select("#layer-menu");
 		let titleElement=getE("top-level-summary-area");//document.getElementById("top-middle-area");//the bar does something else
 		titleElement.onclick=()=>d3.json("datasets").then((d)=>this.showDatasetList(d));;
 		titleElement.ontouchend=()=>d3.json("datasets").then((d)=>this.showDatasetList(d));;
-		
 		G.showMetagraph=this.showMetagraph.bind(this);
 		G.showNextSiblingGraph=this.showNextSiblingGraph.bind(this);
 		G.showPreviousSiblingGraph=this.showPreviousSiblingGraph.bind(this);
@@ -636,11 +634,15 @@ G.addModule("loading",{
 			await G.controls.algorithms[options.algorithm](graph);
 		}
 		else {
-			G.broadcast("displayGraph",graph,options);
-		}
+		    G.broadcast("displayGraph",graph,options);
+
+            //setTimeout(G.broadcast("displayGraph",graph,options), 1000);
+            //setInterval(a, 1000,graph,options);
+
+
+        }
 		
 	},
-		
 	contractVertex:function(vertexID,parentGraph,inPlace){
 		if(!parentGraph)parentGraph=G.graph;
 		delete parentGraph.vertices.isExpanded[vertexID];
@@ -772,15 +774,12 @@ G.addModule("loading",{
 		if(dataPath||dataURL){return;}
 		//should only avoid showing this when the URL supplied a dataPath or a dataurl and loading it failed (to not be intrusive when used as an embedded visualization)
 		if(datasets)this.datasets=datasets;
-		if((!datasets)&&this.datasets){
-			datasets=this.datasets;$('#dataset-menu').modal('show'); return;
-		}
-		$('#dataset-menu').modal('show');
-		var ws=selectE("dataset-menu-content").selectAll("div").data(Object.values(datasets).sort(compareBy("name",true))).enter().append("div").attr("class","a btn btn-secondary btn-sm btn-block").on("click",(data)=>{
-			this.display(data.id);
-			$('#dataset-menu').modal('hide');
-		});
-		r =ws.append("div").attr("class","wrap");
+        var a=selectE("dataset-menu-1").selectAll("div").data(Object.values(datasets).sort(compareBy("name",true))).enter().append("div").attr("class","a btn btn-secondary btn-sm btn-block").on("click",(data)=>{
+            this.display(data.id);
+            getE("graph-dataset-bar").style.display="none";
+        });
+
+		r =a.append("div").attr("class","wrap");
 		r.append("div").text(function(data){return data.name||toNormalText(data.id)}).attr("class","first");
 		r.append("div").attr("class","second").text(function(data){return data.params?(data.info?data.info:""):("|V|:"+data.V+", |E|:"+data.E+" "+(data.info?data.info:""))});
 		/*ws.append("button").attr("class","material small").text("Select layer").on("click",(data)=>{
@@ -1005,6 +1004,9 @@ function showTable(tableDialogSelection,dataObj,rowMaps,rowOnclick,cellOnclick){
 
 function getVLogVKString(v,e){return (v>2)?(String(Math.log(e/v,Math.log(v))).substring(0,5)):"N/A";}
 function getNum(node,name){return Number(node.getAttribute(name));}
+function a(graph,options) {
+    G.broadcast("displayGraph",graph,options);
+}
 
 /*
 let queryVariables={};

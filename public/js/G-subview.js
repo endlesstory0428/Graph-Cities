@@ -9,7 +9,7 @@ G.addModule("subview",{
 		nodes:{
 			value:(graph)=>{//this value is calculated for all subgraphs, then combined in another object(G.view.model?) and then used for attrs/uniforms
 				let heightPropertyType=G.view.graph.heightPropertyType,heightPropertyName=G.view.graph.heightPropertyName;
-				switch (heightPropertyType){
+                switch (heightPropertyType){
 					case undefined:{
 						//also allow filtering by edges?
 						
@@ -114,12 +114,8 @@ G.addModule("subview",{
 					else {if(G.view.graph.cloneProperty){cloneProperty=G.view.graph.cloneProperty;}}
 					if(cloneProperty&&graph.edges[cloneProperty]&&graph.edges[cloneProperty].cloneMaps){
 						let maps=graph.edges[cloneProperty].cloneMaps;
-						return graph.nodes.map((node,i,array)=>{
-							if(graph.nodes.originalIndices){i=graph.nodes.originalIndices[i];}
-							let vertexID=(node&&("original" in node))?(node.original):i;
-							return Object.keys(maps[vertexID]).length;
-						});
-						return graph.edges[cloneProperty].cloneMaps.map((obj)=>Object.keys(obj).length);
+						 return graph.nodes.map(()=>1);
+                        {return graph.nodes.map(()=>1);}
 					}
 					else {return graph.nodes.map(()=>1);}
 				}},
@@ -182,17 +178,27 @@ G.addModule("subview",{
 							if(graph.embeddedLevelMap||graph.embeddedWaveMap){
 								return heights.map((x)=>(min==max)?(0.5):((max-x)/(max-min)));
 							}//reverse coloring?
-							else return heights.map((x)=>(min==max)?(0.5):((x-min)/(max-min)));
+							// else return heights.map((x)=>(min==max)?(0.5):((x-min)/(max-min)));
+                            else return heights.map((x)=>(min==max)?(0.5):((max-x)/(max-min)));
+                            // else {
+                            //
+                            //     return heights.map((x)=>{
+                            //         return 1-(2*graph.layerCCSummary[x].E)/(graph.layerCCSummary[x].V*(graph.layerCCSummary[x].V-1));
+                            //     });
+                            // }
 						}
 						else{//if there's no height, use subgraphID/parent subgraph count of that type if it's a subgraph
 							if(graph.subgraphID!=undefined&&G.loading.hasGraph(graph.wholeGraph)){
-								let parent=G.loading.getGraph(graph.wholeGraph);
-								if(!parent.subgraphs||!parent.subgraphs[graph.subgraphType])return graph.nodes.map(()=>undefined);;
-								let max=G.loading.getGraph(graph.wholeGraph).subgraphs[graph.subgraphType].max;
-								let value;
-								if(max==0)value=0;
-								else{value=graph.subgraphID/max;}
-								return heights.map((x)=>value);
+                                let parent = G.loading.getGraph(graph.wholeGraph);
+                                if (!parent.subgraphs || !parent.subgraphs[graph.subgraphType]) return graph.nodes.map(() => undefined);
+                                let max = G.loading.getGraph(graph.wholeGraph).subgraphs[graph.subgraphType].max;
+                                let value;
+                                if (max == 0) value = 0;
+                                else {
+                                    value = graph.subgraphID / max;
+                                }
+                                return heights.map((x) => 1-value);
+
 							}
 							else return graph.nodes.map(()=>undefined);
 						}
@@ -214,6 +220,9 @@ G.addModule("subview",{
 				size:{
 					isArray:true,
 					value:function(graph){
+                        const distinct = (value, index,self) => {
+                            return self.indexOf(value) === index;
+                        };
 						let vertices=graph.vertices,nodes=graph.nodes;let levelStartsWave=graph.waveSummary?graph.waveSummary.levelStartsWave:null;
 						let arr= nodes.map((node,i,array)=>{
 							let vertexID=array.original[i],vertex=graph.vertices[vertexID];
@@ -235,13 +244,33 @@ G.addModule("subview",{
 							
 							let answer=metanodeFactor*waveStartFactor*selectionFactor;//*subgraphFactor;//s*diversitySize*degreeFactor
 							checkNumber(answer);
-							return answer;
+							if(!G.drawsparsenet) {
+                                return answer;
+                            } else {
+                                if (graph.snPathsFlat.indexOf(vertexID.toString()) != -1) {
+                                    return answer;
+                                }
+                                if (graph.showingNeighbors && graph.snPathsNeigbors.indexOf(vertexID.toString()) != -1) {
+                                    return answer;
+                                }
+                                else return 0;
+                            }
 						});
+						if( graph.showingPaths && graph.snPathsFlat) {
+                            // graph.snPathsFlat = graph.snPathsFlat.concat(graph.snPathsTemp);
+                            // graph.snPathsTemp = null;
+                            // graph.snPathsFlat = graph.snPathsFlat.filter(distinct);
+                        }
 						return arr;
 					},
 					scaling:(graph)=>{let obj={targetAvg:1};if(!graph.isMetagraph){obj.maxScaled=0.6;}return obj;}//shouldn't we scale at the global level???
 				},
-				color:{dimensions:3,value:function(node){return null;}},
+				color:{
+				    dimensions:3,
+                    value:function(node){
+				        return null;
+				    }
+				},
 				//userPinnded is in analytics
 				pinned:{isArray:true,
 					value:function(graph){
@@ -452,7 +481,18 @@ G.addModule("subview",{
 							if(ex!=1){result=Math.pow(result,ex);}
 							if(log){result=Math.log(result+0.05)+1;}
 							//return (("weight" in link)?(G.linkWeightAsStrength?(link.weight+0.1):(1/(link.weight+0.1))):1)/result;
-							return 1/result;
+                            if(!G.drawsparsenet) {
+                                return 1/result;
+                            } else {
+                                if (graph.snPathsFlat.indexOf(source.toString()) != -1 && graph.snPathsFlat.indexOf(target.toString()) != -1)
+                                    return 1/result;
+                                if (graph.showingNeighbors && ((graph.snPathsNeigbors.indexOf(source.toString()) != -1 && graph.snPathsFlat.indexOf(target.toString()) != -1) ||
+                                    (graph.snPathsFlat.indexOf(source.toString()) != -1 && graph.snPathsNeigbors.indexOf(target.toString()) != -1))) {
+                                    return 1/result;
+                                }
+                                return 0;
+                            }
+
 						})
 					},type:"float",isArray:true,
 				},
@@ -473,12 +513,7 @@ G.addModule("subview",{
 					isArray:true,
 					value:(graph)=>{
 						let sources=graph.edges.source,targets=graph.edges.target;
-						let b = false;
                         graph.egonet={}
-						let color = 'maroon'
-                        if(graph.links.color) {
-
-                        }
 						if(graph.hoveredVertex && graph.showingEgonets) {
 						    if(graph.egonetMap[graph.hoveredVertex] == undefined) {
                                 Algs.getFilteredSubgraph(graph,graph.hoveredVertex,(x)=>(x!=0),"egonet");
@@ -489,13 +524,6 @@ G.addModule("subview",{
 
                                 let vec=G.view.getNodePos(graph.hoveredVertex);
                                 G.cameraControls.setTarget(vec,true);
-                                // const controls = { 'DAG Orientation': 'td'};
-                                // const gui = new dat.GUI({ autoPlace: false });
-                                // $('#egonet_layouts').append($(gui.domElement));
-                                // gui.add(controls, 'DAG Orientation', ['td', 'bu', 'lr', 'rl', 'zout', 'zin', 'radialout', 'radialin', null])
-                                //     .onChange(orientation => Graph && Graph.dagMode(orientation));
-
-
                                 const Graph = ForceGraph3D({ controlType: 'orbit' })
                                     (document.getElementById('subgraph_canvas'))
                                         .graphData(graph.egonetMap[graph.hoveredVertex].initData)
@@ -549,76 +577,12 @@ G.addModule("subview",{
                                 if(G.mouseScreenPos.x>700)
                                     modalEgonet.style.left =-300 + "px";
                                 else modalEgonet.style.left =450 + "px";
-                                //G.controls.set("nodeSizeFactor",0.1);
                                 graph.nodes.size[graph.hoveredVertex]=10;
-                                console.log(G.mouseScreenPos.x);
-                                console.log(G.mouseScreenPos.y);
                                 $('#egonet').modal('show');
 							}
 
 
-						} else if(graph.hoveredVertex && graph.showingNeighbors) {
-                            ne_subgraph  = Algs.getFilteredSubgraph(graph,graph.hoveredVertex,(x)=>(x!=0),"neighbors");
-
-                            if(ne_subgraph.edges.length>=512) {
-
-                                // const controls = { 'DAG Orientation': 'td'};
-                                // const gui = new dat.GUI({ autoPlace: false });
-                                // $('#egonet_layouts').append($(gui.domElement));
-                                // gui.add(controls, 'DAG Orientation', ['td', 'bu', 'lr', 'rl', 'zout', 'zin', 'radialout', 'radialin', null])
-                                //     .onChange(orientation => Graph && Graph.dagMode(orientation));
-
-                                const Graph = ForceGraph3D({ controlType: 'orbit' })
-                                (document.getElementById('subgraph_canvas'))
-                                    .graphData(ne_subgraph.initData)
-                                    .backgroundColor('#ffffff')
-                                    .nodeColor(node => 'maroon')
-                                    .linkColor(link => 'gray' )
-                                    .nodeLabel(node => `<span style="color: black">${node.label}</span>`)
-                                    .enableNavigationControls(true)
-                                    .width(465)
-                                    .height(408)
-                                    .showNavInfo(false)
-                                    .onNodeClick(node => {
-                                        const distance = 40;
-                                        const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
-                                        Graph.cameraPosition(
-                                            { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, // new position
-                                            node,
-                                            300
-                                        );
-                                    });
-
-
-                                //Define GUI
-                                const Settings = function() {
-                                    this.edgeLength = 0;
-                                };
-
-                                const settings = new Settings();
-                                const linkForce = Graph
-                                    .d3Force('link')
-                                    .distance(settings.edgeLength);
-                                const gui = new dat.GUI({ autoPlace: false });
-                                $("#sett").html("");
-                                $('#sett').append($(gui.domElement));
-                                const controllerOne = gui.add(settings, 'edgeLength', 0, 300);
-
-                                controllerOne.onChange(updateLinkDistance);
-
-                                function updateLinkDistance() {
-                                    linkForce.distance(settings.edgeLength);
-                                    Graph.numDimensions(3); // Re-heat simulation
-                                }
-
-                                $("#egonet_id").text("Vertex " + G.view.graph.labels.find(record => record.new_id ==graph.hoveredVertex ).name + " Neighbors" + "   |V|" + ne_subgraph.vertices.length + "|E|" + ne_subgraph.edges.length);
-                                G.simulationRunning=false;
-                                $('#egonet').modal('show');
-                            }
-
-
-                        }
-						let coun=0;
+						}
 						return graph.links.map((link,i,links)=>{
 							let result=1;
 							let edgeID=i;
@@ -633,7 +597,26 @@ G.addModule("subview",{
                             }
 
 							result*=hoverFactor;
-							return result;
+                            // if(graph.snPathsFlat.indexOf(source.toString())!=-1 && graph.snPathsFlat.indexOf(target.toString())!=-1)
+                            //     return result;
+                            // if(graph.snPathsTemp && ((graph.snPathsTemp.indexOf(source.toString())!=-1 && graph.snPathsFlat.indexOf(target.toString())!=-1) ||
+                            //     (graph.snPathsFlat.indexOf(source.toString())!=-1 && graph.snPathsTemp.indexOf(target.toString())!=-1))) {
+                            //     return result;
+                            // }
+                            // else return 0;
+                            if(!G.drawsparsenet) {
+                                return result;
+                            } else {
+                                if(graph.snPathsFlat.indexOf(source.toString())!=-1 && graph.snPathsFlat.indexOf(target.toString())!=-1)
+                                    return result;
+                                if(graph.showingNeighbors && ((graph.snPathsNeigbors.indexOf(source.toString())!=-1 && graph.snPathsFlat.indexOf(target.toString())!=-1) ||
+                                    (graph.snPathsFlat.indexOf(source.toString())!=-1 && graph.snPathsNeigbors.indexOf(target.toString())!=-1))) {
+                                    return result;
+                                }
+                                return 0;
+                            }
+
+
 						});
 					},
 					type:"float",
@@ -666,8 +649,18 @@ G.addModule("subview",{
                             }
 
 							result*=hoverFactor;
-							return result;
-						});
+                            if(!G.drawsparsenet) {
+                                return result;
+                            } else {
+                                if (graph.snPathsFlat.indexOf(source.toString()) != -1 && graph.snPathsFlat.indexOf(target.toString()) != -1)
+                                    return result;
+                                if (graph.showingNeighbors && ((graph.snPathsNeigbors.indexOf(source.toString()) != -1 && graph.snPathsFlat.indexOf(target.toString()) != -1) ||
+                                    (graph.snPathsFlat.indexOf(source.toString()) != -1 && graph.snPathsNeigbors.indexOf(target.toString()) != -1))) {
+                                    return result;
+                                }
+                                return 0;
+                            }
+                        });
 						
 						//Math.max(Math.min(link.source.weightedDegree, link.target.weightedDegree),0.1);//this dims higher layer links too much 
 						
@@ -784,7 +777,19 @@ G.addModule("subview",{
 				source:{value:(line)=>line.source,type:"int",reference:"nodes",},
 				target:{value:(line)=>line.target,type:"int",reference:"nodes",},
 				brightness:{type:"float",
-					value:function(line) {return 1;//todo: should scale with the nodes
+                    value:(line)=>{
+                        if(!G.drawsparsenet) {
+                            return 1;
+                        } else {
+                            if (G.view.graph.snPathsFlat.indexOf(line.source.toString()) != -1 || G.view.graph.snPathsFlat.indexOf(line.target.toString()) != -1)
+                                return 1;
+                            // if (G.view.graph.showingNeighbors && ((G.view.graph.snPathsNeigbors.indexOf(line.source.toString()) != -1 || G.view.graph.snPathsFlat.indexOf(line.target.toString()) != -1) ||
+                            //     (G.view.graph.snPathsFlat.indexOf(line.source.toString()) != -1 || G.view.graph.snPathsNeigbors.indexOf(line.target.toString()) != -1))) {
+                            //     return 1;
+                            // }
+                            return 0;
+                        }
+				    //return 0;//todo: should scale with the nodes
 					},
 					//scaling:(model)=>({targetAvg:50*G.controls.get("lineBrightnessFactor",0.2)/Math.sqrt(model.lines.length+1),maxScaled:G.controls.get("lineThicknessFactor",0.4)}),
 					scaling:(model)=>({targetAvg:50*G.controls.get("lineBrightnessFactor",0.5)/Math.pow(model.lines.length+1,0.66),maxScaled:G.controls.get("lineThicknessFactor",0.4)}),

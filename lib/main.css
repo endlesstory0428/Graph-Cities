@@ -264,7 +264,7 @@ div#graph-menu{
 	background:white !important;
 }
 
-div#graph-info-bar, div#graph-fork-bar, div#graph-plot-bar{
+div#graph-info-bar, div#graph-fork-bar, div#graph-plot-bar, div#graph-dataset-bar{
     display:none;
     width:20%;
     position: absolute;

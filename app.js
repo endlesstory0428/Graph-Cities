@@ -390,7 +390,6 @@ function onSocketConnection(client) {
 		if(data.dataPath){
 			let result;
 			try{
-                console.log("Here")
                 result=Datasets.loadCustomData(data.dataPath,data.type);
 				this.emit("custom",{type:data.type,success:true,result:result});
 				return;
