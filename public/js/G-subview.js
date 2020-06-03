@@ -2926,7 +2926,8 @@ G.addModule("subview",{
 					],
 					strength:[
 						(data,oldValue,link,index,array)=>{
-							if(data.enableForce){
+                            data.enableForce=true;
+							if(true){
 								let factor=G.controls.get("snStrengthFactor",.1);
 								if(index in data.edgePaths)return oldValue*factor;
 								else {
