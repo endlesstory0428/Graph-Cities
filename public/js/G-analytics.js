@@ -18,7 +18,7 @@ G.addModule("analytics",{
 		let startTime=new Date().getTime();
 		//now this only calculates graph-level analytics, not view-level stuff like clones
 		this.applyTemplates(graph);
-		//partitions and clones from vertex properties and edge properties 
+		//partitions and clones from vertex properties and edge properties
 		/*
 		for(let name in this.templates.vertices.properties){
 			let templateObj=this.templates.vertices.properties[name];
@@ -183,7 +183,7 @@ G.addModule("analytics",{
 		selection:{
 			value:(graph)=>{
 				if(!graph.selectHistory){graph.selectHistory=[{}];graph.selectHistoryCurrentIndex=0;}
-				if(!graph.selectedVertices){graph.selectedVertices={};graph.selectedVertexCount=0;graph.selectHistory=[{}];graph.selectHistoryCurrentIndex=0;}
+				if(!graph.selectedVertices){graph.sparsenetSelectedVertices={},graph.selectedVertices={};graph.selectedVertexCount=0;graph.selectHistory=[{}];graph.selectHistoryCurrentIndex=0;}
 			}
 		},
 		sparsenet:{},
@@ -216,11 +216,18 @@ G.addModule("analytics",{
 		}
 		else{
 			let V=graph.vertices.length,E=graph.edges.length;
-			let p=(E/(V*(V-1)/2)),k=Math.log(E/V)/Math.log(Math.log(V));
+			let p=(2*E / (V * (V - 1))),k=Math.log(E/V)/Math.log(Math.log(V));
 			desc="|V|: "+V+", |E|: "+E+", avg. degree: "+shortStr(2*E/V)+", density: "+shortStr(p)+", sparsity:"+shortStr(k);
-			if(graph.heights){
-				if(graph.heights.count>1){desc+=", heights: "+graph.heights.count;}
-				if(graph.heights.max>0){desc+=", max height: "+graph.heights.max;}
+            originalGraphMenu = ["|V| : " + V , "|E| : " + E, "avg. degree : "+ shortStr(2*E/V), "density : " + shortStr(p), "sparsity : "+shortStr(k)  ]
+            if(graph.heights){
+				if(graph.heights.count>1){
+				    desc+=", heights: "+graph.heights.count;
+                    originalGraphMenu.push("heights : "+graph.heights.count);
+				}
+				if(graph.heights.max>0){
+				    desc+=", max height: "+graph.heights.max;
+                    originalGraphMenu.push("max height: "+graph.heights.max);
+				}
 			}
 			//+(graph.showingInterlayers?"":(", peel value:"+graph.maxLayer));
 			/*let layerCount=Object.keys(graph.layers).length;
@@ -235,12 +242,20 @@ G.addModule("analytics",{
 			for(let name in G.analytics.templates.vertices.properties){
 				if(!graph.vertices.properties[name])continue;
 				if(graph.vertices.properties[name].isAbstract)continue;
-				if(graph.vertices[name].max>1){desc+=", max "+toLowerCaseNormalText(name)+": "+graph.vertices[name].max;}
+				if(graph.vertices[name].max>1){
+				    desc+=", max "+toLowerCaseNormalText(name)+": "+graph.vertices[name].max;
+                    originalGraphMenu.push("max "+toLowerCaseNormalText(name)+" : "+graph.vertices[name].max);
+
+                }
 			}
 			for(let name in G.analytics.templates.edges.properties){
 				if(!graph.edges.properties[name])continue;
 				if(graph.edges.properties[name].isAbstract)continue;
-				if(graph.edges[name].max>1){desc+=", max "+toLowerCaseNormalText(name)+": "+graph.edges[name].max;}
+				if(graph.edges[name].max>1){
+				    desc+=", max "+toLowerCaseNormalText(name)+": "+graph.edges[name].max;
+                    originalGraphMenu.push("max "+toLowerCaseNormalText(name)+" : "+graph.edges[name].max);
+
+                }
 			}
 		}
 		if(graph.partitionInfo){
@@ -248,7 +263,10 @@ G.addModule("analytics",{
 				desc+=", "+toNormalText(item.type)+" "+item.value+((item.graph==graph.datasetID)?"":(" of "+pathToText(item.graph)));
 			}
 		}
-		return desc;
+        let infoElem=getE("info-menu");
+        $("#info-menu").html("");
+        G.controls.addDropdownMenu(infoElem,"Original Graph",originalGraphMenu);
+        return desc;
 	},
 	getDescription:function(result){
 		//this description is based on an original data object in a subgraph?
@@ -355,7 +373,7 @@ G.addModule("analytics",{
 				if(count>1){verticesWithClones++;}
 			}
 		}
-		return {cloneCount:cloneCount,cloneMaps:cloneMaps,clones:clones,verticesWithClones:verticesWithClones,edgeSources:edgeSources,edgeTargets:edgeTargets,partitions:partitions,partitionCount:partitionCount,max:max,min:min};
+        return {cloneCount:cloneCount,cloneMaps:cloneMaps,clones:clones,verticesWithClones:verticesWithClones,edgeSources:edgeSources,edgeTargets:edgeTargets,partitions:partitions,partitionCount:partitionCount,max:max,min:min};
 	},
 	
 	getVertexCCMetagraph(g,propertyName){
@@ -1122,7 +1140,7 @@ G.addModule("analytics",{
 		for(let i=0;i<vertexLevels.length;i++){
 			vertexWaves[i]=waveMap[vertexLevels[i]];
 		}
-		
+
 		let ccIDs=new Array(graph.vertices.length);
 		
 		let waveCCs=[],waveCCEdges=[];
@@ -1202,7 +1220,7 @@ G.addModule("analytics",{
 			edgeLayers[i]=null;
 		}
 		var remainingEdges=graph.edges.length;var done,peeled,minDegree;var peelValues;var degreeDone;
-		let percentage=0,lastPercentage=0,increment=(edgeCount>1000000)?5:20;
+		let percentage=0,lastPercentage=0,increment=(edgeCount>1000000)?0:0;
 		while(remainingEdges>0){//each iteration removes one layer of edges
 			if(edgeCount>100){//show progress for bigger graphs
 				let edgesPeeled=edgeCount-remainingEdges;
@@ -1569,7 +1587,7 @@ G.addModule("analytics",{
 		G.layerBorderFunc=layerBorderFunc;G.infoDivs=infoDivs;//change the borders later
 		infoDivs.append("p").text((d)=>"L"+d.index+", v: "+d.v+", e: "+d.e+", d: "+d.density.toString().substring(0,5)+" , forward e: "+d.forwardEdges);
 		
-		infoBarHoverDelay=300;
+		infoBarHoverDelay=0;
 		function hoverOnInfoBar(obj){
 			let data=obj.__data__;
 			G.graph.highlightedWaveLayer=data.layer;
@@ -1616,13 +1634,21 @@ G.addModule("analytics",{
 	
 	showSparseNet:function(graph){
 		if(!graph)graph=G.graph;
+        graph.snPathsTemp=[];
 		let vc=graph.vertices.length;let options=null;if(vc>G.controls.get("approximateSNThreshold",1)){options={variant:"approximate"};G.addLog("using approximate sparse net");}//todo: the exact SN code has a problem
 		let data={};
 		if((!graph.dataPath)||graph.isCustom){data.data=this.getGraphVerticesAndEdges(graph);}
 		if(graph.dataPath&&(graph.dataPath.indexOf("custom")==-1)){data.dataPath=graph.dataPath;}
 		
 		if(options)data.options=options;
-		if(!graph.snPaths){G.messaging.requestCustomData("sparsenet",data,(result)=>{if(result&&result.length>0){graph.snPaths=result;G.enableModifier("sparsenet",graph);}else{G.addLog("invalid sparsenet result");}});}
+		if(!graph.snPaths){G.messaging.requestCustomData("sparsenet",data,(result)=>{
+		    if(result&&result.length>0){
+		        graph.snPaths=result;
+		        G.enableModifier("sparsenet",graph);
+		    }else{
+		        G.addLog("invalid sparsenet result");}
+		});
+		}
 		else{G.enableModifier("sparsenet",graph);}//this only sets snPaths, and other intermediate data are managed by the subview.
 	},
 	hideSparseNet:function(graph){

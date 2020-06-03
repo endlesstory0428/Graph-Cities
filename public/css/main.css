@@ -261,8 +261,8 @@ div#selecting-region{
 p.bar-segment{
 	font-size: xx-small;
     overflow: hidden;
-	margin: 0;
-    padding: 0;
+	margin-bottom: 2px;
+	margin-top: 0;
 }
 
 div.menu.panel{
@@ -276,7 +276,7 @@ div.menu-content{
 
 div.dialog-content,div.menu-content{
 	position:relative;
-	overflow-y:auto;height:87%;bottom:0;
+	overflow-y:auto;height:45%;bottom:0;
 }
 .simple{
 	margin:0;padding:0;border:none;box-sizing: border-box;flex: 1 1 auto;
@@ -558,6 +558,17 @@ div#graph-menu{
 	left:0%;
 	/*background:white;*/
 }
+div#graph-info-bar, div#graph-fork-bar, div#graph-plot-bar, div#graph-dataset-bar{
+    display:none;
+    width:20%;
+    position: absolute;
+    top:10%;
+    bottom:0;
+    text-align: center;
+    z-index: 4;
+    left:0%;
+    background:white;
+}
 div#style-menu{
 	display:none;
 	width:20%;
@@ -592,8 +603,6 @@ span.selector{
 }
 span.selector-bottom{
 	margin:0;padding:0;
-	position: absolute;
-    top: 80%;
 	z-index:3;
 }
 span.metagraph-item{
@@ -851,11 +860,13 @@ button.material:active {
     transition-delay: 0s;
 }
 
+
 div.material-slider{
 	position:relative;
 	box-sizing:border-box;
 	margin: 6px;
     margin-bottom: 0px;
+    padding: 5px;
 }
 .minimal>div.material-slider{
 	position:relative;
@@ -893,8 +904,8 @@ div.material-slider{
 
 
 p.material-slider-label{
-	/*position:absolute;*/
-	width:35%;
+	position:relative;
+	width:80px;
 	font-size:xx-small;
 	float: left;
 	/*text-transform:uppercase;*/
@@ -939,7 +950,7 @@ div.material-slider-bar-container{
     border-top-right-radius: 5px;
     border-bottom-right-radius: 5px;
     border-bottom-left-radius: 5px;
-	
+	margin-bottom: 2px;
 }
 div.material-slider-bar{
 	position:absolute;left:0;
@@ -1205,4 +1216,7 @@ div.dropdown-select-item{
 
 circle.dot {
   stroke: #fff;
+}
+.modal-backdrop.show{
+    opacity: .05 !important;
 }

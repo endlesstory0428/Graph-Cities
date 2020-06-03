@@ -9,7 +9,7 @@ G.addModule("subview",{
 		nodes:{
 			value:(graph)=>{//this value is calculated for all subgraphs, then combined in another object(G.view.model?) and then used for attrs/uniforms
 				let heightPropertyType=G.view.graph.heightPropertyType,heightPropertyName=G.view.graph.heightPropertyName;
-				switch (heightPropertyType){
+                switch (heightPropertyType){
 					case undefined:{
 						//also allow filtering by edges?
 						
@@ -114,12 +114,8 @@ G.addModule("subview",{
 					else {if(G.view.graph.cloneProperty){cloneProperty=G.view.graph.cloneProperty;}}
 					if(cloneProperty&&graph.edges[cloneProperty]&&graph.edges[cloneProperty].cloneMaps){
 						let maps=graph.edges[cloneProperty].cloneMaps;
-						return graph.nodes.map((node,i,array)=>{
-							if(graph.nodes.originalIndices){i=graph.nodes.originalIndices[i];}
-							let vertexID=(node&&("original" in node))?(node.original):i;
-							return Object.keys(maps[vertexID]).length;
-						});
-						return graph.edges[cloneProperty].cloneMaps.map((obj)=>Object.keys(obj).length);
+						 return graph.nodes.map(()=>1);
+                        {return graph.nodes.map(()=>1);}
 					}
 					else {return graph.nodes.map(()=>1);}
 				}},
@@ -182,17 +178,27 @@ G.addModule("subview",{
 							if(graph.embeddedLevelMap||graph.embeddedWaveMap){
 								return heights.map((x)=>(min==max)?(0.5):((max-x)/(max-min)));
 							}//reverse coloring?
-							else return heights.map((x)=>(min==max)?(0.5):((x-min)/(max-min)));
+							// else return heights.map((x)=>(min==max)?(0.5):((x-min)/(max-min)));
+                            else return heights.map((x)=>(min==max)?(0.5):((max-x)/(max-min)));
+                            // else {
+                            //
+                            //     return heights.map((x)=>{
+                            //         return 1-(2*graph.layerCCSummary[x].E)/(graph.layerCCSummary[x].V*(graph.layerCCSummary[x].V-1));
+                            //     });
+                            // }
 						}
 						else{//if there's no height, use subgraphID/parent subgraph count of that type if it's a subgraph
 							if(graph.subgraphID!=undefined&&G.loading.hasGraph(graph.wholeGraph)){
-								let parent=G.loading.getGraph(graph.wholeGraph);
-								if(!parent.subgraphs||!parent.subgraphs[graph.subgraphType])return graph.nodes.map(()=>undefined);;
-								let max=G.loading.getGraph(graph.wholeGraph).subgraphs[graph.subgraphType].max;
-								let value;
-								if(max==0)value=0;
-								else{value=graph.subgraphID/max;}
-								return heights.map((x)=>value);
+                                let parent = G.loading.getGraph(graph.wholeGraph);
+                                if (!parent.subgraphs || !parent.subgraphs[graph.subgraphType]) return graph.nodes.map(() => undefined);
+                                let max = G.loading.getGraph(graph.wholeGraph).subgraphs[graph.subgraphType].max;
+                                let value;
+                                if (max == 0) value = 0;
+                                else {
+                                    value = graph.subgraphID / max;
+                                }
+                                return heights.map((x) => 1-value);
+
 							}
 							else return graph.nodes.map(()=>undefined);
 						}
@@ -201,7 +207,9 @@ G.addModule("subview",{
 					},
 				},
 				charge:{value:(node)=>{if(node&&node.weightedDegree){return (1/(node.weightedDegree + 1))}else{return 1;}}},
-				forcePriority:{value:(node)=>{return 1;}},
+				forcePriority:{value:(node)=>{
+				    return 1;
+				}},
 				forceEffectiveness:{value:(node)=>{return 1;}},
 				metanodeSize:{
 					isArray:true,value:(graph)=>{
@@ -214,6 +222,9 @@ G.addModule("subview",{
 				size:{
 					isArray:true,
 					value:function(graph){
+                        const distinct = (value, index,self) => {
+                            return self.indexOf(value) === index;
+                        };
 						let vertices=graph.vertices,nodes=graph.nodes;let levelStartsWave=graph.waveSummary?graph.waveSummary.levelStartsWave:null;
 						let arr= nodes.map((node,i,array)=>{
 							let vertexID=array.original[i],vertex=graph.vertices[vertexID];
@@ -235,13 +246,33 @@ G.addModule("subview",{
 							
 							let answer=metanodeFactor*waveStartFactor*selectionFactor;//*subgraphFactor;//s*diversitySize*degreeFactor
 							checkNumber(answer);
-							return answer;
+							if(!G.drawsparsenet) {
+                                return answer;
+                            } else {
+                                if (graph.snPathsFlat.indexOf(vertexID.toString()) != -1) {
+                                    return answer;
+                                }
+                                if (graph.showingNeighbors && graph.snPathsNeigbors.indexOf(vertexID.toString()) != -1) {
+                                    return answer;
+                                }
+                                else return 0;
+                            }
 						});
+						if( graph.showingPaths && graph.snPathsFlat) {
+                            // graph.snPathsFlat = graph.snPathsFlat.concat(graph.snPathsTemp);
+                            // graph.snPathsTemp = null;
+                            // graph.snPathsFlat = graph.snPathsFlat.filter(distinct);
+                        }
 						return arr;
 					},
 					scaling:(graph)=>{let obj={targetAvg:1};if(!graph.isMetagraph){obj.maxScaled=0.6;}return obj;}//shouldn't we scale at the global level???
 				},
-				color:{dimensions:3,value:function(node){return null;}},
+				color:{
+				    dimensions:3,
+                    value:function(node){
+				        return null;
+				    }
+				},
 				//userPinnded is in analytics
 				pinned:{isArray:true,
 					value:function(graph){
@@ -250,7 +281,6 @@ G.addModule("subview",{
 						return arr;
 					}
 				},//pinned is calculated from user manual pinning and style-based pinning
-				
 				clusterCenter:{reference:"nodes",value:function(node){return null;}},
 				
 				//hack: global rings are always before other rings, so vertex.ringID is the subview ring ID, and currently there are no vertices on local rings, and no subview global rings, and the correct radius can be calculated by targetRadius*radialLimit*radialLimitFactor
@@ -380,9 +410,7 @@ G.addModule("subview",{
 				if(heightPropertyType=="edges"){
 					
 				}//"original" of each clone is the vertex ID 
-				else{
-					
-				}
+
 			},//don't want to affect original properties
 			properties:{
 				source:{
@@ -444,15 +472,27 @@ G.addModule("subview",{
 				},
 				strength:{
 					value:(graph)=>{
-						let ex=G.controls.get("linkStrengthExponent",1.5),log=G.controls.get("logLinkStrength",false);
+						let ex=G.controls.get("linkStrengthExponent",1.3),log=G.controls.get("logLinkStrength",false);
 						return graph.links.map((link,i,links)=>{
 							let source=links.source[i],target=links.target[i];
 							let sDegree=graph.nodes.degree[source],tDegree=graph.nodes.degree[target];
-							let result=Math.max(Math.min(sDegree,tDegree),0.1);//todo: use weighted degree if available?
+							let result=Math.max(Math.min(sDegree,tDegree),0.05);//todo: use weighted degree if available?
 							if(ex!=1){result=Math.pow(result,ex);}
-							if(log){result=Math.log(result+1)+1;}
+							if(log){result=Math.log(result+0.05)+1;}
 							//return (("weight" in link)?(G.linkWeightAsStrength?(link.weight+0.1):(1/(link.weight+0.1))):1)/result;
-							return 1/result;
+                            if(!G.drawsparsenet) {
+                                return 1/result;
+                            } else {
+                                if (graph.snPathsFlat.indexOf(source.toString()) != -1 && graph.snPathsFlat.indexOf(target.toString()) != -1) {
+                                    return 1/result;
+                                }
+                                if (graph.showingNeighbors && ((graph.snPathsNeigbors.indexOf(source.toString()) != -1 && graph.snPathsFlat.indexOf(target.toString()) != -1) ||
+                                    (graph.snPathsFlat.indexOf(source.toString()) != -1 && graph.snPathsNeigbors.indexOf(target.toString()) != -1))) {
+                                    return 1/result;
+                                }
+                                return 0.006;
+                            }
+
 						})
 					},type:"float",isArray:true,
 				},
@@ -473,15 +513,103 @@ G.addModule("subview",{
 					isArray:true,
 					value:(graph)=>{
 						let sources=graph.edges.source,targets=graph.edges.target;
+                        graph.egonet={}
+						if(graph.hoveredVertex && graph.showingEgonets) {
+						    if(graph.egonetMap[graph.hoveredVertex] == undefined) {
+                                Algs.getFilteredSubgraph(graph,graph.hoveredVertex,(x)=>(x!=0),"egonet");
+                            } else {
+						        graph.egonet = graph.egonetMap[graph.hoveredVertex];
+                            }
+							if(graph.egonetMap[graph.hoveredVertex].edges.length>=512 && graph.egonetMap[graph.hoveredVertex].edges.length<2048) {
+
+                                let vec=G.view.getNodePos(graph.hoveredVertex);
+                                G.cameraControls.setTarget(vec,true);
+                                const Graph = ForceGraph3D({ controlType: 'orbit' })
+                                    (document.getElementById('subgraph_canvas'))
+                                        .graphData(graph.egonetMap[graph.hoveredVertex].initData)
+                                        .backgroundColor('#ffffff')
+                                        .nodeColor(node => 'gray')
+                                        .linkColor(link => 'maroon' )
+                                        .nodeLabel(node => `<span style="color: black">${node.label}</span>`)
+                                        .enableNavigationControls(true)
+                                        .width(465)
+                                        .height(408)
+                                        .showNavInfo(false)
+                                        .onNodeClick(node => {
+                                            const distance = 40;
+                                            const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
+                                            Graph.cameraPosition(
+                                                { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, // new position
+                                                node,
+                                                300
+                                            );
+                                        });
+
+
+                                //Define GUI
+                                const Settings = function() {
+                                    this.edgeLength = 0;
+                                };
+
+                                const settings = new Settings();
+                                const linkForce = Graph
+                                    .d3Force('link')
+                                    .distance(settings.edgeLength);
+                                const gui = new dat.GUI({ autoPlace: false });
+                                $("#sett").html("");
+                                $('#sett').append($(gui.domElement));
+                                const controllerOne = gui.add(settings, 'edgeLength', 0, 300);
+
+                                controllerOne.onChange(updateLinkDistance);
+
+                                function updateLinkDistance() {
+                                    linkForce.distance(settings.edgeLength);
+                                    Graph.numDimensions(3); // Re-heat simulation
+                                }
+
+                                $("#egonet_id").text(G.view.graph.labels.find(record => record.new_id ==graph.hoveredVertex ).name);
+                                G.simulationRunning=false;
+                                G.resizeNodes = false;
+                                document.getElementById("egonet-close").addEventListener('click', function(){
+                                    G.simulationRunning=true;
+                                });
+                                let modalEgonet = document.getElementById("egonet");
+                                if(G.mouseScreenPos.x>700)
+                                    modalEgonet.style.left =-300 + "px";
+                                else modalEgonet.style.left =450 + "px";
+                                graph.nodes.size[graph.hoveredVertex]=10;
+                                $('#egonet').modal('show');
+							}
+
+
+						}
 						return graph.links.map((link,i,links)=>{
 							let result=1;
-							
 							let edgeID=i;
 							let source=sources[i],target=targets[i];//vertex indices
 							let hoverFactor=1;
-							if(graph.hoveredVertex==source||graph.hoveredVertex==target)hoverFactor=5;
+                            if(graph.hoveredVertex && graph.showingEgonets){
+                                if(Object.keys(graph.egonetMap[graph.hoveredVertex].vertexMap).indexOf(source.toString())!=-1 && Object.keys(graph.egonetMap[graph.hoveredVertex].vertexMap).indexOf(target.toString())!=-1  ){
+                                    hoverFactor=5;
+								}
+							} else {
+                                if(graph.hoveredVertex==source||graph.hoveredVertex==target)hoverFactor=5;
+                            }
+
 							result*=hoverFactor;
-							return result;
+                            if(!G.drawsparsenet) {
+                                return result;
+                            } else {
+                                if(graph.snPathsFlat.indexOf(source.toString())!=-1 && graph.snPathsFlat.indexOf(target.toString())!=-1)
+                                    return result;
+                                if(graph.showingNeighbors && ((graph.snPathsNeigbors.indexOf(source.toString())!=-1 && graph.snPathsFlat.indexOf(target.toString())!=-1) ||
+                                    (graph.snPathsFlat.indexOf(source.toString())!=-1 && graph.snPathsNeigbors.indexOf(target.toString())!=-1))) {
+                                    return result;
+                                }
+                                return 0;
+                            }
+
+
 						});
 					},
 					type:"float",
@@ -505,10 +633,27 @@ G.addModule("subview",{
 							let edgeID=i;//G.subview.templates.links.getOriginalObjectID(graph,index);
 							let source=sources[i],target=targets[i];//vertex indices
 							let hoverFactor=1;
-							if(graph.hoveredVertex==source||graph.hoveredVertex==target)hoverFactor=2;
+                            if(graph.hoveredVertex && graph.showingEgonets){
+                                if(Object.keys(graph.egonetMap[graph.hoveredVertex].vertexMap).indexOf(source.toString())!=-1 && Object.keys(graph.egonetMap[graph.hoveredVertex].vertexMap).indexOf(target.toString())!=-1  ){
+                                    hoverFactor=5;
+                                }
+                            } else {
+                                if(graph.hoveredVertex==source||graph.hoveredVertex==target)hoverFactor=2;
+                            }
+
 							result*=hoverFactor;
-							return result;
-						});
+                            if(!G.drawsparsenet) {
+                                return result;
+                            } else {
+                                if (graph.snPathsFlat.indexOf(source.toString()) != -1 && graph.snPathsFlat.indexOf(target.toString()) != -1)
+                                    return result;
+                                if (graph.showingNeighbors && ((graph.snPathsNeigbors.indexOf(source.toString()) != -1 && graph.snPathsFlat.indexOf(target.toString()) != -1) ||
+                                    (graph.snPathsFlat.indexOf(source.toString()) != -1 && graph.snPathsNeigbors.indexOf(target.toString()) != -1))) {
+                                    return result;
+                                }
+                                return 0;
+                            }
+                        });
 						
 						//Math.max(Math.min(link.source.weightedDegree, link.target.weightedDegree),0.1);//this dims higher layer links too much 
 						
@@ -522,7 +667,7 @@ G.addModule("subview",{
 				color:{
 					dimensions:3,
 					value:(link)=>{
-						return null;
+						return ;
 					},
 				},
 				coord:{dimensions:3,perPoint:true,value:quadCoordFunc,},//this reuse is OK because it's the same value for all
@@ -625,7 +770,19 @@ G.addModule("subview",{
 				source:{value:(line)=>line.source,type:"int",reference:"nodes",},
 				target:{value:(line)=>line.target,type:"int",reference:"nodes",},
 				brightness:{type:"float",
-					value:function(line) {return 1;//todo: should scale with the nodes
+                    value:(line)=>{
+                        if(!G.drawsparsenet) {
+                            return 1;
+                        } else {
+                            if (G.view.graph.snPathsFlat.indexOf(line.source.toString()) != -1 || G.view.graph.snPathsFlat.indexOf(line.target.toString()) != -1)
+                                return 1;
+                            // if (G.view.graph.showingNeighbors && ((G.view.graph.snPathsNeigbors.indexOf(line.source.toString()) != -1 || G.view.graph.snPathsFlat.indexOf(line.target.toString()) != -1) ||
+                            //     (G.view.graph.snPathsFlat.indexOf(line.source.toString()) != -1 || G.view.graph.snPathsNeigbors.indexOf(line.target.toString()) != -1))) {
+                            //     return 1;
+                            // }
+                            return 0;
+                        }
+				    //return 0;//todo: should scale with the nodes
 					},
 					//scaling:(model)=>({targetAvg:50*G.controls.get("lineBrightnessFactor",0.2)/Math.sqrt(model.lines.length+1),maxScaled:G.controls.get("lineThicknessFactor",0.4)}),
 					scaling:(model)=>({targetAvg:50*G.controls.get("lineBrightnessFactor",0.5)/Math.pow(model.lines.length+1,0.66),maxScaled:G.controls.get("lineThicknessFactor",0.4)}),
@@ -1024,7 +1181,7 @@ G.addModule("subview",{
 								let vertexID=G.subview.templates.nodes.getOriginalObjectID(graph,index);if(data.property in graph.vertices){value=graph.vertices[data.property][vertexID];}
 							}
 							
-							let scaled=(data.max==data.min)?0.5:((value-data.min)/(data.max-data.min));
+							let scaled=(data.max==data.min)?3.5:((value-data.min)/(data.max-data.min));
 							return scaled;
 							
 						},
@@ -1090,6 +1247,7 @@ G.addModule("subview",{
 				property:(g,params)=>{if(g.modifiers&&g.modifiers.nodeColor&&g.modifiers.nodeColor.property in g.vertices)return g.modifiers.nodeColor.property;},
 				max:(g,params)=>{
 					let values=g.vertices[params.property];let max=-Infinity;
+
 					for(let v in g.selectedVertices){
 						if(values[v]>max)max=values[v];
 					}
@@ -2273,7 +2431,7 @@ G.addModule("subview",{
 					min:(graph,params)=>{return G.getGraph(graph.wholeGraph).subgraphs[graph.subgraphType].min;},
 					max:(graph,params)=>{return G.getGraph(graph.wholeGraph).subgraphs[graph.subgraphType].max;},
 					func:(value,graph,params)=>{
-						if(params.max<params.min)return true;//todo: maybe disable the graph update in this case, but should allow the UI change because it's annoying to not let the user drag all the way to the start if he wanted to start over; or at least change min/max to be consistent
+						if(params.max<params.min)return true;//todo: maybe disable the graph update in this case, but should allow the UI change because it's annoying to not let the user §§§§drag all the way to the start if he wanted to start over; or at least change min/max to be consistent
 						if(params.IPWindow){
 							let IP=params.IP,realMax;
 							let fullSummary=G.getGraph(graph.wholeGraph).subgraphs[graph.subgraphType].fullSummary;
@@ -2442,6 +2600,7 @@ G.addModule("subview",{
 		},
 		
 		sparsenet:{
+
 			//condition:()=>(G.showingSparseNet&&G.graph.snPaths),//G.graph.snPaths
 			onEnable:(g,params)=>{
 				if(!g.snPaths){G.analytics.showSparseNet(g);return true;}
@@ -2454,7 +2613,7 @@ G.addModule("subview",{
 			},
 			params:{
 				pathSequence:{
-					value:(g,params)=>g.snPaths.length,
+					value:(g,params)=>1,
 					type:"integer",
 					min:(g,params)=>1,
 					max:(g,params)=>g.snPaths.length,
@@ -2473,16 +2632,16 @@ G.addModule("subview",{
 				},
 				showPathColors:{type:"boolean",value:true,},
 				randomPathColors:{type:"boolean",value:false,},
-				
+
 				pinned:{type:"boolean",value:false,},
 				unpinLastPath:{type:"boolean",value:false,},
 				enableForce:{type:"boolean",value:true,},
-				prioritizeSNForce:{type:"boolean",value:true,},
+				prioritizeSNForce:{type:"boolean",value:false,},
 				hideOtherLinks:{type:"boolean",value:true,},
 				showWorms:{type:"boolean",value:false,},
 				showPathAssignment:{type:"boolean",value:false,},//will show all edges between other vertices and the path it's asigned to, with teh color of that path. (unlike showing worms, which may show edges between a vertex and multiple paths
 				
-				showClustering:{type:"boolean",value:true,},
+				showClustering:{type:"boolean",value:false,},
 				clusteringType:{
 					type:"select",value:"landmarks",
 					options:["landmarks","endpoints","all points"],
@@ -2656,14 +2815,12 @@ G.addModule("subview",{
 						(data,oldValue,node,index,array,graph)=>{
 							if(!data.vertexPaths)return;
 							let vertexID=G.subview.templates.nodes.getOriginalObjectID(graph,index);
-							if(data.hideOtherLinks){
-								if(vertexID in data.vertexPaths)return;
-								if(data.showClustering)return;
-								if(data.showWorms||data.showPathAssignment){
-									if(data.pathAssignment[vertexID]!==undefined&&(data.pathAssignment[vertexID]<=data.attachmentSequence))return;
-								}
-								return 0;
-							}
+                            if(vertexID in data.vertexPaths)return;
+                            if(data.showClustering)return;
+                            if(data.showWorms||data.showPathAssignment){
+                                if(data.pathAssignment[vertexID]!==undefined&&(data.pathAssignment[vertexID]<=data.attachmentSequence))return;
+                            }
+                            return 0;
 						}
 					//
 					],
@@ -2733,14 +2890,31 @@ G.addModule("subview",{
 						},
 					],
 					thickness:[
-						(data,oldValue,link,index,array)=>{
+						(data,oldValue,link,index,array,graph)=>{
+                            let edgeID=index;//G.subview.templates.links.getOriginalObjectID(graph,index);
+                            let edge=graph.edges[edgeID],svID=graph.edges.source[edgeID],tvID=graph.edges.target[edgeID];
 							if(!data.edgePaths)return;
 							if(index in data.edgePaths)return oldValue+G.controls.get("snPathThickness",3);
 							else{//first see if it's shown for another reason, then return 0 if only paths are shown (it should be called hide other edges)
 								if(data.clusteringLinks){if(data.edgeClustering[index]!==undefined){return;}}
 								if(data.showPathAssignment){if(data.edgePathAssignment[index]!==undefined)return;}
-								if(data.showWorms){if(data.edgeAdjacentToPath[index]!==undefined){return;}}
-								if(data.hideOtherLinks)return 0;//showing other things overrides showing only paths?
+								if(data.showWorms){
+
+                                    // for( i in Object.keys(data.pathAssignment)){
+                                    //     console.log(graph.getNeighborsByID(i));
+                                    // }
+								    if(data.edgeAdjacentToPath[index]!==undefined){return;}
+								}
+
+								if(data.hideOtherLinks) {
+                                    return 0;//showing other things overrides showing only paths?
+                                }
+								if(data.showWorms && !data.hideOtherLinks) {
+                                    if (Object.keys(data.pathAssignment).indexOf(svID.toString()) != -1 && Object.keys(data.pathAssignment).indexOf(tvID.toString()) != -1)
+                                        return;
+                                    else return 0;
+                                }
+
 							}
 						},
 					],
@@ -2752,8 +2926,9 @@ G.addModule("subview",{
 					],
 					strength:[
 						(data,oldValue,link,index,array)=>{
-							if(data.enableForce){
-								let factor=G.controls.get("snStrengthFactor",3);
+                            data.enableForce=true;
+							if(true){
+								let factor=G.controls.get("snStrengthFactor",.1);
 								if(index in data.edgePaths)return oldValue*factor;
 								else {
 									let v=oldValue/Math.max(factor,1);//the special edges should keep higher strength?
@@ -2761,6 +2936,8 @@ G.addModule("subview",{
 									if(data.showPathAssignment){if(data.edgePathAssignment[index]!==undefined)return ;}
 									if(data.showWorms){if(data.edgeAdjacentToPath[index]!==undefined){
 										if(data.edgeAdjacentToPath[index]!=-2)return;//is not a crossing edge
+                                        if (Object.keys(data.pathAssignment).indexOf(svID) != -1 && Object.keys(data.pathAssignment).indexOf(tvID) != -1)
+                                            return;
 										else return v;//decrease crossing edge strength, because they tend to destroy the layout
 									}}
 									if(data.hideOtherLinks)return 0;//showing other things overrides showing only paths?

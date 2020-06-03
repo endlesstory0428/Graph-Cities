@@ -82,7 +82,7 @@ vec4 getEdgeData(float eid){
 	return texture2D(edgeList,getUV(eid,edgeListSize));
 }
 
-const float d = 1./textureSize, e2 = 0.1,  dt2 = .001,G=-10000.,edgeStrength=1.0,clusteringStrength=2.0,alignmentStrength=20.0,radialLimitStrength=0.5, decay=0.05,factor=1.-decay;
+const float d = 1./textureSize, e2 = 0.1,  dt2 = .029,G=-10000.,edgeStrength=.5,clusteringStrength=2.0,alignmentStrength=20.0,radialLimitStrength=0.5, decay=0.05,factor=1.-decay;
 void main(void) {
 	vec4 pos = texture2D( tPositionsPrev, vUv );
 	vec2 r = pos.xy;
@@ -289,15 +289,15 @@ void main(void) {
 	float layerHeight=getArrayValue(layerHeights,layerHeightsSize,layer).x*heightFactor;
 	if(nodeScreenTarget.z>0.&&nodeSelected.x>0.){
 		vec4 pos=cameraProjectionMatrix*(cameraMatrixWorldInverse*vec4(r2*radiusFactor, layerHeight,1.0));
-		
+
 		vec2 spos=pos.xy/pos.w;
 		spos.x*=screenWidth;
 		spos.y*=screenHeight;
 		spos/=2.;
-		
+
 		vec3 movement=(leftVector*(spos.x-nodeScreenTarget.x)+screenUpVector*(nodeScreenTarget.y-spos.y));
 		r2=r1+0.05*movement.xy;;//movement.xy;
-		
+
 		
 		//vec3 pos = vertexPos.xyz;
 		//pos.xy*=radiusFactor;

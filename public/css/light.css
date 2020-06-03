@@ -21,7 +21,7 @@ div#ribbon-menu{
     background:rgba(30,40,100,0.5);
 }
 
-div#graph-menu,div#style-menu{
+div#graph-menu,div#style-menu,div#graph-info-bar, div#graph-fork-bar, div#graph-plot-bar{
 	
 	background:white;
 }
@@ -88,5 +88,79 @@ button.material {
     background-color: var(--lighter);
    
 }
+@bg-blue: #337ab7;
+@bg-hoki: #67809F;
+@bg-red: #e7505a;
+@bg-purple: #8E44AD;
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
+}
 
+.wrapper {
+    position: relative;
+}
+
+.heading{
+    margin: 25px 0;
+    font-size: 24px;
+}
+.dashboard-stat {
+    position: relative;
+    display: block;
+    margin: 0 0 25px;
+    overflow: hidden;
+    border-radius: 4px;
+.visual {
+    width: 80px;
+    height: 80px;
+    display: block;
+    float: left;
+    padding-top: 10px;
+    padding-left: 15px;
+    margin-bottom: 15px;
+    font-size: 35px;
+    line-height: 35px;
+> i {
+    margin-left: -15px;
+    font-size: 110px;
+    line-height: 110px;
+    color: #fff;
+    opacity: .1;
+}
+}
+.details {
+    position: absolute;
+    right: 15px;
+    padding-right: 15px;
+    color: #fff;
+.number {
+    padding-top: 25px;
+    text-align: right;
+    font-size: 34px;
+    line-height: 36px;
+    letter-spacing: -1px;
+    margin-bottom: 0;
+    font-weight: 300;
+.desc {
+    text-transform: capitalize;
+    text-align: right;
+    font-size: 16px;
+    letter-spacing: 0;
+    font-weight: 300;
+}
+}
+}
+    &.blue {
+         background-color: @bg-blue;
+     }
+&.red {
+     background-color: @bg-red;
+ }
+&.purple {
+     background-color: @bg-purple;
+ }
+&.hoki {
+     background-color: @bg-hoki;
+ }
+}
 
