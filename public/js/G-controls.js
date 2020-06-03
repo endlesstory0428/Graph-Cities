@@ -10,9 +10,11 @@ G.addModule("controls",{
 		
 		
 		//bottom
+        this.index=1;
 		let viewButtomsElem=getE("view-buttons-area");
 		let semanticsButtomsElem=getE("graph-semantics-buttons-area");
-		let styleControlsElem=getE("style-controls-area");
+		this.styleControlsElem=getE("style-controls-area");
+		let styleControlsElem = this.styleControlsElem;
 		
 		function saveLayout(){
 			let path=G.controls.graph.dataPath;
@@ -29,7 +31,7 @@ G.addModule("controls",{
 		G.saveLayout=saveLayout;
 		
 		function saveImage(){
-			let path=this.graph.datasetID;//this.graph.dataPath;
+			let path=this.graph.dataPath;
 			if(path){
 				G.messaging.sendCustomData("save",{type:"image",path:path,data:G.renderer.domElement.toDataURL("image/png")});
 				G.addLog("saved");
@@ -65,10 +67,13 @@ G.addModule("controls",{
 		this.addButton(semanticsButtomsElem,"show labels",()=>{G.ui.showLabels()});
 		
 		//this.addSlider(styleControlsElem,"waves",(value)=>{G.controls.set("radialLimitFactor",value);},{min:1,max:60,default:1});
-		this.addSlider(styleControlsElem,"vertical spread",(value)=>{G.controls.set("heightFactor",value);},{min:0,max:5,default:1,});
-		this.addSlider(styleControlsElem,"horizontal spread",(value)=>{G.controls.set("radiusFactor",value);},{min:1,max:60,default:1});
-		
-		//minimal UI: height, width, node size, link brightness
+		this.addSlider(styleControlsElem,"vertical spread",(value)=>{G.controls.set("heightFactor",value);},{min:0,max:5,default:1,},"1","vertical");
+		this.addSlider(styleControlsElem,"horizontal spread",(value)=>{G.controls.set("radiusFactor",value);},{min:1,max:60,default:1}, "2", "horizontal");
+        this.addSlider(styleControlsElem,"node size",(value)=>{G.controls.set("nodeSizeFactor",value);},{long:true,min:0.1,max:10,default:1});
+        let styleRotateElem=getE("rotate_speed");
+        this.addSlider(styleRotateElem,"rotate speed",(value)=>{G.animation["rotate speed"]=value;},{long:true,min:-1,max:1,default:0});
+
+        //minimal UI: height, width, node size, link brightness
 		let minimalBar=getE("minimal-bar");
 		let minimalBarSelection=d3.select(minimalBar);
 		let minimalControlsElem=getE("minimal-style-controls-area");
@@ -89,7 +94,8 @@ G.addModule("controls",{
 		this.addSlider(minimalControlsElem,"link brightness",(value)=>{G.controls.set("linkBrightnessFactor",value);},{long:true,min:0.1,max:5,default:1});
 		this.addSlider(minimalControlsElem,"line brightness",(value)=>{G.controls.set("lineBrightnessFactor",value);},{long:true,min:0.1,max:20,default:1});
 		this.addSlider(minimalControlsElem,"link strength",(value)=>{G.controls.set("linkStrengthFactor",value);},{long:true,min:1,max:500,default:10});
-		
+
+
 		
 		//right side
 		let controlsElem=getE("controls-menu");
@@ -297,7 +303,6 @@ G.addModule("controls",{
 			}
 		});
 		let algsMenu=this.addDropdownMenu(controlsElem,"algorithms",this.algorithms);
-		
 
 		
 									/*
@@ -430,7 +435,62 @@ G.addModule("controls",{
 		this.addButton(itemsTitleElem,"+",saveGraph,()=>saveGraph(false,true));
 		
 		let selectionButtonsElem=getE("selection-buttons-area");
-		this.addButton(selectionButtonsElem,"select by ID",()=>{let value=getE('select-vertex-input').value;let result=this.graph.vertices.findIndex((v)=>(v.id==value));if(result!=-1)G.toggleSelectVertex(result);});
+		this.addButton(selectionButtonsElem,"select by ID",()=>{
+		    let value=getE('select-vertex-input').value;
+		    let result=this.graph.vertices.id.indexOf(value);
+            G.cameraControls.setTarget(null);
+		    if(result!=-1) {
+                let vec=G.view.getNodePos(value);
+                G.cameraControls.setTarget(vec,true);
+                G.toggleSelectVertex(value);
+            }
+		});
+
+            let drawingButtonsElem = getE("drawing-buttons-area");
+            let drawingGraphText = getE("drawing-graph");
+            this.addButton(drawingButtonsElem, "Next Neighbors", () => {
+                const distinct = (value, index, self) => {
+                    return self.indexOf(value) === index;
+                };
+                let arr = []
+                for (let node = 0; node < G.graph.snPathsFlat.length; node++) {
+                    let neighbors = G.graph.getNeighbors(G.graph.snPathsFlat[node]);
+                    arr.push(neighbors);
+                }
+                G.graph.snPathsNeigbors = arr.flat(1);
+                G.graph.snPathsNeigbors = G.graph.snPathsNeigbors.filter(distinct);
+                G.graph.showingNeighbors = true;
+                G.view.refreshStyles(true, true);
+                //G.graph.showingNeighbors = false;
+                G.graph.trackIndex++;
+
+            });
+
+            this.addButton(drawingButtonsElem, "Next Paths", () => {
+                G.graph.snPathsFlat = (G.graph.snPathsFlat.concat(G.graph.snPaths.slice(this.index, this.index + 1))).flat(1);
+                G.graph.snPathsTemp.push(G.graph.snPaths.slice(this.index, this.index + 1))
+                let paths=G.graph.snPathsTemp;let snPathEdgeMap={};
+                for(let pathID=0;pathID<paths.length;pathID++){
+                    let path=paths[pathID].flat(1);
+                    for(let i=0;i<path.length;i++){
+                        let tempID=path[i];
+                        let vertex=G.graph.vertices[tempID];
+                        if(i>0){
+                            snPathEdgeMap[G.graph.vertices.edges[tempID][path[i-1]]]=pathID;
+                        }
+                    }
+                }
+                G.graph.edgePaths = snPathEdgeMap;
+
+
+                this.index = this.index+ 1;
+                getE("showing-paths").textContent=""+this.index+" sparesnet paths out of " + G.graph.snPaths.length;
+                G.graph.showingPaths = true;
+                G.view.refreshStyles(true, true);
+                G.graph.showingPaths = false;
+
+            });
+
 		
 		let filteringElem=getE("subgraph-filtering-area");
 		function getPredicate(){
@@ -514,7 +574,7 @@ G.addModule("controls",{
 		this.contextMenus.empty.onmouseout=hideFunc;
 
 		
-		this.addButton(this.contextMenus.vertices,"add to SN",()=>G.analytics.addVertexToSparseNet(this.contextMenuTarget.original));
+		this.addButton(this.contextMenus.vertices,"add to SN",()=>G.analytics.addVertexToSparseNet(this.contextMenuTarget));
 		this.addButton(this.contextMenus.vertices,"draw subgraph by height",()=>{
 			if(!this.graph||!this.graph.heightProperty){G.addLog("no heights detected");return;}
 			let subgraph=Algs.getFilteredSubgraph(this.graph,this.graph.heightPropertyName,this.contextMenuTarget.height,this.graph.heightPropertyType);
@@ -838,6 +898,65 @@ G.addModule("controls",{
 		G.showingTooltip=false;
 		window.addEventListener("keydown", ev=>{
 			if ( ev.keyCode === 32) { }
+            if ( ev.key === 'e') {
+                if(G.graph.showingEgonets) {
+                    G.graph.showingEgonets = false;
+                    G.cameraControls.setTarget(null);
+                }
+                else G.graph.showingEgonets=true;
+            }
+            if ( ev.key === 'n') {
+                if(G.graph.showingNeighbors) {
+                    G.graph.showingNeighbors = false;
+                    const distinct = (value, index,self) => {
+                        return self.indexOf(value) === index;
+                    };
+                    // if(G.graph.snPathsFlat && G.graph.snPathsTemp)
+                    //     G.graph.snPathsFlat = G.graph.snPathsFlat.concat(G.graph.snPathsTemp)
+                    //     G.graph.snPathsFlat = G.graph.snPathsFlat.filter(distinct);
+                }
+                else {
+                    G.graph.showingNeighbors = true;
+
+                }
+
+            }
+            if ( ev.key === 'm') {
+                if(G.graph.showingPaths) {
+                    G.graph.showingPaths = false;
+                }
+                else {
+                    G.graph.snPathsTemp = (G.graph.snPathsTemp.concat(G.graph.snPaths.slice(this.index, this.index+1))).flat(1);
+                    this.index +=1;
+                    getE("showing-paths").textContent=""+this.index+" sparesnet paths out of " + G.graph.snPaths.length;
+
+                    G.graph.showingPaths = true;
+                    G.graph.showingNeighbors = false;
+                    const distinct = (value, index,self) => {
+                        return self.indexOf(value) === index;
+                    };
+                    if(G.graph.snPathsFlat && G.graph.snPathsTemp)
+                        G.graph.snPathsFlat = G.graph.snPathsFlat.concat(G.graph.snPathsTemp)
+                        G.graph.snPathsFlat = G.graph.snPathsFlat.filter(distinct);
+
+                }
+
+            }
+            if ( ev.key === 's') {
+                if(G.graph.showingSparsenet) {
+                    G.graph.firstShowSparsenet = true;
+                    G.graph.showingSparsenet = false;
+                }
+                else {
+                    G.graph.showingSparsenet = true;
+                    G.graph.showingSparsenet = true;
+                    document.getElementById("vertical").style.display="none";
+                    document.getElementById("horizontal").style.display="none";
+                    document.getElementById("path").style.display = "block"
+
+                    G.analytics.showSparseNet(G.graph);
+                }
+            }
 			//removed moving
 		});
 		window.addEventListener("keyup", ev=>{
@@ -847,19 +966,158 @@ G.addModule("controls",{
 		} 
 		});
 		G.showingControls=false;
+        G.showingControls1=false;
+        G.showingControls2=false;
+        G.showingControls3=false;
 		window.addEventListener("keydown", ev=>{
 			if ( ev.key==="`" ) { }
 			//removed moving
 		});
 		window.addEventListener("keyup", ev=>{
-			if ( ev.key==="`" ) { 
+
+            if ( ev.key==="`" ) {
 				if(G.showingControls){G.showingControls=false;getE("graph-menu").style.display="none";getE("style-menu").style.display="none";}
 				else{G.showingControls=true;getE("graph-menu").style.display="block";getE("style-menu").style.display="block";}
 			}
 		});
-		
-		
-		this.initGestures();
+        let b=getE("panel-show");
+        document.getElementById("info-bar-show").addEventListener('click', function(){
+            if(G.showingControls1){
+                G.showingControls1=false;
+                getE("graph-plot-bar").style.display="none";
+                getE("graph-info-bar").style.display="none";
+                getE("graph-plot-bar").style.display="none";
+                getE("graph-dataset-bar").style.display="none";
+                getE("graph-menu").style.display="none";
+
+            }
+            else{
+                getE("graph-plot-bar").style.display="none";
+                getE("graph-fork-bar").style.display="none";
+                getE("graph-menu").style.display="none";
+                getE("graph-dataset-bar").style.display="none";
+                getE("graph-info-bar").style.display="block";
+                G.showingControls1=true;
+                G.showingControls2=false;
+                G.showingControls3=false;
+                G.showingControls4=false;
+                G.showingControls5=false;
+            }
+        }, false);
+        document.getElementById("plot-bar-show").addEventListener('click', function(){
+            if(G.showingControls2){
+                G.showingControls2=false;
+                getE("graph-info-bar").style.display="none";
+                getE("graph-info-bar").style.display="none";
+                getE("graph-plot-bar").style.display="none";
+                getE("graph-dataset-bar").style.display="none";
+                getE("graph-menu").style.display="none";
+            }
+            else{
+                getE("graph-info-bar").style.display="none";
+                getE("graph-fork-bar").style.display="none";
+                getE("graph-dataset-bar").style.display="none";
+                getE("graph-menu").style.display="none";
+
+                G.showingControls2=true;
+                G.showingControls1=false;
+                G.showingControls3=false;
+                G.showingControls4=false;
+                G.showingControls5=false;
+                getE("graph-plot-bar").style.display="block";
+            }
+        }, false);
+        document.getElementById("fork-bar-show").addEventListener('click', function(){
+            if(G.showingControls3){
+                G.showingControls3=false;
+                getE("graph-fork-bar").style.display="none";
+                getE("graph-info-bar").style.display="none";
+                getE("graph-plot-bar").style.display="none";
+                getE("graph-dataset-bar").style.display="none";
+                getE("graph-menu").style.display="none";
+            }
+            else{
+                getE("graph-info-bar").style.display="none";
+                getE("graph-plot-bar").style.display="none";
+                getE("graph-dataset-bar").style.display="none";
+                getE("graph-menu").style.display="none";
+                G.showingControls3=true;
+                G.showingControls1=false;
+                G.showingControls2=false;
+                G.showingControls4=false;
+                G.showingControls5=false;
+                getE("graph-fork-bar").style.display="block";
+            }
+        }, false);
+        document.getElementById("search-bar-show").addEventListener('click', function(){
+            if(G.showingControls4){
+                G.showingControls4=false;
+                getE("graph-fork-bar").style.display="none";
+                getE("graph-info-bar").style.display="none";
+                getE("graph-plot-bar").style.display="none";
+                getE("graph-dataset-bar").style.display="none";
+                getE("graph-menu").style.display="none";
+
+            }
+            else{
+                getE("graph-info-bar").style.display="none";
+                getE("graph-plot-bar").style.display="none";
+                getE("graph-fork-bar").style.display="none";
+                getE("graph-dataset-bar").style.display="none";
+                getE("graph-info-bar").style.display="none";
+                getE("graph-menu").style.display="block";
+
+                G.showingControls4=true;
+                G.showingControls1=false;
+                G.showingControls2=false;
+                G.showingControls3=false;
+                G.showingControls5=false;
+            }
+        }, false);
+        G.showingControls5=true;
+        document.getElementById("dataset-bar-show").addEventListener('click', function(){
+            if(G.showingControls5){
+                G.showingControls5=false;
+                getE("graph-info-bar").style.display="none";
+                getE("graph-info-bar").style.display="none";
+                getE("graph-plot-bar").style.display="none";
+                getE("graph-menu").style.display="none";
+                getE("graph-dataset-bar").style.display="none";
+
+            }
+            else{
+                getE("graph-plot-bar").style.display="none";
+                getE("graph-fork-bar").style.display="none";
+                getE("graph-menu").style.display="none";
+                getE("graph-dataset-bar").style.display="block";
+                getE("graph-info-bar").style.display="none";
+
+                G.showingControls5=true;
+                G.showingControls4=false;
+                G.showingControls2=false;
+                G.showingControls3=false;
+                G.showingControls1=false;
+            }
+        }, false);
+        G.drawsparsenet = false;
+        document.getElementById("drawing_option_1").addEventListener('click', function(){
+            G.drawsparsenet = true;
+        }, false);
+        G.drawFixedPoints = false;
+        document.getElementById("drawing_option_2").addEventListener('click', function(){
+            G.drawFixedPoints = true;
+        }, false);
+        document.getElementById("rotate_option").addEventListener('click', function(){
+            if(G.animation.rotate) {
+                G.animation.rotate=false;
+                G.animation["rotate speed"]=0;
+            }else {
+                G.animation.rotate=true;
+                G.animation["rotate speed"]=0.3;
+            }
+
+        }, false);
+        this.initGestures();
 		this.initInteractions();
 		
 	},
@@ -913,6 +1171,9 @@ G.addModule("controls",{
 	},
 	addButton(parentElem,text,func,rightclickfunc){
 		let s=d3.select(parentElem).append("button").attr("class","material").text(text);
+        if(text == "Next Neighbors") {
+            s.attr("style", "margin-right: 20px;");
+        }
 		let buttonElem=s.node();
 		s.on("click",()=>func());
 		if(rightclickfunc){
@@ -953,19 +1214,25 @@ G.addModule("controls",{
 		parentElem.appendChild(closeButton);
 		closeButton.onclick=function(e){if(func)func.call(this,e);parentElem.style.display="none";}
 	},
-	addSlider(parentElem,text,func,options){
+	addSlider(parentElem,text,func,options, num="", id=""){
 		let min=0,max=1;let lazy=false;
 		if(!options)options={};
 		//allow changing the range later through this object
 		if("min" in options==false)options.min=0;
 		if("max" in options==false)options.max=1;
-		
-		
-		let s=d3.select(parentElem).append("div").attr("class","material-slider");
+
+        let s=d3.select(parentElem).append("div").attr("class","material-slider");
+		if(id != "") {
+		    s.attr("id",id);
+		    if(id=="path"){
+                s.attr("style","display:none;");
+            }
+        }
+
 		if(options.long){s.attr("class","material-slider long");}
 		let elem=s.node();elem.__options=options;options.elem=elem;
 		
-		let label=s.append("p").attr("class","material-slider-label").text(text);
+		let label=s.append("p").attr("id", num).attr("class","material-slider-label").text(text);
 		let barContainer=s.append("div").attr("class","material-slider-bar-container");
 		let pivot=barContainer.append("div").attr("class","material-slider-pivot");
 		let bar=barContainer.append("div").attr("class","material-slider-bar");
@@ -1006,15 +1273,20 @@ G.addModule("controls",{
 		return options;
 	},
 	addSliderWithStepButtons(parentElem,text,func,options){
-		let obj=this.addSlider(parentElem,text,func,options);
-		
+	    let obj = null;
+	    if(text == "Path Sequence") {
+            parentElem = this.styleControlsElem;
+            obj=this.addSlider(parentElem,text,func,options,"",'path');
+        } else {
+            obj=this.addSlider(parentElem,text,func,options,"");
+        }
 		let elem=obj.elem,s=d3.select(elem);
-		
+
 		let stepButtonsAreaSelection=s.append("div").attr("class","step-buttons-area").style("width","30%");//.style("margin-top","3px");
 		let barSelection=s.select(".material-slider-bar-container");
-		barSelection.style("width","65%");
+		barSelection.style("width","52%");
 		let stepButtonsArea=stepButtonsAreaSelection.node();
-		
+
 		let getStepFunc=(delta)=>{
 			return ()=>{
 				let target=this.modifierTarget;let end=false;
@@ -1055,7 +1327,7 @@ G.addModule("controls",{
 			}
 			return obj.timeoutFuncs[delta];
 		};
-		
+
 		if(obj.noAnimate!=true){//right click animates; now allow animation by default, unless it's disabled because the operation is expensive or something
 			if(!obj.animateInterval)obj.animateInterval=1000;
 			this.addSmallButton(stepButtonsArea,"<",getStepFunc(-1),getAnimateFunc(-1));
@@ -1065,7 +1337,7 @@ G.addModule("controls",{
 			this.addSmallButton(stepButtonsArea,"<",getStepFunc(-1));
 			this.addSmallButton(stepButtonsArea,">",getStepFunc(1));
 		}
-		
+
 	},
 	addRangeSlider(parentElem,text,func,options){
 		let min=0,max=1;let lazy=false;
@@ -1144,17 +1416,24 @@ G.addModule("controls",{
 		else {pivot1.call(d3.drag().on("drag",cb).on("end",cb));pivot2.call(d3.drag().on("drag",cb).on("end",cb));}
 		return options;
 	},
-	addCheckbox(parentElem,text,func,options){
-		if(!options)options={};
-		let s=d3.select(parentElem).append("div").attr("class","material-checkbox");
-		let label=s.append("p").attr("class","material-checkbox-label").text(text);
-		let checkbox=s.append("input").attr("type","checkbox").attr("class","material-checkbox");
-		let checkboxElem=checkbox.node();
-		checkbox.on("input",()=>func(checkboxElem.checked));
-		let onUpdate=function(value){checkboxElem.checked=value;};
-		options.onUpdate=onUpdate;//call when the value is changed outside
-		return options;
-	},
+    addCheckbox(parentElem, text, func, options) {
+        let arr = [];
+
+        if (!options) options = {};
+        let s = d3.select(parentElem).append("div").attr("class", "material-checkbox");
+        if(arr.indexOf(text)!=-1) {
+            s.attr("style","display:none;");
+        }
+        let label = s.append("p").attr("class", "material-checkbox-label").text(text);
+        let checkbox = s.append("input").attr("type", "checkbox").attr("class", "material-checkbox");
+        let checkboxElem = checkbox.node();
+        checkbox.on("input", () => func(checkboxElem.checked));
+        let onUpdate = function (value) {
+            checkboxElem.checked = value;
+        };
+        options.onUpdate = onUpdate;//call when the value is changed outside
+        return options;
+    },
 	addDropdownMenu(parentElem,title,items,func,options){
 		if(typeof func!="function"){options=func;func=undefined;}//may skip the callback if the items contain callbacks
 		if(!options)options={};
@@ -1183,6 +1462,7 @@ G.addModule("controls",{
 		for(let i in items){
 			let item=items[i];//for both list or object type input
 			let value=(typeof item=="function")?i:item;
+
 			menuBody.append("div").attr("class","dropdown-item").text(toNormalText(value)).on("click",()=>{
 				options.value=value;
 				options.index=i;
@@ -1458,29 +1738,41 @@ type: "nodes"*/
 				if(originalObjectType&&G.analytics.templates[originalObjectType]){originalTypeSingular=G.analytics.templates[originalObjectType].singularName;}
 				let subgraphLevel=result.subview.subgraphLevel;let subgraph=result.subview.graph;
 				
-				let originalDesc="";
-				if(originalObjectType){
-					originalDesc=((originalTypeSingular?toNormalText(originalTypeSingular):toSingularName(toNormalText(originalObjectType)))+" "+originalObjectID+(subgraphLevel?" (in subgraph "+subgraph.shortName+") ":""));
-					if(G.analytics.templates[originalObjectType]&&G.analytics.templates[originalObjectType].getDescription){
-						originalDesc+=G.analytics.templates[originalObjectType].getDescription(originalObject,originalObjectID,result.subview.graph[originalObjectType]);
-					}
-					originalDesc+="\n";
-				}
-				let viewTypeSingular=null;
-				if(G.view.templates[type].singularName){viewTypeSingular=G.view.templates[type].singularName;}
-				let viewDesc=(toNormalText((viewTypeSingular?viewTypeSingular:toSingularName(result.type)))+" "+objID);
-				if(G.view.templates[type]&&G.view.templates[type].getDescription){
-					viewDesc+=" "+G.view.templates[type].getDescription(obj,objID,G.view.model[result.type]);
-				}
-				
-				G.toolTipElem.textContent = originalDesc+viewDesc;
+				// let originalDesc="";
+				// if(originalObjectType){
+				// 	originalDesc=((originalTypeSingular?toNormalText(originalTypeSingular):toSingularName(toNormalText(originalObjectType)))+" "+originalObjectID+(subgraphLevel?" (in subgraph "+subgraph.shortName+") ":""));
+				// 	if(G.analytics.templates[originalObjectType]&&G.analytics.templates[originalObjectType].getDescription){
+				// 		originalDesc+=G.analytics.templates[originalObjectType].getDescription(originalObject,originalObjectID,result.subview.graph[originalObjectType]);
+				// 	}
+				// 	originalDesc+="\n";
+				// }
+				// let viewTypeSingular=null;
+				// if(G.view.templates[type].singularName){viewTypeSingular=G.view.templates[type].singularName;}
+				// let viewDesc=(toNormalText((viewTypeSingular?viewTypeSingular:toSingularName(result.type)))+" "+objID);
+				// if(G.view.templates[type]&&G.view.templates[type].getDescription){
+				// 	viewDesc+=" "+G.view.templates[type].getDescription(obj,objID,G.view.model[result.type]);
+				// }
+				if(G.view.graph.labels.columns != "null") {
+                    let label = "";
+                    if (G.view.graph.labels.find(record => record.new_id == originalObjectID)) {
+                        let a = G.view.graph.labels.find(record => record.new_id == originalObjectID);
+                        label = a.name;
+                    } else if(G.view.graph.labels.find(record => record.new_id == G.view.graph.vertices.id[originalObjectID])) {
+                        let a = G.view.graph.labels.find(record => record.new_id == G.view.graph.vertices.id[originalObjectID]);
+                        label = a.name;
+                    }
+                    G.toolTipElem.textContent = "Vertex: " + originalObjectID + " " + label;
+                }
+                else
+                    G.toolTipElem.textContent = "Vertex: " +originalObjectID;
 				G.toolTipElem.style.display="";
 				
 				switch (result.type)
 				{
 					case "nodes":
+						//$("#egonet").modal('show');
 						let nodes=G.view.model.nodes;
-						
+
 						let vertices=originalObjects;
 						if(vertices.waveLayers&&vertices.waveLayersExpanded){
 							if(!vertices.waveLayersExpanded[originalObjectID]){
@@ -1495,7 +1787,6 @@ type: "nodes"*/
 						//highlight edges and neighhbors
 						
 						this.graph.hoveredVertex=originalObjectID;
-						
 						G.view.refreshStyles(true,true);
 				}
 			}
@@ -1567,8 +1858,12 @@ type: "nodes"*/
 					graph.selectedVertexCount=1;
 					let selectedEdgeCount=0;
 					let sources=graph.edges.source,targets=graph.edges.target;
-					for(let i=0;i<graph.edges.length;i++){if((sources[i] in graph.egonet)&&(targets[i] in graph.egonet))selectedEdgeCount++;}
+					for(let i=0;i<graph.edges.length;i++){
+						if((sources[i] in graph.egonet)&&(targets[i] in graph.egonet))
+							selectedEdgeCount++;
+					}
 					graph.selectedEdgeCount=selectedEdgeCount;
+
 				}
 				else{graph.egonet=null;
 					G.avgLength=0;let selectedEdgeCount=0;
@@ -1582,6 +1877,7 @@ type: "nodes"*/
 				graph.selectedEdgeCount=0;
 			}
 			G.view.sharedUniforms.nodeSelectionData.needsUpdate=true;
+
 			G.view.refreshStyles(true,true);
 		};
 		
@@ -1619,6 +1915,9 @@ type: "nodes"*/
 		}
 		G.toggleSelectNode=function(node){//node is a clone index
 			clearFutureHistory();
+			if(!this.graph.selectedVertices) {
+				this.graph.selectedVertices={};
+			}
 			let selected=copyObj(this.graph.selectedVertices);
 			
 			let record=G.view.getOriginalObject("nodes",node);
@@ -1655,16 +1954,30 @@ type: "nodes"*/
 			for (let i=0;i<this.graph.vertices.length;i++){if((ccs[i]==ccID)&&(!selected[i]))selected[i]={time:Date.now()};}
 
 			//else{delete selected[node.original];}
-			this.graph.selectedVertices=selected;this.graph.selectHistory.unshift(selected);//index is still 0
+			this.graph.selectedVertices=selected;
+			if(this.graph.selectHistory) {
+				this.graph.selectHistory.unshift(selected);//index is still 0
+			}
 			G.updateSelection();
 		}
 		G.toggleSelectVertex=function(vertex){//now use index not ID
 			clearFutureHistory();
-			let selected=copyObj(this.graph.selectedVertices);
+			let selected = {}
+			if(this.graph.selectedVertices) {
+				selected=copyObj(this.graph.selectedVertices);
+			}
+
 			//if(typeof vertex=="object"){let ID=G.view.graph.vertices.indexOf(vertex);if(ID==-1)throw Error("no such vertex "+vertex);vertex=ID;}
 			if(!selected[vertex]){selected[vertex]={time:Date.now()};}
-			else{delete selected[vertex];}
-			this.graph.selectedVertices=selected;this.graph.selectHistory.unshift(selected);//index is still 0
+			else{
+			    delete selected[vertex];
+                G.cameraControls.setTarget(null);
+			}
+			this.graph.selectedVertices=selected;
+			if(this.graph.selectHistory) {
+				this.graph.selectHistory.unshift(selected);//index is still 0
+			}
+
 			G.updateSelection();
 		}
 		
@@ -1726,8 +2039,11 @@ type: "nodes"*/
 			};
 			mousePos.x = ( event.clientX / domElement.clientWidth ) * 2 - 1;
 			mousePos.y = - ( event.clientY / domElement.clientHeight ) * 2 + 1;
+			G.mouseScreenPos.x=event.clientX;
+            G.mouseScreenPos.y=event.clientY;
 			mouseScreenPos.x=event.clientX;
 			mouseScreenPos.y=event.clientY;
+
 			mouseShaderPos.x=event.clientX-domElement.clientWidth/2;//seems this is what the vs outputs
 			mouseShaderPos.y=domElement.clientHeight/2-event.clientY;
 			if(relPos.x + 200>G.view.canvasWidth){
@@ -1812,7 +2128,7 @@ type: "nodes"*/
 				G.view.nodeScreenTarget.y=mouseShaderPos.y;
 				G.view.nodeScreenTarget.z=1;
 				G.cameraControls.stopMoving();
-				
+
 				
 			}
 			else{
@@ -1822,11 +2138,25 @@ type: "nodes"*/
 		});
 		domElement.addEventListener("mousemove", ev=>{
 			if(ev.shiftKey&&(ev.button==0)){
-				if(ev.x>G.regionStartPos.x){selectingRegion.style.left=G.regionStartPos.x+"px";selectingRegion.style.right=(domElement.clientWidth-ev.x)+"px";}else{selectingRegion.style.right=(domElement.clientWidth-G.regionStartPos.x)+"px";selectingRegion.style.left=ev.x+"px";}
-				if(ev.y>G.regionStartPos.y){selectingRegion.style.bottom=(domElement.clientHeight-ev.y)+"px";selectingRegion.style.top=G.regionStartPosy+"px";}else{selectingRegion.style.top=ev.y+"px";selectingRegion.style.bottom=(domElement.clientHeight-G.regionStartPos.y)+"px";}
+				if(ev.x>G.regionStartPos.x){
+					selectingRegion.style.left=G.regionStartPos.x+"px";
+					selectingRegion.style.right=(domElement.clientWidth-ev.x)+"px";
+				}else{
+					selectingRegion.style.right=(domElement.clientWidth-G.regionStartPos.x)+"px";
+					selectingRegion.style.left=ev.x+"px";
+				}
+				if(ev.y>G.regionStartPos.y){
+					selectingRegion.style.bottom=(domElement.clientHeight-ev.y)+"px";
+					selectingRegion.style.top=G.regionStartPosy+"px";
+				}else{
+					selectingRegion.style.top=ev.y+"px";
+					selectingRegion.style.bottom=(domElement.clientHeight-G.regionStartPos.y)+"px";
+				}
 				
 			}
-			else{selectingRegion.style.display="none";}
+			else{
+				selectingRegion.style.display="none";
+			}
 		});
 		domElement.addEventListener("mouseup", ev=>{
 			isDraggingObjects=false;
@@ -1875,10 +2205,10 @@ type: "nodes"*/
 			
 		}
 		, false);
-		
-		
-		
-		G.hoverDelay=1000;
+
+
+
+		G.hoverDelay=0;
 		function hoverOnCurrentObject(obj){
 			//if(obj){
 				if ((G.graph) && (G.onhover)) {

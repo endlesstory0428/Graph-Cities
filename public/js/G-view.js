@@ -1,4 +1,3 @@
-
 var starMap = new THREE.ImageUtils.loadTexture('images/star.png');
 var glowMap = new THREE.ImageUtils.loadTexture('images/glow.png');
 var particleMap = new THREE.ImageUtils.loadTexture('images/particle.png');
@@ -25,25 +24,32 @@ G.colorScales={ //[0,1], use with THREE.Color.setStyle()
 	//blackRed:(value)=>orangeTemp(1-(value/2)),
 	blackRed:d3.scaleSequential(d3.interpolateCubehelix("#200000","#ff2020")),
 	//blueRed:d3.scaleSequential(d3.interpolateHslLong("#63daff","#ff2020")),
-	blueRed:d3.scaleSequential(d3.interpolateHslLong("hsl(216,99%,50%)","hsl(0,99%,50%)")), 
+	blueRed:d3.scaleSequential(d3.interpolateHslLong("hsl(216,99%,50%)","hsl(0,99%,50%)")),
 	//lightBlueRed:d3.scaleSequential(d3.interpolateHslLong("hsl(216,65%,82%)","hsl(0,65%,82%)")), //too dark links (their colors are normalized)
-	lightBlueRed:d3.scaleSequential(d3.interpolateHslLong("hsl(216,77%,70%)","hsl(0,77%,70%)")), 
-	
+	lightBlueRed:d3.scaleSequential(d3.interpolateHslLong("hsl(216,77%,70%)","hsl(0,77%,70%)")),
+
 };
 G.colorScale="lightBlueRed";
-G.brightColors=false;
+G.brightColors=true;
+Object.cast = function cast(rawObj, constructor)
+{
+    var obj = new constructor();
+    for(var i in rawObj)
+        obj[i] = rawObj[i];
+    return obj;
+}
 function onColorScaleUpdated(){
 	if(G.view.model){
 		/*for(let value in G.view.model.colorIndexMap){
 			//colors[value]=c; ??
 			let index=G.view.model.colorIndexMap[value];
 			if(value==-1){}else {G.view.model.colorList[index].setStyle(colorScale(value));}
-			
+
 		};*/
 		for(let i=0;i<G.view.model.colors.length;i++){
 			let value=G.view.model.colorValues[i];
 			G.view.model.colors[i].setStyle(colorScale(value));
-			
+
 		}
 	}
 	G.view.sharedUniforms.colorList.needsUpdate=true;
@@ -51,6 +57,8 @@ function onColorScaleUpdated(){
 function colorScale(value){
 	return G.colorScales[G.controls.get("colorScales","lightBlueRed",G.colorScales,onColorScaleUpdated)](value);//controls getting of options returns the value of that option
 }
+
+
 
 
 //note: the view doesn't care what's the logical top level graph, but only what's the displayed top level (meta)graph. So this.graph should be that graph.
@@ -79,7 +87,7 @@ G.addModule("view",{
 		window.addEventListener("resize", this.resizeCanvas, false);
 		this.loadShaders();
 		G.zoomOutDistance=()=>{
-			let maxHeight=G.view.model?(500.0*Math.sqrt(Math.log(G.view.model.heights.max+1.))*G.controls.get("heightFactor")+5000):0;
+			let maxHeight=G.view.model?(500.0*Math.sqrt(Math.log(G.view.model.heights.max+1.))*G.controls.get("heightFactor")+9000):0;
 			let maxRadius=G.view.model?(this.sharedUniforms.radialLimit.value()*G.controls.get("radialLimitFactor")*3+5000):0;//radialLimitFactor is 1 by default, it affects the heuristic-based radial limit force, but we want to use a plain stretching that doesn't affect the forces
 			return Math.max(10000,maxHeight,maxRadius);
 		};
@@ -88,16 +96,17 @@ G.addModule("view",{
 		//add listeners before context creation
 		canvas.addEventListener("webglcontextlost", function(event) {
 			event.preventDefault();
-			alert("Sorry, WebGL crashed because the hardware couldn't handle this view. Please refresh the page."); 
+			alert("Sorry, WebGL crashed because the hardware couldn't handle this view. Please refresh the page.");
 		}, false);
+
 		let context=canvas.getContext("webgl2");//,{premultipliedAlpha: false});
 		if (!context){alert("This demo requires WebGL2, please use Chrome or Firefox");return;}
-		
-			
+
+
 		G.renderer = new THREE.WebGLRenderer( {
 			antialias: false, canvas: canvas, context: context ,
 			clearColor: 0xffffff, //??
-			//clearAlpha: 0, 
+			//clearAlpha: 0,
 			preserveDrawingBuffer: true,
 		} );
 		//var canvas=G.renderer.domElement;
@@ -111,8 +120,8 @@ G.addModule("view",{
 		this.maxTextureSize=G.gl.getParameter(G.gl.MAX_TEXTURE_SIZE);if(G.DEBUG)console.log("max texture size is "+this.maxTextureSize);
 		let maxVertexTextureImageUnits=G.gl.getParameter(G.gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS);
 		if (maxVertexTextureImageUnits==0){alert("Your browser does not support this application:  vertex texture image units is 0"); return;}else{if(G.DEBUG)console.log("max vertex texture image size is "+maxVertexTextureImageUnits);}
-	 
-		G.cameras={perspective:new THREE.PerspectiveCamera( ),orthographic:new THREE.OrthographicCamera(window.innerWidth/ - 2, window.innerWidth/ 2, window.innerHeight/ 2, window.innerHeight / - 2, 1, 20000) };//50, window.innerWidth / window.innerHeight, 0.1, 50000 
+
+		G.cameras={perspective:new THREE.PerspectiveCamera( ),orthographic:new THREE.OrthographicCamera(window.innerWidth/ - 2, window.innerWidth/ 2, window.innerHeight/ 2, window.innerHeight / - 2, 1, 20000) };//50, window.innerWidth / window.innerHeight, 0.1, 50000
 		G.cameras.perspective.far = 20000;
 		G.cameras.perspective.near = 0.01;
 		G["camera type"]="perspective";
@@ -124,15 +133,15 @@ G.addModule("view",{
 			G.cameras[name].position.z = 1000;//sqrt instead of cbrt because the layout is often quite flat
 		}
 		G.cameraControls = new MyControls(G.cameras,G.renderer.domElement,G);
-		
+
 		G.scene = new THREE.Scene();var scene=G.scene;
 		scene.background = new THREE.Color(0xffffff);
 		G.lightStyle=true;
 		scene.fog = new THREE.FogExp2(0xaaaaaa,0.005);
 		//debugging
 		this.testBuffer=new Float32Array( 4 );
-		
-		
+
+
 		let objectOrder=Object.keys(this.templates).sort(compareBy((x)=>(this.templates[x].priority?this.templates[x].priority:0),true));
 		for(let name of objectOrder){
 			let obj=this.templates[name];
@@ -145,30 +154,30 @@ G.addModule("view",{
 			}
 			if(obj.simulate){
 				this.sim.addObject(name);//simulation is currently being used
-				
+
 			}
 		}
-		
+
 		dpr = 1;
 		if (window.devicePixelRatio !== undefined) {dpr = window.devicePixelRatio;}
-		
-		
+
+
 		var stats = new Stats();G.stats=stats;
 		stats.showPanel( 0 );
 		stats.dom.style.position="absolute";
 		stats.dom.style.top="";
 		stats.dom.style.bottom="5px";
 		stats.dom.style.left="5px";
-		document.querySelector("#graph-menu").appendChild( stats.dom );
+		document.querySelector("#graph-plot-bar").appendChild( stats.dom );
 		this.animateBound=this.animate.bind(this);
 		setTimeout(this.animateBound,0);//this may happen after a mouse event fires but it's OK because graph is not set at the start
-		
+
 		this.clock = new THREE.Clock();
 		this.resizeCanvas();
-		
+
 		//init some controls
 		this.initModifierControls();
-		
+
 		let objectsVisibilityObj={};
 		for(let name of objectOrder){
 			let obj=this.templates[name];
@@ -178,9 +187,9 @@ G.addModule("view",{
 		}
 		let viewButtomsElem=getE("view-buttons-area");
 		G.controls.addDropdownMenu(viewButtomsElem,"show/hide",objectsVisibilityObj,{upward:true});
-		//the simulation shouldn't need to know the camera position, but the movement needs to happen in the simulation and 
+		//the simulation shouldn't need to know the camera position, but the movement needs to happen in the simulation and
 		//we need to calculate the real movemnet for it
-		
+
 		canvas.tabIndex=1;//to make it focusable and accept key events
 		let moveLength=50;
 		G.controls.addKeyListener(canvas,37,()=>{G.view.nodeMovement.copy(G.cameraControls.leftVector).multiplyScalar(moveLength);},()=>{G.view.nodeMovement.set(0,0,0)});
@@ -190,8 +199,8 @@ G.addModule("view",{
 	},
 	createSubscene:function(){//actually creates a logical sub-canvas with its own view model, layout, scene and cameras, (and optionally controls later??)
 		//now there's one main scene/subcanvas, ad another subscene with its own layout which is a filtered part of the main view model - I don't want to actually manage two independent graphs? maybe we can manage not just scenes but infdependent graphs being displayed
-		
-		
+
+
 	},
 	shaderConstants:{
 		textureSize:()=>{
@@ -208,7 +217,7 @@ G.addModule("view",{
 					this.subviews[i].graph.vertices.addProperty("layout",null,layouts[i]);
 					for(let v of layouts[i]){if(!v)throw Error();}
 				}
-				
+
 				//try reusing parts of the old (main) layout if the new graph has no layout and there's a significant overlap (but if the overlap is tiny, don't reuse as it could make the layout look worse)
 				if((!newGraph.vertices.layout)&&(newGraph.datasetID==this.subviews[0].graph.datasetID)){
 					//here if it has a layout it should have been loaded
@@ -232,12 +241,12 @@ G.addModule("view",{
 						newGraph.vertices.addProperty("layout",null,newLayout);
 					}
 				}
-				
+
 			}
 		}
-		
-		
-		
+
+
+
 		let minimap=getE("minimap");
 		//save minimap before the child graph is shown
 		if(this.graph&&(!this.graph.imageData)&&(this.graph.vertices.length>0||this.graph.globalRings&&this.graph.globalRings.length>0)){
@@ -248,9 +257,61 @@ G.addModule("view",{
 	},
 	displayGraph:async function(graph,options){
 		if(!options)options={};
-		if(graph.vertices.layout)for(let i=0;i<graph.vertices.layout.length;i++){if(!graph.vertices.layout[i])throw Error();}
+		if(G.drawFixedPoints) {
+            graph.colorScaleName = "orange";
+        }
+		if(G.drawFixedPoints && G.drawsparsenet){
+            graph.colorScaleName = "blueRed";
+        }
+
+        if(graph.vertices.layout)for(let i=0;i<graph.vertices.layout.length;i++){if(!graph.vertices.layout[i])throw Error();}
 		while(graph.representation)graph=G.getGraph(graph.dataPath+"/metagraphs/"+graph.representation);//only use the real displayed top level graph
-		
+        graph.snPathsTemp=[];
+        graph.snPathsNeigbors = [];
+        graph.trackIndex = 0;
+        let vc=graph.vertices.length;
+        let options2=null;if(vc>G.controls.get("approximateSNThreshold",1)){options={variant:"approximate"};}//todo: the exact SN code has a problem
+        let data={};
+        if((!graph.dataPath)||graph.isCustom){
+            data.data=this.getGraphVerticesAndEdges(graph);
+        }
+        if(graph.dataPath&&(graph.dataPath.indexOf("custom")==-1)){
+            data.dataPath=graph.dataPath;}
+
+        if(options2)data.options=options2;
+        const distinct = (value, index,self) => {
+            return self.indexOf(value) === index;
+        };
+        if(G.drawsparsenet) {
+        if(!graph.snPaths) {
+            G.messaging.requestCustomData("sparsenet", data, (result) => {
+                if (result && result.length > 0) {
+                    graph.snPaths = result;
+                    graph.snPathsColor= graph.snPaths.map((path,i)=>{if(i==0)return redColor;let c=new THREE.Color();c.setHSL(((i/(path.length))*0.7+0.1),1,0.5);return c;})
+                    graph.snPathsTemp.push(graph.snPaths.slice(0, 1));
+                    let paths=G.graph.snPathsTemp;let snPathEdgeMap={};
+                    for(let pathID=0;pathID<paths.length;pathID++){
+                        let path=paths[pathID].flat(1);
+                        for(let i=0;i<path.length;i++){
+                            let tempID=path[i];
+                            let vertex=G.graph.vertices[tempID];
+                            if(i>0){
+                                snPathEdgeMap[G.graph.vertices.edges[tempID][path[i-1]]]=pathID;
+                            }
+                        }
+                    }
+                    G.graph.edgePaths = snPathEdgeMap;
+                    graph.snPathsFlat = graph.snPaths.slice(0, 1).flat(1);
+                    if(graph.snPaths){
+                        getE("showing-paths").textContent=""+1+" sparesnet paths out of " + graph.snPaths.length;
+                    }
+                } else {
+                    G.addLog("invalid sparsenet result");
+                }
+            });
+        }
+        }
+
 		if(graph.vertices.id.isAbstract){console.log("warning: showing abstract graph");return;}
 		if(graph.dataPath&&graph.vertices.length>0&&(graph.vertices.layout===undefined)&&(!graph.isCustom)){//don't load layout for abstract top level
 			await d3.json("datasets/"+graph.dataPath+"/layout.json.gz").then((layout)=>{
@@ -270,75 +331,89 @@ G.addModule("view",{
 			//either load the layout or know it's missing
 		}
 		this.beforeDisplayGraph(graph);
-		
-		
-		this.step=0;
-		this.timer=0;//reset the time since simulation started
-		if((this.graph!=graph)&&(!options.noMoveCamera))G.resetView();//exclude expansion in-place
-		this.graph=graph;
-		
-		
-		let heightPropertyName=graph.heightProperty,heightPropertyType;
-		if(heightPropertyName){
-			if(heightPropertyName in graph.edges.properties){
-				heightPropertyType="edges";//??!!
-				if (graph.heightPropertyTypeHint){
-					heightPropertyType=graph.heightPropertyTypeHint;
-				}
-			}
-			else heightPropertyType="vertices";
-		}
-		graph.heightPropertyType=heightPropertyType;graph.heightPropertyName=heightPropertyName;
-		let results=this.getObjectsFromHierarchy(graph);
-		Object.assign(this,results);//model etc are now defined globally on the view module
-		this.setModifiersTarget(this.model);//the global modifiers are different from local ones;
-		this.applyTemplates(this.model,true);//subviews are applied on each graph and do not contain attrs and uniforms, but the global template is applied on the global model (and we use that for attrs and uniforms)
-		G.subview.setModifiersTarget(this.graph);//target the top graph by default
-		
-		var simulationUniforms={
-			timer: { type: "f", value: 0},
-		};
-		for(let uniformName in this.sharedUniforms){
-			let uniform=this.sharedUniforms[uniformName];//every one must be created, even dynamic ones
-			uniform.needsUpdate=true;
-			if(uniform.noSimulate)continue;//must skip the ones that cannot be used in the simulation, ie its own output
-			this.initUniform(uniform,this.model);
-			this.updateUniform(uniform,simulationUniforms,uniformName,this.model);
-		}
-		
-		await this.loadShaders();
-		
-		this.refreshUniforms(true);
-		this.refreshAttrs(true);//they do not use the textureSize constant
-		
-		var textureSize=Math.max(1,Math.ceil(Math.sqrt(this.model.nodes.length)));this.simulationTextureSize=textureSize;//stupid bug: using graph.nodes.length like before we had a model, would break the simulation but only when subgraphs increase the texture size! 
-		//but the simulation shader uses the constant so we have to set it before creating the simulation.
-		let vertexShader=this.getVertexShader("simulation"),fragmentShader= this.getFragmentShader("simulation");
-		var sim = new THREE.Simulation(G.renderer,G.view.templates.nodes.object3d.geometry.attributes.initialPosition.array,simulationUniforms,vertexShader,fragmentShader);
-		this.simulation=sim;
-		this.simulationShader=sim.simulationShader;
-	
-		G.cameraControls.setTarget(null);//stop zooming into the old node
-		G.cameraControls.lastZoomTime=new Date().getTime();//prevent immediate zoom-out due to camera position
-		
-		if(this.model.nodes.length>10000){G.simulationRunning=false;}
-		else{G.simulationRunning=true;}
-		
-		this.clock.getDelta();
-		this.animateOnce(); //it only animates one frame, and doesn't create an (extra) requestAnimationFrame loop for itself. without this, between load graph and the next animate() frame, a mouse event may happen and get invalid positions. 
-	},
+
+            // subgraph = Algs.getInducedSubgraph(graph, graph.snPaths, this.indexCount);
+            // this.indexCount += 10;
+            // if(graph.wholeGraph == undefined) {
+            //     graph.wholeGraph = Object.cast(JSON.parse(JSON.stringify(graph)), Graph);
+            // }
+            // graph.vertices = subgraph.vertices;
+            // graph.edges = subgraph.edges;
+            // graph.vertexMap = subgraph.vertexMap;
+            // graph.vertices = subgraph.vertices;
+            this.step = 0;
+            this.timer = 0;//reset the time since simulation started
+            if ((this.graph != graph) && (!options.noMoveCamera)) G.resetView();//exclude expansion in-place
+            this.graph = graph;
+
+            if(G.drawFixedPoints){
+                graph.heightProperty="fixedPointLayer";
+            }
+            let heightPropertyName = graph.heightProperty, heightPropertyType;
+            if (heightPropertyName) {
+                if (heightPropertyName in graph.edges.properties) {
+                    heightPropertyType = "edges";//??!!
+                    if (graph.heightPropertyTypeHint) {
+                        heightPropertyType = graph.heightPropertyTypeHint;
+                    }
+                } else heightPropertyType = "vertices";
+            }
+            graph.heightPropertyType = heightPropertyType;
+            graph.heightPropertyName = heightPropertyName;
+            let results = this.getObjectsFromHierarchy(graph);
+            Object.assign(this, results);//model etc are now defined globally on the view module
+            this.setModifiersTarget(this.model);//the global modifiers are different from local ones;
+
+            this.applyTemplates(this.model, true);//subviews are applied on each graph and do not contain attrs and uniforms, but the global template is applied on the global model (and we use that for attrs and uniforms)
+            G.subview.setModifiersTarget(this.graph);//target the top graph by default
+            var simulationUniforms = {
+                timer: {type: "f", value: 0},
+            };
+            for (let uniformName in this.sharedUniforms) {
+                let uniform = this.sharedUniforms[uniformName];//every one must be created, even dynamic ones
+                uniform.needsUpdate = true;
+                if (uniform.noSimulate) continue;//must skip the ones that cannot be used in the simulation, ie its own output
+                this.initUniform(uniform, this.model);
+                this.updateUniform(uniform, simulationUniforms, uniformName, this.model);
+            }
+            await this.loadShaders();
+
+            this.refreshUniforms(true);
+            this.refreshAttrs(true);//they do not use the textureSize constant
+
+            var textureSize = Math.max(1, Math.ceil(Math.sqrt(this.model.nodes.length)));
+            this.simulationTextureSize = textureSize;//stupid bug: using graph.nodes.length like before we had a model, would break the simulation but only when subgraphs increase the texture size!
+            //but the simulation shader uses the constant so we have to set it before creating the simulation.
+            let vertexShader = this.getVertexShader("simulation"),
+                fragmentShader = this.getFragmentShader("simulation");
+            var sim = new THREE.Simulation(G.renderer, G.view.templates.nodes.object3d.geometry.attributes.initialPosition.array, simulationUniforms, vertexShader, fragmentShader);
+            this.simulation = sim;
+            this.simulationShader = sim.simulationShader;
+
+            G.cameraControls.setTarget(null);//stop zooming into the old node
+            G.cameraControls.lastZoomTime = new Date().getTime();//prevent immediate zoom-out due to camera position
+
+            if (this.model.nodes.length > 10000) {
+                G.simulationRunning = false;
+            } else {
+                G.simulationRunning = true;
+            }
+
+            this.clock.getDelta();
+            this.animateOnce(); //it only animates one frame, and doesn't create an (extra) requestAnimationFrame loop for itself. without this, between load graph and the next animate() frame, a mouse event may happen and get invalid positions.
+		},
 	step:0,
 	simulationStarted:false,
 	animateOnce:function animateOnce() {
 		G.stats.begin();
-		
+
 		if(!this.simulationShader){
 			//G.composer.render(delta);
 			G.renderer.render( G.scene, G.camera );
 			return;
 		}
 		if(!this.model||!this.model.nodes){return;}
-		
+
 		var delta = this.clock.getDelta();
 		this.timer += delta;
 		this.simulationShader.uniforms.timer.value = this.timer;
@@ -582,29 +657,29 @@ G.addModule("view",{
 		activeLayerEnabled:{value:()=>G.activeLayer!=null,dynamic:true},
 		activeLayer:{value:()=>G.activeLayer,dynamic:true,},
 		maxLayer:{value:()=>arrayMax(G.view.model.nodes.height)},//G.graph.nodeHeights
-		
+
 		radiusFactor:{value:()=>G.controls.get("radiusFactor",1),dynamic:true},
-		
+
 		radialLimit:{value:()=>(7*Math.pow(G.view.subviews[0].nodes.length,0.5)+5*Math.pow(G.view.subviews[0].nodes.length,0.33)),dynamic:true},//hack - the idea is it reflects both size and how flat the graph is, but the numbers are not really justified
 		radialLimitFactor:{value:()=>G.controls.get("radialLimitFactor",1),dynamic:true},
 		heightFactor:{value:()=>G.controls.get("heightFactor"),dynamic:true},
 		nodeSizeFactor:{value:()=>G.controls.get("nodeSizeFactor"),dynamic:true},
 		linkBrightnessFactor:{value:()=>G.controls.get("linkBrightnessFactor"),dynamic:true},
 		linkDistanceFactor:{value:()=>G.controls.get("linkDistanceFactor"),dynamic:true},
-		linkStrengthFactor:{value:()=>G.controls.get("linkStrengthFactor",10),dynamic:true},
+		linkStrengthFactor:{value:()=>G.controls.get("linkStrengthFactor",3),dynamic:true},
 		clusteringStrengthFactor:{value:()=>G.controls.get("clusteringStrengthFactor",1),dynamic:true},
 		alignmentStrengthFactor:{value:()=>G.controls.get("alignmentStrengthFactor",1),dynamic:true},
 		angleTargetStrengthFactor:{value:()=>G.controls.get("angleTargetStrengthFactor",1),dynamic:true},
 		camera:{value:()=>G.camera.position,dynamic:true},
-		
+
 		linkLayerColorRatio:{value:()=>clamp(G.controls.get("linkLayerColorRatio",0.75),0,1),dynamic:true},
 		lineLayerColorRatio:{value:()=>clamp(G.controls.get("lineLayerColorRatio"),0,1),dynamic:true},
-		
+
 		colorList:{
 			isArray:true,
 			value:(model)=>model.colors,
 		},
-		
+
 		layerHeights:{
 			isArray:true,
 			value:(model)=>{//assuming they are non negative, scale to between -0.5 and 0.5
@@ -633,11 +708,11 @@ G.addModule("view",{
 						else{
 							temp*=0.5;if(i>=threshold)temp+=0.5;
 						}
-						
+
 					}
 					result[i]=(temp-0.5)*500.0*Math.sqrt(Math.log(max+1.));
 				}
-				return result;	
+				return result;
 			}
 		}
 	},
@@ -677,6 +752,11 @@ G.addModule("view",{
 					value:(node,i,array)=>{
 						let result=array.size[i];
 						if(array.isExpanded[i]&&array.metanodeSize[i])result+=array.metanodeSize[i];
+                            if(G.view.graph.hoveredVertex && G.view.graph.showingEgonets && G.view.graph.hoveredVertex == i) {
+                                result=1;
+                            }
+
+
 						result=result*Math.pow(0.5,array.subgraphLevel[i]);
 						return result;
 					},
@@ -702,7 +782,7 @@ G.addModule("view",{
 							}
 							if(value===undefined){
 								value=0;
-							}//undefined height is not allowed in the global view 
+							}//undefined height is not allowed in the global view
 							heights[i]=value;//if a metagraph has heights and a second-level metagraph does not, the inherited height will not propagate to the subgraph of a second level metanode if property updates are not immediately replacing. so we have to use an array
 						});
 						return heights;
@@ -719,12 +799,15 @@ G.addModule("view",{
 								value=-1;
 								if(G.view.graph.colorScale){value=0.5;}
 							}//0 is the first color, -1 is a neutral color (grey?)
+                            if(G.view.graph.hoveredVertex && G.view.graph.showingEgonets && G.view.graph.hoveredVertex == i) {
+                                value = 2;
+                            }
 							colorValues[i]=value;
 						});
 						return colorValues;
 					}
 				},
-				
+
 				adjlist:{isArray:true,isAttribute:false,//for building some uniforms
 					value:(model)=>{
 						let adjlist=[];for(let i=0;i<model.nodes.length;i++){adjlist[i]={};}
@@ -761,7 +844,7 @@ G.addModule("view",{
 									//v.add(newLayout[metanodeID]);
 								}
 							}
-							//note: add metanode position to random initial position - if there's a cached position, it sould not be modified. when I load a subgraph in place, its layout is not loaded from the server so the initial positions have to be random and we can add the metanode position. If it were loaded from teh server, we would have to differentiate between saved (presumably origin-centered) layouts and cached (possibly metanode-centered) layouts. 
+							//note: add metanode position to random initial position - if there's a cached position, it sould not be modified. when I load a subgraph in place, its layout is not loaded from the server so the initial positions have to be random and we can add the metanode position. If it were loaded from teh server, we would have to differentiate between saved (presumably origin-centered) layouts and cached (possibly metanode-centered) layouts.
 							v.w=1;//would be 0 for extra space that correspond to no nodes
 							newLayout[i]=v;
 						});
@@ -776,7 +859,7 @@ G.addModule("view",{
 				customColor:{dimensions:3,value:(node,i,array)=>(array.color?(array.color[i]||whiteColor):whiteColor)},
 				usingCustomColor:{value:(node,i,array)=>((array.color&&array.color[i])?1:0)},
 			},
-			
+
 			uniforms:{//shared ones are automatically added
 				t:   { type: "t", value: ()=>G.view.textures[G.view["node texture"]] },
 				pointSize: { type: "f", value: function(){return (250/Math.log2(16+this.simulationTextureSize)) }},
@@ -801,11 +884,11 @@ G.addModule("view",{
 				return bestObjID;
 			}
 		},
-		
+
 		links:{
 			object3dType:THREE.Mesh,//the array value is set elsewhere
 			properties:{
-				subgraphLevel:{//currently I'm going to make the adjustments directly in the shader, making them thinner and shorter according to which level of subgraph they are in. note: simple linear scaling might be a bad idea here, because the different subgraph values would skew the range and average. 
+				subgraphLevel:{//currently I'm going to make the adjustments directly in the shader, making them thinner and shorter according to which level of subgraph they are in. note: simple linear scaling might be a bad idea here, because the different subgraph values would skew the range and average.
 					isArray:true,value:(model)=>{
 						let links=model.links;let nodes=model.nodes;let nodeSubgraphLevels=nodes.subgraphLevel;
 						return links.map((link,i)=>nodeSubgraphLevels[links.source[i]]);//todo: later would we have cross-subgraph edges??
@@ -819,10 +902,27 @@ G.addModule("view",{
 						return linkColorValues.map((v)=>{if(v==-1)return -1;else return model.colorIndexMap[v]});//-1 means interpolate
 					}
 				},
-				
+
 				customColor:{//put here to avoid having to specify these in subview modifier effects
 					dimensions:3,
-					value:(link,i,array)=>((array.color[i])?array.color[i]:whiteColor),
+					value:(link,i,array)=>{
+                        if(G.view.graph.egonet && Object.keys(G.graph.egonet).length>0 && G.graph.showingEgonets) {
+                            let source=G.view.graph.edges.source[i],target=G.view.graph.edges.target[i];
+                            if(G.view.graph.egonet && Object.keys(G.graph.egonet).length>0) {
+                                if(Object.keys(G.graph.egonet.vertexMap).indexOf(source.toString())!=-1 && Object.keys(G.graph.egonet.vertexMap).indexOf(target.toString())!=-1  ){
+                                    return  redColor;
+                                }
+                            }
+                        }
+						if((array.color[i])) {
+							return array.color[i];
+						} else {
+						    return whiteColor;
+
+
+						}
+
+					},
 				},
 				usingCustomColor:{value:(link,i,array)=>{
 					return ((array.color[i]!=null)?1:0);
@@ -854,7 +954,7 @@ G.addModule("view",{
 			value:(model)=>{
 				let colorList=[],colorValues=[];let scale=colorScale;//G.colorScale
 				let graph=G.view.graph;
-				
+
 				if(graph.heightProperty=="wave"||graph.heightProperty=="originalWaveLevel"||graph.embeddedWaveMap||graph.embeddedLevelMap){scale=G.colorScales.lightBlueRed;}
 				if(graph.colorScaleName){scale=G.colorScales[G.view.graph.colorScaleName];}
 				if(graph.colorScale){
@@ -880,7 +980,7 @@ G.addModule("view",{
 				let heights={};
 				//if(model.nodes.length==0){for(let l in G.graph.layers){heights[l]=G.graph.layers[l];}}
 				//??//special case for top-level abstract graphs
-				
+
 				for(let objName in model.objects){
 					let dataObj=model[objName];
 					if(!dataObj.height)continue;
@@ -910,7 +1010,7 @@ G.addModule("view",{
 					}
 				});
 				*/
-				
+
 				let heightsList=Object.keys(heights).map((n)=>Number(n));
 				let max=arrayMax(heightsList);if(max==-Infinity)max=0;addHiddenProperty(heights,"max",max);
 				let min=arrayMin(heightsList);if(min==Infinity)min=0;addHiddenProperty(heights,"min",min);
@@ -986,11 +1086,11 @@ G.addModule("view",{
 					tempPos.copy(nodePos).addScaledVector(horizontal,1).addScaledVector(vertical,-1).applyMatrix4(G.view.templates.nodes.object3d.matrixWorld).project(G.camera);p2.copy(tempPos);
 					tempPos.copy(nodePos).addScaledVector(horizontal,-1).addScaledVector(vertical,-1).applyMatrix4(G.view.templates.nodes.object3d.matrixWorld).project(G.camera);p3.copy(tempPos);
 					tempPos.copy(nodePos).addScaledVector(horizontal,-1).addScaledVector(vertical,1).applyMatrix4(G.view.templates.nodes.object3d.matrixWorld).project(G.camera);p4.copy(tempPos);
-					
+
 					let result=pointInPolygon(point,[p1,p2,p3,p4]);
 					//let screenPos = vec.applyMatrix4(G.view.templates.nodes.object3d.matrixWorld).project(G.camera);
 					//let dx=screenPos.x-pos.x,dy=screenPos.y-pos.y,dist=Math.sqrt(dx*dx+dy*dy);
-					
+
 					if(result){
 						//console.log("clicked "+pos.x+","+pos.y+" inside layer "+layerObj.layerInVertex+" polygon: ("+p1.x+","+p1.y+") "+"("+p2.x+","+p2.y+") "+"("+p3.x+","+p3.y+") "+"("+p4.x+","+p4.y+") ");
 						bestObjID=i;
@@ -999,7 +1099,7 @@ G.addModule("view",{
 				return bestObjID;
 			},
 			onrightclick:function(){
-				
+
 			},
 		},
 		waveInterlayers:{
@@ -1017,7 +1117,7 @@ G.addModule("view",{
 			},
 			shader:"waveInterlayers",
 		},
-		
+
 		collapsedRings:{
 			object3dType:THREE.Mesh,
 			pointsPerObject:6,
@@ -1028,7 +1128,7 @@ G.addModule("view",{
 					},
 				},
 			},
-			
+
 			getDescription:function(ring,ringID,rings){
 				if(ring.isGlobal){
 					return "Global CC bucket ring "+ringID+", |V|:"+ring.totalV+", |E|:"+ring.totalE+", # CCs: "+ring.CCs.length;
@@ -1038,7 +1138,7 @@ G.addModule("view",{
 					//{isLocal:true,originalCC:ccID,center:vMap[ccRecord.center],maxDegree:maxDegree,degree:Number(degree),originalCCSize:ccRecord["|V|"],vertices:localDegrees[degree],totalV:totalV,prevV:prevV,vertexRatio:totalV/ccRecord["|V|"],prevVertexRatio:prevV/ccRecord["|V|"]}
 				}
 				//{isGlobal:true,originalCC:undefined,center:undefined,maxV:maxV,minV:minV,totalV:totalVertexCount,totalE:totalEdgeCount,prevV:previousVertexCount,vertices:vertices,CCs:bucket,vertexRatio:totalVertexCount/vertexCount,prevVertexRatio:previousVertexCount/vertexCount}
-				
+
 			},
 			getObjectAtPos:function(pos){
 				let buffer=G.view.getPositions(),vec=new THREE.Vector3();
@@ -1102,7 +1202,7 @@ G.addModule("view",{
 					intersection.addScaledVector(ray.direction,multiplier);
 					let radialDistance=intersection.distanceTo(center);
 					let radialRatio=radialDistance;
-					
+
 					if(maxRadius>radialRatio&&radialRatio>minRadius){
 						let margin1=Math.min(Math.abs(maxRadius-radialRatio),Math.abs(radialRatio-minRadius));
 						let thisAngle=Math.atan2(intersection.x,intersection.y);
@@ -1148,7 +1248,7 @@ G.addModule("view",{
 				result[name]=new DataObject(name);
 				for(let propName in G.subview.templates[name].properties)result[name].addProperty(propName);
 			}
-		} 
+		}
 		return result;
 	},
 	getObjectsFromHierarchy(graph){//heightPropertyType,heightPropertyName are defined on the top level graph
@@ -1262,7 +1362,7 @@ G.addModule("view",{
 						(data,oldValue,node,index,array)=>{
 							if(data.reversed){if(getProperty(array,index,data.property)>data.threshold)return 0;}
 							else{if(getProperty(array,index,data.property)<data.threshold)return 0;}
-							
+
 						},
 					]
 				},
@@ -1274,7 +1374,7 @@ G.addModule("view",{
 								if(getProperty(model.nodes,sID,data.property)>data.threshold)return 0;if(getProperty(model.nodes,tID,data.property)>data.threshold)return 0;
 							}
 							else{if(getProperty(model.nodes,sID,data.property)<data.threshold)return 0;if(getProperty(model.nodes,tID,data.property)<data.threshold)return 0;}
-							
+
 						}
 					],
 				},
@@ -1292,7 +1392,7 @@ G.addModule("view",{
 			}
 		},
 	},
-	
+
 	//some helpers
 	resizeCanvas:function resizeCanvas() {
 		var w = G.canvasContainer.clientWidth;
@@ -1342,8 +1442,8 @@ G.addModule("view",{
 	},
 	getVerticesScreenPos:function(allSubviews=false){
 		if(allSubviews){
-			
-		}	
+
+		}
 		else{
 			let layout=this.getVerticesPos(false);let tempPos=new THREE.Vector3();
 			if(!this.cachedScreenPosArray||this.cachedScreenPosArray.length!=layout.length){
@@ -1413,7 +1513,7 @@ G.addModule("view",{
 					selected[record.originalObjectID]=true;
 				}
 			}
-			
+
 		}
 		return selected;
 	},
@@ -1423,7 +1523,7 @@ G.addModule("view",{
 	},
 	positionsChanged:false,
 	getPositions:function(){
-		
+
 		if(!(this.simulation&&this.simulation.dataBuffer))return null;//throw Error("no position buffer");
 		if(this.positionsChanged){G.renderer.readRenderTargetPixels ( this.simulation.out, 0,0, this.simulation.textureSize, this.simulation.textureSize, this.simulation.dataBuffer );this.positionsChanged=false;}
 		return this.simulation.dataBuffer;
@@ -1446,7 +1546,7 @@ G.addModule("view",{
 				if(attr.isAttribute===false)return;;
 				let dimensions=attr.dimensions?attr.dimensions:1;
 				let propertyData=model[name][attrName];
-				
+
 				let bufferAttr=geometry.attributes[attrName];
 				let oldLength=(bufferAttr?(bufferAttr.array.length):null),newLength=length*dimensions*ppo;
 				if(oldLength!==newLength){
@@ -1529,7 +1629,7 @@ G.addModule("view",{
 				if(uniform.dynamic){uniform.needsUpdate=true;}
 				if(uniform.needsUpdate||updateAll){
 					this.updateUniform(uniform,materialUniforms,uniformName,model);
-					 
+
 				}
 			}
 		}
@@ -1560,11 +1660,12 @@ G.addModule("view",{
 		if(updateModel){
 			let oldMods=this.model.modifiers;
 			Object.assign(this,this.getObjectsFromHierarchy(G.view.graph));
-			this.model.modifiers=oldMods;
+			this.model.modifiers=this.modifiers;
 			this.setModifiersTarget(this.model);
 		}//todo: what should be kept?
-		
+
 		this.applyTemplates(this.model,updateAll?true:false);
+
 		this.refreshAttrs(updateAll);
 		this.refreshUniforms(updateAll);
 	},
@@ -1573,7 +1674,7 @@ G.addModule("view",{
 		//the update caller should specify which property/properties need updating if possible, otherwise everything is updated.
 		//todo
 	},
-	
+
 	resetView:function(){
 		let cameraHeight=100;
 		if(G.view.graph){
@@ -1603,7 +1704,7 @@ G.addModule("view",{
 	},
 	sideView:function(){
 		G.cameraControls.reset();//necessary here
-		
+
 		let zCenter=0;//G.zHeight({layer:G.graph.maxLayer})/2,
 		let radialDistance=15000;//Math.min(G.radialLimit*3,15000);//camera far?
 		for(let name in G.cameras){
@@ -1611,7 +1712,7 @@ G.addModule("view",{
 			G.cameras[name].position.y = 0;
 			G.cameras[name].position.z = zCenter;
 		}
-		
+
 		G.cameraControls.target.x=0;
 		G.cameraControls.target.y=0;
 		G.cameraControls.target.z=zCenter;
@@ -1628,11 +1729,11 @@ G.addModule("view",{
 		}
 		this.displayGraph(G.view.graph);
 	},
-	
-	
+
+
 	//helpers
-	
-	
+
+
 	initUniform(template,args){//for one uniform template
 		let value=template.value;if(typeof value=="function"){value=value(args);}
 		let realValue=value;
@@ -1671,9 +1772,9 @@ G.addModule("view",{
 			this.initUniform(template,args);
 		}
 		template.needsUpdate=false;
-		
+
 		let newobj={value:template.valueCache};
-		
+
 		if(template.type){newobj.type=template.type;}
 		uniformsObj[uniformName]=newobj;
 		if(template.isArray){
@@ -1711,7 +1812,7 @@ G.addModule("view",{
 			if(typeof value=="function")value=value.call(this,G.view.graph);
 			params[name]=value;
 		}
-		
+
 		return replaceShaderParams(this.shaderLib+"\n"+this.shaderSources[text+".vs"],params);//params can take numbers
 	},
 	getFragmentShader(text){

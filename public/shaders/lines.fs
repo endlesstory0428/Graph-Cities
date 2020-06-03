@@ -3,9 +3,12 @@ uniform float time;
 varying vec3 vColor; // colors associated to vertices; assigned by vertex shader
 varying vec3 pixelCoord;
 varying float bright;
+uniform float heightFactor;
 
 varying float beginExtend;
 varying float endExtend;
+uniform sampler2D layerHeights;
+uniform float layerHeightsSize;
 
 float pi=3.141592653;
 void main() 
@@ -22,4 +25,5 @@ void main()
 	if(endExtend<0.5){b*=sin( min((1.0-pixelCoord.x)*20.0,pi/2.0));}
 	gl_FragColor = vec4(normalize(vColor),b);
 	//gl_FragColor = vec4(normalize(vColor),1);
+
 }

@@ -3,12 +3,10 @@ let datasetMenu,layerMenu;
 
 G.addModule("loading",{
 	init:function(){
-		datasetMenu=d3.select("#dataset-menu");
 		layerMenu=d3.select("#layer-menu");
 		let titleElement=getE("top-level-summary-area");//document.getElementById("top-middle-area");//the bar does something else
 		titleElement.onclick=()=>d3.json("datasets").then((d)=>this.showDatasetList(d));;
 		titleElement.ontouchend=()=>d3.json("datasets").then((d)=>this.showDatasetList(d));;
-		
 		G.showMetagraph=this.showMetagraph.bind(this);
 		G.showNextSiblingGraph=this.showNextSiblingGraph.bind(this);
 		G.showPreviousSiblingGraph=this.showPreviousSiblingGraph.bind(this);
@@ -189,7 +187,11 @@ G.addModule("loading",{
 		if(typeof g=="string"){
 			if(this.graphsCache[g])return this.graphsCache[g];
 			let path=g;g=new Graph();let loadedSummary=false;
-			await d3.json("datasets/"+path+"/summary.json.gz").then((summary)=>{if(summary){g.loadSummary(summary);loadedSummary=true;}}).catch((error)=>{console.error("cannot load summary "+path);return;});;
+			await d3.json("datasets/"+path+"/summary.json.gz").then((summary)=>{
+				if(summary){
+					g.loadSummary(summary);
+					loadedSummary=true;
+				}}).catch((error)=>{console.error("cannot load summary "+path);return;});;
 			if(loadedSummary==false){
 				throw Error();
 				return;
@@ -225,6 +227,17 @@ G.addModule("loading",{
 					console.log("missing ids");
 				}
 			});
+			if(g.wholeGraph == undefined || g.name == g.wholeGraph) {
+                await d3.csv("datasets/"+g.dataPath+"_labels.csv").then((data)=>{
+                    if(typeof data=="string")
+                        data=JSON.parse(data);
+                    labels=data;
+                    if(!ids){
+                        console.log("missing labels");
+                    }
+                });
+            }
+
 			await d3.json("datasets/"+g.dataPath+"/edges.source.json.gz").then((data)=>{
 				if(typeof data=="string")data=JSON.parse(data);
 				sources=data.value;
@@ -233,7 +246,7 @@ G.addModule("loading",{
 				if(typeof data=="string")data=JSON.parse(data);
 				targets=data.value;
 			});
-			g.loadVerticesAndEdges(ids,sources,targets);
+			g.loadVerticesAndEdges(ids,sources,targets,labels);
 		}
 			
 		for(let objName in g.objects){
@@ -571,28 +584,33 @@ G.addModule("loading",{
 		}
 	},
 	display:async function(graph,options){//if it's displayed in place, don't call this, just load and attach it
-		if(graph instanceof Promise)graph=await graph;
-		
-		if(!options)options={};
-		if(!graph){
-			console.warn("no dataset loaded");return;
-		}
-		//if(typeof graph=="string"||graph.isAbstract()){
+		if(typeof graph === 'string' || graph instanceof String) {
+			if(graph instanceof Promise)graph=await graph;
+
+			if(!options)options={};
+			if(!graph){
+				console.warn("no dataset loaded");return;
+			}
+			//if(typeof graph=="string"||graph.isAbstract()){
 			//allow loading a data path directly?
-		graph=await this.load(graph,options);//assuming it's either a path or a fully loaded graph, not an abstract graph
+			graph=await this.load(graph,options);//assuming it's either a path or a fully loaded graph, not an abstract graph
 			//even if it's a loaded graph, we may want to reuse this to load its representation
-		//}
-		this.checkNames(graph);
-		if(graph.vertices.layout){
-			let layoutOK=true;
-			for(let i=0;i<graph.vertices.layout.length;i++){if(!graph.vertices.layout[i]){layoutOK=false;break;;}}
-			if(!layoutOK)graph.vertices.removeProperty("layout");
+			//}
+			this.checkNames(graph);
+			if(graph.vertices.layout){
+				let layoutOK=true;
+				for(let i=0;i<graph.vertices.layout.length;i++){if(!graph.vertices.layout[i]){layoutOK=false;break;;}}
+				if(!layoutOK)graph.vertices.removeProperty("layout");
+			}
+			if(options)Object.assign(graph,options);
+			console.log("displaying graph of |V| "+graph.vertices.length+", |E| "+graph.edges.length);
+			if(graph.vertices.properties && graph.vertices.properties.waveIDs)
+				console.log("displaying graph of |V| "+graph.vertices.properties.waveIDs.value);
+
+
+			//if(graph.name===undefined){graph.name=toNormalText(graph.datasetID);}
+			//else{graph.name=toNormalText(graph.name);}
 		}
-		if(options)Object.assign(graph,options);
-		console.log("displaying graph of |V| "+graph.vertices.length+", |E| "+graph.edges.length);
-	
-		//if(graph.name===undefined){graph.name=toNormalText(graph.datasetID);}
-		//else{graph.name=toNormalText(graph.name);}
 
 		this.graph=graph;
 		G.graph=graph;
@@ -612,15 +630,19 @@ G.addModule("loading",{
 			let type=graph.modifiers.filter.propertyType;
 		}//todo
 		
-		if(options.algorithm){
+		if(options && options.algorithm){
 			await G.controls.algorithms[options.algorithm](graph);
 		}
 		else {
-			G.broadcast("displayGraph",graph,options);
-		}
+		    G.broadcast("displayGraph",graph,options);
+
+            //setTimeout(G.broadcast("displayGraph",graph,options), 1000);
+            //setInterval(a, 1000,graph,options);
+
+
+        }
 		
 	},
-		
 	contractVertex:function(vertexID,parentGraph,inPlace){
 		if(!parentGraph)parentGraph=G.graph;
 		delete parentGraph.vertices.isExpanded[vertexID];
@@ -752,16 +774,14 @@ G.addModule("loading",{
 		if(dataPath||dataURL){return;}
 		//should only avoid showing this when the URL supplied a dataPath or a dataurl and loading it failed (to not be intrusive when used as an embedded visualization)
 		if(datasets)this.datasets=datasets;
-		if((!datasets)&&this.datasets){
-			datasets=this.datasets;selectE('dataset-menu').style('display','block');return;
-		}
-		getE("dataset-menu").style.display="block";
-		var ws=selectE("dataset-menu-content").selectAll("div").data(Object.values(datasets).sort(compareBy("name",true))).enter().append("div").attr("class","dataset").on("click",(data)=>{
-			this.display(data.id);
-			datasetMenu.style('display','none');
-		});
-		ws.append("p").text(function(data){return data.name||toNormalText(data.id)}).attr("class","graph-name");
-		ws.append("p").attr("class","graph-list-info").text(function(data){return data.params?(data.info?data.info:""):("|V|:"+data.V+", |E|:"+data.E+" "+(data.info?data.info:""))});
+        var a=selectE("dataset-menu-1").selectAll("div").data(Object.values(datasets).sort(compareBy("name",true))).enter().append("div").attr("class","a btn btn-secondary btn-sm btn-block").on("click",(data)=>{
+            this.display(data.id);
+            getE("graph-dataset-bar").style.display="none";
+        });
+
+		r =a.append("div").attr("class","wrap");
+		r.append("div").text(function(data){return data.name||toNormalText(data.id)}).attr("class","first");
+		r.append("div").attr("class","second").text(function(data){return data.params?(data.info?data.info:""):("|V|:"+data.V+", |E|:"+data.E+" "+(data.info?data.info:""))});
 		/*ws.append("button").attr("class","material small").text("Select layer").on("click",(data)=>{
 				d3.event.stopPropagation();
 				G.lastDatasetID=data.id;//need this later...
@@ -793,7 +813,7 @@ G.addModule("loading",{
 
 
 
-	
+
 function loadGraphFiles(files,options,successcb,failurecb){
 	//common prefix and suffix attached to "vertices" and "edges"
 	//let prefix=options.prefix?options.prefix:currentGraph.path;//??
@@ -984,6 +1004,9 @@ function showTable(tableDialogSelection,dataObj,rowMaps,rowOnclick,cellOnclick){
 
 function getVLogVKString(v,e){return (v>2)?(String(Math.log(e/v,Math.log(v))).substring(0,5)):"N/A";}
 function getNum(node,name){return Number(node.getAttribute(name));}
+function a(graph,options) {
+    G.broadcast("displayGraph",graph,options);
+}
 
 /*
 let queryVariables={};

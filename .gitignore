@@ -21,7 +21,8 @@ ehthumbs.db
 
 ehthumbs_vista.db
 
-
+.DS_Store
+.idea/workspace.xml
 
 # Dump file
 
@@ -58,3 +59,6 @@ $RECYCLE.BIN/
 # Windows shortcuts
 
 *.lnk
+.idea/workspace.xml
+.DS_Store
+package.json

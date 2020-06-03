@@ -149,7 +149,7 @@
     margin-left: -5px;
     margin-right: 0;
     height: 19px;
-    margin-top: 4px; 
+    margin-top: 4px;
 	background: rgba(255,255,255,0.2);
 	}
   .dg .slider-fg {
@@ -221,9 +221,9 @@
 
 /** Main type */
 .dg {
-  
+
   font: 11px 'Lucida Grande', sans-serif;
-  
+
   /** Auto place */
   /* Controller row, <li> */
   /** Controllers */ }
@@ -272,11 +272,11 @@
   .dg li.title {
     padding-left: 16px;
     background: url(data:image/gif;base64,R0lGODlhBQAFAJEAAP////Pz8////////yH5BAEAAAIALAAAAAAFAAUAAAIIlI+hKgFxoCgAOw==) 6px 10px no-repeat;
-	box-shadow: 
+	box-shadow:
     inset hsla(0,0%,15%, .3) 0 -1px 2px 1px, /* soft SD */
     inset hsla(0,0%,0%, .25) 0 -1px 0px 2px, /* bottom SD */
-    inset hsla(0,0%,0%,.1) 0  1px 1px 2px, 
-    
+    inset hsla(0,0%,0%,.1) 0  1px 1px 2px,
+
     inset hsla(200,100%,50%,0.15) 0 0px 0px 2px, /* outer SD */
     hsla(200,100%,50%,0.5) 0  1px 1px 1px  ;
     cursor: pointer;
@@ -297,7 +297,7 @@
     border-left: 3px solid #1ed36f; }
     .dg .cr.string input[type=text] {
       color: #1ed36f; }
-  
+
   .dg .c input[type=text] {
     background: #303030;
     outline: none; }
