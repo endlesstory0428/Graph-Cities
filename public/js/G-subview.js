@@ -207,7 +207,9 @@ G.addModule("subview",{
 					},
 				},
 				charge:{value:(node)=>{if(node&&node.weightedDegree){return (1/(node.weightedDegree + 1))}else{return 1;}}},
-				forcePriority:{value:(node)=>{return 1;}},
+				forcePriority:{value:(node)=>{
+				    return 1;
+				}},
 				forceEffectiveness:{value:(node)=>{return 1;}},
 				metanodeSize:{
 					isArray:true,value:(graph)=>{
@@ -279,7 +281,6 @@ G.addModule("subview",{
 						return arr;
 					}
 				},//pinned is calculated from user manual pinning and style-based pinning
-				
 				clusterCenter:{reference:"nodes",value:function(node){return null;}},
 				
 				//hack: global rings are always before other rings, so vertex.ringID is the subview ring ID, and currently there are no vertices on local rings, and no subview global rings, and the correct radius can be calculated by targetRadius*radialLimit*radialLimitFactor
@@ -409,9 +410,7 @@ G.addModule("subview",{
 				if(heightPropertyType=="edges"){
 					
 				}//"original" of each clone is the vertex ID 
-				else{
-					
-				}
+
 			},//don't want to affect original properties
 			properties:{
 				source:{
@@ -484,13 +483,14 @@ G.addModule("subview",{
                             if(!G.drawsparsenet) {
                                 return 1/result;
                             } else {
-                                if (graph.snPathsFlat.indexOf(source.toString()) != -1 && graph.snPathsFlat.indexOf(target.toString()) != -1)
+                                if (graph.snPathsFlat.indexOf(source.toString()) != -1 && graph.snPathsFlat.indexOf(target.toString()) != -1) {
                                     return 1/result;
+                                }
                                 if (graph.showingNeighbors && ((graph.snPathsNeigbors.indexOf(source.toString()) != -1 && graph.snPathsFlat.indexOf(target.toString()) != -1) ||
                                     (graph.snPathsFlat.indexOf(source.toString()) != -1 && graph.snPathsNeigbors.indexOf(target.toString()) != -1))) {
                                     return 1/result;
                                 }
-                                return 0;
+                                return 0.006;
                             }
 
 						})
@@ -597,13 +597,6 @@ G.addModule("subview",{
                             }
 
 							result*=hoverFactor;
-                            // if(graph.snPathsFlat.indexOf(source.toString())!=-1 && graph.snPathsFlat.indexOf(target.toString())!=-1)
-                            //     return result;
-                            // if(graph.snPathsTemp && ((graph.snPathsTemp.indexOf(source.toString())!=-1 && graph.snPathsFlat.indexOf(target.toString())!=-1) ||
-                            //     (graph.snPathsFlat.indexOf(source.toString())!=-1 && graph.snPathsTemp.indexOf(target.toString())!=-1))) {
-                            //     return result;
-                            // }
-                            // else return 0;
                             if(!G.drawsparsenet) {
                                 return result;
                             } else {
@@ -674,7 +667,7 @@ G.addModule("subview",{
 				color:{
 					dimensions:3,
 					value:(link)=>{
-						return null;
+						return ;
 					},
 				},
 				coord:{dimensions:3,perPoint:true,value:quadCoordFunc,},//this reuse is OK because it's the same value for all
@@ -2642,8 +2635,8 @@ G.addModule("subview",{
 
 				pinned:{type:"boolean",value:false,},
 				unpinLastPath:{type:"boolean",value:false,},
-				enableForce:{type:"boolean",value:false,},
-				prioritizeSNForce:{type:"boolean",value:true,},
+				enableForce:{type:"boolean",value:true,},
+				prioritizeSNForce:{type:"boolean",value:false,},
 				hideOtherLinks:{type:"boolean",value:true,},
 				showWorms:{type:"boolean",value:false,},
 				showPathAssignment:{type:"boolean",value:false,},//will show all edges between other vertices and the path it's asigned to, with teh color of that path. (unlike showing worms, which may show edges between a vertex and multiple paths

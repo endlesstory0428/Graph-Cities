@@ -468,6 +468,21 @@ G.addModule("controls",{
 
             this.addButton(drawingButtonsElem, "Next Paths", () => {
                 G.graph.snPathsFlat = (G.graph.snPathsFlat.concat(G.graph.snPaths.slice(this.index, this.index + 1))).flat(1);
+                G.graph.snPathsTemp.push(G.graph.snPaths.slice(this.index, this.index + 1))
+                let paths=G.graph.snPathsTemp;let snPathEdgeMap={};
+                for(let pathID=0;pathID<paths.length;pathID++){
+                    let path=paths[pathID].flat(1);
+                    for(let i=0;i<path.length;i++){
+                        let tempID=path[i];
+                        let vertex=G.graph.vertices[tempID];
+                        if(i>0){
+                            snPathEdgeMap[G.graph.vertices.edges[tempID][path[i-1]]]=pathID;
+                        }
+                    }
+                }
+                G.graph.edgePaths = snPathEdgeMap;
+
+
                 this.index = this.index+ 1;
                 getE("showing-paths").textContent=""+this.index+" sparesnet paths out of " + G.graph.snPaths.length;
                 G.graph.showingPaths = true;
@@ -1402,7 +1417,7 @@ G.addModule("controls",{
 		return options;
 	},
     addCheckbox(parentElem, text, func, options) {
-        let arr = ["Show Path Colors", "Random Path Colors", "Pinned", "Unpin Last Path", "Enable Force", "Prioritize SNForce", "Show Path Assignment", "Show Clustering"];
+        let arr = [];
 
         if (!options) options = {};
         let s = d3.select(parentElem).append("div").attr("class", "material-checkbox");

@@ -2359,6 +2359,7 @@ function loadSubgraphs(g, type, includeBucketed = false) {
         subgraphs.push(s);
     });
     if (bucketsFound && includeBucketed) {
+        console.log(cacheDir + "/" + g.dataPath + "/" + type + "/buckets");
         fs.readdirSync(cacheDir + "/" + g.dataPath + "/" + type + "/buckets").forEach((f) => {
             if (f == "summary.json.gz") return;
             let bucketObj = loadObj(g.dataPath + "/" + type + "/buckets" + "/" + f);

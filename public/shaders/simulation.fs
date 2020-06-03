@@ -82,7 +82,7 @@ vec4 getEdgeData(float eid){
 	return texture2D(edgeList,getUV(eid,edgeListSize));
 }
 
-const float d = 1./textureSize, e2 = 0.1,  dt2 = .014,G=-10000.,edgeStrength=.5,clusteringStrength=2.0,alignmentStrength=20.0,radialLimitStrength=0.5, decay=0.05,factor=1.-decay;
+const float d = 1./textureSize, e2 = 0.1,  dt2 = .029,G=-10000.,edgeStrength=.5,clusteringStrength=2.0,alignmentStrength=20.0,radialLimitStrength=0.5, decay=0.05,factor=1.-decay;
 void main(void) {
 	vec4 pos = texture2D( tPositionsPrev, vUv );
 	vec2 r = pos.xy;

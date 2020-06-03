@@ -287,6 +287,20 @@ G.addModule("view",{
             G.messaging.requestCustomData("sparsenet", data, (result) => {
                 if (result && result.length > 0) {
                     graph.snPaths = result;
+                    graph.snPathsColor= graph.snPaths.map((path,i)=>{if(i==0)return redColor;let c=new THREE.Color();c.setHSL(((i/(path.length))*0.7+0.1),1,0.5);return c;})
+                    graph.snPathsTemp.push(graph.snPaths.slice(0, 1));
+                    let paths=G.graph.snPathsTemp;let snPathEdgeMap={};
+                    for(let pathID=0;pathID<paths.length;pathID++){
+                        let path=paths[pathID].flat(1);
+                        for(let i=0;i<path.length;i++){
+                            let tempID=path[i];
+                            let vertex=G.graph.vertices[tempID];
+                            if(i>0){
+                                snPathEdgeMap[G.graph.vertices.edges[tempID][path[i-1]]]=pathID;
+                            }
+                        }
+                    }
+                    G.graph.edgePaths = snPathEdgeMap;
                     graph.snPathsFlat = graph.snPaths.slice(0, 1).flat(1);
                     if(graph.snPaths){
                         getE("showing-paths").textContent=""+1+" sparesnet paths out of " + graph.snPaths.length;
@@ -903,7 +917,9 @@ G.addModule("view",{
 						if((array.color[i])) {
 							return array.color[i];
 						} else {
-							return whiteColor;
+						    return whiteColor;
+
+
 						}
 
 					},
