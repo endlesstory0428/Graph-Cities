@@ -951,7 +951,7 @@ G.addModule("controls",{
                     G.graph.showingSparsenet = true;
                     G.graph.showingSparsenet = true;
                     document.getElementById("vertical").style.display="none";
-                    document.getElementById("horizontal").style.display="none";
+                    //document.getElementById("horizontal").style.display="none";
                     document.getElementById("path").style.display = "block"
 
                     G.analytics.showSparseNet(G.graph);

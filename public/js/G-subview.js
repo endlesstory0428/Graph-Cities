@@ -490,7 +490,7 @@ G.addModule("subview",{
                                     (graph.snPathsFlat.indexOf(source.toString()) != -1 && graph.snPathsNeigbors.indexOf(target.toString()) != -1))) {
                                     return 1/result;
                                 }
-                                return 0.006;
+                                return 0.0009;
                             }
 
 						})
@@ -2636,7 +2636,7 @@ G.addModule("subview",{
 				pinned:{type:"boolean",value:false,},
 				unpinLastPath:{type:"boolean",value:false,},
 				enableForce:{type:"boolean",value:true,},
-				prioritizeSNForce:{type:"boolean",value:false,},
+				prioritizeSNForce:{type:"boolean",value:true,},
 				hideOtherLinks:{type:"boolean",value:true,},
 				showWorms:{type:"boolean",value:false,},
 				showPathAssignment:{type:"boolean",value:false,},//will show all edges between other vertices and the path it's asigned to, with teh color of that path. (unlike showing worms, which may show edges between a vertex and multiple paths
@@ -2882,7 +2882,7 @@ G.addModule("subview",{
 								if(data.showWorms){
 									if(data.edgeAdjacentToPath[edgeID]!==undefined){
 										let pathID=data.edgeAdjacentToPath[edgeID];
-										if(pathID<0)return pinkColor;//edge touches multiple paths (could be betwen paths or has one vertex that's an intersection
+										if(pathID<0)return redColor;//edge touches multiple paths (could be betwen paths or has one vertex that's an intersection
 										else return data.pathColors[pathID];
 									}
 								}
@@ -2936,8 +2936,6 @@ G.addModule("subview",{
 									if(data.showPathAssignment){if(data.edgePathAssignment[index]!==undefined)return ;}
 									if(data.showWorms){if(data.edgeAdjacentToPath[index]!==undefined){
 										if(data.edgeAdjacentToPath[index]!=-2)return;//is not a crossing edge
-                                        if (Object.keys(data.pathAssignment).indexOf(svID) != -1 && Object.keys(data.pathAssignment).indexOf(tvID) != -1)
-                                            return;
 										else return v;//decrease crossing edge strength, because they tend to destroy the layout
 									}}
 									if(data.hideOtherLinks)return 0;//showing other things overrides showing only paths?
