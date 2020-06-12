@@ -2899,8 +2899,8 @@ G.addModule("subview",{
 									if(data.edgeAdjacentToPath[edgeID]!==undefined){
 										let pathID=data.edgeAdjacentToPath[edgeID];
                                         graph.snEdgeAdjacentToPath.push(edgeID);
-										if(pathID<0)return redColor;//edge touches multiple paths (could be betwen paths or has one vertex that's an intersection
-										else return data.pathColors[pathID];
+										if(pathID<0)return -1;//edge touches multiple paths (could be betwen paths or has one vertex that's an intersection
+										else return -1;
 									}
 								}
 							}

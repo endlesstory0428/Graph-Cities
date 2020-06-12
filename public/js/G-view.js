@@ -801,6 +801,8 @@ G.addModule("view",{
                             if(G.view.graph.hoveredVertex && G.view.graph.showingEgonets && G.view.graph.hoveredVertex == i) {
                                 value = 2;
                             }
+                            if(G.view.graph.snWorms && [...new Set(Object.keys(G.view.graph.snWorms))].indexOf(i.toString())!=-1)
+                                value = -1;
 							colorValues[i]=value;
 						});
 						return colorValues;
