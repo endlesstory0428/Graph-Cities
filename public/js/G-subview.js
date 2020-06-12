@@ -12,7 +12,7 @@ G.addModule("subview",{
                 switch (heightPropertyType){
 					case undefined:{
 						//also allow filtering by edges?
-                        	if(graph.modifiers&&graph.modifiers.filter&&graph.modifiers.filter.propertyType=="vertices"&&(graph.modifiers.filter.property in graph.vertices)){
+						if(graph.modifiers&&graph.modifiers.filter&&graph.modifiers.filter.propertyType=="vertices"&&(graph.modifiers.filter.property in graph.vertices)){
 							let propertyName=graph.modifiers.filter.property;
 							let min=graph.modifiers.filter.min,max=graph.modifiers.filter.max;
 							return graph.vertices.filter((v)=>(v[propertyName]<=max&&v[propertyName]>=min));

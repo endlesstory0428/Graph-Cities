@@ -1639,8 +1639,11 @@ G.addModule("analytics",{
 		let data={};
 		if((!graph.dataPath)||graph.isCustom){data.data=this.getGraphVerticesAndEdges(graph);}
 		if(graph.dataPath&&(graph.dataPath.indexOf("custom")==-1)){data.dataPath=graph.dataPath;}
-		
+
 		if(options)data.options=options;
+		if(graph.dataPath.includes("layer")) {
+            data.data = this.getGraphVerticesAndEdges(graph);
+        }
 		if(!graph.snPaths){G.messaging.requestCustomData("sparsenet",data,(result)=>{
 		    if(result&&result.length>0){
 		        graph.snPaths=result;

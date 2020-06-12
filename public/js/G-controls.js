@@ -707,47 +707,65 @@ G.addModule("controls",{
 		}
         let shortestPathSelection=()=> {
             if (!this.graph) return;
-            if(!G.view.bool && Object.keys(this.graph.selectedVertices).length>0) {
-                this.graph.highlightPath = [];
-                for (let i in this.graph.selectedVertices) {
-                    sparsenetSubgraph = Algs.getFilteredSubgraph(this.graph, null, (x) => (x != 0), "sparsenet");
-                    source = parseInt(Object.keys(this.graph.selectedVertices)[0]);
-                    target = parseInt(Object.keys(this.graph.selectedVertices)[1]);
-                    shortestPath = Algs.shortestPath(sparsenetSubgraph, source, target, true);
-                    shortestPathSparsenet = [];
-                    for (i in shortestPath) {
-                        shortestPathSparsenet[i] =
-                            (Object.keys(sparsenetSubgraph.vertexMap)
-                                [Object.values(sparsenetSubgraph.vertexMap).indexOf(shortestPath[i])])
-                    }
-                    this.graph.highlightPath = shortestPathSparsenet;
-
-                }
-                G.view.refreshStyles(true, true);
-                if(G.snPathsAutoExplore) {
-                    G.view.interval_index = this.graph.highlightPath.length - 1;
-
-                    function showTime() {
-                        G.view.bool = true;
-                        if (G.view.interval_index == -1) {
-                            G.view.bool = false;
-                            clearInterval(G.view.timerId);
+            if(this.graph.snPaths) {
+                if (!G.view.bool && Object.keys(this.graph.selectedVertices).length > 0) {
+                    this.graph.highlightPath = [];
+                    for (let i in this.graph.selectedVertices) {
+                        source = parseInt(Object.keys(this.graph.selectedVertices)[0]);
+                        target = parseInt(Object.keys(this.graph.selectedVertices)[1]);
+                        shortestPath = Algs.shortestPath(this.graph.sparsenetSubgraph, source, target, true);
+                        shortestPathSparsenet = [];
+                        for (i in shortestPath) {
+                            shortestPathSparsenet[i] =
+                                (Object.keys(this.graph.sparsenetSubgraph.vertexMap)
+                                    [Object.values(this.graph.sparsenetSubgraph.vertexMap).indexOf(shortestPath[i])])
                         }
-                        G.vertexLabels.show(G.view.bool, [G.view.graph.highlightPath[G.view.interval_index]]);
-                        G.view.interval_index = G.view.interval_index - 1;
-                    }
-                    console.log(G.animation["auto explore speed"]);
-                    G.view.timerId = setInterval(showTime, G.animation["auto explore speed"]*1000);
-                } else {
-                    G.view.bool = true;
-                    G.vertexLabels.show(G.view.bool, Object.keys(this.graph.selectedVertices))
-                }
+                        this.graph.highlightPath = shortestPathSparsenet;
 
+                    }
+                    G.view.refreshStyles(true, true);
+                    if (G.snPathsAutoExplore) {
+                        G.view.interval_index = this.graph.highlightPath.length - 1;
+
+                        function showTime() {
+                            G.view.bool = true;
+                            if (G.view.interval_index == -1) {
+                                G.view.bool = false;
+                                clearInterval(G.view.timerId);
+                            }
+                            G.vertexLabels.show(G.view.bool, [G.view.graph.highlightPath[G.view.interval_index]]);
+                            G.view.interval_index = G.view.interval_index - 1;
+                        }
+
+                        console.log(G.animation["auto explore speed"]);
+                        G.view.timerId = setInterval(showTime, G.animation["auto explore speed"] * 1000);
+                    } else {
+                        G.view.bool = true;
+                        G.vertexLabels.show(G.view.bool, Object.keys(this.graph.selectedVertices))
+                    }
+
+                } else {
+                    this.graph.highlightPath = [];
+                    G.view.bool = false;
+                    G.vertexLabels.show(G.view.bool);
+                    G.view.refreshStyles(true, true);
+                }
             } else {
-                this.graph.highlightPath = [];
-                G.view.bool = false;
-                G.vertexLabels.show(G.view.bool);
-                G.view.refreshStyles(true, true);
+                if (!G.view.bool && Object.keys(this.graph.selectedVertices).length > 0) {
+                    this.graph.highlightPath = [];
+                    for (let i in this.graph.selectedVertices) {
+                        source = parseInt(Object.keys(this.graph.selectedVertices)[0]);
+                        target = parseInt(Object.keys(this.graph.selectedVertices)[1]);
+                        shortestPath = Algs.shortestPath(this.graph, source, target, false);
+                        this.graph.highlightPath = shortestPath;
+
+                    }
+                    G.view.refreshStyles(true, true);
+                } else {
+                    this.graph.highlightPath = [];
+                    G.view.bool = false;
+                    G.view.refreshStyles(true, true);
+                }
             }
             G.view.refreshStyles(true, true);
 
@@ -1883,7 +1901,6 @@ type: "nodes"*/
 						//highlight edges and neighhbors
 
 						this.graph.hoveredVertex=originalObjectID;
-						G.view.refreshStyles(true,true);
 				}
 			}
 			else{
