@@ -251,6 +251,13 @@ class Module{
 								target.modifiers[name][paramName]=value;
 								if(paramObj.func)paramObj.func(value,target,target.modifiers[name]);
 								modObj.needsUpdate=true;this.onModifiersChanged(name);
+								if(name =="sparsenet") {
+                                    G.addLog("showing " + G.view.graph.snPathSequence + " path out of " + G.view.graph.snPaths.length);
+                                    getE("showing-paths").textContent=""+G.view.graph.snPathSequence+" sparsenet paths out of " + G.view.graph.snPaths.length;
+                                    getE("num-vertices").textContent=""+[...new Set(G.view.graph.snPaths.flat(1))].length+" sparsenet vertices";
+                                    getE("num-worms").textContent=""+[...new Set(Object.keys(G.view.graph.snWorms))].length+" warms vertices";
+                                    getE("num-edges").textContent=""+Object.keys(G.view.graph.snEdgePaths).length+" sparsenet edges";
+                                }
 							},paramObj.cache);
 							
 							break;

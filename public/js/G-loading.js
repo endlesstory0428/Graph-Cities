@@ -446,8 +446,8 @@ G.addModule("loading",{
 		
 		//let maxV=1100,maxE=4000;//debug;
 		//let maxV=G.view.maxTextureSize,maxE=Math.floor(maxV*Math.log(maxV)/2);
-		let maxV=16384,maxE=1048576;//??//Math.floor(maxV*Math.log(maxV)/2);
-		if(G.view.maxTextureSize>16384){
+		let maxV=1000000,maxE=1048576;//??//Math.floor(maxV*Math.log(maxV)/2);
+		if(G.view.maxTextureSize>1000000){
 			console.log("maxTextureSize is "+G.view.maxTextureSize);
 			maxV=1000000,maxE=1500000;
 		}//??//Math.floor(maxV*Math.log(maxV)/2);
@@ -775,6 +775,8 @@ G.addModule("loading",{
 		//should only avoid showing this when the URL supplied a dataPath or a dataurl and loading it failed (to not be intrusive when used as an embedded visualization)
 		if(datasets)this.datasets=datasets;
         var a=selectE("dataset-menu-1").selectAll("div").data(Object.values(datasets).sort(compareBy("name",true))).enter().append("div").attr("class","a btn btn-secondary btn-sm btn-block").on("click",(data)=>{
+            console.log("HEre");
+            console.log(data.id);
             this.display(data.id);
             getE("graph-dataset-bar").style.display="none";
         });

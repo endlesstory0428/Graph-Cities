@@ -303,7 +303,7 @@ G.addModule("view",{
                     G.graph.edgePaths = snPathEdgeMap;
                     graph.snPathsFlat = graph.snPaths.slice(0, 1).flat(1);
                     if(graph.snPaths){
-                        getE("showing-paths").textContent=""+1+" sparesnet paths out of " + graph.snPaths.length;
+                        getE("showing-paths").textContent=""+1+" sparsenet paths out of " + graph.snPaths.length;
                     }
                 } else {
                     G.addLog("invalid sparsenet result");
@@ -311,7 +311,6 @@ G.addModule("view",{
             });
         }
         }
-
 		if(graph.vertices.id.isAbstract){console.log("warning: showing abstract graph");return;}
 		if(graph.dataPath&&graph.vertices.length>0&&(graph.vertices.layout===undefined)&&(!graph.isCustom)){//don't load layout for abstract top level
 			await d3.json("datasets/"+graph.dataPath+"/layout.json.gz").then((layout)=>{
@@ -812,10 +811,14 @@ G.addModule("view",{
 					value:(model)=>{
 						let adjlist=[];for(let i=0;i<model.nodes.length;i++){adjlist[i]={};}
 						let linkSources=model.links.source,linkTargets=model.links.target;
-						model.links.forEach((link,i)=>{
-							let s=linkSources[i],t=linkTargets[i];
-							adjlist[s][t]=i;adjlist[t][s]=i;
-						});
+
+                            model.links.forEach((link, i) => {
+                                let s = linkSources[i], t = linkTargets[i];
+                                    adjlist[s][t] = i;
+                                    adjlist[t][s] = i;
+
+                            });
+
 						return adjlist;
 					},
 				},
@@ -918,8 +921,6 @@ G.addModule("view",{
 							return array.color[i];
 						} else {
 						    return whiteColor;
-
-
 						}
 
 					},
@@ -939,7 +940,7 @@ G.addModule("view",{
 			pointsPerObject:6,
 			uniforms: {
 				brightnessFactor:{
-					value:()=>G.controls.get("linkBrightnessFactor"),
+					value:()=>G.controls.get("snlinkBrightnessFactor"),
 					dynamic:true
 				},
 				thicknessFactor:{

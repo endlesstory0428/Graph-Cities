@@ -5,15 +5,14 @@ G.addModule("subview",{
 	},
 	
 	templates:{
-		
 		nodes:{
-			value:(graph)=>{//this value is calculated for all subgraphs, then combined in another object(G.view.model?) and then used for attrs/uniforms
+			value:(graph)=>{
+			    //this value is calculated for all subgraphs, then combined in another object(G.view.model?) and then used for attrs/uniforms
 				let heightPropertyType=G.view.graph.heightPropertyType,heightPropertyName=G.view.graph.heightPropertyName;
                 switch (heightPropertyType){
 					case undefined:{
 						//also allow filtering by edges?
-						
-						if(graph.modifiers&&graph.modifiers.filter&&graph.modifiers.filter.propertyType=="vertices"&&(graph.modifiers.filter.property in graph.vertices)){
+                        	if(graph.modifiers&&graph.modifiers.filter&&graph.modifiers.filter.propertyType=="vertices"&&(graph.modifiers.filter.property in graph.vertices)){
 							let propertyName=graph.modifiers.filter.property;
 							let min=graph.modifiers.filter.min,max=graph.modifiers.filter.max;
 							return graph.vertices.filter((v)=>(v[propertyName]<=max&&v[propertyName]>=min));
@@ -31,7 +30,7 @@ G.addModule("subview",{
 							//{partitions:{1:{v:..,e:...}...},clones:[...],min:..,max:..,average:...,numValues:...}
 							assignHiddenProperties(array,result);
 						}
-						
+
 						if(graph.modifiers&&graph.modifiers.filter&&graph.modifiers.filter.property==heightPropertyName&&graph.modifiers.filter.propertyType=="edges"&&(graph.modifiers.filter.property in graph.edges)){//for consistency, only works for teh correct type of property?
 							let min=graph.modifiers.filter.min,max=graph.modifiers.filter.max;
 							let indices=[],indexMap={};
@@ -52,7 +51,7 @@ G.addModule("subview",{
 						break;
 					}
 					case "vertices":{
-						
+
 						//also allow filtering by edges?
 						if(graph.modifiers&&graph.modifiers.filter&&graph.modifiers.filter.property==heightPropertyName&&graph.modifiers.filter.propertyType=="vertices"&&(graph.modifiers.filter.property in graph.vertices)){
 							let min=graph.modifiers.filter.min,max=graph.modifiers.filter.max;
@@ -249,6 +248,8 @@ G.addModule("subview",{
 							if(!G.drawsparsenet) {
                                 return answer;
                             } else {
+                                if(graph.modifiers && graph.modifiers.sparsenet && [...new Set(graph.snPaths.flat(1))].indexOf(graph.vertexMap[vertexID].toString())==-1)
+                                    return 0;
                                 if (graph.snPathsFlat.indexOf(vertexID.toString()) != -1) {
                                     return answer;
                                 }
@@ -379,8 +380,7 @@ G.addModule("subview",{
 				let heightPropertyType=G.view.graph.heightPropertyType,heightPropertyName=G.view.graph.heightPropertyName;
 				switch (heightPropertyType){
 					case undefined:{
-						
-						if(graph.modifiers&&graph.modifiers.filter&&graph.modifiers.filter.propertyType=="vertices"&&(graph.modifiers.filter.property in graph.vertices)){
+                        	if(graph.modifiers&&graph.modifiers.filter&&graph.modifiers.filter.propertyType=="vertices"&&(graph.modifiers.filter.property in graph.vertices)){
 							let propertyName=graph.modifiers.filter.property;
 							let min=graph.modifiers.filter.min,max=graph.modifiers.filter.max;let values=graph.vertices[propertyName];
 							return graph.edges.filter((e,i,es)=>((values[e.source]<=max&&values[e.source]>=min)&&(values[e.target]<=max&&values[e.target]>=min)));
@@ -423,7 +423,7 @@ G.addModule("subview",{
 								//filtered nodes
 								let result=[];let ss=graph.edges[heightPropertyName].edgeSources;
 								for(let index of graph.links.originalIndices){
-									result.push(nMap[ss[index]]);
+									result.push(lMap[ss[index]]);
 								}
 								return result;
 							}
@@ -514,10 +514,13 @@ G.addModule("subview",{
 					value:(graph)=>{
 						let sources=graph.edges.source,targets=graph.edges.target;
                         graph.egonet={}
+                        if(graph.hoveredVertex){
+                            console.log(graph.getNeighbors(graph.hoveredVertex));
+                        }
 						if(graph.hoveredVertex && graph.showingEgonets) {
 						    if(graph.egonetMap[graph.hoveredVertex] == undefined) {
                                 Algs.getFilteredSubgraph(graph,graph.hoveredVertex,(x)=>(x!=0),"egonet");
-                            } else {
+						    } else {
 						        graph.egonet = graph.egonetMap[graph.hoveredVertex];
                             }
 							if(graph.egonetMap[graph.hoveredVertex].edges.length>=512 && graph.egonetMap[graph.hoveredVertex].edges.length<2048) {
@@ -595,8 +598,7 @@ G.addModule("subview",{
 							} else {
                                 if(graph.hoveredVertex==source||graph.hoveredVertex==target)hoverFactor=5;
                             }
-
-							result*=hoverFactor;
+                            result*=hoverFactor;
                             if(!G.drawsparsenet) {
                                 return result;
                             } else {
@@ -629,7 +631,7 @@ G.addModule("subview",{
 							let w=1;if(links.weight)w=Math.sqrt(Math.log(weightAsStrength?(array.weight[i]+1):(1/(array.weight[i]+1))));
 							w=w*factor+(1-factor);
 							result*=w;
-							
+
 							let edgeID=i;//G.subview.templates.links.getOriginalObjectID(graph,index);
 							let source=sources[i],target=targets[i];//vertex indices
 							let hoverFactor=1;
@@ -2638,7 +2640,7 @@ G.addModule("subview",{
 				enableForce:{type:"boolean",value:true,},
 				prioritizeSNForce:{type:"boolean",value:true,},
 				hideOtherLinks:{type:"boolean",value:true,},
-				showWorms:{type:"boolean",value:false,},
+				showWarms:{type:"boolean",value:false,},
 				showPathAssignment:{type:"boolean",value:false,},//will show all edges between other vertices and the path it's asigned to, with teh color of that path. (unlike showing worms, which may show edges between a vertex and multiple paths
 				
 				showClustering:{type:"boolean",value:false,},
@@ -2661,7 +2663,8 @@ G.addModule("subview",{
 					//let ratio=G.controls.get("snPathSequenceRatio",1);//hide those after this ratio
 					//let count=Math.ceil(snPaths.length*ratio);
 					params.attachmentSequence=Math.floor(params.attachmentSequence);//hack
-					return snPaths.slice(0,params.pathSequence);
+                    g.snPathSequence = params.pathSequence;
+                    return snPaths.slice(0,params.pathSequence);
 				},
 				randomNumbers:(g,params)=>{return params.paths.map(()=>Math.random());},
 				pathColors:(g,params)=>{
@@ -2679,7 +2682,14 @@ G.addModule("subview",{
 							if(tempID in snPathMap){snPathMap[tempID].push(pathID);}
 							else{snPathMap[tempID]=[pathID];}
 						}
+                        if(!g.snExtremePoints) {
+                            g.snExtremePoints = [];
+                        } else {
+                            g.snExtremePoints.push(path[0]);
+                            g.snExtremePoints=[...new Set( g.snExtremePoints)]
+                    }
 					}
+					g.snVertexPaths=snPathMap;
 					return snPathMap;
 				},
 				edgePaths:(g,params)=>{
@@ -2694,6 +2704,10 @@ G.addModule("subview",{
 							}
 						}
 					}
+					if(g.snEdgePaths == undefined) {
+					     g.snEdgePaths={};
+                    }
+                    g.snEdgePaths = snPathEdgeMap;
 					return snPathEdgeMap;
 				},
 				centers:(g,params)=>{
@@ -2725,6 +2739,7 @@ G.addModule("subview",{
 						for(let pathID in pathCounters){if(pathCounters[pathID]>max){max=pathCounters[pathID];bestPathID=pathID;}}
 						if(bestPathID!=null)pathAssignment[vID]=Number(bestPathID);
 					}
+					g.snWorms = pathAssignment;
 					return pathAssignment;
 				},
 				clustering:(g,params)=>{//get the shortest path network from the centers, do not recompute the shortest path from every vertex
@@ -2817,7 +2832,7 @@ G.addModule("subview",{
 							let vertexID=G.subview.templates.nodes.getOriginalObjectID(graph,index);
                             if(vertexID in data.vertexPaths)return;
                             if(data.showClustering)return;
-                            if(data.showWorms||data.showPathAssignment){
+                            if(data.showWarms||data.showPathAssignment){
                                 if(data.pathAssignment[vertexID]!==undefined&&(data.pathAssignment[vertexID]<=data.attachmentSequence))return;
                             }
                             return 0;
@@ -2879,9 +2894,11 @@ G.addModule("subview",{
 									if(data.edgePathAssignment[edgeID]!==undefined)return data.pathColors[data.edgePathAssignment[edgeID]];
 									//else it's not an assigned path link, see if it's on worms
 								}
-								if(data.showWorms){
+								if(data.showWarms){
+								    graph.snEdgeAdjacentToPath=[]
 									if(data.edgeAdjacentToPath[edgeID]!==undefined){
 										let pathID=data.edgeAdjacentToPath[edgeID];
+                                        graph.snEdgeAdjacentToPath.push(edgeID);
 										if(pathID<0)return redColor;//edge touches multiple paths (could be betwen paths or has one vertex that's an intersection
 										else return data.pathColors[pathID];
 									}
@@ -2894,11 +2911,17 @@ G.addModule("subview",{
                             let edgeID=index;//G.subview.templates.links.getOriginalObjectID(graph,index);
                             let edge=graph.edges[edgeID],svID=graph.edges.source[edgeID],tvID=graph.edges.target[edgeID];
 							if(!data.edgePaths)return;
-							if(index in data.edgePaths)return oldValue+G.controls.get("snPathThickness",3);
+                            if(index in data.edgePaths) {
+                                if(G.view.graph.highlightPath && G.view.graph.highlightPath.length>0) {
+                                    if(G.view.graph.highlightPath.indexOf(svID.toString()) != -1 && G.view.graph.highlightPath.indexOf(tvID.toString()) != -1){
+                                         return oldValue+G.controls.get("snPathThickness",3);;
+                                    } else return 1;
+                                } else  return oldValue+G.controls.get("snPathThickness",3);;
+                            }
 							else{//first see if it's shown for another reason, then return 0 if only paths are shown (it should be called hide other edges)
 								if(data.clusteringLinks){if(data.edgeClustering[index]!==undefined){return;}}
 								if(data.showPathAssignment){if(data.edgePathAssignment[index]!==undefined)return;}
-								if(data.showWorms){
+								if(data.showWarms){
 
                                     // for( i in Object.keys(data.pathAssignment)){
                                     //     console.log(graph.getNeighborsByID(i));
@@ -2909,7 +2932,7 @@ G.addModule("subview",{
 								if(data.hideOtherLinks) {
                                     return 0;//showing other things overrides showing only paths?
                                 }
-								if(data.showWorms && !data.hideOtherLinks) {
+								if(data.showWarms && !data.hideOtherLinks) {
                                     if (Object.keys(data.pathAssignment).indexOf(svID.toString()) != -1 && Object.keys(data.pathAssignment).indexOf(tvID.toString()) != -1)
                                         return;
                                     else return 0;
@@ -2920,8 +2943,17 @@ G.addModule("subview",{
 					],
 					brightness:[
 						(data,oldValue,link,index,array)=>{
+                            let edgeID=index;//G.subview.templates.links.getOriginalObjectID(graph,index);
+                            let edge=G.view.graph.edges[edgeID],svID=G.view.graph.edges.source[edgeID],tvID=G.view.graph.edges.target[edgeID];
 							if(!data.edgePaths)return;
-							if(index in data.edgePaths)return oldValue+G.controls.get("snPathBrightness",3);
+							if(index in data.edgePaths) {
+                                if(G.view.graph.highlightPath && G.view.graph.highlightPath.length>0) {
+                                    if(G.view.graph.highlightPath.indexOf(svID.toString()) != -1 && G.view.graph.highlightPath.indexOf(tvID.toString()) != -1){
+                                        return oldValue+G.controls.get("snlinkBrightnessFactor")+9;
+                                    } else return oldValue-.5;
+                                } else  return oldValue+G.controls.get("snPathBrightness");
+                            }
+
 						},
 					],
 					strength:[
@@ -2934,7 +2966,7 @@ G.addModule("subview",{
 									let v=oldValue/Math.max(factor,1);//the special edges should keep higher strength?
 									if(data.clusteringLinks){if(data.edgeClustering[index]!==undefined){return ;}}
 									if(data.showPathAssignment){if(data.edgePathAssignment[index]!==undefined)return ;}
-									if(data.showWorms){if(data.edgeAdjacentToPath[index]!==undefined){
+									if(data.showWarms){if(data.edgeAdjacentToPath[index]!==undefined){
 										if(data.edgeAdjacentToPath[index]!=-2)return;//is not a crossing edge
 										else return v;//decrease crossing edge strength, because they tend to destroy the layout
 									}}

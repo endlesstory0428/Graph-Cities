@@ -677,7 +677,7 @@ let DataTemplates = {//these functions all take a graph(that has a dataPath etc)
                 wave.vertices.addProperty("originalWaveLevel", g.vertices.properties.waveLevel.type, projectedWaveLevels);
             }
 
-            saveSubgraphs(g, "wave2", result1.subgraphs, {unbucketedVLimit: 1024, unbucketedELimit: 4096});//save for wave CCs; avoid many small wave files
+            saveSubgraphs(g, "wave2", result1.subgraphs, {unbucketedVLimit: 32000, unbucketedELimit: 32000});//save for wave CCs; avoid many small wave files
             result1.metagraph.subgraphPrefix = g.dataPath + "/wave2";
             saveMetagraph(g, "wave2", result1.metagraph);
 
@@ -777,7 +777,7 @@ let DataTemplates = {//these functions all take a graph(that has a dataPath etc)
                     }
                 }
 
-                saveSubgraphs(wave, "CC", result.subgraphs, {unbucketedVLimit: 1024, unbucketedELimit: 4096});//{skipSingleVertexSubgraphs:true}
+                saveSubgraphs(wave, "CC", result.subgraphs, {unbucketedVLimit: 32000, unbucketedELimit: 32000});//{skipSingleVertexSubgraphs:true}
                 result.metagraph.subgraphPrefix = wave.dataPath + "/CC";
                 saveMetagraph(wave, "CC", result.metagraph);
                 saveSummary(wave);//update its metagraph records
@@ -857,7 +857,7 @@ let DataTemplates = {//these functions all take a graph(that has a dataPath etc)
         make: (g) => {
             let edgeWaveLevelIDs = g.edgePropertyFromVertexProperty("waveLevel");
             let results = Algs.getEdgePartition(g, edgeWaveLevelIDs);//now to ensure that bucketed waves's levels are still accessible I have to save them too
-            saveSubgraphs(g, "waveLevel", results.subgraphs, {unbucketedVLimit: 1024, unbucketedELimit: 4096});
+            saveSubgraphs(g, "waveLevel", results.subgraphs, {unbucketedVLimit: 32000, unbucketedELimit: 32000});
             results.metagraph.subgraphPrefix = g.dataPath + "/waveLevel";
             saveMetagraph(g, "waveLevel", results.metagraph);
 
@@ -913,7 +913,7 @@ let DataTemplates = {//these functions all take a graph(that has a dataPath etc)
             }
             let edgeWaveLevelIDs = g.edgePropertyFromVertexProperty("originalWaveLevel");
             let result = Algs.getEdgePartition(g, edgeWaveLevelIDs);
-            saveSubgraphs(g, "level", result.subgraphs, {unbucketedVLimit: 1024, unbucketedELimit: 4096});
+            saveSubgraphs(g, "level", result.subgraphs, {unbucketedVLimit: 32000, unbucketedELimit: 32000});
             result.metagraph.subgraphPrefix = g.dataPath + "/level";
             saveMetagraph(g, "level", result.metagraph);
         },
@@ -1732,6 +1732,8 @@ function doCustomComputation(data) {
                         let subgraphType = segments[segments.length - 2];
                         let subgraphIDs = segments[segments.length - 1];
                         let subgraphIDList = subgraphIDs.split("+").map(x => Number(x)).sort(compareBy(x => Number(x), true));//standardize, to make comparing equality easier
+                        console.log("Here34");
+                        console.log(subgraphIDList);
                         let originalGraph = segments.slice(0, segments.length - 2).join("/");
                         //graphPath=originalGraph+"/"+subgraphType+"/"+subgraphIDList.join("+");
 
@@ -2091,16 +2093,15 @@ function loadAllProperties(g) { //saves the commonly loaded vertex IDs, edge sou
 function saveSubgraphs(g, type, subgraphs, options) {//auto buckets, takes array or generator of graphs, adds subgraph-related data(including data path and what partitions were used to create them (which is added at create***Partition in graph-algorithms.js)
 //returns a list of subgraphs (unloaded) that are not bucketed.
     //for bucketed graphs, currently we don't save subgraphs, but we still provide teh statistics for consistency
-
     if (!options) {
         options = {};
     }
     if ("bucketID" in g) {
         options.noBucketing = true;//don't do bucets for them
     }
-    let bucketVLimit = 16384 ;
-    let bucketELimit = 32000;
-    let unbucketedVLimit = 256, unbucketedELimit = 1024;//subgraphs larger tahn this will not be bucketed
+    let bucketVLimit = 132000 ;
+    let bucketELimit = 132000;
+    let unbucketedVLimit = 132000, unbucketedELimit = 132000;//subgraphs larger tahn this will not be bucketed
     if (options.unbucketedVLimit) unbucketedVLimit = options.unbucketedVLimit;
     if (options.unbucketedELimit) unbucketedELimit = options.unbucketedELimit;
     let partitionInfo = options.partitionInfo;
@@ -2139,6 +2140,7 @@ function saveSubgraphs(g, type, subgraphs, options) {//auto buckets, takes array
         //some subgraph info
         let info = g.partitionInfo ? Array.from(g.partitionInfo) : [];//copies the previous partitions
         let subgraphPartitionInfo = Object.assign({}, partitionInfo);
+
         subgraphPartitionInfo.type = type;
         subgraphPartitionInfo.value = subgraphID;
         info.push(subgraphPartitionInfo);//{graph:...(datapath of the graph it's based on),type:...,value:...}
@@ -2404,7 +2406,11 @@ function loadSubgraphUnion(originalGraph, type, subgraphIDList) {
     unionCachePath = result.dataPath;
     result.datasetID = originalGraph.split("/")[0];
     result.wholeGraph = originalGraph;
-    result.metagraph = subgraphList[0].metagraph;
+    console.log("Here123");
+    console.log(subgraphList);
+    if(subgraphList[0] != null) {
+        result.metagraph = subgraphList[0].metagraph;
+    }
     return result;
 }
 

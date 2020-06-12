@@ -1644,12 +1644,48 @@ G.addModule("analytics",{
 		if(!graph.snPaths){G.messaging.requestCustomData("sparsenet",data,(result)=>{
 		    if(result&&result.length>0){
 		        graph.snPaths=result;
+                let paths=graph.snPaths;let snPathEdgeMap={};
+                for(let pathID=0;pathID<paths.length;pathID++){
+                    let path=paths[pathID];
+                    for(let i=0;i<path.length;i++){
+                        let tempID=path[i];
+                        let vertex=graph.vertices[tempID];
+                        if(i>0){
+                            snPathEdgeMap[graph.vertices.edges[tempID][path[i-1]]]=pathID;
+                        }
+                    }
+                }
+                if(graph.snEdgePaths == undefined) {
+                    graph.snEdgePaths={};
+                }
+                graph.snEdgePaths = snPathEdgeMap;
+                let sparsenetSubgraph = Algs.getFilteredSubgraph(this.graph, null, (x) => (x != 0), "sparsenet");
+                graph.sparsenetSubgraph= sparsenetSubgraph;
 		        G.enableModifier("sparsenet",graph);
 		    }else{
 		        G.addLog("invalid sparsenet result");}
 		});
 		}
-		else{G.enableModifier("sparsenet",graph);}//this only sets snPaths, and other intermediate data are managed by the subview.
+		else{
+            let paths=graph.snPaths;let snPathEdgeMap={};
+            for(let pathID=0;pathID<paths.length;pathID++){
+                let path=paths[pathID];
+                for(let i=0;i<path.length;i++){
+                    let tempID=path[i];
+                    let vertex=graph.vertices[tempID];
+                    if(i>0){
+                        snPathEdgeMap[graph.vertices.edges[tempID][path[i-1]]]=pathID;
+                    }
+                }
+            }
+            if(graph.snEdgePaths == undefined) {
+                graph.snEdgePaths={};
+            }
+            graph.snEdgePaths = snPathEdgeMap;
+            let sparsenetSubgraph = Algs.getFilteredSubgraph(this.graph, null, (x) => (x != 0), "sparsenet");
+            graph.sparsenetSubgraph= sparsenetSubgraph;
+		    G.enableModifier("sparsenet",graph);
+		}//this only sets snPaths, and other intermediate data are managed by the subview.
 	},
 	hideSparseNet:function(graph){
 		if(!graph)graph=G.graph;
@@ -1661,7 +1697,6 @@ G.addModule("analytics",{
 		delete G.graph.snPaths;
 	},
 	addVertexToSparseNet:function(obj){
-		if(obj.edges){
 			if((!G.graph.snPaths)||(G.graph.snPaths.length==0)){
 				if(G.graph.sparsenetFirstVertex===undefined){
 					G.graph.sparsenetFirstVertex=Number(obj.original);//do't use normal selection for this!
@@ -1694,7 +1729,6 @@ G.addModule("analytics",{
 				}
 				else{G.addLog("cannot find path to existing sparse net");}
 			}
-		}
 	},
 	//the vertex-reducing metagraph with rings, for when there are too many vertices, mostly very low degree, especially when there are many tiny CCs. This operates on the original graph, considers metanode size if existing (don't want to remove something that may represent larger structures), but does not consider heights. First gets the CCs, and sort by size, and while the number of vertices is greater than the target, take all vertices of the lowest degree in the original graph (does not remove them from the original, no iterative interactions), preferring vertices from smallest CCs if it doesn't need so many, and skipping vertices whose metanode size is greater than a threshold (starting threshold may be simply 1, and increase the threshold if necessary), and mark these vertices as collapsed (the ring to which it belongs is identified later). Repeat until enough vertices are marked collapsed so that the remaining vertex count is small enough. Then, if all vertices in a CC are collapsed, all those vertices (And their edges) belong to a global ring centered around the origin, which represents the size bucket of the CC (where the size ranges are 1-logV, logV-logV^2... and a bucket may be subdivided if there are too many vertices in it to display), and if some vertices in a CC are not collapsed, all vertices in it that are collapsed belong to a local ring (or several local rings divided by degree if needed) that centers on a remaining vertex of highest degree. All edges on collapsed vertices are removed in the metagraph, but the edges between vertices in teh same ring are shown if the ring is expanded.
 	getRingsMetagraph:function(graph,targetVertexCount,options={}){
@@ -2053,24 +2087,24 @@ G.addModule("analytics",{
 		
 	},
 	getVertexIDsString:function(chosenOnes){
-		let arr,str;
-		if(typeof chosenOnes=="object"){
-			arr=Array.from(chosenOnes).map((d)=>G.graph.vertices.id[d]);
-		}
-		else{
-			if(G.graph.selectedVertexCount==0){
-				arr=G.graph.vertices.id;
-			}
-			else{
-				arr=Object.keys(G.graph.selectedVertices).map((d)=>G.graph.vertices.id[d]);
-			}
-		}
-		if(chosenOnes){
-			if(typeof chosenOnes=="boolean")arr=arr.slice(0,100);
-			if(typeof chosenOnes=="number")arr=arr.slice(0,chosenOnes);
-		}
-		str=arr.join(",");
-		return str;
+	    let labels = [];
+	    for(let i in chosenOnes) {
+            if(G.view.graph.labels.columns != "null") {
+                let label = "";
+                originalObjectID =G.view.graph.vertices.id[Number(chosenOnes[i])]
+
+                if (G.view.graph.labels.find(record => record.new_id == originalObjectID)) {
+                    let a = G.view.graph.labels.find(record => record.new_id == originalObjectID);
+                    label = a.name;
+                } else if(G.view.graph.labels.find(record => record.new_id == G.view.graph.vertices.id[originalObjectID])) {
+                    let a = G.view.graph.labels.find(record => record.new_id == G.view.graph.vertices.id[originalObjectID]);
+                    label = a.name;
+                }
+                labels.push(label)
+            }
+        }
+
+		return labels;
 	},
 	datasetIDMaps:{
 		citeseer_hierarchy:
