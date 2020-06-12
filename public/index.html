@@ -135,7 +135,7 @@
 
 		</div>
 
-		<div id="bottom-bar" class="simple fixed" style="position:absolute;bottom:0;height:10%;width:100%;box-sizing: border-box;background-color:rgba(0,0,0,0.05)">
+		<div id="bottom-bar" class="simple fixed" style="position:absolute;bottom:0;height:11%;width:100%;box-sizing: border-box;background-color:rgba(0,0,0,0.05)">
 
 			<div id="bottom-left-corner" class="simple centering wrap" style="width:10%;height:100%;background-color:transparent;" >
 				<div id="view-buttons-area" class="simple column" ></div>
@@ -188,6 +188,14 @@
         <div id="graph-info-bar" class="panel" style="width:20%;height: 655px;min-width:170px;overflow-y: scroll;">
             <div id="info-menu">
             </div>
+            <div>
+                <p id="showing-paths"></p>
+                <p id="num-vertices"></p>
+                <p id="num-worms"></p>
+                <p id="num-edges"></p>
+                <p id="num-worms-edges"></p>
+
+            </div>
         </div>
         <div id="graph-fork-bar" class="panel" style="width:20%;height: 655px;min-width:170px;overflow-y: scroll;">
                 <div id="ribbon-menu" class="simple column" style="overflow-x:visible;overflow-y:auto;border:none;width:100%;height: 100%;">
@@ -227,9 +235,15 @@
                 <div id="drawing-buttons-area" style="margin-top: 50px;">
                     <p id="drawing-graph">Next Drawing Options</p>
                 </div>
-                <div>
-                    <p id="showing-paths"></p>
+            <div id="auto_explore">
+                <p id="auto-explore-graph" >Auto Explore Options</p>
+                <div class="custom-control custom-checkbox" style="padding-right: 76px;" >
+                        <input type="checkbox" class="custom-control-input" id="auto_explore_option">
+                        <label class="custom-control-label" for="auto_explore_option">Auto Explore Path</label>
                 </div>
+            </div>
+            <div id="auto-buttons-area" style="margin-top: 30px;margin-right: 100px;">
+            </div>
                 <div id="rotate-buttons-area" style="margin-top: 50px;">
                     <p id="rotate-graph">Rotation Options</p>
                 </div>
@@ -240,7 +254,6 @@
                         <label class="custom-control-label" for="rotate_option">Rotate</label>
                     </div>
                 </div>
-
         </div>
 
         <div id="style-menu" class="panel" style="min-width:300px;height: 655px;overflow-y: scroll;font-size: x-small;">

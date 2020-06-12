@@ -225,21 +225,22 @@ function bindHandlers(datasetsList){
 				console.log("no such file "+filename+", trying bucketed data");
 				//try bucketed data
 				let relativePath=req.params[0];
-				
+				console.log(req.params);
 				let i1=relativePath.lastIndexOf("/"),subgraphPath=relativePath.substring(0,i1);
 				let i2=subgraphPath.lastIndexOf("/");
-				if(i2!=-1){
-					let subgraphListPath=subgraphPath.substring(0,i2);
-					
+                if(i2!=-1){
+                    let subgraphListPath=subgraphPath.substring(0,i2);
 					let i3=subgraphListPath.lastIndexOf("/");
 					let originalGraphPath=subgraphListPath.substring(0,i3);
 					let subgraphType=subgraphListPath.substring(i3+1);
-					if(subgraphType=="metagraphs"){fail();return;}//not a subgraph
+					if(subgraphType=="metagraphs"){
+					    fail();return;}//not a subgraph
 					//console.log("getting bucketed data "+relativePath);
 					let subgraphIDStr=subgraphPath.substring(i2+1);
 					let subgraphID=Number(subgraphPath.substring(i2+1));
 					if(isNaN(subgraphIDStr)){
 						//try subgraph union
+                        console.log("Here202");
 						let subgraphIDList=subgraphIDStr.split("+");
 						let g=Datasets.loadSubgraphUnion(originalGraphPath,subgraphType,subgraphIDList);
 						if(!g){fail();return;}
@@ -253,7 +254,7 @@ function bindHandlers(datasetsList){
 								return;
 							}
 							else{
-								
+
 								let names=subfileName.split(".");
 								if(names.length!=4){
 									console.log("unexpected subfile name "+subfileName);

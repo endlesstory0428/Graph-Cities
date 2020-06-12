@@ -30,6 +30,7 @@ class Markers {
 				if (G.ui.needsResume) {
 					G.simulationRunning = true;
 					G.ui.needsResume = false;
+                    G.view.graph.highlightPath = [];
 				}
 				this.visible = false;
 				this.containerSelection.style("visibility", "hidden")
@@ -96,7 +97,7 @@ class VertexMarkers extends Markers {
 			}
 		}
 		if (this.cachedMarkedVertices) {
-			for (let i of this.cachedMarkedVertices) {
+			for (let i of Object.values(G.view.graph.vertexMap)) {
 				if (chosenOnes.length >= maxItems) {
 					break;
 				}
@@ -106,7 +107,7 @@ class VertexMarkers extends Markers {
 		}
 		this.cachedMarkedVertices = chosenOnes;
 		if (typeof this.chosenVertices == "object") {
-			for (let i in this.chosenVertices) {
+			for (let i in Object.values(G.view.graph.vertexMap)) {
 				if (chosenOnes.length >= maxItems) {
 					break;
 				}
@@ -123,14 +124,21 @@ class VertexMarkers extends Markers {
 
 	}
 
-	show(bool) {
+	show(bool, chosenOnes = undefined) {
 		let result = super.show(bool);
 		if (result) {
 
 			let positions = G.view.getVerticesScreenPos();
 			this.updateSelection();
 			this.containerSelection.selectAll("div").remove();
-			let chosenOnes = this.cachedMarkedVertices;
+
+			if(!chosenOnes && G.view.graph.snPaths) {
+                chosenOnes = Object.keys(G.view.graph.snVertexPaths);
+            } else if(!chosenOnes){
+                chosenOnes = Object.values(G.view.graph.vertexMap);
+            }
+
+
 
 			Promise.resolve(this.getLabels(chosenOnes)).then((texts) => {
 				let validOnes = [], validTexts = [];
@@ -922,6 +930,7 @@ G.addModule("ui", {
 	},
 	getSemantics: function (chosenOnes) {
 		let datasetID = G.graph.datasetID;
+
 		return new Promise((resolve, reject) => {
 			let idString = G.analytics.getVertexIDsString(chosenOnes);
 			if (G.analytics.datasetIDMaps[datasetID]) {
@@ -949,7 +958,7 @@ G.addModule("ui", {
 					}
 				}
 			} else {
-				resolve(idString.split(","));
+				resolve(idString);
 			}
 		});
 	},

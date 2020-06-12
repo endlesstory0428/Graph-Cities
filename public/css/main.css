@@ -107,14 +107,14 @@ div.graph-nav-info {
 	
     position: absolute;
     
-    font-size: x-small;
-	max-width:100px;
+    font-size: xx-small;
+	max-width:150px;
 	min-width:50px;
 	text-align:center;
-	min-height:25px;
+	min-height:15px;
 	pointer-events:none;
 	
-	border-radius: 5px;
+	border-radius: 10px;
     padding: 3px;
 	padding-left: 7px;
     padding-right: 7px;
@@ -160,8 +160,8 @@ color: lavender;
 .graph-marker{
 	
     position: absolute;
-    //font-size: x-small;
-	max-width:100px;
+    font-size: xx-small;
+	max-width:150px;
 	min-width:20px;
 	text-align:center;
 	min-height:15px;
