@@ -1,85 +1,256 @@
 <html>
 	<head>
-		<title>My first three.js app</title>
+		<title>Graph City Building</title>
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<!-- <link type="text/css" rel="stylesheet" href="./three.js/editor/css/main.css"> -->
 		<style>
 			body { margin: 0; }
 			canvas { display: block; }
 		</style>
+		<script src="lib/jquery-3.5.1.min.js"></script>
+		<script src="lib/three.min.js"></script>
+		<script src="lib/Detector.js"></script>
 	</head>
 	<body>
-		<script src="js/three.js"></script>
-		<script>
+		<!-- <script src="js/three.js"></script> -->
+		<script type="module">
+			import * as THREE from './node_modules/three/build/three.module.js';
+			import { TrackballControls } from './node_modules/three/examples/jsm/controls/TrackballControls.js';
+			import { GUI } from './node_modules/three/examples/jsm/libs/dat.gui.module.js';
+
+			var perspectiveCamera, orthographicCamera, controls, scene, renderer;
+
+			var params = {
+				orthographicCamera: false
+			};
+			var building = {
+			    floor: ''
+			};
+			var frustumSize = 400;
+			var aspect = window.innerWidth/window.innerHeight;
 			var scene = new THREE.Scene();
 			scene.background = new THREE.Color('skyblue');
-			var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
-
-			// var renderer = new THREE.WebGLRenderer({ alpha: true });
-			var renderer = new THREE.WebGLRenderer();
-			renderer.setSize( window.innerWidth, window.innerHeight );
-			document.body.appendChild( renderer.domElement );
-
-			// var floor1 = new THREE.CylinderGeometry(0.1, 0.2, 1.5, 16, 16);
-			// floor1.translate(2,0,0);
-			// var floor2 = new THREE.CylinderGeometry(0.2, 0.3, 1.5, 16, 16);
-
-			var heights = [0,0.0877794886782907,0.13128609409319691,0.1747926995081031,0.22819410025109796,0.2815955009940928,0.35019479832400946,0.4187940956539261,0.6061428892410488];
-			for(var i=0;i<heights.length;i++){
-				heights[i]*=10;
-			}
-			var radius = [6.066089190457772,3.0,3.4594316186372973,2.321928094887362,2.584962500721156,0.98,2.0,1.0,1.584962500721156];
-			var floor1 = new THREE.CylinderGeometry(radius[1], radius[0], heights[1]-heights[0], 16, 16);
-			floor1.translate(0,heights[1]/2,0);
-			var floor2 = new THREE.CylinderGeometry(radius[2], radius[1], heights[2]-heights[1], 16, 16);
-			floor2.translate(0,heights[1]+(heights[2]-heights[1])/2,0);
-			var floor3 = new THREE.CylinderGeometry(radius[3], radius[2], heights[3]-heights[2], 16, 16);
-			floor3.translate(0,heights[2]+(heights[3]-heights[2])/2,0);
-			var floor4 = new THREE.CylinderGeometry(radius[4], radius[3], heights[4]-heights[3], 16, 16);
-			floor4.translate(0,heights[3]+(heights[4]-heights[3])/2,0);
-			var floor5 = new THREE.CylinderGeometry(radius[5], radius[4], heights[5]-heights[4], 16, 16);
-			floor5.translate(0,heights[4]+(heights[5]-heights[4])/2,0);
-			var floor6 = new THREE.CylinderGeometry(radius[6], radius[5], heights[6]-heights[5], 16, 16);
-			floor6.translate(0,heights[5]+(heights[6]-heights[5])/2,0);
-			var floor7 = new THREE.CylinderGeometry(radius[7], radius[6], heights[7]-heights[6], 16, 16);
-			floor7.translate(0,heights[6]+(heights[7]-heights[6])/2,0);
-			// Colors
-			var material1 = new THREE.MeshBasicMaterial({color:0xEC3613});
-			var material2 = new THREE.MeshBasicMaterial({color:0xECA113});
-			var material3 = new THREE.MeshBasicMaterial({color:0xC1EC13});
-			var material4 = new THREE.MeshBasicMaterial({color:0x13EC13});
-			var material5 = new THREE.MeshBasicMaterial({color:0x1313EC});
+			// var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
 			
-			// Mesh
-			var frustum_mesh_1 = new THREE.Mesh(floor1, material1);
-			var frustum_mesh_2 = new THREE.Mesh(floor2, material2);
-			var frustum_mesh_3 = new THREE.Mesh(floor3, material2);
-			var frustum_mesh_4 = new THREE.Mesh(floor4, material3);
-			var frustum_mesh_5 = new THREE.Mesh(floor5, material3);
-			var frustum_mesh_6 = new THREE.Mesh(floor6, material4);
-			var frustum_mesh_7 = new THREE.Mesh(floor7, material5);
-			// var frustum_mesh_3 = new THREE.Mesh(floor2, material2);
-			// var building_mesh_1 = new THREE.Mesh(THREE.Geometry());
-			// building_mesh_1.merge(floor1);
-			// building_mesh_1.merge(floor2);
-			// var building_mesh_1 = new THREE.Mesh(building1,material1);
-			// scene.add(building_mesh_1);
-			scene.add(frustum_mesh_1);
-			scene.add(frustum_mesh_2);
-			scene.add(frustum_mesh_3);
-			scene.add(frustum_mesh_4);
-			scene.add(frustum_mesh_5);
-			scene.add(frustum_mesh_6);
-			scene.add(frustum_mesh_7);
+			var raycaster = new THREE.Raycaster();
+			var mouse = new THREE.Vector2();
+			var objects = [];
+			var INTERSECTED,canvas1,context1,texture1;
+				// create a canvas element
+			canvas1 = document.createElement('canvas');
+			context1 = canvas1.getContext('2d');
+			context1.font = "Bold 20px Arial";
+			context1.fillStyle = "rgba(0,0,0,0.95)";
+			context1.fillText('Hello, world!', 0, 20);
+			// canvas contents will be used for a texture
+			texture1 = new THREE.Texture(canvas1) 
+			texture1.needsUpdate = true;
+// 			var spriteMaterial = new THREE.SpriteMaterial( { map: texture1, useScreenCoordinates: true} );
 			
-			camera.position.z = 15;
-			camera.position.y = 2;
-			var animate = function () {
-				requestAnimationFrame( animate );
-				// building_mesh_1.rotation.x += 0.01;
-				// building_mesh_1.rotation.y += 0.01;
-				renderer.render( scene, camera );
-			};
+// 			var sprite1 = new THREE.Sprite( spriteMaterial );
+// 			sprite1.scale.set(200,100,1.0);
+// 			sprite1.position.set( 50, 50, 0 );
+// 			scene.add( sprite1 );	
+			
 
+			var gui = new GUI();
+			init();
 			animate();
+
+			function init(){
+				perspectiveCamera = new THREE.PerspectiveCamera( 60, aspect, 1, 1000 );
+				perspectiveCamera.position.z = 20;
+
+				orthographicCamera = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 1, 1000 );
+				orthographicCamera.position.z = 20;
+
+				renderer = new THREE.WebGLRenderer();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				document.body.appendChild( renderer.domElement );
+
+				// var floor1 = new THREE.CylinderGeometry(0.1, 0.2, 1.5, 16, 16);
+				// floor1.translate(2,0,0);
+				// var floor2 = new THREE.CylinderGeometry(0.2, 0.3, 1.5, 16, 16);
+
+				var heights = [0,0.0877794886782907,0.13128609409319691,0.1747926995081031,0.22819410025109796,0.2815955009940928,0.35019479832400946,0.4187940956539261,0.6061428892410488];
+				for(var i=0;i<heights.length;i++){
+					heights[i]*=10;
+				}
+				var radius = [6.066089190457772,3.0,3.4594316186372973,2.321928094887362,2.584962500721156,0.98,2.0,1.0,1.584962500721156];
+				var floor1 = new THREE.CylinderBufferGeometry(radius[1], radius[0], heights[1]-heights[0], 16, 16);
+				floor1.translate(0,heights[1]/2,0);
+				var floor2 = new THREE.CylinderBufferGeometry(radius[2], radius[1], heights[2]-heights[1], 16, 16);
+				floor2.translate(0,heights[1]+(heights[2]-heights[1])/2,0);
+				var floor3 = new THREE.CylinderBufferGeometry(radius[3], radius[2], heights[3]-heights[2], 16, 16);
+				floor3.translate(0,heights[2]+(heights[3]-heights[2])/2,0);
+				var floor4 = new THREE.CylinderBufferGeometry(radius[4], radius[3], heights[4]-heights[3], 16, 16);
+				floor4.translate(0,heights[3]+(heights[4]-heights[3])/2,0);
+				var floor5 = new THREE.CylinderBufferGeometry(radius[5], radius[4], heights[5]-heights[4], 16, 16);
+				floor5.translate(0,heights[4]+(heights[5]-heights[4])/2,0);
+				var floor6 = new THREE.CylinderBufferGeometry(radius[6], radius[5], heights[6]-heights[5], 16, 16);
+				floor6.translate(0,heights[5]+(heights[6]-heights[5])/2,0);
+				var floor7 = new THREE.CylinderBufferGeometry(radius[7], radius[6], heights[7]-heights[6], 16, 16);
+				floor7.translate(0,heights[6]+(heights[7]-heights[6])/2,0);
+				// Colors
+				var material1 = new THREE.MeshBasicMaterial({color:0xEC3613});
+				var material2 = new THREE.MeshBasicMaterial({color:0xECA113});
+				var material3 = new THREE.MeshBasicMaterial({color:0xC1EC13});
+				var material4 = new THREE.MeshBasicMaterial({color:0x13EC13});
+				var material5 = new THREE.MeshBasicMaterial({color:0x1313EC});
+
+				// Mesh
+				var frustum_mesh_1 = new THREE.Mesh(floor1, material1);
+				frustum_mesh_1.name="floor 1"
+				var frustum_mesh_2 = new THREE.Mesh(floor2, material2);
+				frustum_mesh_2.name="floor 2"
+				var frustum_mesh_3 = new THREE.Mesh(floor3, material2);
+				frustum_mesh_3.name="floor 3"
+				var frustum_mesh_4 = new THREE.Mesh(floor4, material3);
+				frustum_mesh_4.name="floor 4"
+				var frustum_mesh_5 = new THREE.Mesh(floor5, material3);
+				frustum_mesh_5.name="floor 5"
+				var frustum_mesh_6 = new THREE.Mesh(floor6, material4);
+				frustum_mesh_6.name="floor 6"
+				var frustum_mesh_7 = new THREE.Mesh(floor7, material5);
+				frustum_mesh_7.name="floor 7"
+				// var frustum_mesh_3 = new THREE.Mesh(floor2, material2);
+				// var building_mesh_1 = new THREE.Mesh(THREE.Geometry());
+				// building_mesh_1.merge(floor1);
+				// building_mesh_1.merge(floor2);
+				// var building_mesh_1 = new THREE.Mesh(building1,material1);
+				// scene.add(building_mesh_1);
+				scene.add(frustum_mesh_1);
+				scene.add(frustum_mesh_2);
+				scene.add(frustum_mesh_3);
+				scene.add(frustum_mesh_4);
+				scene.add(frustum_mesh_5);
+				scene.add(frustum_mesh_6);
+				scene.add(frustum_mesh_7);
+				objects.push(frustum_mesh_1);
+				objects.push(frustum_mesh_2);
+				objects.push(frustum_mesh_3);
+				objects.push(frustum_mesh_4);
+				objects.push(frustum_mesh_5);
+				objects.push(frustum_mesh_6);
+				objects.push(frustum_mesh_7);
+
+				// camera.position.z = 15;
+				// camera.position.y = 2;
+
+				
+				gui.add( params, 'orthographicCamera' ).name( 'use orthographic' ).onChange( function ( value ) {
+
+					controls.dispose();
+
+					createControls( value ? orthographicCamera : perspectiveCamera );
+
+				} );
+
+                
+                gui.add(building, 'floor').name('floor number').listen();
+// 				window.onload = function() {
+// 					var text = new building();
+// 					gui.add(text, 'floor');
+// 				};
+
+				document.body.appendChild( renderer.domElement );
+				document.addEventListener( 'mousemove', onMouseMove, false );
+				window.addEventListener( 'resize', onWindowResize, false );
+				createControls( perspectiveCamera );	
+			}
+
+			function createControls( camera ) {
+				controls = new TrackballControls( camera, renderer.domElement );
+				controls.rotateSpeed = 1.0;
+				controls.zoomSpeed = 1.2;
+				controls.panSpeed = 0.8;
+				controls.keys = [ 65, 83, 68 ];
+			}
+
+			function onWindowResize() {
+
+				var aspect = window.innerWidth / window.innerHeight;
+
+				perspectiveCamera.aspect = aspect;
+				perspectiveCamera.updateProjectionMatrix();
+
+				orthographicCamera.left = - frustumSize * aspect / 2;
+				orthographicCamera.right = frustumSize * aspect / 2;
+				orthographicCamera.top = frustumSize / 2;
+				orthographicCamera.bottom = - frustumSize / 2;
+				orthographicCamera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				controls.handleResize();
+
+			}
+			
+			function animate() {
+				requestAnimationFrame( animate );
+				controls.update();
+				// stats.update();
+				render();
+			}
+
+			function render(){
+				var camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
+				renderer.render(scene, camera);
+			}
+
+			function onMouseMove( event ){
+				mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
+				mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
+				var camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
+				raycaster.setFromCamera( mouse, camera );
+
+				var intersects = raycaster.intersectObjects( objects );
+				// Toggle rotation bool for meshes that we clicked
+				if ( intersects.length > 0 ) {
+					// if the closest object intersected is not the currently stored intersection object
+					if ( intersects[ 0 ].object != INTERSECTED ) 
+					{
+					    // restore previous intersection object (if it exists) to its original color
+						// if ( INTERSECTED ) 
+							// INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+						// store reference to closest object as current intersection object
+						INTERSECTED = intersects[ 0 ].object;
+						// store color of closest object (for later restoration)
+						// INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
+						// set a new color for closest object
+						// INTERSECTED.material.color.setHex( 0xffff00 );
+						
+						// update text, if it has a "name" field.
+						if ( intersects[ 0 ].object.name )
+						{
+							console.log(intersects[ 0 ].object.name);
+							building.floor=intersects[ 0 ].object.name;
+							context1.clearRect(0,0,640,480);
+							var message = intersects[ 0 ].object.name;
+							var metrics = context1.measureText(message);
+							var width = metrics.width;
+							context1.fillStyle = "rgba(0,0,0,0.95)"; // black border
+							context1.fillRect( 0,0, width+8,20+8);
+							context1.fillStyle = "rgba(255,255,255,0.95)"; // white filler
+							context1.fillRect( 2,2, width+4,20+4 );
+							context1.fillStyle = "rgba(0,0,0,1)"; // text color
+							context1.fillText( message, 4,20 );
+							texture1.needsUpdate = true;
+						}
+						else
+						{
+							context1.clearRect(0,0,300,300);
+							texture1.needsUpdate = true;
+						}
+					}
+				} else // there are no intersections
+				{
+					INTERSECTED = null;
+					building.floor='';
+					context1.clearRect(0,0,300,300);
+					texture1.needsUpdate = true;
+				}
+			}
 		</script>
 	</body>
 </html>
