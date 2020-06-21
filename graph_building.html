@@ -24,6 +24,7 @@
 			var building = {
 			    floor: ''
 			};
+			var spiral = [];
 			var frustumSize = 400;
 			var aspect = window.innerWidth/window.innerHeight;
 			var scene = new THREE.Scene();
@@ -35,9 +36,9 @@
 			var gui = new GUI();
 			var objects = [];
 			var INTERSECTED;
-			var fileText = null;
+			var city_tracking = {};
+			var city_all = {};
 			
-
 			init();
 			animate();
 
@@ -67,7 +68,6 @@
 				// }
 
 
-				loadFile('data/example.txt',manager);
 				loadFile('data/',manager);
 
 				var heights = [0,0.0877794886782907,0.13128609409319691,0.1747926995081031,0.22819410025109796,0.2815955009940928,0.35019479832400946,0.4187940956539261,0.6061428892410488];
@@ -158,7 +158,7 @@
 				loader.responseType = "blob";
 				loader.load(file,
 					function(data) {
-						getAsText(data);
+						getAsText(data,file);
 					},
 					function(xhr) {
 						console.log((file+' '+xhr.loaded/xhr.total*100)+'% loaded');
@@ -169,12 +169,13 @@
 				);
 			}
 
-			function getAsText(file) {
+			function getAsText(file,url) {
 				var reader = new FileReader();
 				reader.readAsText(file);
 				reader.onProgress = updateProgress;
 				reader.onload = loaded;
 				reader.onerror = errorHandler;
+				reader.url = url;
 				var text = reader.result;
 			}
 
@@ -186,17 +187,165 @@
 
 			function loaded(evt) {
 				var fileString = evt.target.result;
-				console.log(fileString);
 				var isFolder = fileString.startsWith("<!DOCTYPE HTML PUBLIC");
 				var lines = null;
 				if(isFolder) {
-					lines = fileString.split("\n");
+					lines = fileString.split('\n');
 					var doc = new DOMParser().parseFromString(fileString, "text/html");
-					// console.log(doc);
 					var files = doc.getElementsByTagName("LI");
-					console.log(files);
-					console.log(files[0].firstChild.innerHTML);
+					for(var i=0;i<files.length;i++){
+						loadFile("data/"+files[i].firstChild.innerHTML);
+					}
+				} else {
+					var filename = evt.target.url;
+					var layer_name;
+					lines = fileString.split('\n');
+					var element_count = (lines[0].split(' ')).length;
+					if(element_count == 4) {
+						loadSpiral(lines,filename);
+					} else if(element_count == 6) {
+						console.log("color file");
+						layer_name = fileToLayer(filename);
+						loadColor(lines,layer_name);
+					} else if(element_count == 3) {
+						console.log("floor file");
+						layer_name = fileToLayer(filename);
+						loadFloor(lines,layer_name);
+					}
 				}
+			}
+
+			function fileToLayer(filename) {
+				var start = filename.lastIndexOf('/');
+				var end = filename.lastIndexOf('_');
+				return filename.substring(start+1,end);
+			}
+
+			function getLayerAllObj(layer_name) {
+				var layer_all = {
+					coords:[],
+					colors:{},
+					shapes:[]
+				};
+				return layer_all;
+			}
+
+			function getLayerTrackingObj(layer_name) {
+				var layer_tracking = {
+					ready_to_move: false,
+					ready_to_color: false
+				};
+				return layer_tracking;
+			}
+
+			function printGlobalDict(func) {
+				console.log(func + ": city_all");
+				console.log(city_all);
+				console.log(func + ": city_tracking");
+				console.log(city_tracking);
+			}
+
+			// add a new floor shape to a given building
+			function addNewFloor(layer_name, h, inner_r, outer_r) {
+				var floor = {
+					height: h,
+					inner_radius: inner_r,
+					outer_radius: outer_r
+				}
+				city_all[layer_name].shapes.push(floor);
+			}
+
+			// take layer name and lines from floor file, update the shape of building
+			function loadFloor(lines,layer_name) {
+				console.log("loadFloor: "+layer_name);
+				if (!(layer_name) in city_all) {
+					city_all[layer_name] = getLayerAllObj(layer_name);
+				} else if (!(layer_name) in city_all) {
+					city_all[layer_name] = getLayerTrackingObj(layer_name);
+				}
+				var i;
+				var tmp_outer_radius = 0;
+				for(i=0; i<lines.length-1; i++) {
+					var elements = lines[i].split(' ');
+					console.log("loadFloor: floor "+i);
+					console.log(elements);
+					if (elements[1] == 0) {
+						console.log("loadFloor: add new floor "+city_all[layer_name].shapes.length);
+						addNewFloor(layer_name,0.0,parseFloat(elements[2]),0.0);
+					} else if (i%2 == 1 && i < lines.length-2) {
+						tmp_outer_radius = elements[2];
+					} else {
+						console.log("loadFloor: add new floor "+city_all[layer_name].shapes.length);
+						if(i == lines.length-2) {
+							tmp_outer_radius = 0;
+						}
+						addNewFloor(layer_name,parseFloat(elements[1]),parseFloat(elements[2]),parseFloat(tmp_outer_radius));
+					}
+				}
+				// shape of building is ready, check if coordinated is ready
+				if(city_all[layer_name].coords.length > 0) {
+					city_tracking[layer_name].ready_to_move = true;
+				}
+				printGlobalDict("loadFloor");
+			}
+
+			// take color file of a layer and save information to global dictionary
+			function loadColor(color_list,layer_name) {
+				// console.log("loadColor: " +layer_name);
+				if (!(layer_name in city_all)) {
+					city_all[layer_name] = getLayerAllObj(layer_name);
+				}
+				if (!(layer_name in city_tracking)) {
+					city_tracking[layer_name] = getLayerTrackingObj(layer_name);
+				}
+				// inner structure of colors in layer_all dictionary
+				var color_dict = {
+					disc:[],
+					inner:[],
+					outer:[]
+				};
+				// read lines from a color file into "colors" dictionary
+				var i;
+				for(i=0; i<color_list.length; i++) {
+					var elements = color_list[i].split(' ');
+					var rgb = {
+							r: elements[3],
+							g: elements[4],
+							b: elements[5]
+					};
+					if (color_list[i].search("disc")>0) {
+						color_dict.disc.push(rgb);
+					} else if (color_list[i].search("inner")>0) {
+						color_dict.inner.push(rgb);
+					} else if (color_list[i].search("outer")>0) {
+						color_dict.outer.push(rgb);
+					}
+				}
+				city_tracking[layer_name].ready_to_color = true;
+				printGlobalDict("loadColor");
+			}
+
+			function loadSpiral(lines,filename) {
+				console.log("loading spiral");
+				console.log(filename);
+				var scale = 80000.0; // scale down the coordinates span
+				for(var i=0; i<lines.length-1; i++) {
+					var elements = lines[i].split(' ');
+					var layer_name = elements[0];
+					//update global dictionaries if new layer appears
+					if (!(layer_name in city_tracking)) {
+						city_tracking[layer_name] = getLayerTrackingObj(layer_name);
+					}
+					if (!(layer_name in city_all)) {
+						city_all[layer_name] = getLayerAllObj(layer_name);
+					}
+					city_all[layer_name].coords = [elements[1]/scale, elements[2]/scale];
+					//coordinates is ready, check if shape of building is ready
+					if(city_all[layer_name].shapes.length > 0) {
+						city_tracking[layer_name].ready_to_move = true;
+					}
+				}
+				printGlobalDict("loadSpiral");
 			}
 
 			function errorHandler(evt) {
@@ -259,7 +408,6 @@
 						INTERSECTED = intersects[ 0 ].object;
 						if ( intersects[ 0 ].object.name )
 						{
-							console.log(intersects[ 0 ].object.name);
 							building.floor=intersects[ 0 ].object.name;
 						}
 						else
