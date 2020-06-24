@@ -22,7 +22,8 @@
 				orthographicCamera: false
 			};
 			var building = {
-			    floor: ''
+					floor: '',
+					layer: ''
 			};
 			var spiral = [];
 			var frustumSize = 400;
@@ -83,6 +84,7 @@
 				} );
 
 				gui.add(building, 'floor').name('floor number').listen();
+				gui.add(building, 'layer').name('layer info').listen();
 
 				document.body.appendChild( renderer.domElement );
 				document.addEventListener( 'mousemove', onMouseMove, false );
@@ -195,7 +197,7 @@
 					lines = fileString.split('\n');
 					var doc = new DOMParser().parseFromString(fileString, "text/html");
 					var files = doc.getElementsByTagName("LI");
-					city_to_load = parseInt(files.length-1)/2;
+					city_to_load = parseInt(files.length-2)/2;
 					console.log("loaded: city_to_load = "+city_to_load);
 					for(var i=0;i<files.length;i++){
 						var file_url = "data/"+files[i].firstChild.innerHTML;
@@ -366,8 +368,109 @@
 				return hex.length == 1 ? "0" + hex : hex;
 			}
 
+			// RGB in [0,255]
 			function rgbToHex(r,g,b) {
 				return parseInt("0x"+colorToHex(r)+colorToHex(g)+colorToHex(b));
+			}
+
+			//given a normalized vector, compute the Euler angles of rotation for bars in truss structure
+			function truss_rotate(b) {
+				var i,j;
+				var a = [0,1,0];
+				b[0] = -b[0];
+				b[2] = -b[2];
+				var v = [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+				var c = a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+				var I = [[1,0,0],[0,1,0],[0,0,1]];
+				var v_matrix = [[0,-v[2],v[1]],[v[2],0,-v[0]],[-v[1],v[0],0]];
+				var v_matrix_2 = [[-v[2]*v[2]-v[1]*v[1],v[0]*v[1],v[0]*v[2]],[v[0]*v[1],-v[0]*v[0]-v[2]*v[2],v[1]*v[2]],[v[0]*v[2],v[1]*v[2],-v[0]*v[0]-v[1]*v[1]]];
+				var R = [];
+				if(c == -1) {
+					for(j=0; j<3; j++) {
+						var line = [];
+						for(i=0; i<3; i++) {
+							line.push(I[i][j] + v_matrix[i][j] + v_matrix_2[i][j]);
+						}
+						R.push(line);
+					}
+				} else {
+					for(j=0; j<3; j++) {
+						var line = [];
+						for(i=0; i<3; i++) {
+							line.push(I[i][j] + v_matrix[i][j] + v_matrix_2[i][j]/(1+c));
+						}
+						R.push(line);
+					}
+				}
+				var sy = Math.sqrt(R[0][0]*R[0][0]+R[1][0]*R[1][0]);
+				// https://www.learnopencv.com/rotation-matrix-to-euler-angles/
+				var singular = sy<1e-8;
+				var x,y,z;
+				if(!singular) {
+					x = Math.atan2(R[2][1],R[2][2]);
+					y = Math.atan2(-R[2][0],sy);
+					z = Math.atan2(R[1][0],R[0][0]);
+				} else {
+					x = Math.atan2(-R[1][2],R[1][1]);
+					y = Math.atan2(-R[2][0],sy);
+					z = 0;
+				}
+				 var rotate_rad = [x,y,z];
+				return rotate_rad;
+			}
+
+			function mag(v) {
+				return Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+			}
+
+			function normalize(v) {
+				var length = mag(v);
+				var i;
+				var normalized = [];
+				for(i=0; i<3; i++) {
+					normalized.push(v[i]/length);
+				}
+				return normalized;
+			}
+
+			function obtain_truss(center,top_radius,btm_radius,height,r,g,b) {
+				var thickness = 0.05;
+				var number = 6;
+				var truss_geo = new THREE.Geometry();
+				var i;
+				for (i = 0; i<number; i++) {
+					var theta = i*(360/number);
+					var theta_sin = Math.sin(theta*Math.PI/180);
+					var theta_cos = Math.cos(theta*Math.PI/180);
+					var top = [theta_cos*top_radius,height/2,theta_sin*top_radius];
+					var btm = [theta_cos*btm_radius,-height/2,theta_sin*btm_radius];
+					var top_btm = [top[0]-btm[0], top[1]-btm[1], top[2]-btm[2]];
+					var length = mag(top_btm);
+					var normalized_top_btm = normalize(top_btm);
+					var mid_radius = (top_radius+btm_radius)/2;
+					var bar_center = [center[0]+theta_cos*mid_radius,center[1],center[2]+theta_sin*mid_radius];
+					var bar = new THREE.CylinderGeometry(thickness,thickness,length,16,16);
+					// rotate the side bars
+					var rotated = truss_rotate(normalized_top_btm);
+					bar.rotateX(rotated[0]);
+					bar.rotateY(rotated[1]);
+					bar.rotateZ(rotated[2]);
+					bar.translate(bar_center[0],bar_center[1],bar_center[2]);
+					var bar_mesh = new THREE.Mesh(bar);
+					bar_mesh.updateMatrix();
+					// merge all bars together
+					truss_geo.merge(bar_mesh.geometry,bar_mesh.matrix);
+				}
+				// create torus geometry
+				var torus_geo = new THREE.TorusGeometry(top_radius,thickness,16,100);
+				torus_geo.translate(0,0,center[1]+height/2);
+				torus_geo.rotateX(270*Math.PI/180);
+				// merge torus with bars
+				var material = new THREE.MeshBasicMaterial({color:rgbToHex(r,g,b)});
+				var torus_mesh = new THREE.Mesh(torus_geo, material);
+				truss_geo.merge(torus_mesh.geometry,torus_mesh.matrix);
+				var truss_mesh = new THREE.Mesh(truss_geo,material);
+				return truss_mesh;
 			}
 
 			// check city_tracking, create buildings that are ready to color & move
@@ -392,17 +495,31 @@
 							var Z = city_all[layer].coords[1];
 							floor.translate(0,Y,0);
 							// floor.translate(X,Y,Z);
-
 							// apply colors
 							var r = parseInt(city_all[layer].colors.inner[h-1].r*255);
 							var g = parseInt(city_all[layer].colors.inner[h-1].g*255);
 							var b = parseInt(city_all[layer].colors.inner[h-1].b*255);
 							var material = new THREE.MeshBasicMaterial({color:rgbToHex(r,g,b)});
 							var frustum_mesh = new THREE.Mesh(floor,material);
-							frustum_mesh.floor_name = "floor "+h;
-							frustum_mesh.layer_name = "layer "+layer;
+							frustum_mesh.floor_name = h;
+							frustum_mesh.layer_name = layer.substring(8);
+							// draw inner frustums
 							scene.add(frustum_mesh);
 							objects.push(frustum_mesh);
+
+							// outer frustums
+							if(h<height-1) {
+								//create outer frustum as truss structure
+								var top_out_r = layer_shape[h].outer_radius;
+								var btm_out_r = layer_shape[h-1].inner_radius;
+								r = parseInt(city_all[layer].colors.outer[h-1].r*255);
+								g = parseInt(city_all[layer].colors.outer[h-1].g*255);
+								b = parseInt(city_all[layer].colors.outer[h-1].b*255);
+								var truss_mesh = obtain_truss([0,Y,0],top_out_r,btm_out_r,tall,r,g,b);
+								console.log("createCityMeshes: create a set of truss");
+								// draw outer frustums
+								scene.add(truss_mesh);
+							}
 						}
 						delete city_tracking.layer;
 						--city_to_load;
@@ -461,24 +578,26 @@
 
 				var intersects = raycaster.intersectObjects( objects );
 				// Toggle rotation bool for meshes that we clicked
-				if ( intersects.length > 0 ) {
+				if (intersects.length > 0) {
 					// if the closest object intersected is not the currently stored intersection object
-					if ( intersects[ 0 ].object != INTERSECTED ) 
-					{
-						INTERSECTED = intersects[ 0 ].object;
-						if ( intersects[ 0 ].object.name )
-						{
-							building.floor=intersects[ 0 ].object.name;
+					if (intersects[0].object != INTERSECTED ) {
+						INTERSECTED = intersects[0].object;
+						if(intersects[0].object.floor_name) {
+							building.floor = intersects[0].object.floor_name;
+						} else {
+							building.floor = '';
 						}
-						else
-						{
-							building.floor='';
+						if(intersects[0].object.layer_name) {
+							building.layer = intersects[0].object.layer_name;
+						} else {
+							building.layer = '';
 						}
 					}
 				} else // there are no intersections
 				{
 					INTERSECTED = null;
 					building.floor='';
+					building.layer='';
 				}
 			}
 		</script>
