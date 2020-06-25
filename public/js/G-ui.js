@@ -670,8 +670,7 @@ G.addModule("ui", {
 			ccRibbon.selectAll("p").remove();
 			let ccRects = ccRibbon.selectAll("p").data(VERecords).enter().append("p");
 			ccRects.attr("class", "bar-segment").style("color", "black").style("background-color", (x) => G.colorScales.lightSpectral(x.e / E)).style("width", (x) => Math.ceil(x.avgDeg * 100 / maxAvgDeg) + "%").style("height", "92%")/*.style("flex",(x)=>x.e/E+" 0 0")*/.text((x) => {
-				if (x.count == 1 && (x.v > 50 || x.v > Math.log(V))) return "CC with |V|:" + x.v + ", |E|:" + x.e;
-				return x.count;
+                    return "CC with |V|:" + x.v + ", |E|:" + x.e;
 			});
 			//right now, only clicking a bucket with one unbucketed CC can display that CC; later we'll be able to open bucketed CCs
 			ccRects.on("click", (d) => {
@@ -810,7 +809,7 @@ G.addModule("ui", {
         let min=arrayMin(heights);
         arr = heights.map((x)=>(min==max)?(0.5):((x-min)/(max-min)));
         arr = (arr.filter(distinct)).sort(function(a, b){return b-a});
-        barContainerSelection.append("span").attr("class", "layer-edge-bar").text(" ").style("width", (d) => Math.floor(xLinear(d.E) * 100) + "%")
+        barContainerSelection.append("span").attr("class", "layer-edge-bar").text(" ").style("width", (d) => Math.floor(xLinear(d.E) * 100 + 5) + "%")
             .style("background", (d) => {
                 return G.colorScales.orange((1-(arr[index++])));
 		});
