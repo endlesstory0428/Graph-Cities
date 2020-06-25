@@ -231,10 +231,7 @@ G.addModule("loading",{
                 await d3.csv("datasets/"+g.dataPath+"_labels.csv").then((data)=>{
                     if(typeof data=="string")
                         data=JSON.parse(data);
-                    labels=data;
-                    if(!ids){
-                        console.log("missing labels");
-                    }
+                    labels = data;
                 });
             }
 
@@ -246,9 +243,9 @@ G.addModule("loading",{
 				if(typeof data=="string")data=JSON.parse(data);
 				targets=data.value;
 			});
-			g.loadVerticesAndEdges(ids,sources,targets,labels);
+			g.loadVerticesAndEdges(ids,sources,targets, labels);
 		}
-			
+
 		for(let objName in g.objects){
 			let obj=g.objects[objName];
 			for(let propName in obj.properties){
@@ -614,6 +611,7 @@ G.addModule("loading",{
 
 		this.graph=graph;
 		G.graph=graph;
+
 		//window.history.pushState(graph.dataPath, "", "/?dataPath="+graph.dataPath);
 		//I think this can be annoying when I want to refresh when debugging. have a separate "get link" button?
 		
@@ -638,8 +636,6 @@ G.addModule("loading",{
 
             //setTimeout(G.broadcast("displayGraph",graph,options), 1000);
             //setInterval(a, 1000,graph,options);
-
-
         }
 		
 	},

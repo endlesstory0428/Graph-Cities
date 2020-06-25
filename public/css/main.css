@@ -65,7 +65,18 @@ div.context-menu {
     opacity: 0.7;
     font-size: 16px;
 }
+div.hovered-context-menu {
+    position: absolute;
+    text-align: left;
+    color: white;
+    background-color:black;
+    opacity: 0.7;
+    font-size: 16px;
+    border-radius: 5px;
+    padding: 3px 7px;
 
+    border: 1px solid #bfbfbf;
+}
 div.graph-nav-info {
     position: absolute;
     bottom: 5px;
@@ -94,26 +105,26 @@ div.graph-nav-info {
 	max-width:20%;
 	pointer-events:none;
 	opacity:0.7;
-	
+
 	border-radius: 5px;
     padding: 3px 7px;
-	
+
 	border: 1px solid #bfbfbf;
     opacity: 1;
 	background-color: white;
 	color: black;
 }
 .graph-label {
-	
+
     position: absolute;
-    
+
     font-size: xx-small;
 	max-width:150px;
 	min-width:50px;
 	text-align:center;
 	min-height:15px;
 	pointer-events:none;
-	
+
 	border-radius: 10px;
     padding: 3px;
 	padding-left: 7px;
@@ -667,7 +678,37 @@ div.tooltip{
 	display:none;
 }
 
+div.hovered-tooltip{
+    width:250px;
+    height: fit-content;
+    background-color:white;
+    color:black;
+    position:absolute;
+    z-index:5;
+    display:none;
+    font-size: 10px;
+    max-width:20%;
+    max-height: 20%;
+    opacity: 1;
+    border-radius: 5px;
+    padding: 3px 7px;
+    border: 1px solid #bfbfbf;
+    unselectable:off;
+    overflow-y:scroll;
+    overflow-x:scroll;
 
+}
+.dot {
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    margin-bottom: 2px;
+    display: block;
+}
+div.hovered-tooltip-text{
+    width:250px;
+    height: 100px;
+}
 div#ribbon-histogram{
 	border-top:1px solid grey;
 	width:100%;
@@ -688,6 +729,9 @@ p.histogram{
 	flex:auto;
 	max-width:30px;
 	overflow:hidden;
+}
+a{
+    color:blue;
 }
 
 div#graph-info-area{
@@ -821,7 +865,7 @@ button.material {
 	box-sizing:border-box;
     border: none;
     background: none;
-    height: 32px;
+    height: fit-content;
 	/*min-width:90%;*/
     display: inline-flex;
     align-items: center;

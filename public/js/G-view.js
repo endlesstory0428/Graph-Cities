@@ -16,10 +16,10 @@ G.colorScales={ //[0,1], use with THREE.Color.setStyle()
 	cool:d3.scaleSequential(d3.interpolateCool),
 	warm:d3.scaleSequential(d3.interpolateWarm),
 	plasma:d3.scaleSequential(d3.interpolatePlasma),
-	spring:d3.scaleSequential(d3.interpolateCubehelixLong("#f80","#f8f")),
+	spring:d3.scaleSequential(d3.interpolateHslLong("#ff0000","#f8f")),
 	spectral:d3.scaleSequential(d3.interpolateSpectral),
 	lightSpectral:d3.scaleSequential(d3.interpolateCubehelixLong("#d7d0ff","#f7b6ab")),
-	orange:d3.scaleSequential(d3.interpolateCubehelix("#a00000","#ffd878")),
+	orange:d3.scaleSequential(d3.interpolateHslLong("#a00000","#ffd878")),
 	orangeLight:(value)=>orangeTemp(1-value),
 	//blackRed:(value)=>orangeTemp(1-(value/2)),
 	blackRed:d3.scaleSequential(d3.interpolateCubehelix("#200000","#ff2020")),
@@ -228,8 +228,7 @@ G.addModule("view",{
 						if(id in oldIDMap){
 							newLayout[i]=new THREE.Vector3().copy(oldLayout[oldIDMap[id]]);
 							overlapCount++;
-						}
-					}
+						}}
 					if(overlapCount>=threshold){
 						for(let i=0;i<newGraph.vertices.length;i++){
 							if(newLayout[i])continue;
@@ -801,8 +800,8 @@ G.addModule("view",{
                             if(G.view.graph.hoveredVertex && G.view.graph.showingEgonets && G.view.graph.hoveredVertex == i) {
                                 value = 2;
                             }
-                            if(G.view.graph.snWorms && [...new Set(Object.keys(G.view.graph.snWorms))].indexOf(i.toString())!=-1)
-                                value = -1;
+                            // if(G.view.graph.snWorms && [...new Set(Object.keys(G.view.graph.snWorms))].indexOf(i.toString())!=-1)
+                            //     value = -1;
 							colorValues[i]=value;
 						});
 						return colorValues;

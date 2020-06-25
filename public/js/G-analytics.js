@@ -1685,7 +1685,7 @@ G.addModule("analytics",{
                 graph.snEdgePaths={};
             }
             graph.snEdgePaths = snPathEdgeMap;
-            let sparsenetSubgraph = Algs.getFilteredSubgraph(this.graph, null, (x) => (x != 0), "sparsenet");
+            let sparsenetSubgraph = Algs.getFilteredSubgraph(graph, null, (x) => (x != 0), "sparsenet");
             graph.sparsenetSubgraph= sparsenetSubgraph;
 		    G.enableModifier("sparsenet",graph);
 		}//this only sets snPaths, and other intermediate data are managed by the subview.
@@ -2092,16 +2092,22 @@ G.addModule("analytics",{
 	getVertexIDsString:function(chosenOnes){
 	    let labels = [];
 	    for(let i in chosenOnes) {
-            if(G.view.graph.labels.columns != "null") {
+            if(G.view.graph.labelsByID) {
                 let label = "";
-                originalObjectID =G.view.graph.vertices.id[Number(chosenOnes[i])]
+                originalObjectID =Number(chosenOnes[i])
+                let isEnglish = true;
+                var x = document.getElementsByName("language");
+                for(i = 0; i < x.length; i++) {
+                    if(x[i].checked)
+                        if(x[i].value != "en")
+                            isEnglish = false;
 
-                if (G.view.graph.labels.find(record => record.new_id == originalObjectID)) {
-                    let a = G.view.graph.labels.find(record => record.new_id == originalObjectID);
-                    label = a.name;
-                } else if(G.view.graph.labels.find(record => record.new_id == G.view.graph.vertices.id[originalObjectID])) {
-                    let a = G.view.graph.labels.find(record => record.new_id == G.view.graph.vertices.id[originalObjectID]);
-                    label = a.name;
+                }
+                if (G.view.graph.labelsByID[originalObjectID]) {
+                    let a = G.view.graph.labelsByID[originalObjectID];
+                    if(isEnglish)
+                        label = a[0];
+                    else label = a[1];
                 }
                 labels.push(label)
             }

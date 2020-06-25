@@ -64,6 +64,17 @@ G.addModule("subview",{
 			},
 			originalObjectType:"vertices",
 			getOriginalObjectID:(graph,nodeID)=>{
+			    // if(!G.view.graph.labelsByID || !G.view.graph.labelsByID[nodeID] ){
+			    //     if(!G.view.graph.labelsByID) {
+                //         G.view.graph.labelsByID = [];
+                //     }
+                //     let label = "";
+                //     if (G.view.graph.labels.find(record => record.new_id == G.view.graph.vertices.id[nodeID])) {
+                //         let a = G.view.graph.labels.find(record => record.new_id == G.view.graph.vertices.id[nodeID]);
+                //         label = a.name;
+                //     }
+                //     G.view.graph.labelsByID[nodeID] = label;
+                // }
 				if("original" in graph.nodes)return graph.nodes.original[nodeID];//clone object
 				else return graph.nodes.index[nodeID];
 			},
@@ -170,37 +181,67 @@ G.addModule("subview",{
 						if(graph!=G.view.graph)return graph.nodes.map(()=>undefined);
 						//else if it has height values (here we don't care what is the height rule, just the values), use the height/total height; for now heights are either all undefined or all numbers
 						let heights=graph.nodes.height;
-						if((heights.length>0)&&heights[0]!=undefined){
-							//get the max value
-							let max=arrayMax(heights);
-							let min=arrayMin(heights);
-							if(graph.embeddedLevelMap||graph.embeddedWaveMap){
-								return heights.map((x)=>(min==max)?(0.5):((max-x)/(max-min)));
-							}//reverse coloring?
-							// else return heights.map((x)=>(min==max)?(0.5):((x-min)/(max-min)));
-                            else return heights.map((x)=>(min==max)?(0.5):((max-x)/(max-min)));
-                            // else {
-                            //
-                            //     return heights.map((x)=>{
-                            //         return 1-(2*graph.layerCCSummary[x].E)/(graph.layerCCSummary[x].V*(graph.layerCCSummary[x].V-1));
-                            //     });
-                            // }
-						}
-						else{//if there's no height, use subgraphID/parent subgraph count of that type if it's a subgraph
-							if(graph.subgraphID!=undefined&&G.loading.hasGraph(graph.wholeGraph)){
-                                let parent = G.loading.getGraph(graph.wholeGraph);
-                                if (!parent.subgraphs || !parent.subgraphs[graph.subgraphType]) return graph.nodes.map(() => undefined);
-                                let max = G.loading.getGraph(graph.wholeGraph).subgraphs[graph.subgraphType].max;
-                                let value;
-                                if (max == 0) value = 0;
-                                else {
-                                    value = graph.subgraphID / max;
-                                }
-                                return heights.map((x) => 1-value);
+						if(!graph.snPaths) {
+                            if ((heights.length > 0) && heights[0] != undefined) {
+                                //get the max value
+                                let max = arrayMax(heights);
+                                let min = arrayMin(heights);
+                                if (graph.embeddedLevelMap || graph.embeddedWaveMap) {
+                                    return heights.map((x) => (min == max) ? (0.5) : ((max - x) / (max - min)));
+                                }//reverse coloring?
+                                // else return heights.map((x)=>(min==max)?(0.5):((x-min)/(max-min)));
+                                else return heights.map((x) => (min == max) ? (0.5) : ((max - x) / (max - min)));
+                                // else {
+                                //
+                                //     return heights.map((x)=>{
+                                //         return 1-(2*graph.layerCCSummary[x].E)/(graph.layerCCSummary[x].V*(graph.layerCCSummary[x].V-1));
+                                //     });
+                                // }
+                            } else {//if there's no height, use subgraphID/parent subgraph count of that type if it's a subgraph
+                                if (graph.subgraphID != undefined && G.loading.hasGraph(graph.wholeGraph)) {
+                                    let parent = G.loading.getGraph(graph.wholeGraph);
+                                    if (!parent.subgraphs || !parent.subgraphs[graph.subgraphType]) return graph.nodes.map(() => undefined);
+                                    let max = G.loading.getGraph(graph.wholeGraph).subgraphs[graph.subgraphType].max;
+                                    let value;
+                                    if (max == 0) value = 0;
+                                    else {
+                                        value = graph.subgraphID / max;
+                                    }
+                                    return heights.map((x) => 1 - value);
 
-							}
-							else return graph.nodes.map(()=>undefined);
-						}
+                                } else return graph.nodes.map(() => undefined);
+                            }
+                        } else {
+                            return graph.nodes.map((node,i,array) => {
+                                if(graph.snPaths && G.snNodesColorByLabel) {
+                                    let label = "";
+                                    if(G.view.graph.labelsByID && G.view.graph.labelsByID[i]) {
+                                        label = G.view.graph.labelsByID[i][0];
+                                    }
+                                    if (label.includes("TMI")) {
+                                        G.view.graph.colorScaleName = "spring";
+                                        return .2;
+                                    }
+                                    if (label.includes("ATU")) {
+                                        G.view.graph.colorScaleName = "spring";
+                                        return 0.6;
+                                    }
+                                    if (label.includes("ETK")) {
+                                        G.view.graph.colorScaleName = "spring";
+                                        return 0;
+                                    }
+                                    if ((label.split(" ")).length == 1) {
+                                        G.view.graph.colorScaleName = "spring";
+                                        return 0.3;
+                                    }
+                                    if ((label.split(" ")).length >= 2) {
+                                        G.view.graph.colorScaleName = "spring";
+                                        return 1;
+                                    }
+                                    return undefined;
+                                } return undefined;
+                            });
+                        }
 						
 						//todo: use the metagraph's metanode color if available
 					},
@@ -370,7 +411,7 @@ G.addModule("subview",{
 				//position:{//also doesn't exist at the subview level},
 				//brightness:{value:(node)=>1},
 				customColor:{dimensions:3,value:(node,i,nodes)=>(nodes.color[i]?nodes.color[i]:whiteColor)},
-				usingCustomColor:{value:(node,i,nodes)=>((nodes.color[i]!=null)?1:0)},
+				usingCustomColor:{value:(node,i,nodes)=>((nodes.color[i]!=null)?0:0)},
 			},
 			//other tings like getObjectAtPos are only at the global level, and separates attrs/uniforms from properties and modifiers
 		},
@@ -514,9 +555,6 @@ G.addModule("subview",{
 					value:(graph)=>{
 						let sources=graph.edges.source,targets=graph.edges.target;
                         graph.egonet={}
-                        if(graph.hoveredVertex){
-                            console.log(graph.getNeighbors(graph.hoveredVertex));
-                        }
 						if(graph.hoveredVertex && graph.showingEgonets) {
 						    if(graph.egonetMap[graph.hoveredVertex] == undefined) {
                                 Algs.getFilteredSubgraph(graph,graph.hoveredVertex,(x)=>(x!=0),"egonet");
@@ -599,6 +637,26 @@ G.addModule("subview",{
                                 if(graph.hoveredVertex==source||graph.hoveredVertex==target)hoverFactor=5;
                             }
                             result*=hoverFactor;
+                            if(G.view.graph.highlightPath && G.view.graph.highlightPath.length>0) {
+                                if(G.view.graph.highlightPath.indexOf(source) != -1 && G.view.graph.highlightPath.indexOf(target) != -1){
+                                    return result*5;
+                                } else return result;
+                            }
+                            // if(G.snNodesColorByLabel && G.view.graph.snVertexPaths && G.view.graph.labelsByID[source][0].includes("ATU")) {
+                            //     a = G.view.graph.getNeighbors(source);
+                            //     first = false;
+                            //     second = false;
+                            //     for (let b in a) {
+                            //         if ( G.view.graph.labelsByID[a[b]][0].includes("TMI") && Object.keys(G.view.graph.snVertexPaths).indexOf(a[b])!=-1)
+                            //             first = true;
+                            //         if (G.view.graph.labelsByID[a[b]][0].includes("ETK") && Object.keys(G.view.graph.snVertexPaths).indexOf(a[b])!=-1)
+                            //             second = true;
+                            //
+                            //     }
+                            //     if(first && second && G.view.graph.labelsByID && G.view.graph.labelsByID[source][0].includes("ATU") && (G.view.graph.labelsByID[target][0].includes("TMI")||G.view.graph.labelsByID[target][0].includes("ETK")))
+                            //         return result*5;
+                            //}
+
                             if(!G.drawsparsenet) {
                                 return result;
                             } else {
@@ -642,8 +700,14 @@ G.addModule("subview",{
                             } else {
                                 if(graph.hoveredVertex==source||graph.hoveredVertex==target)hoverFactor=2;
                             }
-
+                            if(G.view.graph.highlightPath && G.view.graph.highlightPath.length>0) {
+                                if(G.view.graph.highlightPath.indexOf(source) != -1 && G.view.graph.highlightPath.indexOf(target) != -1){
+                                    hoverFactor=5;
+                                } else hoverFactor=.1;
+                            }
 							result*=hoverFactor;
+
+
                             if(!G.drawsparsenet) {
                                 return result;
                             } else {
@@ -669,7 +733,7 @@ G.addModule("subview",{
 				color:{
 					dimensions:3,
 					value:(link)=>{
-						return ;
+                        return;
 					},
 				},
 				coord:{dimensions:3,perPoint:true,value:quadCoordFunc,},//this reuse is OK because it's the same value for all
@@ -2668,6 +2732,9 @@ G.addModule("subview",{
 				},
 				randomNumbers:(g,params)=>{return params.paths.map(()=>Math.random());},
 				pathColors:(g,params)=>{
+                    if(G.snNodesColorByLabel){
+                        return new Array(params.paths.length).fill(-1);
+                    }
 					if(!params.showPathColors){return new Array(params.paths.length).fill(redColor);}//to avoid red?
 					if(params.randomPathColors){return params.paths.map((path,i)=>{if(i==0)return redColor;let c=new THREE.Color();c.setHSL(params.randomNumbers[i]*0.7+0.15,1,0.5);return c;})}
 					else{return params.paths.map((path,i)=>{if(i==0)return redColor;let c=new THREE.Color();c.setHSL(((i/(params.paths.length))*0.7+0.1),1,0.5);return c;})}
@@ -2739,7 +2806,7 @@ G.addModule("subview",{
 						for(let pathID in pathCounters){if(pathCounters[pathID]>max){max=pathCounters[pathID];bestPathID=pathID;}}
 						if(bestPathID!=null)pathAssignment[vID]=Number(bestPathID);
 					}
-					g.snWorms = pathAssignment;
+					g.snWorms = Object.keys(pathAssignment);
 					return pathAssignment;
 				},
 				clustering:(g,params)=>{//get the shortest path network from the centers, do not recompute the shortest path from every vertex
@@ -2826,6 +2893,9 @@ G.addModule("subview",{
 			},
 			effects:{
 				nodes:{
+				    color:[(data,oldValue,node,index,array,graph)=>{
+                        return redColor;
+                    }],
 					size:[
 						(data,oldValue,node,index,array,graph)=>{
 							if(!data.vertexPaths)return;
@@ -2881,8 +2951,14 @@ G.addModule("subview",{
 				links:{
 					color:[
 						(data,oldValue,link,index,array,graph)=>{
+                            if(G.snNodesColorByLabel){
+                                return -1;
+                            }
+
 							if(!data.edgePaths)return;
-							if(index in data.edgePaths){return data.pathColors[data.edgePaths[index]];}
+							if(index in data.edgePaths && !G.snNodesColorByLabel){
+							    return data.pathColors[data.edgePaths[index]];
+							}
 							else{
 								let edgeID=index;//G.subview.templates.links.getOriginalObjectID(graph,index);
 								let edge=graph.edges[edgeID],svID=graph.edges.source[edgeID],tvID=graph.edges.target[edgeID];
@@ -2914,9 +2990,9 @@ G.addModule("subview",{
                             if(index in data.edgePaths) {
                                 if(G.view.graph.highlightPath && G.view.graph.highlightPath.length>0) {
                                     if(G.view.graph.highlightPath.indexOf(svID.toString()) != -1 && G.view.graph.highlightPath.indexOf(tvID.toString()) != -1){
-                                         return oldValue+G.controls.get("snPathThickness",3);;
+                                         return oldValue+G.controls.get("snPathThickness",3);
                                     } else return 1;
-                                } else  return oldValue+G.controls.get("snPathThickness",3);;
+                                } else  return oldValue+G.controls.get("snPathThickness",3);
                             }
 							else{//first see if it's shown for another reason, then return 0 if only paths are shown (it should be called hide other edges)
 								if(data.clusteringLinks){if(data.edgeClustering[index]!==undefined){return;}}
@@ -2926,6 +3002,11 @@ G.addModule("subview",{
                                     // for( i in Object.keys(data.pathAssignment)){
                                     //     console.log(graph.getNeighborsByID(i));
                                     // }
+                                    if(G.view.graph.highlightPath && G.view.graph.highlightPath.length>0) {
+                                        if (G.view.graph.highlightPath.indexOf(data.edgeAdjacentToPath[index]) != -1) {
+                                            return oldValue + G.controls.get("snPathThickness", 3);
+                                        }
+                                    }
 								    if(data.edgeAdjacentToPath[index]!==undefined){return;}
 								}
 
@@ -2933,8 +3014,15 @@ G.addModule("subview",{
                                     return 0;//showing other things overrides showing only paths?
                                 }
 								if(data.showWarms && !data.hideOtherLinks) {
-                                    if (Object.keys(data.pathAssignment).indexOf(svID.toString()) != -1 && Object.keys(data.pathAssignment).indexOf(tvID.toString()) != -1)
+                                    if (Object.keys(data.pathAssignment).indexOf(svID.toString()) != -1 && Object.keys(data.pathAssignment).indexOf(tvID.toString()) != -1) {
+                                        if(!G.view.graph.snWorms){
+                                            G.view.graph.snWorms=[];
+                                        }else {
+                                            G.view.graph.snWorms.push(svID);
+                                            G.view.graph.snWorms.push(tvID);
+                                        }
                                         return;
+                                    }
                                     else return 0;
                                 }
 

@@ -444,57 +444,66 @@ G.addModule("controls",{
 		let selectionButtonsElem=getE("selection-buttons-area");
 		this.addButton(selectionButtonsElem,"select by ID",()=>{
 		    let value=getE('select-vertex-input').value;
-		    let result=this.graph.vertices.id.indexOf(value);
-            G.cameraControls.setTarget(null);
-		    if(result!=-1) {
-                let vec=G.view.getNodePos(value);
-                G.cameraControls.setTarget(vec,true);
-                G.toggleSelectVertex(value);
+		    let values = [];
+            if (value.indexOf(',') > -1) {
+                values = value.split(',')
+            } else {
+                let result=this.graph.vertices.id.indexOf(value);
+                G.cameraControls.setTarget(null);
+                if(result!=-1) {
+                    let vec=G.view.getNodePos(value);
+                    if(vec.x != undefined || vec.y != undefined || vec.z != undefined )
+                        G.cameraControls.setTarget(vec,true);
+                    if(this.graph.heightProperty == "fixedPointLayer")
+                        G.toggleSelectVertex(this.graph.vertexMap[value]);
+                    else G.toggleSelectVertex(this.graph.vertexMap[value]);
+                }
             }
+            if(values.length > 0) {
+              for(let i=0; i< values.length; i++) {
+                  let result=this.graph.vertices.id.indexOf(values[i]);
+                  G.cameraControls.setTarget(null);
+                  if(result!=-1) {
+                      let vec=G.view.getNodePos(values[i]);
+                      if(vec.x != undefined || vec.y != undefined || vec.z != undefined )
+                          G.cameraControls.setTarget(vec,true);
+                      if(this.graph.heightProperty == "fixedPointLayer")
+                          G.toggleSelectVertex(this.graph.vertexMap[values[i]]);
+                      else G.toggleSelectVertex(this.graph.vertexMap[values[i]]);
+                  }
+              }
+            }
+
 		});
 
             let drawingButtonsElem = getE("drawing-buttons-area");
             let drawingGraphText = getE("drawing-graph");
-            this.addButton(drawingButtonsElem, "Next Neighbors", () => {
-                const distinct = (value, index, self) => {
-                    return self.indexOf(value) === index;
-                };
-                let arr = []
-                for (let node = 0; node < G.graph.snPathsFlat.length; node++) {
-                    let neighbors = G.graph.getNeighbors(G.graph.snPathsFlat[node]);
-                    arr.push(neighbors);
+            // this.addButton(drawingButtonsElem, "Next Neighbors", () => {
+            //     const distinct = (value, index, self) => {
+            //         return self.indexOf(value) === index;
+            //     };
+            //     let arr = []
+            //     for (let node = 0; node < G.graph.snPathsFlat.length; node++) {
+            //         let neighbors = G.graph.getNeighbors(G.graph.snPathsFlat[node]);
+            //         arr.push(neighbors);
+            //     }
+            //     G.graph.snPathsNeigbors = arr.flat(1);
+            //     G.graph.snPathsNeigbors = G.graph.snPathsNeigbors.filter(distinct);
+            //     G.graph.showingNeighbors = true;
+            //     G.view.refreshStyles(true, true);
+            //     //G.graph.showingNeighbors = false;
+            //     G.graph.trackIndex++;
+            //
+            // });
+
+            this.addButton(drawingButtonsElem, "Update", () => {
+                let value=getE('number-of-next-paths').value;
+                if(Number.isInteger(Number(value))) {
+                    G.graph.customPathNumbers = Number(value);
+                }else {
+                    G.graph.customPathNumbers = 1;
                 }
-                G.graph.snPathsNeigbors = arr.flat(1);
-                G.graph.snPathsNeigbors = G.graph.snPathsNeigbors.filter(distinct);
-                G.graph.showingNeighbors = true;
                 G.view.refreshStyles(true, true);
-                //G.graph.showingNeighbors = false;
-                G.graph.trackIndex++;
-
-            });
-
-            this.addButton(drawingButtonsElem, "Next Paths", () => {
-                G.graph.snPathsFlat = (G.graph.snPathsFlat.concat(G.graph.snPaths.slice(this.index, this.index + 1))).flat(1);
-                G.graph.snPathsTemp.push(G.graph.snPaths.slice(this.index, this.index + 1))
-                let paths=G.graph.snPathsTemp;let snPathEdgeMap={};
-                for(let pathID=0;pathID<paths.length;pathID++){
-                    let path=paths[pathID].flat(1);
-                    for(let i=0;i<path.length;i++){
-                        let tempID=path[i];
-                        let vertex=G.graph.vertices[tempID];
-                        if(i>0){
-                            snPathEdgeMap[G.graph.vertices.edges[tempID][path[i-1]]]=pathID;
-                        }
-                    }
-                }
-                G.graph.edgePaths = snPathEdgeMap;
-
-
-                this.index = this.index+ 1;
-                getE("showing-paths").textContent=""+this.index+" sparsenet paths out of " + G.graph.snPaths.length;
-                G.graph.showingPaths = true;
-                G.view.refreshStyles(true, true);
-                G.graph.showingPaths = false;
 
             });
 
@@ -504,17 +513,66 @@ G.addModule("controls",{
                 clearInterval(G.view.timerId);
             });
             this.addButton(autoButtonsElem, "Resume", () => {
-                function showTime() {
-                    G.view.bool = true;
-                    if (G.view.interval_index == -1) {
-                        G.view.bool = false;
-                        clearInterval(G.view.timerId);
+                if (G.autoExplorePathsOption == 2) {
+                    function showTime() {
+                        G.view.bool = true;
+                        if (G.view.interval_index == -1) {
+                            G.view.bool = false;
+                            clearInterval(G.view.timerId);
+                        }
+                        G.vertexLabels.show(G.view.bool, [G.view.graph.highlightPath[G.view.interval_index]]);
+                        G.view.interval_index = G.view.interval_index - 1;
                     }
-                    G.vertexLabels.show(G.view.bool, [G.view.graph.highlightPath[G.view.interval_index]]);
-                    G.view.interval_index = G.view.interval_index - 1;
+
+                    console.log(G.animation["auto explore speed"]);
+                    G.view.timerId = setInterval(showTime, G.animation["auto explore speed"] * 1000, G.view.interval_index, G.view.bool, G.view.timerId);
+                } else if (G.autoExplorePathsOption == 1) {
+                    function showTime() {
+                        G.view.bool = true;
+                        if (G.view.interval_index1 == -1 &&  G.view.interval_index2 == G.view.graph.highlightPath.length) {
+                            G.view.bool = false;
+                            clearInterval(G.view.timerId);
+                            if(G.view.graph.highlightPath.length%2 == 0) {
+                                G.view.interval_index1 = G.view.graph.highlightPath.length / 2 - 1;
+                                G.view.interval_index2 = G.view.graph.highlightPath.length / 2;
+                            } else {
+                                G.view.interval_index1 = Math.floor(G.view.graph.highlightPath.length / 2);
+                                G.view.interval_index2 = Math.floor(G.view.graph.highlightPath.length / 2);
+                            }
+                        }
+                        G.vertexLabels.show(G.view.bool, [G.view.graph.highlightPath[G.view.interval_index1],G.view.graph.highlightPath[G.view.interval_index2]]);
+                        G.view.interval_index1 = G.view.interval_index1 - 1;
+                        G.view.interval_index2 = G.view.interval_index2 + 1;
+                    }
+
+                    console.log(G.animation["auto explore speed"]);
+                    G.view.timerId = setInterval(showTime, G.animation["auto explore speed"] * 1000);
+                } else if (G.autoExplorePathsOption == 3) {
+                    function showTime() {
+                        let stop1 = 0;
+                        let stop2 = 0;
+                        if (G.view.graph.highlightPath.length % 2 == 0) {
+                            stop1 = G.view.graph.highlightPath.length / 2 - 1;
+                            stop2 = G.view.graph.highlightPath.length / 2;
+                        } else {
+                            stop1 = Math.floor(G.view.graph.highlightPath.length / 2) - 1;
+                            stop2 = Math.floor(G.view.graph.highlightPath.length / 2) + 1;
+                        }
+                        G.view.bool = true;
+                        if (G.view.interval_index1 == stop1 && G.view.interval_index2 == stop2) {
+                            G.view.bool = false;
+                            clearInterval(G.view.timerId);
+                        }
+                        G.vertexLabels.show(G.view.bool, [G.view.graph.highlightPath[G.view.interval_index1], G.view.graph.highlightPath[G.view.interval_index2]]);
+                        G.view.interval_index1 = G.view.interval_index1 - 1;
+                        G.view.interval_index2 = G.view.interval_index2 + 1;
+
+
+                    }
+
+                    console.log(G.animation["auto explore speed"]);
+                    G.view.timerId = setInterval(showTime, G.animation["auto explore speed"] * 1000, G.view.interval_index, G.view.bool, G.view.timerId);
                 }
-                console.log(G.animation["auto explore speed"]);
-                G.view.timerId = setInterval(showTime, G.animation["auto explore speed"]*1000, this.interval_index, this.bool, this.timerId);
             });
 
 		let filteringElem=getE("subgraph-filtering-area");
@@ -585,6 +643,12 @@ G.addModule("controls",{
 		this.contextMenus.vertices.classList.add("tooltip");
 		this.contextMenus.vertices.classList.add("context-menu");
 		this.contextMenus.vertices.onmouseout=hideFunc;
+
+
+        this.contextMenus={};
+        this.contextMenus.hoveredVertex=document.createElement("div");
+        document.body.appendChild(this.contextMenus.hoveredVertex);
+        this.contextMenus.hoveredVertex.classList.add("hovered-tooltip");
 
 		this.contextMenus.waveLayers=document.createElement("div");
 		document.body.appendChild(this.contextMenus.waveLayers);
@@ -708,37 +772,111 @@ G.addModule("controls",{
         let shortestPathSelection=()=> {
             if (!this.graph) return;
             if(this.graph.snPaths) {
-                if (!G.view.bool && Object.keys(this.graph.selectedVertices).length > 0) {
+                if (!G.view.bool && Object.keys(this.graph.selectedVertices).length == 2) {
                     this.graph.highlightPath = [];
-                    for (let i in this.graph.selectedVertices) {
-                        source = parseInt(Object.keys(this.graph.selectedVertices)[0]);
-                        target = parseInt(Object.keys(this.graph.selectedVertices)[1]);
-                        shortestPath = Algs.shortestPath(this.graph.sparsenetSubgraph, source, target, true);
-                        shortestPathSparsenet = [];
-                        for (i in shortestPath) {
-                            shortestPathSparsenet[i] =
-                                (Object.keys(this.graph.sparsenetSubgraph.vertexMap)
-                                    [Object.values(this.graph.sparsenetSubgraph.vertexMap).indexOf(shortestPath[i])])
-                        }
-                        this.graph.highlightPath = shortestPathSparsenet;
-
+                    let source = parseInt(Object.keys(this.graph.selectedVertices)[0]);
+                    let target = parseInt(Object.keys(this.graph.selectedVertices)[1]);
+                    let shortestPath = Algs.shortestPath(this.graph.sparsenetSubgraph, source, target, true);
+                    let shortestPathSparsenet = [];
+                    for (let i in shortestPath) {
+                        shortestPathSparsenet[i] =
+                            (Object.keys(this.graph.sparsenetSubgraph.vertexMap)
+                                [Object.values(this.graph.sparsenetSubgraph.vertexMap).indexOf(shortestPath[i])])
                     }
+                    this.graph.highlightPath = shortestPathSparsenet;
                     G.view.refreshStyles(true, true);
                     if (G.snPathsAutoExplore) {
-                        G.view.interval_index = this.graph.highlightPath.length - 1;
-
-                        function showTime() {
-                            G.view.bool = true;
-                            if (G.view.interval_index == -1) {
-                                G.view.bool = false;
-                                clearInterval(G.view.timerId);
+                        var x = document.getElementsByName("auto-explore");
+                        let option_1 = false;
+                        let option_2 = false;
+                        let option_3 = false;
+                        G.autoExplorePathsOption=0;
+                        for(i = 0; i < x.length; i++) {
+                            if(x[i].checked) {
+                                if (x[i].value == "option_1") {
+                                    option_1 = true;
+                                    G.autoExplorePathsOption=1;
+                                }
+                                if (x[i].value == "option_2") {
+                                    G.autoExplorePathsOption=2;
+                                    option_2 = true;
+                                }
+                                if (x[i].value == "option_3") {
+                                    option_3 = true;
+                                    G.autoExplorePathsOption=3;
+                                }
                             }
-                            G.vertexLabels.show(G.view.bool, [G.view.graph.highlightPath[G.view.interval_index]]);
-                            G.view.interval_index = G.view.interval_index - 1;
-                        }
 
-                        console.log(G.animation["auto explore speed"]);
-                        G.view.timerId = setInterval(showTime, G.animation["auto explore speed"] * 1000);
+                        }
+                        if(option_2) {
+                            G.view.interval_index = G.view.graph.highlightPath.length - 1;
+
+                            function showTime() {
+                                G.view.bool = true;
+                                if (G.view.interval_index == -1) {
+                                    G.view.bool = false;
+                                    clearInterval(G.view.timerId);
+                                    G.view.interval_index = G.view.graph.highlightPath.length - 1;
+                                }
+                                G.vertexLabels.show(G.view.bool, [G.view.graph.highlightPath[G.view.interval_index]]);
+                                G.view.interval_index = G.view.interval_index - 1;
+                            }
+                            G.view.timerId = setInterval(showTime, G.animation["auto explore speed"] * 1000);
+                        } else if(option_3) {
+                            G.view.interval_index1 = G.view.graph.highlightPath.length - 1;
+                            G.view.interval_index2 = 0;
+                            let stop1=0;
+                            let stop2=0;
+                            if(G.view.graph.highlightPath.length%2 == 0) {
+                                stop1= G.view.graph.highlightPath.length/2-1;
+                                stop2= G.view.graph.highlightPath.length/2;
+                            } else {
+                                stop1= Math.floor(G.view.graph.highlightPath.length / 2)-1;
+                                stop2= Math.floor(G.view.graph.highlightPath.length / 2)+1;
+                            }
+                            function showTime() {
+                                G.view.bool = true;
+                                if (G.view.interval_index1 == stop1 &&  G.view.interval_index2 == stop2) {
+                                    G.view.bool = false;
+                                    G.view.interval_index1 = G.view.graph.highlightPath.length - 1;
+                                    G.view.interval_index2 = 0;
+                                    clearInterval(G.view.timerId);
+                                }
+                                G.vertexLabels.show(G.view.bool, [G.view.graph.highlightPath[G.view.interval_index1],G.view.graph.highlightPath[G.view.interval_index2]]);
+                                G.view.interval_index1 = G.view.interval_index1 - 1;
+                                G.view.interval_index2 = G.view.interval_index2 + 1;
+                            }
+
+                            G.view.timerId = setInterval(showTime, G.animation["auto explore speed"] * 1000);
+
+                        } else if(option_1){
+                            if(G.view.graph.highlightPath.length%2 == 0) {
+                                G.view.interval_index1 = G.view.graph.highlightPath.length / 2 - 1;
+                                G.view.interval_index2 = G.view.graph.highlightPath.length / 2;
+                            } else {
+                                G.view.interval_index1 = Math.floor(G.view.graph.highlightPath.length / 2);
+                                G.view.interval_index2 = Math.floor(G.view.graph.highlightPath.length / 2);
+                            }
+                            function showTime() {
+                                G.view.bool = true;
+                                if (G.view.interval_index1 == -1 &&  G.view.interval_index2 == G.view.graph.highlightPath.length) {
+                                    G.view.bool = false;
+                                    clearInterval(G.view.timerId);
+                                    if(G.view.graph.highlightPath.length%2 == 0) {
+                                        G.view.interval_index1 = G.view.graph.highlightPath.length / 2 - 1;
+                                        G.view.interval_index2 = G.view.graph.highlightPath.length / 2;
+                                    } else {
+                                        G.view.interval_index1 = Math.floor(G.view.graph.highlightPath.length / 2);
+                                        G.view.interval_index2 = Math.floor(G.view.graph.highlightPath.length / 2);
+                                    }
+                                }
+                                G.vertexLabels.show(G.view.bool, [G.view.graph.highlightPath[G.view.interval_index1],G.view.graph.highlightPath[G.view.interval_index2]]);
+                                G.view.interval_index1 = G.view.interval_index1 - 1;
+                                G.view.interval_index2 = G.view.interval_index2 + 1;
+                            }
+
+                            G.view.timerId = setInterval(showTime, G.animation["auto explore speed"] * 1000);
+                        }
                     } else {
                         G.view.bool = true;
                         G.vertexLabels.show(G.view.bool, Object.keys(this.graph.selectedVertices))
@@ -751,20 +889,15 @@ G.addModule("controls",{
                     G.view.refreshStyles(true, true);
                 }
             } else {
-                if (!G.view.bool && Object.keys(this.graph.selectedVertices).length > 0) {
+                if (!G.view.bool && Object.keys(this.graph.selectedVertices).length == 2) {
                     this.graph.highlightPath = [];
-                    for (let i in this.graph.selectedVertices) {
-                        source = parseInt(Object.keys(this.graph.selectedVertices)[0]);
-                        target = parseInt(Object.keys(this.graph.selectedVertices)[1]);
-                        shortestPath = Algs.shortestPath(this.graph, source, target, false);
-                        this.graph.highlightPath = shortestPath;
-
-                    }
-                    G.view.refreshStyles(true, true);
+                    let source = parseInt(Object.keys(this.graph.selectedVertices)[0]);
+                    let target = parseInt(Object.keys(this.graph.selectedVertices)[1]);
+                    let shortestPath = Algs.shortestPath(this.graph, source, target, false);
+                    this.graph.highlightPath = shortestPath;
                 } else {
                     this.graph.highlightPath = [];
                     G.view.bool = false;
-                    G.view.refreshStyles(true, true);
                 }
             }
             G.view.refreshStyles(true, true);
@@ -1223,6 +1356,17 @@ G.addModule("controls",{
                 G.animation["auto explore speed"]=1;
             }
 
+        }, false);
+        document.getElementById("color_code_nodes_option").addEventListener('click', function(){
+            if(G.snNodesColorByLabel) {
+                G.snNodesColorByLabel=false;
+                document.getElementById("labels_color-mapping").style.display="none";
+                G.view.refreshStyles(true,true);
+            }else {
+                document.getElementById("labels_color-mapping").style.display="block";
+                G.snNodesColorByLabel=true;
+                G.view.refreshStyles(true,true);
+            }
         }, false);
 
         this.initGestures();
@@ -1845,68 +1989,214 @@ originalObjectType: "vertices"
 subview: {nodes: Array(50), links: Array(52), lines: Array(0), waveLayers: Array(0), waveInterlayers: Array(0), …}
 subviewObjectID: 8
 type: "nodes"*/
-			if(result)
-			{
-				//the description comes in two parts, the original object (eg.vertices) description if available from the analytics, and the view object(eg node) description defined in the view or subview(if the view defines it it takes priority over the subview one).
+			if(result) {
+                //the description comes in two parts, the original object (eg.vertices) description if available from the analytics, and the view object(eg node) description defined in the view or subview(if the view defines it it takes priority over the subview one).
 
-				let objID=result.objectID;let type=result.type;
-				let originalObjectID=result.originalObjectID,originalObjectType=result.originalObjectType,originalObject=result.originalObject,originalObjects=result.originalObjects;
-				let originalTypeSingular=null;
-				if(originalObjectType&&G.analytics.templates[originalObjectType]){originalTypeSingular=G.analytics.templates[originalObjectType].singularName;}
-				let subgraphLevel=result.subview.subgraphLevel;let subgraph=result.subview.graph;
-
-				// let originalDesc="";
-				// if(originalObjectType){
-				// 	originalDesc=((originalTypeSingular?toNormalText(originalTypeSingular):toSingularName(toNormalText(originalObjectType)))+" "+originalObjectID+(subgraphLevel?" (in subgraph "+subgraph.shortName+") ":""));
-				// 	if(G.analytics.templates[originalObjectType]&&G.analytics.templates[originalObjectType].getDescription){
-				// 		originalDesc+=G.analytics.templates[originalObjectType].getDescription(originalObject,originalObjectID,result.subview.graph[originalObjectType]);
-				// 	}
-				// 	originalDesc+="\n";
-				// }
-				// let viewTypeSingular=null;
-				// if(G.view.templates[type].singularName){viewTypeSingular=G.view.templates[type].singularName;}
-				// let viewDesc=(toNormalText((viewTypeSingular?viewTypeSingular:toSingularName(result.type)))+" "+objID);
-				// if(G.view.templates[type]&&G.view.templates[type].getDescription){
-				// 	viewDesc+=" "+G.view.templates[type].getDescription(obj,objID,G.view.model[result.type]);
-				// }
-				if(G.view.graph.labels.columns != "null") {
-                    let label = "";
-                     if(G.view.graph.labels.find(record => record.new_id == G.view.graph.vertices.id[originalObjectID])) {
-                        let a = G.view.graph.labels.find(record => record.new_id == G.view.graph.vertices.id[originalObjectID]);
-                        label = a.name;
-                    }
-                    G.toolTipElem.textContent = "Vertex: " + originalObjectID + " " + label;
+                let objID = result.objectID;
+                let type = result.type;
+                let originalObjectID = result.originalObjectID, originalObjectType = result.originalObjectType,
+                    originalObject = result.originalObject, originalObjects = result.originalObjects;
+                let originalTypeSingular = null;
+                if (originalObjectType && G.analytics.templates[originalObjectType]) {
+                    originalTypeSingular = G.analytics.templates[originalObjectType].singularName;
                 }
-                else
-                    G.toolTipElem.textContent = "Vertex: " +originalObjectID;
-				G.toolTipElem.style.display="";
+                let subgraphLevel = result.subview.subgraphLevel;
+                let subgraph = result.subview.graph;
 
-				switch (result.type)
-				{
-					case "nodes":
-						//$("#egonet").modal('show');
-						let nodes=G.view.model.nodes;
+                // let originalDesc="";
+                // if(originalObjectType){
+                // 	originalDesc=((originalTypeSingular?toNormalText(originalTypeSingular):toSingularName(toNormalText(originalObjectType)))+" "+originalObjectID+(subgraphLevel?" (in subgraph "+subgraph.shortName+") ":""));
+                // 	if(G.analytics.templates[originalObjectType]&&G.analytics.templates[originalObjectType].getDescription){
+                // 		originalDesc+=G.analytics.templates[originalObjectType].getDescription(originalObject,originalObjectID,result.subview.graph[originalObjectType]);
+                // 	}
+                // 	originalDesc+="\n";
+                // }
+                // let viewTypeSingular=null;
+                // if(G.view.templates[type].singularName){viewTypeSingular=G.view.templates[type].singularName;}
+                // let viewDesc=(toNormalText((viewTypeSingular?viewTypeSingular:toSingularName(result.type)))+" "+objID);
+                // if(G.view.templates[type]&&G.view.templates[type].getDescription){
+                // 	viewDesc+=" "+G.view.templates[type].getDescription(obj,objID,G.view.model[result.type]);
+                // }
+                if (G.view.graph && G.view.graph.snWorms) {
+                    if (G.view.graph.labelsByID != "null") {
+                        let label = "";
+                        let isEnglish = true;
+                        var x = document.getElementsByName("language");
+                        for (i = 0; i < x.length; i++) {
+                            if (x[i].checked)
+                                if (x[i].value != "en")
+                                    isEnglish = false;
 
-						let vertices=originalObjects;
-						if(vertices.waveLayers&&vertices.waveLayersExpanded){
-							if(!vertices.waveLayersExpanded[originalObjectID]){
-								vertices.waveLayersExpanded[originalObjectID]=true;
-							}
-							else{
-								vertices.waveLayersExpanded[originalObjectID]=false;
-							}
-							//G.view.refreshStyles(true,true);
-							return;
-						}
-						//highlight edges and neighhbors
+                        }
+                        if (G.view.graph.labelsByID[originalObjectID]) {
+                            let a = G.view.graph.labelsByID[originalObjectID];
+                            if (isEnglish)
+                                label = a[0];
+                            else label = a[1];
+                        }
+                        G.toolTipElem.textContent = "Vertex: " + originalObjectID + " " + label;
+                        let menu = G.controls.contextMenus["hoveredVertex"];
+                        menu.innerHTML = "";
+                        G.controls.contextMenus.hoveredVertex.textContent = "Vertex: " + originalObjectID + " " + label;
+                        G.controls.contextMenus.hoveredVertex.item = document.createElement('div');
+                        var link = document.createElement('a');
+                        link.setAttribute("id","downloadLink");
+                        link.textContent = "Download";
+                        link.classList.add("download-link");
+                        link.style.color="blue";
+                        link.style.display="none";
+                        if (G.view.graph && G.view.graph.snWorms) {
+                            if(!G.view.graph.wormsList) {
+                                G.view.graph.wormsList = {};
+                            } else {
+                                if (G.view.graph.wormsList && Object.keys(G.view.graph.wormsList).length > 0 && G.view.graph.wormsList[originalObjectID]) {
 
-						this.graph.hoveredVertex=originalObjectID;
-				}
-			}
+                                } else {
+                                    let wormsList = Algs.getWormsIdsAndLabels(G.view.graph, originalObjectID);
+                                    G.view.graph.wormsList[originalObjectID]=wormsList;
+                                }
+                            }
+                            if (G.view.graph.wormsList[originalObjectID] && G.view.graph.wormsList[originalObjectID].length > 0) {
+                                G.controls.addCheckbox(G.controls.contextMenus.hoveredVertex, toNormalText("Show Neighbors"), (value) => {
+                                    if (value) {
+                                        G.controls.contextMenus.hoveredVertex.item.style.display = "block";
+                                        link.style.display="inline";
+                                    } else {
+                                        G.controls.contextMenus.hoveredVertex.item.style.display = "none";
+                                        link.style.display="none";
+                                    }
+                                });
+                                menu.appendChild(link);
+
+                                G.controls.contextMenus.hoveredVertex.item.classList.add("hovered-tooltip-text");
+                                G.controls.contextMenus.hoveredVertex.item.innerHTML = "";
+                                for (let i = 0; i < G.view.graph.wormsList[originalObjectID].length; i++) {
+                                    G.controls.contextMenus.hoveredVertex.item.innerHTML += G.view.graph.wormsList[originalObjectID][i] + "\n</br>";
+                                }
+                                G.controls.contextMenus.hoveredVertex.item.style.display = "none";
+                                menu.appendChild(G.controls.contextMenus.hoveredVertex.item);
+                                function downloadInnerHtml(filename, elId, mimeType) {
+                                    var elHtml = document.getElementsByClassName(elId)[0].innerText;
+                                    var link = document.createElement('a');
+                                    mimeType = mimeType || 'text/plain';
+
+                                    link.setAttribute('download', filename);
+                                    link.setAttribute('href', 'data:' + mimeType + ';charset=utf-8,' + encodeURIComponent(elHtml));
+                                    link.click();
+                                }
+
+                                var fileName =  'Vertex'+originalObjectID+'_'+label+'.txt'; // You can use the .txt extension if you want
+
+                                $('#downloadLink').click(function(){
+                                    downloadInnerHtml(fileName, 'hovered-tooltip-text','text/html');
+                                });
+                            }
+                        }
+
+                    } else
+                        G.toolTipElem.textContent = "Vertex: " + originalObjectID;
+
+                    G.showContextMenu("hoveredVertex");
+
+                    switch (result.type) {
+                        case "nodes":
+                            //$("#egonet").modal('show');
+                            let nodes = G.view.model.nodes;
+
+                            let vertices = originalObjects;
+                            if (vertices.waveLayers && vertices.waveLayersExpanded) {
+                                if (!vertices.waveLayersExpanded[originalObjectID]) {
+                                    vertices.waveLayersExpanded[originalObjectID] = true;
+                                } else {
+                                    vertices.waveLayersExpanded[originalObjectID] = false;
+                                }
+                                //G.view.refreshStyles(true,true);
+                                return;
+                            }
+                            //highlight edges and neighhbors
+
+                            this.graph.hoveredVertex = originalObjectID;
+                            G.view.refreshStyles(true, true);
+                    }
+                } else {
+
+                    let objID=result.objectID;let type=result.type;
+                    let originalObjectID=result.originalObjectID,originalObjectType=result.originalObjectType,originalObject=result.originalObject,originalObjects=result.originalObjects;
+                    let originalTypeSingular=null;
+                    if(originalObjectType&&G.analytics.templates[originalObjectType]){originalTypeSingular=G.analytics.templates[originalObjectType].singularName;}
+                    let subgraphLevel=result.subview.subgraphLevel;let subgraph=result.subview.graph;
+
+                    // let originalDesc="";
+                    // if(originalObjectType){
+                    // 	originalDesc=((originalTypeSingular?toNormalText(originalTypeSingular):toSingularName(toNormalText(originalObjectType)))+" "+originalObjectID+(subgraphLevel?" (in subgraph "+subgraph.shortName+") ":""));
+                    // 	if(G.analytics.templates[originalObjectType]&&G.analytics.templates[originalObjectType].getDescription){
+                    // 		originalDesc+=G.analytics.templates[originalObjectType].getDescription(originalObject,originalObjectID,result.subview.graph[originalObjectType]);
+                    // 	}
+                    // 	originalDesc+="\n";
+                    // }
+                    // let viewTypeSingular=null;
+                    // if(G.view.templates[type].singularName){viewTypeSingular=G.view.templates[type].singularName;}
+                    // let viewDesc=(toNormalText((viewTypeSingular?viewTypeSingular:toSingularName(result.type)))+" "+objID);
+                    // if(G.view.templates[type]&&G.view.templates[type].getDescription){
+                    // 	viewDesc+=" "+G.view.templates[type].getDescription(obj,objID,G.view.model[result.type]);
+                    // }
+                    if(G.view.graph.labelsByID != "null") {
+                        let label = "";
+                        if(G.view.graph.labelsByID[originalObjectID]) {
+                            let a = G.view.graph.labelsByID[originalObjectID];
+                            label = a[0];
+                        }
+                        G.toolTipElem.textContent = "Vertex: " + originalObjectID + " " + label;
+                    }
+                    else
+                        G.toolTipElem.textContent = "Vertex: " +originalObjectID;
+                    G.toolTipElem.style.display="";
+
+                    switch (result.type)
+                    {
+                        case "nodes":
+                            //$("#egonet").modal('show');
+                            let nodes=G.view.model.nodes;
+
+                            let vertices=originalObjects;
+                            if(vertices.waveLayers&&vertices.waveLayersExpanded){
+                                if(!vertices.waveLayersExpanded[originalObjectID]){
+                                    vertices.waveLayersExpanded[originalObjectID]=true;
+                                }
+                                else{
+                                    vertices.waveLayersExpanded[originalObjectID]=false;
+                                }
+                                //G.view.refreshStyles(true,true);
+                                return;
+                            }
+                            //highlight edges and neighhbors
+
+                            this.graph.hoveredVertex=originalObjectID;
+                    }
+
+                }
+            }
 			else{
-				G.toolTipElem.textContent="";
-				G.toolTipElem.style.display="none";
+
+				if(G.view.graph && G.view.graph.snWorms) {
+                    $(document).on('mouseover', 'div', function (e) {
+                        if ($(e.target).attr('class') != "hovered-tooltip" &&
+                            $(e.target).attr('class') != "material-checkbox" &&
+                            $(e.target).attr('class') != "material-checkbox-label" && $(e.target).attr('class') != "hovered-tooltip-text" && $(e.target).attr('class') != "download-link") {
+                            let menu = G.controls.contextMenus["hoveredVertex"];
+                            menu.innerHTML = "";
+                            menu.style.display = "none";
+                        }
+                    });
+                } else {
+                    let menu = G.controls.contextMenus["hoveredVertex"];
+                    menu.innerHTML = "";
+                    menu.style.display = "none";
+                    G.toolTipElem.textContent="";
+                    G.toolTipElem.style.display="none";
+                }
 			}
+
 		}
 		G.onhoverend=function(result){
 			if(result)
@@ -1916,6 +2206,9 @@ type: "nodes"*/
 				let subgraphLevel=result.subview.subgraphLevel;let subgraph=result.subview.graph;
 				G.toolTipElem.textContent="";
 				G.toolTipElem.style.display="none";
+                let menu=G.controls.contextMenus["hoveredVertex"];
+                menu.innerHTML = "";
+                menu.style.display="none";
 				switch (result.type)
 				{
 					case "nodes":
@@ -1933,8 +2226,6 @@ type: "nodes"*/
 				}
 			}
 		}
-
-
 
 		G.zoomIntoVertexID=null;
 		G.zoomIntoGraph=null;

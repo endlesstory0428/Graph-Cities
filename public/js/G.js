@@ -248,6 +248,10 @@ class Module{
 							if(paramObj.advanced){hasAdvancedControls=true;}
 							G.controls.addSliderWithStepButtons(container,toNormalText(displayName),(value)=>{
 								let target=this.modifierTarget;
+                                if( G.view.graph.customPathNumbers>0) {
+                                    value += (G.view.graph.customPathNumbers-1);
+                                    //G.view.graph.customPathNumbers = false;
+                                }
 								target.modifiers[name][paramName]=value;
 								if(paramObj.func)paramObj.func(value,target,target.modifiers[name]);
 								modObj.needsUpdate=true;this.onModifiersChanged(name);
