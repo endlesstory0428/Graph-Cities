@@ -23,10 +23,10 @@
 		<script type="text/javascript" src="lib/d3-tip.js"></script>
 		<script type="text/javascript" src="lib/d3-scale-chromatic.js"></script>
 		<script type="text/javascript" src="lib/union-find.js"></script>
-        <script src="lib/jsnetworkx.js"></script>
 		<script src="https://unpkg.com/3d-force-graph@1.56.0/dist/3d-force-graph.min.js"></script>
         <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.12.0/css/all.css" integrity="sha384-ekOryaXPbeCpWQNxMwSWVvQ0+1VrStoPJq54shlYhR8HzQgig1v5fas6YgOqLoKz" crossorigin="anonymous">
 		<script type="text/javascript" src="lib/three.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 
 		<script type="text/javascript" src="lib/util.js"></script>
 		<script type="text/javascript" src="lib/controls.js"></script>
@@ -256,11 +256,11 @@
             </div>
             <div id="color_code_nodes" style="margin-top: 30px;">
                 <div class="custom-control custom-checkbox" style="padding-right: 45px;" >
-                    <input type="checkbox" class="custom-control-input" id="color_code_nodes_option">
-                    <label class="custom-control-label" for="color_code_nodes_option">Color Nodes By Label</label><br>
+                    <input type="checkbox" class="custom-control-input" id="color_code_nodes_option_1">
+                    <label class="custom-control-label" for="color_code_nodes_option_1">Color Nodes By Label</label><br>
                 </div>
-                <div>
-                    <table style="margin-left: 21px; text-align: left; display: none;" id="labels_color-mapping">
+                <div style="display: none" id="labels_color-mapping">
+                    <table style="margin-left: 21px; text-align: left;" >
                         <tr>
                             <td>
                                 <span class="dot" style="background-color: red;  display: inline-block" id="red"></span>
@@ -286,6 +286,36 @@
                             <td><span class="dot" style="background-color: mediumpurple; display: inline-block"
                                       id="purple"></span></td>
                             <td><label for="purple" style="display:inline">PEOPLE (at least two names)</label></td>
+                        </tr>
+                    </table>
+                    <div class="custom-control custom-checkbox" style="padding-left: 50px;" >
+                        <input type="checkbox" class="custom-control-input" id="highlight_color_node_path">
+                        <label class="custom-control-label" for="highlight_color_node_path" style="font-size: medium;padding-right: 25px;"> Highlight consecutive TMI, ATU, ETK nodes</label><br>
+                    </div>
+                </div>
+
+                <div class="custom-control custom-checkbox" style="padding-right: 11px;" >
+                    <input type="checkbox" class="custom-control-input" id="color_code_nodes_option_2">
+                    <label class="custom-control-label" for="color_code_nodes_option_2">Color Nodes By Hot Spots</label><br>
+                </div>
+
+                <div style="display: none" id="spots_color-mapping">
+                    <div id="labels-area"  style="padding-left: 22px; width: 235px" ></div>
+                    <table style="margin-left: 21px; text-align: left;" >
+                        <tr>
+                            <td>
+                                <span class="dot" style="background-color: red;  display: inline-block" id="red_1"></span>
+                            </td>
+                            <td>above average</td>
+                        </tr>
+                        <tr>
+                            <td><span class="dot" style="background-color: lightskyblue; display: inline-block"
+                                      id="blue_1"></span></td>
+                            <td><label for="blue" style="display:inline">around the average</label></td>
+                        </tr>
+                        <tr>
+                            <td><span class="dot" style="background-color: yellow; display: inline-block" id="yellow_1"></span></td>
+                            <td><label for="yellow" style="display:inline">below the average</label></td>
                         </tr>
                     </table>
                 </div>

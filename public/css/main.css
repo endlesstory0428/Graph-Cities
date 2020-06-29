@@ -957,6 +957,17 @@ p.material-slider-label{
 	padding:0;margin:0;
 	overflow:hidden;
 }
+p.material-slider-label-2{
+    position:relative;
+    width:80px;
+    font-size:xx-small;
+    float: left;
+    /*text-transform:uppercase;*/
+    box-sizing:border-box;
+    padding:0;margin:0;
+    margin-left: 140px;
+    overflow:hidden;
+}
 div.material-checkbox{
 	position:relative;
 	width:100%;

@@ -1632,7 +1632,7 @@ G.addModule("analytics",{
 	},
 	
 	
-	showSparseNet:function(graph){
+	showSparseNet:function(graph, show = true){
 		if(!graph)graph=G.graph;
         graph.snPathsTemp=[];
 		let vc=graph.vertices.length;let options=null;if(vc>G.controls.get("approximateSNThreshold",1)){options={variant:"approximate"};G.addLog("using approximate sparse net");}//todo: the exact SN code has a problem

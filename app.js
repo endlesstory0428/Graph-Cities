@@ -240,7 +240,6 @@ function bindHandlers(datasetsList){
 					let subgraphID=Number(subgraphPath.substring(i2+1));
 					if(isNaN(subgraphIDStr)){
 						//try subgraph union
-                        console.log("Here202");
 						let subgraphIDList=subgraphIDStr.split("+");
 						let g=Datasets.loadSubgraphUnion(originalGraphPath,subgraphType,subgraphIDList);
 						if(!g){fail();return;}
