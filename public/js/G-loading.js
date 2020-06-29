@@ -543,6 +543,7 @@ G.addModule("loading",{
 		else{
 			if((graph.vertices.length>maxV||graph.edges.length>maxE)){console.log("warning:loading large graph of V "+graph.vertices.length+", E "+graph.edges.length);}
 			if(graph.vertices.length+graph.edges.length>10000000)throw error();
+			graph.firstBool = true;
 			await this.loadWhole(graph);
 		}
 		
@@ -771,7 +772,6 @@ G.addModule("loading",{
 		//should only avoid showing this when the URL supplied a dataPath or a dataurl and loading it failed (to not be intrusive when used as an embedded visualization)
 		if(datasets)this.datasets=datasets;
         var a=selectE("dataset-menu-1").selectAll("div").data(Object.values(datasets).sort(compareBy("name",true))).enter().append("div").attr("class","a btn btn-secondary btn-sm btn-block").on("click",(data)=>{
-            console.log("HEre");
             console.log(data.id);
             this.display(data.id);
             getE("graph-dataset-bar").style.display="none";
