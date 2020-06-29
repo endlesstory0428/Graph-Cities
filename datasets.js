@@ -1732,7 +1732,6 @@ function doCustomComputation(data) {
                         let subgraphType = segments[segments.length - 2];
                         let subgraphIDs = segments[segments.length - 1];
                         let subgraphIDList = subgraphIDs.split("+").map(x => Number(x)).sort(compareBy(x => Number(x), true));//standardize, to make comparing equality easier
-                        console.log("Here34");
                         console.log(subgraphIDList);
                         let originalGraph = segments.slice(0, segments.length - 2).join("/");
                         //graphPath=originalGraph+"/"+subgraphType+"/"+subgraphIDList.join("+");
@@ -2406,7 +2405,6 @@ function loadSubgraphUnion(originalGraph, type, subgraphIDList) {
     unionCachePath = result.dataPath;
     result.datasetID = originalGraph.split("/")[0];
     result.wholeGraph = originalGraph;
-    console.log("Here123");
     console.log(subgraphList);
     if(subgraphList[0] != null) {
         result.metagraph = subgraphList[0].metagraph;

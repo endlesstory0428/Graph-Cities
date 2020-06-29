@@ -1688,7 +1688,9 @@ G.addModule("analytics",{
             let sparsenetSubgraph = Algs.getFilteredSubgraph(graph, null, (x) => (x != 0), "sparsenet");
             graph.sparsenetSubgraph= sparsenetSubgraph;
 		    G.enableModifier("sparsenet",graph);
+            return deferred.promise();
 		}//this only sets snPaths, and other intermediate data are managed by the subview.
+
 	},
 	hideSparseNet:function(graph){
 		if(!graph)graph=G.graph;
