@@ -125,6 +125,35 @@ G.addModule("controls",{
 				G.controls.set("zoomToExpand",!G.controls.get("zoomToExpand",false));
 			},
 		});
+        let labelsElem=getE("labels-area");
+        this.addDropdownMenu(labelsElem,"explore",{
+            "Story Id (ETK)":()=>{
+                G.labelFilter = "ETK";
+                Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
+                G.view.refreshStyles(true,true);
+            },
+            "Story Topic (ATU)":()=>{
+                G.labelFilter = "ATU";
+                Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
+                G.view.refreshStyles(true,true);
+
+                },
+            "Story Motif (TMI)":()=>{
+                G.labelFilter = "TMI";
+                Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
+                G.view.refreshStyles(true,true);
+                },
+            "PLACES (one-word)":(value)=>{
+                G.labelFilter = "places";
+                Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
+                G.view.refreshStyles(true,true);
+            },
+            "PEOPLE (at least two names)":()=>{
+                G.labelFilter = "people";
+                Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
+                G.view.refreshStyles(true,true);
+                },
+        });
 
 		this.algorithms={
 			"(original graph)":()=>{
@@ -449,6 +478,7 @@ G.addModule("controls",{
                 values = value.split(',')
             } else {
                 let result=this.graph.vertices.id.indexOf(value);
+                Algs.getVertexShortestPathInAllFixedPoints(this.graph, result);
                 G.cameraControls.setTarget(null);
                 if(result!=-1) {
                     let vec=G.view.getNodePos(value);
@@ -1357,7 +1387,7 @@ G.addModule("controls",{
             }
 
         }, false);
-        document.getElementById("color_code_nodes_option").addEventListener('click', function(){
+        document.getElementById("color_code_nodes_option_1").addEventListener('click', function(){
             if(G.snNodesColorByLabel) {
                 G.snNodesColorByLabel=false;
                 document.getElementById("labels_color-mapping").style.display="none";
@@ -1365,6 +1395,28 @@ G.addModule("controls",{
             }else {
                 document.getElementById("labels_color-mapping").style.display="block";
                 G.snNodesColorByLabel=true;
+                G.view.refreshStyles(true,true);
+            }
+        }, false);
+        document.getElementById("color_code_nodes_option_2").addEventListener('click', function(){
+            if(G.snNodesColorByHotSpot) {
+                document.getElementById("spots_color-mapping").style.display="none";
+                G.snNodesColorByHotSpot=false;
+                G.view.refreshStyles(true,true);
+
+            }else {
+                G.snNodesColorByHotSpot=true;
+                document.getElementById("spots_color-mapping").style.display="block";
+            }
+        }, false);
+        document.getElementById("highlight_color_node_path").addEventListener('click', function(){
+            if(G.snHighlightPathNodesColor) {
+                G.snHighlightPathNodesColor=false;
+                document.getElementById("highlight_color_node_path").style.display="none";
+                G.view.refreshStyles(true,true);
+            }else {
+                document.getElementById("highlight_color_node_path").style.display="block";
+                G.snHighlightPathNodesColor=true;
                 G.view.refreshStyles(true,true);
             }
         }, false);
@@ -1487,8 +1539,11 @@ G.addModule("controls",{
 
 		if(options.long){s.attr("class","material-slider long");}
 		let elem=s.node();elem.__options=options;options.elem=elem;
-
-		let label=s.append("p").attr("id", num).attr("class","material-slider-label").text(text);
+        if(text == "vertical spread" || text == "horizontal spread" || text == "node size" || text == "link thickness" || id == "path") {
+            s.append("p").attr("id", num).attr("class", "material-slider-label-2").text(text);
+        } else {
+            s.append("p").attr("id", num).attr("class", "material-slider-label").text(text);
+        }
 		let barContainer=s.append("div").attr("class","material-slider-bar-container");
 		let pivot=barContainer.append("div").attr("class","material-slider-pivot");
 		let bar=barContainer.append("div").attr("class","material-slider-bar");
@@ -2046,17 +2101,7 @@ type: "nodes"*/
                         link.style.color="blue";
                         link.style.display="none";
                         if (G.view.graph && G.view.graph.snWorms) {
-                            if(!G.view.graph.wormsList) {
-                                G.view.graph.wormsList = {};
-                            } else {
-                                if (G.view.graph.wormsList && Object.keys(G.view.graph.wormsList).length > 0 && G.view.graph.wormsList[originalObjectID]) {
-
-                                } else {
-                                    let wormsList = Algs.getWormsIdsAndLabels(G.view.graph, originalObjectID);
-                                    G.view.graph.wormsList[originalObjectID]=wormsList;
-                                }
-                            }
-                            if (G.view.graph.wormsList[originalObjectID] && G.view.graph.wormsList[originalObjectID].length > 0) {
+                            if (G.view.graph.snwormsList[originalObjectID] && G.view.graph.snwormsList[originalObjectID].length > 0) {
                                 G.controls.addCheckbox(G.controls.contextMenus.hoveredVertex, toNormalText("Show Neighbors"), (value) => {
                                     if (value) {
                                         G.controls.contextMenus.hoveredVertex.item.style.display = "block";
@@ -2070,8 +2115,8 @@ type: "nodes"*/
 
                                 G.controls.contextMenus.hoveredVertex.item.classList.add("hovered-tooltip-text");
                                 G.controls.contextMenus.hoveredVertex.item.innerHTML = "";
-                                for (let i = 0; i < G.view.graph.wormsList[originalObjectID].length; i++) {
-                                    G.controls.contextMenus.hoveredVertex.item.innerHTML += G.view.graph.wormsList[originalObjectID][i] + "\n</br>";
+                                for (let i = 0; i < G.view.graph.snwormsList[originalObjectID].length; i++) {
+                                    G.controls.contextMenus.hoveredVertex.item.innerHTML += G.view.graph.snwormsList[originalObjectID][i] + "\n</br>";
                                 }
                                 G.controls.contextMenus.hoveredVertex.item.style.display = "none";
                                 menu.appendChild(G.controls.contextMenus.hoveredVertex.item);

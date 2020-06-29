@@ -1372,6 +1372,21 @@ G.addModule("view",{
 					brightness:[
 						(data,oldValue,link,index,array,model)=>{
 							let sID=array.source[index],tID=array.target[index];
+                            if(G.snHighlightPathNodesColor && G.snNodesColorByLabel && G.view.graph.snVertexPaths && G.view.graph.labelsByID[sID] && G.view.graph.labelsByID[sID][0].includes("ATU")) {
+                                a = G.view.graph.getNeighbors(sID);
+                                first = false;
+                                second = false;
+                                for (let b in a) {
+                                    if (G.view.graph.labelsByID[a[b]]&& G.view.graph.labelsByID[a[b]][0].includes("TMI") && Object.keys(G.view.graph.snVertexPaths).indexOf(a[b])!=-1)
+                                        first = true;
+                                    if (G.view.graph.labelsByID[a[b]] &&G.view.graph.labelsByID[a[b]][0].includes("ETK") && Object.keys(G.view.graph.snVertexPaths).indexOf(a[b])!=-1)
+                                        second = true;
+
+                                }
+                                if(G.view.graph.labelsByID[sID] && first && second && G.view.graph.labelsByID && G.view.graph.labelsByID[sID][0].includes("ATU") && (G.view.graph.labelsByID[tID] && G.view.graph.labelsByID[tID][0].includes("TMI")||G.view.graph.labelsByID[tID][0].includes("ETK"))) {
+                                    return 10;
+                                }
+                            }
 							if(data.reversed){
 								if(getProperty(model.nodes,sID,data.property)>data.threshold)return 0;if(getProperty(model.nodes,tID,data.property)>data.threshold)return 0;
 							}

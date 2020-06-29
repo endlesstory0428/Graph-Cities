@@ -10,6 +10,7 @@
     "express": "^4.17.1",
     "graphology": "^0.16.0",
     "html": "^1.0.0",
+    "jquery": "^3.5.1",
     "node-fs": "^0.1.7",
     "node-fs-extra": "^0.8.2",
     "plotly": "^1.0.6",

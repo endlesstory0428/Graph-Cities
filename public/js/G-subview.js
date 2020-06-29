@@ -239,7 +239,55 @@ G.addModule("subview",{
                                         return 1;
                                     }
                                     return undefined;
-                                } return undefined;
+                                }
+                                if(G.view.graph.snWorms && graph.snPaths && graph.snnumConnections && G.snNodesColorByHotSpot ) {
+                                    let label = "";
+                                    if(G.view.graph.labelsByID && G.view.graph.labelsByID[i]) {
+                                        label = G.view.graph.labelsByID[i][0];
+                                    }
+                                    if(G.labelFilter == "places"){
+                                        if ((label.split(" ")).length == 1 && (G.view.graph.snnumConnections[i] < G.view.graph.snnumConnections[G.labelFilter] || G.view.graph.snnumConnections[i] == 0 || !G.view.graph.snnumConnections[i])) {
+                                            G.view.graph.colorScaleName = "spring";
+                                            return .2;
+                                        }
+                                        if ((label.split(" ")).length == 1 && G.view.graph.snnumConnections[i] == G.view.graph.snnumConnections[G.labelFilter]) {
+                                            G.view.graph.colorScaleName = "spring";
+                                            return 0.6;
+                                        }
+                                        if ((label.split(" ")).length == 1 && G.view.graph.snnumConnections[i] > G.view.graph.snnumConnections[G.labelFilter]) {
+                                            G.view.graph.colorScaleName = "spring";
+                                            return 0;
+                                        }
+                                    } else if(G.labelFilter == "people" && !label.includes("ETK") && !label.includes("ATU") && !label.includes("TMI")){
+                                        if ((label.split(" ")).length >= 2 && (G.view.graph.snnumConnections[i] < G.view.graph.snnumConnections[G.labelFilter] || G.view.graph.snnumConnections[i] == 0 || !G.view.graph.snnumConnections[i])) {
+                                            G.view.graph.colorScaleName = "spring";
+                                            return .2;
+                                        }
+                                        if ((label.split(" ")).length >= 2 && G.view.graph.snnumConnections[i] == G.view.graph.snnumConnections[G.labelFilter]) {
+                                            G.view.graph.colorScaleName = "spring";
+                                            return 0.6;
+                                        }
+                                        if ((label.split(" ")).length >= 2 && G.view.graph.snnumConnections[i] > G.view.graph.snnumConnections[G.labelFilter]) {
+                                            G.view.graph.colorScaleName = "spring";
+                                            return 0;
+                                        }
+                                    } else {
+                                        if (label.includes(G.labelFilter) && (G.view.graph.snnumConnections[i] < G.view.graph.snnumConnections[G.labelFilter] || G.view.graph.snnumConnections[i] == 0 || !G.view.graph.snnumConnections[i])) {
+                                            G.view.graph.colorScaleName = "spring";
+                                            return .2;
+                                        }
+                                        if (label.includes(G.labelFilter) && G.view.graph.snnumConnections[i] == G.view.graph.snnumConnections[G.labelFilter]) {
+                                            G.view.graph.colorScaleName = "spring";
+                                            return 0.6;
+                                        }
+                                        if (label.includes(G.labelFilter) && G.view.graph.snnumConnections[i] > G.view.graph.snnumConnections[G.labelFilter]) {
+                                            G.view.graph.colorScaleName = "spring";
+                                            return 0;
+                                        }
+                                    }
+                                    return undefined;
+                                }
+                                return undefined;
                             });
                         }
 						
@@ -283,7 +331,7 @@ G.addModule("subview",{
 							if(graph.selectedVertices[vertexID]){
 								selectionFactor=1.5;
 							}
-							
+
 							let answer=metanodeFactor*waveStartFactor*selectionFactor;//*subgraphFactor;//s*diversitySize*degreeFactor
 							checkNumber(answer);
 							if(!G.drawsparsenet) {
@@ -636,26 +684,15 @@ G.addModule("subview",{
 							} else {
                                 if(graph.hoveredVertex==source||graph.hoveredVertex==target)hoverFactor=5;
                             }
-                            result*=hoverFactor;
+                            if(!G.snHighlightPathNodesColor) {
+                                result*=hoverFactor;
+                            }
+
                             if(G.view.graph.highlightPath && G.view.graph.highlightPath.length>0) {
                                 if(G.view.graph.highlightPath.indexOf(source) != -1 && G.view.graph.highlightPath.indexOf(target) != -1){
                                     return result*5;
                                 } else return result;
                             }
-                            // if(G.snNodesColorByLabel && G.view.graph.snVertexPaths && G.view.graph.labelsByID[source][0].includes("ATU")) {
-                            //     a = G.view.graph.getNeighbors(source);
-                            //     first = false;
-                            //     second = false;
-                            //     for (let b in a) {
-                            //         if ( G.view.graph.labelsByID[a[b]][0].includes("TMI") && Object.keys(G.view.graph.snVertexPaths).indexOf(a[b])!=-1)
-                            //             first = true;
-                            //         if (G.view.graph.labelsByID[a[b]][0].includes("ETK") && Object.keys(G.view.graph.snVertexPaths).indexOf(a[b])!=-1)
-                            //             second = true;
-                            //
-                            //     }
-                            //     if(first && second && G.view.graph.labelsByID && G.view.graph.labelsByID[source][0].includes("ATU") && (G.view.graph.labelsByID[target][0].includes("TMI")||G.view.graph.labelsByID[target][0].includes("ETK")))
-                            //         return result*5;
-                            //}
 
                             if(!G.drawsparsenet) {
                                 return result;
@@ -2732,7 +2769,7 @@ G.addModule("subview",{
 				},
 				randomNumbers:(g,params)=>{return params.paths.map(()=>Math.random());},
 				pathColors:(g,params)=>{
-                    if(G.snNodesColorByLabel){
+                    if(G.snNodesColorByHotSpot || G.snNodesColorByLabel){
                         return new Array(params.paths.length).fill(-1);
                     }
 					if(!params.showPathColors){return new Array(params.paths.length).fill(redColor);}//to avoid red?
@@ -2900,6 +2937,9 @@ G.addModule("subview",{
 						(data,oldValue,node,index,array,graph)=>{
 							if(!data.vertexPaths)return;
 							let vertexID=G.subview.templates.nodes.getOriginalObjectID(graph,index);
+							if(G.view.graph.snWorms.indexOf(vertexID.toString())==-1) {
+                                Algs.getWormsIdsAndLabels(G.view.graph, vertexID);
+                            }
                             if(vertexID in data.vertexPaths)return;
                             if(data.showClustering)return;
                             if(data.showWarms||data.showPathAssignment){
@@ -2951,12 +2991,12 @@ G.addModule("subview",{
 				links:{
 					color:[
 						(data,oldValue,link,index,array,graph)=>{
-                            if(G.snNodesColorByLabel){
+                            if(G.snNodesColorByHotSpot || G.snNodesColorByLabel){
                                 return -1;
                             }
 
 							if(!data.edgePaths)return;
-							if(index in data.edgePaths && !G.snNodesColorByLabel){
+							if(index in data.edgePaths && (!G.snNodesColorByLabel || !G.snNodesColorByHotSpot)){
 							    return data.pathColors[data.edgePaths[index]];
 							}
 							else{
@@ -3035,11 +3075,13 @@ G.addModule("subview",{
                             let edge=G.view.graph.edges[edgeID],svID=G.view.graph.edges.source[edgeID],tvID=G.view.graph.edges.target[edgeID];
 							if(!data.edgePaths)return;
 							if(index in data.edgePaths) {
-                                if(G.view.graph.highlightPath && G.view.graph.highlightPath.length>0) {
-                                    if(G.view.graph.highlightPath.indexOf(svID.toString()) != -1 && G.view.graph.highlightPath.indexOf(tvID.toString()) != -1){
-                                        return oldValue+G.controls.get("snlinkBrightnessFactor")+9;
-                                    } else return oldValue-.5;
-                                } else  return oldValue+G.controls.get("snPathBrightness");
+							    if(!G.snHighlightPathNodesColor) {
+                                    if (G.view.graph.highlightPath && G.view.graph.highlightPath.length > 0) {
+                                        if (G.view.graph.highlightPath.indexOf(svID.toString()) != -1 && G.view.graph.highlightPath.indexOf(tvID.toString()) != -1) {
+                                            return oldValue + G.controls.get("snlinkBrightnessFactor") + 9;
+                                        } else return oldValue - .5;
+                                    } else return oldValue + G.controls.get("snPathBrightness");
+                                } else oldValue;
                             }
 
 						},
