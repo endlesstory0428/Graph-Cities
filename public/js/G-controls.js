@@ -478,7 +478,7 @@ G.addModule("controls",{
                 values = value.split(',')
             } else {
                 let result=this.graph.vertices.id.indexOf(value);
-                Algs.getVertexShortestPathInAllFixedPoints(this.graph, result);
+                //Algs.getVertexShortestPathInAllFixedPoints(this.graph, result);
                 G.cameraControls.setTarget(null);
                 if(result!=-1) {
                     let vec=G.view.getNodePos(value);
@@ -505,6 +505,18 @@ G.addModule("controls",{
             }
 
 		});
+        // this.addButton(selectionButtonsElem,"Show Selected Vertex Paths",()=>{
+        //     let value=getE('select-vertex-input').value;
+        //     let values = [];
+        //     if (value.indexOf(',') > -1) {
+        //         values = value.split(',')
+        //     } else {
+        //         let result=this.graph.vertices.id.indexOf(value);
+        //         Algs.getVertexShortestPathInAllFixedPoints(this.graph,value, result);
+        //     }
+        //
+        //
+        // });
 
             let drawingButtonsElem = getE("drawing-buttons-area");
             let drawingGraphText = getE("drawing-graph");

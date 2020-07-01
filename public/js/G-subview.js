@@ -328,7 +328,7 @@ G.addModule("subview",{
 							}
 							
 							let selectionFactor=1;
-							if(graph.selectedVertices[vertexID]){
+							if(graph.selectedVertices && graph.selectedVertices[vertexID]){
 								selectionFactor=1.5;
 							}
 
@@ -367,7 +367,7 @@ G.addModule("subview",{
 				pinned:{isArray:true,
 					value:function(graph){
 						let vertices=graph.vertices,nodes=graph.nodes;let userPinned=vertices.userPinned;
-						let arr= nodes.map((node,i,array)=>{if(userPinned[i])return true;return false;});
+						let arr= nodes.map((node,i,array)=>{if(userPinned && userPinned[i])return true;return false;});
 						return arr;
 					}
 				},//pinned is calculated from user manual pinning and style-based pinning
@@ -465,7 +465,7 @@ G.addModule("subview",{
 		},
 		links:{
 			value:(graph)=>{
-				
+
 				let heightPropertyType=G.view.graph.heightPropertyType,heightPropertyName=G.view.graph.heightPropertyName;
 				switch (heightPropertyType){
 					case undefined:{
@@ -2781,10 +2781,23 @@ G.addModule("subview",{
 					for(let pathID=0;pathID<paths.length;pathID++){
 						let path=paths[pathID];
 						for(let i=0;i<path.length;i++){
-							let tempID=path[i];
-							let vertex=g.vertices[tempID];
-							if(tempID in snPathMap){snPathMap[tempID].push(pathID);}
-							else{snPathMap[tempID]=[pathID];}
+                            if(!g.isShortestPathsById) {
+                                let tempID = path[i];
+                                let vertex = g.vertices[tempID];
+                                if (tempID in snPathMap) {
+                                    snPathMap[tempID].push(pathID);
+                                } else {
+                                    snPathMap[tempID] = [pathID];
+                                }
+                            }else {
+                                let tempID = path[i];
+                                let vertex = g.vertexMap[tempID];
+                                if (tempID in snPathMap) {
+                                    snPathMap[vertex].push(pathID);
+                                } else {
+                                    snPathMap[vertex] = [pathID];
+                                }
+                            }
 						}
                         if(!g.snExtremePoints) {
                             g.snExtremePoints = [];
@@ -2801,11 +2814,19 @@ G.addModule("subview",{
 					for(let pathID=0;pathID<paths.length;pathID++){
 						let path=paths[pathID];
 						for(let i=0;i<path.length;i++){
-							let tempID=path[i];
-							let vertex=g.vertices[tempID];
-							if(i>0){
-								snPathEdgeMap[g.vertices.edges[tempID][path[i-1]]]=pathID;
-							}
+                            if(!g.isShortestPathsById) {
+                                let tempID = path[i];
+                                let vertex = g.vertices[tempID];
+                                if (i > 0) {
+                                    snPathEdgeMap[g.vertices.edges[tempID][path[i - 1]]] = pathID;
+                                }
+                            } else {
+                                let tempID = path[i];
+                                let vertex = g.vertexMap[tempID];
+                                if (i > 0) {
+                                    snPathEdgeMap[g.vertices.edges[vertex][g.vertexMap[path[i - 1]]]] = pathID;
+                                }
+                            }
 						}
 					}
 					if(g.snEdgePaths == undefined) {
