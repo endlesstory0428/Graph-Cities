@@ -255,6 +255,11 @@ G.addModule("subview",{
                                             return 0.6;
                                         }
                                         if ((label.split(" ")).length == 1 && G.view.graph.snnumConnections[i] > G.view.graph.snnumConnections[G.labelFilter]) {
+                                            if(G.view.graph.hotspotsIds){
+                                                G.view.graph.hotspotsIds.push(i);
+                                            }else {
+                                                G.view.graph.hotspotsIds = [];
+                                            }
                                             G.view.graph.colorScaleName = "spring";
                                             return 0;
                                         }
@@ -268,6 +273,14 @@ G.addModule("subview",{
                                             return 0.6;
                                         }
                                         if ((label.split(" ")).length >= 2 && G.view.graph.snnumConnections[i] > G.view.graph.snnumConnections[G.labelFilter]) {
+                                            if(G.view.graph.hotspotsIds){
+                                                if(G.view.graph.hotspotsIds.indexOf(i)==-1){
+                                                    G.view.graph.hotspotsIds.push(i);
+                                                }
+
+                                            }else {
+                                                G.view.graph.hotspotsIds = [];
+                                            }
                                             G.view.graph.colorScaleName = "spring";
                                             return 0;
                                         }
@@ -281,6 +294,11 @@ G.addModule("subview",{
                                             return 0.6;
                                         }
                                         if (label.includes(G.labelFilter) && G.view.graph.snnumConnections[i] > G.view.graph.snnumConnections[G.labelFilter]) {
+                                            if(G.view.graph.hotspotsIds){
+                                                G.view.graph.hotspotsIds.push(i);
+                                            }else {
+                                                G.view.graph.hotspotsIds = [];
+                                            }
                                             G.view.graph.colorScaleName = "spring";
                                             return 0;
                                         }
