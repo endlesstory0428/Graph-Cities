@@ -256,7 +256,9 @@ G.addModule("subview",{
                                         }
                                         if ((label.split(" ")).length == 1 && G.view.graph.snnumConnections[i] > G.view.graph.snnumConnections[G.labelFilter]) {
                                             if(G.view.graph.hotspotsIds){
-                                                G.view.graph.hotspotsIds.push(i);
+                                                if(G.view.graph.hotspotsIds.indexOf(i)==-1 && Object.keys(G.view.graph.snVertexPaths).indexOf(i.toString())!=-1) {
+                                                    G.view.graph.hotspotsIds.push(i);
+                                                }
                                             }else {
                                                 G.view.graph.hotspotsIds = [];
                                             }
@@ -274,7 +276,7 @@ G.addModule("subview",{
                                         }
                                         if ((label.split(" ")).length >= 2 && G.view.graph.snnumConnections[i] > G.view.graph.snnumConnections[G.labelFilter]) {
                                             if(G.view.graph.hotspotsIds){
-                                                if(G.view.graph.hotspotsIds.indexOf(i)==-1){
+                                                if(G.view.graph.hotspotsIds.indexOf(i)==-1 && Object.keys(G.view.graph.snVertexPaths).indexOf(i.toString())!=-1){
                                                     G.view.graph.hotspotsIds.push(i);
                                                 }
 
@@ -295,7 +297,9 @@ G.addModule("subview",{
                                         }
                                         if (label.includes(G.labelFilter) && G.view.graph.snnumConnections[i] > G.view.graph.snnumConnections[G.labelFilter]) {
                                             if(G.view.graph.hotspotsIds){
-                                                G.view.graph.hotspotsIds.push(i);
+                                                if(G.view.graph.hotspotsIds.indexOf(i)==-1 && Object.keys(G.view.graph.snVertexPaths).indexOf(i.toString())!=-1) {
+                                                    G.view.graph.hotspotsIds.push(i);
+                                                }
                                             }else {
                                                 G.view.graph.hotspotsIds = [];
                                             }
