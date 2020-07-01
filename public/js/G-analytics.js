@@ -218,7 +218,9 @@ G.addModule("analytics",{
 			let V=graph.vertices.length,E=graph.edges.length;
 			let p=(2*E / (V * (V - 1))),k=Math.log(E/V)/Math.log(Math.log(V));
 			desc="|V|: "+V+", |E|: "+E+", avg. degree: "+shortStr(2*E/V)+", density: "+shortStr(p)+", sparsity:"+shortStr(k);
-            originalGraphMenu = ["|V| : " + V , "|E| : " + E, "avg. degree : "+ shortStr(2*E/V), "density : " + shortStr(p), "sparsity : "+shortStr(k)  ]
+            originalGraphMenu = ["|V| : " + V , "|E| : " + E, "avg. degree : "+ shortStr(2*E/V), "density : " + shortStr(p), "sparsity : "+shortStr(k),
+                "ETK count: "+ G.view.graph.ETKCount, "ATU count: "+ G.view.graph.ATUCount, "TMI count: "+ G.view.graph.TMICount, "People count: "+ G.view.graph.PeopleCount
+                , "Places count: "+ G.view.graph.PlacesCount ]
             if(graph.heights){
 				if(graph.heights.count>1){
 				    desc+=", heights: "+graph.heights.count;
@@ -1630,8 +1632,8 @@ G.addModule("analytics",{
 		let lastLayer=getE("X-ray-menu-content").lastElementChild;lastLayer.removeChild(lastLayer.lastElementChild);
 		console.log(layerSummary);
 	},
-	
-	
+
+
 	showSparseNet:function(graph, show = true){
 		if(!graph)graph=G.graph;
         graph.snPathsTemp=[];
@@ -1688,7 +1690,6 @@ G.addModule("analytics",{
             let sparsenetSubgraph = Algs.getFilteredSubgraph(graph, null, (x) => (x != 0), "sparsenet");
             graph.sparsenetSubgraph= sparsenetSubgraph;
 		    G.enableModifier("sparsenet",graph);
-            return deferred.promise();
 		}//this only sets snPaths, and other intermediate data are managed by the subview.
 
 	},
