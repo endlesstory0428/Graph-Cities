@@ -129,27 +129,32 @@ G.addModule("controls",{
         this.addDropdownMenu(labelsElem,"explore",{
             "Story Id (ETK)":()=>{
                 G.labelFilter = "ETK";
+                G.view.graph.hotspotsIds = [];
                 Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
                 G.view.refreshStyles(true,true);
             },
             "Story Topic (ATU)":()=>{
                 G.labelFilter = "ATU";
+                G.view.graph.hotspotsIds = [];
                 Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
                 G.view.refreshStyles(true,true);
 
                 },
             "Story Motif (TMI)":()=>{
                 G.labelFilter = "TMI";
+                G.view.graph.hotspotsIds = [];
                 Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
                 G.view.refreshStyles(true,true);
                 },
             "PLACES (one-word)":(value)=>{
                 G.labelFilter = "places";
+                G.view.graph.hotspotsIds = [];
                 Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
                 G.view.refreshStyles(true,true);
             },
             "PEOPLE (at least two names)":()=>{
                 G.labelFilter = "people";
+                G.view.graph.hotspotsIds = [];
                 Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
                 G.view.refreshStyles(true,true);
                 },
@@ -472,14 +477,15 @@ G.addModule("controls",{
         let downloadButtonsElem=getE("spots_color-mapping");
         this.addButton(downloadButtonsElem,"Download HotSpots",()=>{
 
-            let text = "";
-            for (let j = 0; j< G.view.graph.hotspotsIds.length; j++) {
-                if(!text.includes(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]])) {
-                    text += G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]] + "\n";
-                }
 
-            }
             function downloadInnerHtml(filename, mimeType) {
+                let text = "";
+                for (let j = 0; j< G.view.graph.hotspotsIds.length; j++) {
+                    if(!text.includes(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0])) {
+                        text += G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0] + "\n";
+                    }
+
+                }
                 var link = document.createElement('a');
                 mimeType = mimeType || 'text/plain';
 
