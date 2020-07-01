@@ -469,7 +469,30 @@ G.addModule("controls",{
 			item.__obj=obj;
 		};
 		this.addButton(itemsTitleElem,"+",saveGraph,()=>saveGraph(false,true));
+        let downloadButtonsElem=getE("spots_color-mapping");
+        this.addButton(downloadButtonsElem,"Download HotSpots",()=>{
 
+            let text = "";
+            for (let j = 0; j< G.view.graph.hotspotsIds.length; j++) {
+                if(!text.includes(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]])) {
+                    text += G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]] + "\n";
+                }
+
+            }
+            function downloadInnerHtml(filename, mimeType) {
+                var link = document.createElement('a');
+                mimeType = mimeType || 'text/plain';
+
+                link.setAttribute('download', filename);
+                link.setAttribute('href', 'data:' + mimeType + ';charset=utf-8,' + encodeURIComponent(text));
+                link.click();
+            }
+
+            var fileName =  'Hotspots.txt'; // You can use the .txt extension if you want
+            downloadInnerHtml(fileName,'text/html');
+
+
+        });
 		let selectionButtonsElem=getE("selection-buttons-area");
 		this.addButton(selectionButtonsElem,"select by ID",()=>{
 		    let value=getE('select-vertex-input').value;
