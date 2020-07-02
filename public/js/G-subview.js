@@ -219,24 +219,24 @@ G.addModule("subview",{
                                         label = G.view.graph.labelsByID[i][0];
                                     }
                                     if (label.includes("TMI")) {
-                                        G.view.graph.colorScaleName = "spring";
-                                        return .2;
+                                        G.view.graph.colorScaleName = "blueRed";
+                                        return .85;
                                     }
                                     if (label.includes("ATU")) {
-                                        G.view.graph.colorScaleName = "spring";
-                                        return 0.6;
+                                        G.view.graph.colorScaleName = "blueRed";
+                                        return .3;
                                     }
                                     if (label.includes("ETK")) {
-                                        G.view.graph.colorScaleName = "spring";
-                                        return 0;
+                                        G.view.graph.colorScaleName = "blueRed";
+                                        return 1.5;
                                     }
                                     if ((label.split(" ")).length == 1) {
-                                        G.view.graph.colorScaleName = "spring";
-                                        return 0.3;
+                                        G.view.graph.colorScaleName = "blueRed";
+                                        return 0.5;
                                     }
                                     if ((label.split(" ")).length >= 2) {
-                                        G.view.graph.colorScaleName = "spring";
-                                        return 1;
+                                        G.view.graph.colorScaleName = "blueRed";
+                                        return 0;
                                     }
                                     return undefined;
                                 }
@@ -247,12 +247,12 @@ G.addModule("subview",{
                                     }
                                     if(G.labelFilter == "places"){
                                         if ((label.split(" ")).length == 1 && (G.view.graph.snnumConnections[i] < G.view.graph.snnumConnections[G.labelFilter] || G.view.graph.snnumConnections[i] == 0 || !G.view.graph.snnumConnections[i])) {
-                                            G.view.graph.colorScaleName = "spring";
-                                            return .2;
+                                            G.view.graph.colorScaleName = "blueRed";
+                                            return .85;
                                         }
                                         if ((label.split(" ")).length == 1 && G.view.graph.snnumConnections[i] == G.view.graph.snnumConnections[G.labelFilter]) {
-                                            G.view.graph.colorScaleName = "spring";
-                                            return 0.6;
+                                            G.view.graph.colorScaleName = "blueRed";
+                                            return 0.3;
                                         }
                                         if ((label.split(" ")).length == 1 && G.view.graph.snnumConnections[i] > G.view.graph.snnumConnections[G.labelFilter]) {
                                             if(G.view.graph.hotspotsIds){
@@ -262,17 +262,17 @@ G.addModule("subview",{
                                             }else {
                                                 G.view.graph.hotspotsIds = [];
                                             }
-                                            G.view.graph.colorScaleName = "spring";
-                                            return 0;
+                                            G.view.graph.colorScaleName = "blueRed";
+                                            return 1;
                                         }
                                     } else if(G.labelFilter == "people" && !label.includes("ETK") && !label.includes("ATU") && !label.includes("TMI")){
                                         if ((label.split(" ")).length >= 2 && (G.view.graph.snnumConnections[i] < G.view.graph.snnumConnections[G.labelFilter] || G.view.graph.snnumConnections[i] == 0 || !G.view.graph.snnumConnections[i])) {
-                                            G.view.graph.colorScaleName = "spring";
-                                            return .2;
+                                            G.view.graph.colorScaleName = "blueRed";
+                                            return .85;
                                         }
                                         if ((label.split(" ")).length >= 2 && G.view.graph.snnumConnections[i] == G.view.graph.snnumConnections[G.labelFilter]) {
-                                            G.view.graph.colorScaleName = "spring";
-                                            return 0.6;
+                                            G.view.graph.colorScaleName = "blueRed";
+                                            return 0.3;
                                         }
                                         if ((label.split(" ")).length >= 2 && G.view.graph.snnumConnections[i] > G.view.graph.snnumConnections[G.labelFilter]) {
                                             if(G.view.graph.hotspotsIds){
@@ -283,17 +283,17 @@ G.addModule("subview",{
                                             }else {
                                                 G.view.graph.hotspotsIds = [];
                                             }
-                                            G.view.graph.colorScaleName = "spring";
-                                            return 0;
+                                            G.view.graph.colorScaleName = "blueRed";
+                                            return 1;
                                         }
                                     } else {
                                         if (label.includes(G.labelFilter) && (G.view.graph.snnumConnections[i] < G.view.graph.snnumConnections[G.labelFilter] || G.view.graph.snnumConnections[i] == 0 || !G.view.graph.snnumConnections[i])) {
-                                            G.view.graph.colorScaleName = "spring";
-                                            return .2;
+                                            G.view.graph.colorScaleName = "blueRed";
+                                            return .84;
                                         }
                                         if (label.includes(G.labelFilter) && G.view.graph.snnumConnections[i] == G.view.graph.snnumConnections[G.labelFilter]) {
-                                            G.view.graph.colorScaleName = "spring";
-                                            return 0.6;
+                                            G.view.graph.colorScaleName = "blueRed";
+                                            return 0.3;
                                         }
                                         if (label.includes(G.labelFilter) && G.view.graph.snnumConnections[i] > G.view.graph.snnumConnections[G.labelFilter]) {
                                             if(G.view.graph.hotspotsIds){
@@ -303,8 +303,8 @@ G.addModule("subview",{
                                             }else {
                                                 G.view.graph.hotspotsIds = [];
                                             }
-                                            G.view.graph.colorScaleName = "spring";
-                                            return 0;
+                                            G.view.graph.colorScaleName = "blueRed";
+                                            return 1;
                                         }
                                     }
                                     return undefined;
