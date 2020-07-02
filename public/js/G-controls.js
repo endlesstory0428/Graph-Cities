@@ -480,16 +480,17 @@ G.addModule("controls",{
 
             function downloadInnerHtml(filename, mimeType) {
                 let text = "";
-                let arr  = []
+                let arr  = [];
+                let arr2 = [];
                 for (let j = 0; j< G.view.graph.hotspotsIds.length; j++) {
                     if(arr.indexOf(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0])==-1) {
-                        arr.push(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0]);
+                        arr.push(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0] + ""+ G.view.graph.snwormsList[G.view.graph.hotspotsIds[j]].length);
                     }
 
                 }
                 arr.sort();
                 for(let j =0; j<arr.length;j++){
-                    text += arr[j] + "\n";
+                    text += arr[j]  +"\n";
                 }
                 var link = document.createElement('a');
                 mimeType = mimeType || 'text/plain';

@@ -24,7 +24,7 @@ G.colorScales={ //[0,1], use with THREE.Color.setStyle()
 	//blackRed:(value)=>orangeTemp(1-(value/2)),
 	blackRed:d3.scaleSequential(d3.interpolateCubehelix("#200000","#ff2020")),
 	//blueRed:d3.scaleSequential(d3.interpolateHslLong("#63daff","#ff2020")),
-	blueRed:d3.scaleSequential(d3.interpolateHslLong("hsl(216,99%,50%)","hsl(0,99%,50%)")),
+	blueRed:d3.scaleSequential(d3.interpolateHslLong("hsl(289,100%,50%)","hsl(0,100%,50%)")),
 	//lightBlueRed:d3.scaleSequential(d3.interpolateHslLong("hsl(216,65%,82%)","hsl(0,65%,82%)")), //too dark links (their colors are normalized)
 	lightBlueRed:d3.scaleSequential(d3.interpolateHslLong("hsl(216,77%,70%)","hsl(0,77%,70%)")),
 
