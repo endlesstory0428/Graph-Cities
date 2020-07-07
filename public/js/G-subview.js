@@ -256,7 +256,7 @@ G.addModule("subview",{
                                         }
                                         if ((label.split(" ")).length == 1 && G.view.graph.snnumConnections[i] > G.view.graph.snnumConnections[G.labelFilter]) {
                                             if(G.view.graph.hotspotsIds){
-                                                if(G.view.graph.hotspotsIds.indexOf(i)==-1 && Object.keys(G.view.graph.snVertexPaths).indexOf(i.toString())!=-1) {
+                                                if(G.view.graph.hotspotsIds.indexOf(i)==-1) {
                                                     G.view.graph.hotspotsIds.push(i);
                                                 }
                                             }else {
@@ -276,7 +276,7 @@ G.addModule("subview",{
                                         }
                                         if ((label.split(" ")).length >= 2 && G.view.graph.snnumConnections[i] > G.view.graph.snnumConnections[G.labelFilter]) {
                                             if(G.view.graph.hotspotsIds){
-                                                if(G.view.graph.hotspotsIds.indexOf(i)==-1 && Object.keys(G.view.graph.snVertexPaths).indexOf(i.toString())!=-1){
+                                                if(G.view.graph.hotspotsIds.indexOf(i)==-1){
                                                     G.view.graph.hotspotsIds.push(i);
                                                 }
 
@@ -297,7 +297,7 @@ G.addModule("subview",{
                                         }
                                         if (label.includes(G.labelFilter) && G.view.graph.snnumConnections[i] > G.view.graph.snnumConnections[G.labelFilter]) {
                                             if(G.view.graph.hotspotsIds){
-                                                if(G.view.graph.hotspotsIds.indexOf(i)==-1 && (Object.keys(G.view.graph.snVertexPaths).indexOf(i.toString())!=-1 || G.view.graph.snWorms.indexOf(i.toString())!=-1)) {
+                                                if(G.view.graph.hotspotsIds.indexOf(i)==-1) {
                                                     G.view.graph.hotspotsIds.push(i);
                                                 }
                                             }else {
@@ -2787,6 +2787,14 @@ G.addModule("subview",{
 					//let count=Math.ceil(snPaths.length*ratio);
 					params.attachmentSequence=Math.floor(params.attachmentSequence);//hack
                     g.snPathSequence = params.pathSequence;
+                    if(G.view.graph.thePaths){
+                        paths =[];
+                        for(let i =0; i<G.view.graph.thePaths.length; i++){
+                            paths.push(snPaths[G.view.graph.thePaths[i]]);
+                        }
+                        params.attachmentSequence = paths.length;
+                        return paths;
+                    }
                     return snPaths.slice(0,params.pathSequence);
 				},
 				randomNumbers:(g,params)=>{return params.paths.map(()=>Math.random());},
@@ -2803,7 +2811,7 @@ G.addModule("subview",{
 					for(let pathID=0;pathID<paths.length;pathID++){
 						let path=paths[pathID];
 						for(let i=0;i<path.length;i++){
-                            if(!g.isShortestPathsById) {
+                            if(!G.view.graph.isShortestPathsById) {
                                 let tempID = path[i];
                                 let vertex = g.vertices[tempID];
                                 if (tempID in snPathMap) {
@@ -2828,7 +2836,33 @@ G.addModule("subview",{
                             g.snExtremePoints=[...new Set( g.snExtremePoints)]
                     }
 					}
-					g.snVertexPaths=snPathMap;
+                    let fullpaths=G.view.graph.snPaths;let fullsnPathMap={};
+                    for(let pathID=0;pathID<fullpaths.length;pathID++){
+                        let path=fullpaths[pathID];
+                        for(let i=0;i<path.length;i++){
+                            if(!G.view.graph.isShortestPathsById) {
+                                let tempID = path[i];
+                                let vertex = g.vertices[tempID];
+                                if (tempID in fullsnPathMap) {
+                                    fullsnPathMap[tempID].push(pathID);
+                                } else {
+                                    fullsnPathMap[tempID] = [pathID];
+                                }
+                            }else {
+                                let tempID = path[i];
+                                let vertex = g.vertexMap[tempID];
+                                if (tempID in fullsnPathMap) {
+                                    fullsnPathMap[vertex].push(pathID);
+                                } else {
+                                    fullsnPathMap[vertex] = [pathID];
+                                }
+                            }
+                        }
+                    }
+                    if(!G.view.graph.thePaths) {
+                        g.snVertexPaths = snPathMap;
+                        g.fullsnVertexPaths = fullsnPathMap;
+                    }
 					return snPathMap;
 				},
 				edgePaths:(g,params)=>{
@@ -2854,7 +2888,8 @@ G.addModule("subview",{
 					if(g.snEdgePaths == undefined) {
 					     g.snEdgePaths={};
                     }
-                    g.snEdgePaths = snPathEdgeMap;
+					if(!G.view.graph.thePaths)
+                        g.snEdgePaths = snPathEdgeMap;
 					return snPathEdgeMap;
 				},
 				centers:(g,params)=>{
@@ -2886,7 +2921,28 @@ G.addModule("subview",{
 						for(let pathID in pathCounters){if(pathCounters[pathID]>max){max=pathCounters[pathID];bestPathID=pathID;}}
 						if(bestPathID!=null)pathAssignment[vID]=Number(bestPathID);
 					}
-					g.snWorms = Object.keys(pathAssignment);
+                    let fullpathAssignment={};
+                    for(let vID=0;vID<g.vertices.length;vID++){
+                        if(vID in g.fullsnVertexPaths)continue;
+                        let pathCounters={};
+                        for(let other in g.vertices.edges[vID]){
+                            if(other in g.fullsnVertexPaths){
+                                for(let pathID of g.fullsnVertexPaths[other]){
+                                    //if(pathID>=params.attachmentSequence)continue;
+                                    if(!pathCounters[pathID])pathCounters[pathID]=0;pathCounters[pathID]++;
+                                }
+                            }
+                        }
+                        let max=0,bestPathID=null;
+                        for(let pathID in pathCounters){if(pathCounters[pathID]>max){max=pathCounters[pathID];bestPathID=pathID;}}
+                        if(bestPathID!=null)fullpathAssignment[vID]=Number(bestPathID);
+                    }
+                    if(!G.view.graph.thePaths) {
+                        g.fullsnWorms = Object.keys(fullpathAssignment);
+                        g.snWorms = Object.keys(pathAssignment);
+                        g.fullpathAssignment = fullpathAssignment;
+                    }
+
 					return pathAssignment;
 				},
 				clustering:(g,params)=>{//get the shortest path network from the centers, do not recompute the shortest path from every vertex
@@ -2952,22 +3008,58 @@ G.addModule("subview",{
 					});
 				},
 				edgeAdjacentToPath:(g,data)=>{
-					return g.edges.map((edge,edgeID,edges)=>{
-						let svID=g.edges.source[edgeID],tvID=g.edges.target[edgeID];
-						if(svID in data.vertexPaths||tvID in data.vertexPaths){
-							let pathIDs=[];let bothInPath=true;
-							if(svID in data.vertexPaths){
-								pathIDs=pathIDs.concat(data.vertexPaths[svID].filter((id)=>id<data.attachmentSequence));//vertexPaths[x] is an array!
-							}
-							else{bothInPath=false;}
-							if(tvID in data.vertexPaths){pathIDs=pathIDs.concat(data.vertexPaths[tvID].filter((id)=>id<data.attachmentSequence));}
-							else{bothInPath=false;}
-							if(pathIDs.length==0){return;}//ignored due to attachmentSequence
-							if(pathIDs.length==1){return pathIDs[0];}
-							//edge touches multiple paths (could be betwen paths or has one vertex that's an intersection
-							if(bothInPath)return -2;//between vertices on the path
-							else return -1;//is an intersection
-						}//if the edge is in a path it is still adjacent or not?
+					return g.edges.map((edge,edgeID,edges)=> {
+                       // if(!G.view.graph.thePaths) {
+                        let svID = g.edges.source[edgeID], tvID = g.edges.target[edgeID];
+                        if (svID in data.vertexPaths || tvID in data.vertexPaths) {
+                            let pathIDs = [];
+                            let bothInPath = true;
+                            if (svID in data.vertexPaths) {
+                                pathIDs = pathIDs.concat(data.vertexPaths[svID].filter((id) => id < data.attachmentSequence));//vertexPaths[x] is an array!
+                            } else {
+                                bothInPath = false;
+                            }
+                            if (tvID in data.vertexPaths) {
+                                pathIDs = pathIDs.concat(data.vertexPaths[tvID].filter((id) => id < data.attachmentSequence));
+                            } else {
+                                bothInPath = false;
+                            }
+                            if (pathIDs.length == 0) {
+                                return;
+                            }//ignored due to attachmentSequence
+                            if (pathIDs.length == 1) {
+                                return pathIDs[0];
+                            }
+                            //edge touches multiple paths (could be betwen paths or has one vertex that's an intersection
+                            if (bothInPath) return -2;//between vertices on the path
+                            else return -1;//is an intersection
+                        }//if the edge is in a path it is still adjacent or not?
+                    // } else {
+                    //         let svID = g.edges.source[edgeID], tvID = g.edges.target[edgeID];
+                    //         if (svID in g.hotspotsIds || tvID in g.hotspotsIds) {
+                    //             let pathIDs = [];
+                    //             let bothInPath = true;
+                    //             if (svID in g.snVertexPaths) {
+                    //                 pathIDs = pathIDs.concat(g.snVertexPaths[svID]);//vertexPaths[x] is an array!
+                    //             } else {
+                    //                 bothInPath = false;
+                    //             }
+                    //             if (tvID in g.snVertexPaths) {
+                    //                 pathIDs = pathIDs.concat(g.snVertexPaths[tvID]);
+                    //             } else {
+                    //                 bothInPath = false;
+                    //             }
+                    //             if (pathIDs.length == 0) {
+                    //                 return;
+                    //             }//ignored due to attachmentSequence
+                    //             if (pathIDs.length == 1) {
+                    //                 return pathIDs[0];
+                    //             }
+                    //             //edge touches multiple paths (could be betwen paths or has one vertex that's an intersection
+                    //             if (bothInPath) return -2;//between vertices on the path
+                    //             else return -1;//is an intersection
+                    //         }//if the edge is in a path it is still adjacent or not?
+                    //     }
 					});
 				},
 			},
@@ -2980,7 +3072,7 @@ G.addModule("subview",{
 						(data,oldValue,node,index,array,graph)=>{
 							if(!data.vertexPaths)return;
 							let vertexID=G.subview.templates.nodes.getOriginalObjectID(graph,index);
-							if(G.view.graph.snWorms.indexOf(vertexID.toString())==-1) {
+							if(!G.view.graph.thePaths && G.view.graph.snWorms.indexOf(vertexID.toString())==-1) {
                                 Algs.getWormsIdsAndLabels(G.view.graph, vertexID);
                             }
                             if(vertexID in data.vertexPaths)return;

@@ -235,6 +235,14 @@ G.addModule("loading",{
                 });
             }
 
+            if(g.wholeGraph == undefined || g.name == g.wholeGraph) {
+                await d3.csv("datasets/AllTMI.csv").then((data)=>{
+                    if(typeof data=="string")
+                        data=JSON.parse(data);
+                    classification = data;
+                });
+            }
+
 			await d3.json("datasets/"+g.dataPath+"/edges.source.json.gz").then((data)=>{
 				if(typeof data=="string")data=JSON.parse(data);
 				sources=data.value;
@@ -243,7 +251,7 @@ G.addModule("loading",{
 				if(typeof data=="string")data=JSON.parse(data);
 				targets=data.value;
 			});
-			g.loadVerticesAndEdges(ids,sources,targets, labels);
+			g.loadVerticesAndEdges(ids,sources,targets, labels, classification);
 		}
 
 		for(let objName in g.objects){
