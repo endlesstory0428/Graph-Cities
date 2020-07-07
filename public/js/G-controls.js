@@ -132,31 +132,222 @@ G.addModule("controls",{
                 G.view.graph.hotspotsIds = [];
                 Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
                 G.view.refreshStyles(true,true);
+                let downloadButtonsElem=getE("spots_color-mapping");
+                if(G.view.graph && G.view.graph &&G.view.graph.hotspotsIds) {
+                    for (let j = 0; j< G.view.graph.hotspotsIds.length; j++) {
+                        if(Object.keys(arr).indexOf(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0])==-1) {
+                            arr[G.view.graph.hotspotsIds[j]] = G.view.graph.snwormsList[G.view.graph.hotspotsIds[j]].length;
+
+                        }
+
+                    }
+                    keysSorted = Object.keys(arr).sort(function(a,b){return arr[b]- arr[a]});
+                    sorted = [];
+                    for(let j =0; j<keysSorted.length;j++){
+                        sorted.push(keysSorted[j]);
+                    }
+                    this.addRangeSlider(downloadButtonsElem, "HotSpots", (begin, end) => {
+                        let paths = [];
+                        for(let i = begin; i<=end; i++){
+                            if(G.view.graph.fullpathAssignment[sorted[i]] && G.view.graph.fullpathAssignment[sorted[i]][0]){
+                                paths.push(G.view.graph.fullpathAssignment[sorted[i]]);
+                            } else if(G.view.graph.snVertexPaths[sorted[i]]&&G.view.graph.snVertexPaths[sorted[i]][0]){
+                                paths.push(G.view.graph.snVertexPaths[sorted[i]]);
+                            }
+                        }
+                        G.view.graph.thePaths = paths.flat(1).sort();
+                        G.view.refreshStyles(true,true);
+                    }, {long: true, min: 0, max: sorted.length, default: 0});
+                }
             },
             "Story Topic (ATU)":()=>{
                 G.labelFilter = "ATU";
                 G.view.graph.hotspotsIds = [];
                 Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
                 G.view.refreshStyles(true,true);
+                let downloadButtonsElem=getE("spots_color-mapping");
+                if(G.view.graph && G.view.graph &&G.view.graph.hotspotsIds) {
+                    for (let j = 0; j< G.view.graph.hotspotsIds.length; j++) {
+                        if(Object.keys(arr).indexOf(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0])==-1) {
+                            arr[G.view.graph.hotspotsIds[j]] = G.view.graph.snwormsList[G.view.graph.hotspotsIds[j]].length;
+
+                        }
+
+                    }
+                    keysSorted = Object.keys(arr).sort(function(a,b){return arr[b]- arr[a]});
+                    sorted = [];
+                    for(let j =0; j<keysSorted.length;j++){
+                        sorted.push(keysSorted[j]);
+                    }
+                    this.addRangeSlider(downloadButtonsElem, "HotSpots", (begin, end) => {
+                        let paths = [];
+                        for(let i = begin; i<=end; i++){
+                            if(G.view.graph.fullpathAssignment[sorted[i]] && G.view.graph.fullpathAssignment[sorted[i]][0]){
+                                paths.push(G.view.graph.fullpathAssignment[sorted[i]]);
+                            } else if(G.view.graph.snVertexPaths[sorted[i]]&&G.view.graph.snVertexPaths[sorted[i]][0]){
+                                paths.push(G.view.graph.snVertexPaths[sorted[i]]);
+                            }
+                        }
+                        G.view.graph.thePaths = paths.flat(1).sort();
+                        G.view.refreshStyles(true,true);
+                    }, {long: true, min: 0, max: sorted.length, default: 0});
+                }
 
                 },
             "Story Motif (TMI)":()=>{
                 G.labelFilter = "TMI";
                 G.view.graph.hotspotsIds = [];
+                let myarr = {};
                 Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
                 G.view.refreshStyles(true,true);
+
+                let downloadButtonsElem=getE("spots_color-mapping");
+                if(G.view.graph && G.view.graph &&G.view.graph.hotspotsIds) {
+                    for (let j = 0; j< G.view.graph.hotspotsIds.length; j++) {
+                        let u =0;
+                        if(Object.keys(myarr).indexOf(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0])==-1) {
+                                if (G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]]) {
+                                    u = G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]][0];
+                                } else if (G.view.graph.fullpathAssignment[G.view.graph.hotspotsIds[j]]) {
+                                    u = G.view.graph.fullpathAssignment[G.view.graph.hotspotsIds[j]][0];
+                                } else if (G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]]) {
+                                    u = G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]][0];
+                                }
+                                myarr[G.view.graph.hotspotsIds[j]] = u;
+
+
+                        }
+
+                    }
+                    keysSorted = Object.keys(myarr).sort(function(a,b){return myarr[a]- myarr[b]});
+                    sorted = [];
+                    for(let j =0; j<keysSorted.length;j++){
+                        sorted.push(keysSorted[j]);
+                    }
+                    if(G.firstHotspots ==  undefined || G.firstHotspots ==false) {
+                        G.firstHotspots = true;
+                        this.addRangeSlider(downloadButtonsElem, "HotSpots", (begin, end) => {
+                            let paths = [];
+                            let count = 0;
+                            for (let i = begin; i <=end; i++) {
+                                if(paths.length  == 0) {
+                                    if (G.view.graph.snVertexPaths[sorted[i]]) {
+                                        paths.push(G.view.graph.snVertexPaths[sorted[i]]);
+                                    } else if (G.view.graph.fullpathAssignment[sorted[i]] ) {
+                                        paths.push(G.view.graph.fullpathAssignment[sorted[i]]);
+                                    } else if (G.view.graph.snVertexPaths[sorted[i]]) {
+                                        paths.push(G.view.graph.snVertexPaths[sorted[i]]);
+                                    }
+                                } else {
+                                    if (G.view.graph.snVertexPaths[sorted[i]] &&G.view.graph.snVertexPaths[sorted[i]][0]!=undefined) {
+                                        paths.push(G.view.graph.snVertexPaths[sorted[i]][0]);
+                                    } else if (G.view.graph.fullpathAssignment[sorted[i]] &&G.view.graph.fullpathAssignment[sorted[i]][0] !=undefined) {
+                                        paths.push(G.view.graph.fullpathAssignment[sorted[i]][0]);
+                                    } else if (G.view.graph.snVertexPaths[sorted[i]]&& G.view.graph.snVertexPaths[sorted[i]][0] !=undefined) {
+                                        paths.push(G.view.graph.snVertexPaths[sorted[i]][0]);
+                                    }
+                                    // if(paths.length >1) {
+                                    //     let start =0;
+                                    //     let end  = 0;
+                                    //     if(paths[count]> paths[count - 1]){
+                                    //         start  = paths[count - 1];
+                                    //         end = paths[count];
+                                    //     } else {
+                                    //         end  = paths[count - 1];
+                                    //         start = paths[count];
+                                    //     }
+                                    //     if (end - start != 1) {
+                                    //         var missing = new Array();
+                                    //         for (var l = start; l <= end; l++) {
+                                    //             if (paths.indexOf(l) == -1) {
+                                    //                 missing.push(l);
+                                    //             }
+                                    //         }
+                                    //         paths.push(missing.flat(1));
+                                    //     }
+                                    // }
+                                }
+                                count = count+1;
+                            }
+                            G.view.graph.thePaths = [...new Set(paths.flat(1).sort(function(a, b){return a-b}))];
+                            G.view.refreshStyles(true, true);
+
+                        }, {long: true, min: 0, max: sorted.length-1, default: 0});
+                        this.addCheckbox(downloadButtonsElem, toNormalText("Reset"), (value) => {
+                            if (value) {
+                                G.view.graph.thePaths = undefined;
+                                G.view.refreshStyles(true, true);
+                            }
+                        });
+                    }
+
+                }
                 },
             "PLACES (one-word)":(value)=>{
                 G.labelFilter = "places";
                 G.view.graph.hotspotsIds = [];
                 Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
                 G.view.refreshStyles(true,true);
+                let downloadButtonsElem=getE("spots_color-mapping");
+                if(G.view.graph && G.view.graph &&G.view.graph.hotspotsIds) {
+                    for (let j = 0; j< G.view.graph.hotspotsIds.length; j++) {
+                        if(Object.keys(arr).indexOf(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0])==-1) {
+                            arr[G.view.graph.hotspotsIds[j]] = G.view.graph.snwormsList[G.view.graph.hotspotsIds[j]].length;
+
+                        }
+
+                    }
+                    keysSorted = Object.keys(arr).sort(function(a,b){return arr[b]- arr[a]});
+                    sorted = [];
+                    for(let j =0; j<keysSorted.length;j++){
+                        sorted.push(keysSorted[j]);
+                    }
+                    this.addRangeSlider(downloadButtonsElem, "HotSpots", (begin, end) => {
+                        let paths = [];
+                        for(let i = begin; i<=end; i++){
+                            if(G.view.graph.fullpathAssignment[sorted[i]] && G.view.graph.fullpathAssignment[sorted[i]][0]){
+                                paths.push(G.view.graph.fullpathAssignment[sorted[i]]);
+                            } else if(G.view.graph.snVertexPaths[sorted[i]]&&G.view.graph.snVertexPaths[sorted[i]][0]){
+                                paths.push(G.view.graph.snVertexPaths[sorted[i]]);
+                            }
+                        }
+                        G.view.graph.thePaths = paths.flat(1).sort();
+                        G.view.refreshStyles(true,true);
+                    }, {long: true, min: 0, max: sorted.length, default: 0});
+                }
             },
             "PEOPLE (at least two names)":()=>{
                 G.labelFilter = "people";
                 G.view.graph.hotspotsIds = [];
                 Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
                 G.view.refreshStyles(true,true);
+                let downloadButtonsElem=getE("spots_color-mapping");
+                if(G.view.graph && G.view.graph &&G.view.graph.hotspotsIds) {
+                    for (let j = 0; j< G.view.graph.hotspotsIds.length; j++) {
+                        if(Object.keys(arr).indexOf(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0])==-1) {
+                            arr[G.view.graph.hotspotsIds[j]] = G.view.graph.snwormsList[G.view.graph.hotspotsIds[j]].length;
+
+                        }
+
+                    }
+                    keysSorted = Object.keys(arr).sort(function(a,b){return arr[b]- arr[a]});
+                    sorted = [];
+                    for(let j =0; j<keysSorted.length;j++){
+                        sorted.push(keysSorted[j]);
+                    }
+                    this.addRangeSlider(downloadButtonsElem, "HotSpots", (begin, end) => {
+                        let paths = [];
+                        for(let i = begin; i<=end; i++){
+                            if(G.view.graph.fullpathAssignment[sorted[i]] && G.view.graph.fullpathAssignment[sorted[i]][0]){
+                                paths.push(G.view.graph.fullpathAssignment[sorted[i]]);
+                            } else if(G.view.graph.snVertexPaths[sorted[i]]&&G.view.graph.snVertexPaths[sorted[i]][0]){
+                                paths.push(G.view.graph.snVertexPaths[sorted[i]]);
+                            }
+                        }
+                        G.view.graph.thePaths = paths.flat(1).sort();
+                        G.view.refreshStyles(true,true);
+                    }, {long: true, min: 0, max: sorted.length, default: 0});
+                }
                 },
         });
 
@@ -475,22 +666,25 @@ G.addModule("controls",{
 		};
 		this.addButton(itemsTitleElem,"+",saveGraph,()=>saveGraph(false,true));
         let downloadButtonsElem=getE("spots_color-mapping");
+
         this.addButton(downloadButtonsElem,"Download HotSpots",()=>{
 
 
             function downloadInnerHtml(filename, mimeType) {
                 let text = "";
-                let arr  = [];
+                let arr  = {};
                 let arr2 = [];
                 for (let j = 0; j< G.view.graph.hotspotsIds.length; j++) {
-                    if(arr.indexOf(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0])==-1) {
-                        arr.push(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0] + ""+ G.view.graph.snwormsList[G.view.graph.hotspotsIds[j]].length);
+                    if(Object.keys(arr).indexOf(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0])==-1) {
+                        arr[G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0]] = G.view.graph.snwormsList[G.view.graph.hotspotsIds[j]].length;
+
                     }
 
                 }
-                arr.sort();
-                for(let j =0; j<arr.length;j++){
-                    text += arr[j]  +"\n";
+
+                keysSorted = Object.keys(arr).sort(function(a,b){return arr[b]- arr[a]})
+                for(let j =0; j<keysSorted.length;j++){
+                    text += keysSorted[j] + " " + arr[keysSorted[j]]  +"\n";
                 }
                 var link = document.createElement('a');
                 mimeType = mimeType || 'text/plain';
@@ -1528,6 +1722,9 @@ G.addModule("controls",{
         if(text == "Next Neighbors" || text == "Pause") {
             s.attr("style", "margin-right: 20px;");
         }
+        if(text == "Download HotSpots") {
+            s.attr("style", "margin-top: 20px;");
+        }
         console.log(parentElem);
 		let buttonElem=s.node();
 		s.on("click",()=>func());
@@ -1715,6 +1912,7 @@ G.addModule("controls",{
 		let pivot1=barContainer.append("div").attr("class","slider-pivot-begin");
 		let pivot2=barContainer.append("div").attr("class","slider-pivot-end");
 		let bar=barContainer.append("div").attr("class","slider-bar");
+		let valDis = s.append("div").attr("class","custom-control-label");
 
 		let cb=function(data,i,elem){
 			let isBeginPivot;if(this==pivot1.node()){isBeginPivot=true;}else{isBeginPivot=false;}
@@ -1723,7 +1921,7 @@ G.addModule("controls",{
 			if(options.vertical){totalLength=rect.height;length=clamp(d3.event.y,0,rect.height);}
 			else{totalLength=rect.width;length=clamp(d3.event.x,0,rect.width);}
 			let max=options.max,min=options.min;
-			let value=(max-min)*(length)/totalLength+min;
+                let value=Math.floor((max-min)*(length)/totalLength+min);
 			let begin=options.begin,end=options.end;
 			if(isBeginPivot){//ensure that end>=begin no matter how they are dragged
 				begin=value;
@@ -1733,8 +1931,11 @@ G.addModule("controls",{
 				end=value;
 				if(begin>value)begin=value;
 			}
-			let percent1=Math.floor(100*(begin-min)/(max-min));
-			let percent2=Math.floor(100*(end-min)/(max-min));
+                valDis.text("["+begin + " - "+end+"]");
+            valDis.style("padding-top", "10px");
+
+            let percent1=Math.floor(95*(begin-min)/(max-min));
+			let percent2=Math.floor(90*(end-min)/(max-min));
 			if(max==min){percent1="0";percent2="100";}
 			if(options.vertical){
 				bar.style("bottom",(100-percent1)+"%");
@@ -1744,8 +1945,8 @@ G.addModule("controls",{
 			}
 			else{
 				bar.style("left",percent1+"%");
-				bar.style("right",(100-percent2)+"%");
-				pivot1.style("right",(100-percent1)+"%");
+				bar.style("right",(95-percent2)+"%");
+				pivot1.style("right",(90-percent1)+"%");
 				pivot2.style("left",percent2+"%");
 			}
 			options.begin=begin;
@@ -1753,8 +1954,8 @@ G.addModule("controls",{
 			func(begin,end);
 		};
 		let onUpdate=function(beginValue,endValue){
-			let percent1=Math.floor(100*(beginValue-options.min)/(options.max-options.min));
-			let percent2=Math.floor(100*(endValue-options.min)/(options.max-options.min));
+			let percent1=Math.floor(95*(beginValue-options.min)/(options.max-options.min));
+			let percent2=Math.floor(90*(endValue-options.min)/(options.max-options.min));
 			if(max==min){percent1="0";percent2="100";}
 			if(options.vertical){
 				bar.style("bottom",(100-percent1)+"%");
@@ -1764,8 +1965,8 @@ G.addModule("controls",{
 			}
 			else{
 				bar.style("left",percent1);
-				bar.style("right",(100-percent2));
-				pivot1.style("right",(100-percent1));
+				bar.style("right",(95-percent2));
+				pivot1.style("right",(90-percent1));
 				pivot2.style("left",percent2);
 			}
 		};
@@ -1774,18 +1975,27 @@ G.addModule("controls",{
 		else {pivot1.call(d3.drag().on("drag",cb).on("end",cb));pivot2.call(d3.drag().on("drag",cb).on("end",cb));}
 		return options;
 	},
-    addCheckbox(parentElem, text, func, options) {
+    addCheckbox(parentElem, text, func, options, id=null){
         let arr = [];
 
         if (!options) options = {};
         let s = d3.select(parentElem).append("div").attr("class", "material-checkbox");
+        if(id){
+            s.attr("id", id);
+        }
         if(arr.indexOf(text)!=-1) {
             s.attr("style","display:none;");
+        }
+        if(text == "Reset"){
+            s.attr("style","margin-top: 20px;margin-left: 15px;");
+
         }
         let label = s.append("p").attr("class", "material-checkbox-label").text(text);
         let checkbox = s.append("input").attr("type", "checkbox").attr("class", "material-checkbox");
         let checkboxElem = checkbox.node();
-        checkbox.on("input", () => func(checkboxElem.checked));
+        if(id) {
+            checkbox.on("input", () => func(checkboxElem.checked, id));
+        } else checkbox.on("input", () => func(checkboxElem.checked));
         let onUpdate = function (value) {
             checkboxElem.checked = value;
         };
@@ -2084,6 +2294,7 @@ G.addModule("controls",{
 				G.broadcast("onUserEvent","dblclick",result);
 			}
 		}
+
 		G.onhover=function(result){
 /*objectID: 8
 originalObjectID: 8
@@ -2159,15 +2370,60 @@ type: "nodes"*/
                                     }
                                 });
                                 menu.appendChild(link);
-
+                                let classify = [];
                                 G.controls.contextMenus.hoveredVertex.item.classList.add("hovered-tooltip-text");
                                 G.controls.contextMenus.hoveredVertex.item.innerHTML = "";
                                 for (let i = 0; i < G.view.graph.snwormsList[originalObjectID].length; i++) {
-                                    G.controls.contextMenus.hoveredVertex.item.innerHTML += G.view.graph.snwormsList[originalObjectID][i] + "\n</br>";
+                                    r = G.view.graph.snwormsList[originalObjectID][i].match(/[A-Z][0-9]{1,9}/);
+                                    if(r && r.length>0) {
+                                        r = r[0];
+                                        a = (G.view.graph.classification.filter(record => record.start.substring(0, 1) == r.substring(0, 1))).filter(
+                                            record => (Number(record.start.substring(1)) < Number(r.substring(1))
+                                                && Number(record.end.substring(1)) > Number(r.substring(1))));
+                                        if(a && a[0] && a[0].label) {
+                                            classify.push({label:G.view.graph.snwormsList[originalObjectID][i], classif:a[0].label })
+                                        }
+                                    } else {
+                                        G.controls.contextMenus.hoveredVertex.item.innerHTML += G.view.graph.snwormsList[originalObjectID][i] + "\n</br>";
+                                    }
+                                }
+                                if(classify.length > 0) {
+                                    result = classify.reduce((h, {label, classif}) => {
+                                        return Object.assign(h, {[classif]: (h[classif] || []).concat({label})})
+                                    }, {})
+                                    if (result) {
+                                        for (k in Object.keys(result)) {
+                                            //G.controls.contextMenus.hoveredVertex.item.innerHTML += Object.keys(result)[k] + "\n</br>";
+                                            // for(i in result[Object.keys(result)[k]] )
+                                            //     G.controls.contextMenus.hoveredVertex.item.innerHTML += result[Object.keys(result)[k]][i].label + "\n</br>";
+                                            G.controls.addCheckbox(G.controls.contextMenus.hoveredVertex.item, toNormalText(Object.keys(result)[k]), (value, id) => {
+                                                if (value) {
+                                                    document.getElementById("label" + id).style.display = "block";
+                                                    link.style.display = "inline";
+                                                } else {
+                                                    document.getElementById("label" + id).style.display = "none";
+                                                    link.style.display = "none";
+                                                }
+                                            }, {}, k);
+                                            g = document.createElement('div');
+                                            g.setAttribute("id", "label" + k);
+                                            g.setAttribute("class", "material-checkbox-label");
+                                            g.style.display = "none";
+                                            G.controls.contextMenus.hoveredVertex.item.append(g);
+                                            for (i in result[Object.keys(result)[k]])
+                                                g.innerHTML += result[Object.keys(result)[k]][i].label + "\n</br>";
+
+                                        }
+                                    }
                                 }
                                 G.controls.contextMenus.hoveredVertex.item.style.display = "none";
                                 menu.appendChild(G.controls.contextMenus.hoveredVertex.item);
                                 function downloadInnerHtml(filename, elId, mimeType) {
+                                    if(result) {
+                                        for (k in Object.keys(result)) {
+                                            document.getElementById("label" + k).style.display = "block";
+                                        }
+                                    }
                                     var elHtml = document.getElementsByClassName(elId)[0].innerText;
                                     var link = document.createElement('a');
                                     mimeType = mimeType || 'text/plain';
@@ -2184,6 +2440,8 @@ type: "nodes"*/
                                 });
                             }
                         }
+                        this.graph.hoveredVertex = originalObjectID;
+                        G.view.refreshStyles(true, true);
 
                     } else
                         G.toolTipElem.textContent = "Vertex: " + originalObjectID;
@@ -2274,7 +2532,9 @@ type: "nodes"*/
                     $(document).on('mouseover', 'div', function (e) {
                         if ($(e.target).attr('class') != "hovered-tooltip" &&
                             $(e.target).attr('class') != "material-checkbox" &&
-                            $(e.target).attr('class') != "material-checkbox-label" && $(e.target).attr('class') != "hovered-tooltip-text" && $(e.target).attr('class') != "download-link") {
+                            $(e.target).attr('class') != "material-checkbox-label" &&
+                            $(e.target).attr('class') != "hovered-tooltip-text" &&
+                            $(e.target).attr('class') != "download-link") {
                             let menu = G.controls.contextMenus["hoveredVertex"];
                             menu.innerHTML = "";
                             menu.style.display = "none";
