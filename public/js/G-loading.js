@@ -239,7 +239,14 @@ G.addModule("loading",{
                 await d3.csv("datasets/AllTMI.csv").then((data)=>{
                     if(typeof data=="string")
                         data=JSON.parse(data);
-                    classification = data;
+                    TMIclassification = data;
+                });
+            }
+            if(g.wholeGraph == undefined || g.name == g.wholeGraph) {
+                await d3.csv("datasets/AllATU.csv").then((data)=>{
+                    if(typeof data=="string")
+                        data=JSON.parse(data);
+                    ATUclassification = data;
                 });
             }
 
@@ -251,7 +258,7 @@ G.addModule("loading",{
 				if(typeof data=="string")data=JSON.parse(data);
 				targets=data.value;
 			});
-			g.loadVerticesAndEdges(ids,sources,targets, labels, classification);
+			g.loadVerticesAndEdges(ids,sources,targets, labels, TMIclassification, ATUclassification);
 		}
 
 		for(let objName in g.objects){
