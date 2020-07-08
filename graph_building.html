@@ -24,9 +24,6 @@
 
       var perspectiveCamera, orthographicCamera, controls, scene, renderer;
 
-
-
-
       var spiral = [];
       var frustumSize = 400;
       var aspect = window.innerWidth/window.innerHeight;
@@ -36,28 +33,32 @@
 
       var raycaster = new THREE.Raycaster();
       var mouse = new THREE.Vector2();
-      var gui = new GUI();
       var objects = [];
       var INTERSECTED;
       var city_tracking = {};
       var city_all = {};
       var city_mesh = [];
       var city_to_load = 0;
+      var groundMesh;
       var source_dir = "data/";
+      // var source_dir;
       var y_scale = 10; // scale up the height of building
       var x_scale = 800000.0; // scale down the coordinates span
       var default_persp = [0,200,400]
-      
-      var params = {
-        orthographicCamera: false,
-        resetCamera: function() {
-            TrackballControls.reset();
-        }
-      };
-      var building_params = {
-        floor: '',
-        layer: ''
-      };
+        // GUI parameters
+        var params = {
+            orthographicCamera: false,
+            resetCamera: function() {
+                // TrackballControls.reset();
+            },
+            ground: "#8B4513",
+            colorMap: "jet",
+            hideBuilding: false
+        };
+        var building_params = {
+            floor: '',
+            layer: ''
+        };
 
       init();
       animate();
@@ -80,9 +81,16 @@
         };
 
         loadFile(source_dir,manager);
+
+        // GUI folders
+        var gui = new GUI();
         var f1 = gui.addFolder('Building Info');
         f1.add(building_params, 'floor').name('floor number').listen();
         f1.add(building_params, 'layer').name('layer info').listen();
+        f1.add(params, 'colorMap', ['jet','others']).name('color map').onChange(function () {
+            // updateColorMap();
+            render();
+        });
         f1.open();
         var f2 = gui.addFolder('Camera Control');
         f2.add(params, 'resetCamera').name('reset camera');
@@ -92,6 +100,21 @@
             createControls( value ? orthographicCamera : perspectiveCamera );
         });
         f2.open();
+        var f3 = gui.addFolder('Environment Control');
+        f3.addColor(params, 'ground').name('ground color').onChange( function( colorValue ) {
+            colorValue = parseInt(colorValue.replace('#','0x'),16);
+            var colorObject = new THREE.Color( colorValue );
+            groundMesh.material.color = colorObject;
+            animate();
+        });
+        f3.open();
+
+        // ground
+        var groundGeo = new THREE.BoxBufferGeometry(800,0.1,800);
+        var groundMat = new THREE.MeshBasicMaterial( {color:params.ground} );
+        groundMesh = new THREE.Mesh( groundGeo, groundMat );
+        groundMesh.translateY(-0.1);
+        scene.add( groundMesh );
 
         document.body.appendChild( renderer.domElement );
         document.addEventListener( 'mousemove', onMouseMove, false );
