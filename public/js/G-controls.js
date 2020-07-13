@@ -63,7 +63,7 @@ G.addModule("controls",{
 
 
 
-		this.addButton(semanticsButtomsElem,"vertex semantics",()=>{G.ui.showSemanticsText();});
+		this.addButton(semanticsButtomsElem,"Generate Story",()=>{G.ui.showSemanticsText();});
 		this.addButton(semanticsButtomsElem,"show labels",()=>{G.ui.showLabels()});
 
 		//this.addSlider(styleControlsElem,"waves",(value)=>{G.controls.set("radialLimitFactor",value);},{min:1,max:60,default:1});
@@ -126,418 +126,107 @@ G.addModule("controls",{
 			},
 		});
         let labelsElem=getE("labels-area");
+        function addHotspotFiltering() {
+
+            G.view.graph.hotspotsIds = [];
+            Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
+            G.view.refreshStyles(true, true);
+            G.view.graph.hotspotsPathsMapping = {};
+            let downloadButtonsElem = getE("spots_color-mapping");
+            if (G.view.graph && G.view.graph && G.view.graph.hotspotsIds) {
+                for (let j = 0; j < G.view.graph.hotspotsIds.length; j++) {
+                    let u = 0;
+                    if (Object.keys(G.view.graph.hotspotsPathsMapping).indexOf(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0]) == -1) {
+                        if (G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]]) {
+                            u = G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]][0];
+                        } else if (G.view.graph.fullpathAssignment[G.view.graph.hotspotsIds[j]]) {
+                            u = G.view.graph.fullpathAssignment[G.view.graph.hotspotsIds[j]][0];
+                        } else if (G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]]) {
+                            u = G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]][0];
+                        }
+                        if(G.view.graph.thePathsToHighlight) {
+                            G.view.graph.thePathsToHighlight.push(u);
+                        } else {
+                            G.view.graph.thePathsToHighlight = [];
+                        }
+                        G.view.graph.hotspotsPathsMapping[G.view.graph.hotspotsIds[j]] = u;
+                    }
+                }
+                keysSorted = Object.keys(G.view.graph.hotspotsPathsMapping).sort(function (a, b) {
+                    return G.view.graph.hotspotsPathsMapping[a] - G.view.graph.hotspotsPathsMapping[b]
+                });
+                sorted = [];
+                for (let j = 0; j < keysSorted.length; j++) {
+                    sorted.push(keysSorted[j]);
+                }
+                var x = document.getElementsByClassName("range-slider");
+                if (x.length > 0) {
+                    x[0].remove();
+                }
+                G.controls.addRangeSlider(downloadButtonsElem, "HotSpots", (begin, end) => {
+                    let paths = [];
+                    G.view.graph.hotspotsPathsHighlight = [];
+
+                    let count = 0;
+                    let realPaths = Algs.getHotspotsPaths();
+                    for (let i = begin; i <= end; i++) {
+                            if (G.view.graph.snVertexPaths[sorted[i]] && G.view.graph.snVertexPaths[sorted[i]][0] != undefined) {
+                                G.view.graph.hotspotsPathsHighlight.push(G.view.graph.snVertexPaths[sorted[i]][0]);
+                                paths.push(G.view.graph.snVertexPaths[sorted[i]]);
+                            } else if (G.view.graph.fullpathAssignment[sorted[i]] && G.view.graph.fullpathAssignment[sorted[i]][0] != undefined) {
+                                G.view.graph.hotspotsPathsHighlight.push(G.view.graph.snVertexPaths[sorted[i]][0]);
+                                paths.push(G.view.graph.fullpathAssignment[sorted[i]]);
+                            } else if (G.view.graph.snVertexPaths[sorted[i]] && G.view.graph.snVertexPaths[sorted[i]][0] != undefined) {
+                                G.view.graph.hotspotsPathsHighlight.push(G.view.graph.snVertexPaths[sorted[i]][0]);
+                                paths.push(G.view.graph.snVertexPaths[sorted[i]]);
+                            }
+
+                        count = count + 1;
+                    }
+                    paths = (paths.flat(1)).filter(function (item) {
+                        return realPaths.includes(item);
+                    });
+                    G.view.graph.hotspotsPathsHighlight = [...new Set(G.view.graph.hotspotsPathsHighlight)];
+                    G.view.graph.thePaths = [...new Set(paths.sort(function (a, b) {
+                        return a - b
+                    }))];
+                    G.view.refreshStyles(true, true);
+
+                }, {long: true, min: 0, max: sorted.length - 1, default: 0});
+                if(G.firstHotspots ==  undefined || G.firstHotspots ==false) {
+                    G.firstHotspots = true;
+                    G.controls.addCheckbox(downloadButtonsElem, toNormalText("Reset"), (value) => {
+                        if (value) {
+                            G.view.graph.thePaths = undefined;
+                            G.view.refreshStyles(true, true);
+                        }
+                    });
+                }
+
+
+            }
+        }
         this.addDropdownMenu(labelsElem,"explore",{
             "Story Id (ETK)": () => {
                 G.labelFilter = "ETK";
-                let myarr = {};
-                G.view.graph.hotspotsIds = [];
-                Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
-                G.view.refreshStyles(true, true);
-
-                let downloadButtonsElem = getE("spots_color-mapping");
-                if (G.view.graph && G.view.graph && G.view.graph.hotspotsIds) {
-                    for (let j = 0; j < G.view.graph.hotspotsIds.length; j++) {
-                        let u = 0;
-                        if (Object.keys(myarr).indexOf(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0]) == -1) {
-                            if (G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]]) {
-                                u = G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]][0];
-                            } else if (G.view.graph.fullpathAssignment[G.view.graph.hotspotsIds[j]]) {
-                                u = G.view.graph.fullpathAssignment[G.view.graph.hotspotsIds[j]][0];
-                            } else if (G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]]) {
-                                u = G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]][0];
-                            }
-                            myarr[G.view.graph.hotspotsIds[j]] = u;
-
-
-                        }
-
-                    }
-                    keysSorted = Object.keys(myarr).sort(function (a, b) {
-                        return myarr[a] - myarr[b]
-                    });
-                    sorted = [];
-                    for (let j = 0; j < keysSorted.length; j++) {
-                        sorted.push(keysSorted[j]);
-                    }
-                    var x = document.getElementsByClassName("range-slider");
-                    if (x.length > 0) {
-                        x[0].remove();
-                    }
-                    this.addRangeSlider(downloadButtonsElem, "HotSpots", (begin, end) => {
-                        let paths = [];
-                        let count = 0;
-                        let realPaths = Algs.getHotspotsPaths();
-                        for (let i = begin; i <= end; i++) {
-                            if (paths.length == 0) {
-                                if (G.view.graph.snVertexPaths[sorted[i]]) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                } else if (G.view.graph.fullpathAssignment[sorted[i]]) {
-                                    paths.push(G.view.graph.fullpathAssignment[sorted[i]]);
-                                } else if (G.view.graph.snVertexPaths[sorted[i]]) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                }
-                            } else {
-                                if (G.view.graph.snVertexPaths[sorted[i]] && G.view.graph.snVertexPaths[sorted[i]][0] != undefined) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                } else if (G.view.graph.fullpathAssignment[sorted[i]] && G.view.graph.fullpathAssignment[sorted[i]][0] != undefined) {
-                                    paths.push(G.view.graph.fullpathAssignment[sorted[i]]);
-                                } else if (G.view.graph.snVertexPaths[sorted[i]] && G.view.graph.snVertexPaths[sorted[i]][0] != undefined) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                }
-                            }
-                            count = count + 1;
-                        }
-                        paths = (paths.flat(1)).filter(function (item) {
-                            return realPaths.includes(item);
-                        });
-                        G.view.graph.thePaths = [...new Set(paths.sort(function (a, b) {
-                            return a - b
-                        }))];
-                        G.view.refreshStyles(true, true);
-
-                    }, {long: true, min: 0, max: sorted.length - 1, default: 0});
-                    if(G.firstHotspots ==  undefined || G.firstHotspots ==false) {
-                        G.firstHotspots = true;
-                        this.addCheckbox(downloadButtonsElem, toNormalText("Reset"), (value) => {
-                            if (value) {
-                                G.view.graph.thePaths = undefined;
-                                G.view.refreshStyles(true, true);
-                            }
-                        });
-                    }
-
-
-                }
+                addHotspotFiltering()
             },
             "Story Topic (ATU)": () => {
                 G.labelFilter = "ATU";
-                G.view.graph.hotspotsIds = [];
-                let myarr = {};
-                Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
-                G.view.refreshStyles(true, true);
-
-                let downloadButtonsElem = getE("spots_color-mapping");
-                if (G.view.graph && G.view.graph && G.view.graph.hotspotsIds) {
-                    for (let j = 0; j < G.view.graph.hotspotsIds.length; j++) {
-                        let u = 0;
-                        if (Object.keys(myarr).indexOf(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0]) == -1) {
-                            if (G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]]) {
-                                u = G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]][0];
-                            } else if (G.view.graph.fullpathAssignment[G.view.graph.hotspotsIds[j]]) {
-                                u = G.view.graph.fullpathAssignment[G.view.graph.hotspotsIds[j]][0];
-                            } else if (G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]]) {
-                                u = G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]][0];
-                            }
-                            myarr[G.view.graph.hotspotsIds[j]] = u;
-
-
-                        }
-
-                    }
-                    keysSorted = Object.keys(myarr).sort(function (a, b) {
-                        return myarr[a] - myarr[b]
-                    });
-                    sorted = [];
-                    for (let j = 0; j < keysSorted.length; j++) {
-                        sorted.push(keysSorted[j]);
-                    }
-                    var x = document.getElementsByClassName("range-slider");
-                    if (x.length > 0) {
-                        x[0].remove();
-                    }
-                    this.addRangeSlider(downloadButtonsElem, "HotSpots", (begin, end) => {
-                        let paths = [];
-                        let count = 0;
-                        let realPaths = Algs.getHotspotsPaths();
-                        for (let i = begin; i <= end; i++) {
-                            if (paths.length == 0) {
-                                if (G.view.graph.snVertexPaths[sorted[i]]) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                } else if (G.view.graph.fullpathAssignment[sorted[i]]) {
-                                    paths.push(G.view.graph.fullpathAssignment[sorted[i]]);
-                                } else if (G.view.graph.snVertexPaths[sorted[i]]) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                }
-                            } else {
-                                if (G.view.graph.snVertexPaths[sorted[i]] && G.view.graph.snVertexPaths[sorted[i]][0] != undefined) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                } else if (G.view.graph.fullpathAssignment[sorted[i]] && G.view.graph.fullpathAssignment[sorted[i]][0] != undefined) {
-                                    paths.push(G.view.graph.fullpathAssignment[sorted[i]]);
-                                } else if (G.view.graph.snVertexPaths[sorted[i]] && G.view.graph.snVertexPaths[sorted[i]][0] != undefined) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                }
-                            }
-                            count = count + 1;
-                        }
-                        paths = (paths.flat(1)).filter(function (item) {
-                            return realPaths.includes(item);
-                        });
-                        G.view.graph.thePaths = [...new Set(paths.sort(function (a, b) {
-                            return a - b
-                        }))];
-                        G.view.refreshStyles(true, true);
-
-                    }, {long: true, min: 0, max: sorted.length - 1, default: 0});
-                    if(G.firstHotspots ==  undefined || G.firstHotspots ==false) {
-                        G.firstHotspots = true;
-                        this.addCheckbox(downloadButtonsElem, toNormalText("Reset"), (value) => {
-                            if (value) {
-                                G.view.graph.thePaths = undefined;
-                                G.view.refreshStyles(true, true);
-                            }
-                        });
-                    }
-
-
-                }
+                addHotspotFiltering();
 
             },
             "Story Motif (TMI)": () => {
                 G.labelFilter = "TMI";
-                G.view.graph.hotspotsIds = [];
-                let myarr = {};
-                Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
-                G.view.refreshStyles(true, true);
-
-                let downloadButtonsElem = getE("spots_color-mapping");
-                if (G.view.graph && G.view.graph && G.view.graph.hotspotsIds) {
-                    for (let j = 0; j < G.view.graph.hotspotsIds.length; j++) {
-                        let u = 0;
-                        if (Object.keys(myarr).indexOf(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0]) == -1) {
-                            if (G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]]) {
-                                u = G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]][0];
-                            } else if (G.view.graph.fullpathAssignment[G.view.graph.hotspotsIds[j]]) {
-                                u = G.view.graph.fullpathAssignment[G.view.graph.hotspotsIds[j]][0];
-                            } else if (G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]]) {
-                                u = G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]][0];
-                            }
-                            myarr[G.view.graph.hotspotsIds[j]] = u;
-
-
-                        }
-
-                    }
-                    keysSorted = Object.keys(myarr).sort(function (a, b) {
-                        return myarr[a] - myarr[b]
-                    });
-                    sorted = [];
-                    for (let j = 0; j < keysSorted.length; j++) {
-                        sorted.push(keysSorted[j]);
-                    }
-                    var x = document.getElementsByClassName("range-slider");
-                    if (x.length > 0) {
-                        x[0].remove();
-                    }
-                    this.addRangeSlider(downloadButtonsElem, "HotSpots", (begin, end) => {
-                        let paths = [];
-                        let count = 0;
-                        let realPaths = Algs.getHotspotsPaths();
-                        for (let i = begin; i <= end; i++) {
-                            if (paths.length == 0) {
-                                if (G.view.graph.snVertexPaths[sorted[i]]) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                } else if (G.view.graph.fullpathAssignment[sorted[i]]) {
-                                    paths.push(G.view.graph.fullpathAssignment[sorted[i]]);
-                                } else if (G.view.graph.snVertexPaths[sorted[i]]) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                }
-                            } else {
-                                if (G.view.graph.snVertexPaths[sorted[i]] && G.view.graph.snVertexPaths[sorted[i]][0] != undefined) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                } else if (G.view.graph.fullpathAssignment[sorted[i]] && G.view.graph.fullpathAssignment[sorted[i]][0] != undefined) {
-                                    paths.push(G.view.graph.fullpathAssignment[sorted[i]]);
-                                } else if (G.view.graph.snVertexPaths[sorted[i]] && G.view.graph.snVertexPaths[sorted[i]][0] != undefined) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                }
-                            }
-                            count = count + 1;
-                        }
-                        paths = (paths.flat(1)).filter(function (item) {
-                            return realPaths.includes(item);
-                        });
-                        G.view.graph.thePaths = [...new Set(paths.sort(function (a, b) {
-                            return a - b
-                        }))];
-                        G.view.refreshStyles(true, true);
-
-                    }, {long: true, min: 0, max: sorted.length - 1, default: 0});
-                    if(G.firstHotspots ==  undefined || G.firstHotspots ==false) {
-                        G.firstHotspots = true;
-                        this.addCheckbox(downloadButtonsElem, toNormalText("Reset"), (value) => {
-                            if (value) {
-                                G.view.graph.thePaths = undefined;
-                                G.view.refreshStyles(true, true);
-                            }
-                        });
-                    }
-
-                }
+                addHotspotFiltering();
             },
             "PLACES (one-word)": (value) => {
                 G.labelFilter = "places";
-                G.view.graph.hotspotsIds = [];
-                let myarr = {};
-                Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
-                G.view.refreshStyles(true, true);
-
-
-                let downloadButtonsElem = getE("spots_color-mapping");
-                if (G.view.graph && G.view.graph && G.view.graph.hotspotsIds) {
-                    for (let j = 0; j < G.view.graph.hotspotsIds.length; j++) {
-                        let u = 0;
-                        if (Object.keys(myarr).indexOf(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0]) == -1) {
-                            if (G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]]) {
-                                u = G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]][0];
-                            } else if (G.view.graph.fullpathAssignment[G.view.graph.hotspotsIds[j]]) {
-                                u = G.view.graph.fullpathAssignment[G.view.graph.hotspotsIds[j]][0];
-                            } else if (G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]]) {
-                                u = G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]][0];
-                            }
-                            myarr[G.view.graph.hotspotsIds[j]] = u;
-
-
-                        }
-
-                    }
-                    keysSorted = Object.keys(myarr).sort(function (a, b) {
-                        return myarr[a] - myarr[b]
-                    });
-                    sorted = [];
-                    for (let j = 0; j < keysSorted.length; j++) {
-                        sorted.push(keysSorted[j]);
-                    }
-
-                    var x = document.getElementsByClassName("range-slider");
-                    if (x.length > 0) {
-                        x[0].remove();
-                    }
-                    this.addRangeSlider(downloadButtonsElem, "HotSpots", (begin, end) => {
-                        let paths = [];
-                        let count = 0;
-                        let realPaths = Algs.getHotspotsPaths();
-                        for (let i = begin; i <= end; i++) {
-                            if (paths.length == 0) {
-                                if (G.view.graph.snVertexPaths[sorted[i]]) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                } else if (G.view.graph.fullpathAssignment[sorted[i]]) {
-                                    paths.push(G.view.graph.fullpathAssignment[sorted[i]]);
-                                } else if (G.view.graph.snVertexPaths[sorted[i]]) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                }
-                            } else {
-                                if (G.view.graph.snVertexPaths[sorted[i]] && G.view.graph.snVertexPaths[sorted[i]][0] != undefined) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                } else if (G.view.graph.fullpathAssignment[sorted[i]] && G.view.graph.fullpathAssignment[sorted[i]][0] != undefined) {
-                                    paths.push(G.view.graph.fullpathAssignment[sorted[i]]);
-                                } else if (G.view.graph.snVertexPaths[sorted[i]] && G.view.graph.snVertexPaths[sorted[i]][0] != undefined) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                }
-                            }
-                            count = count + 1;
-                        }
-                        paths = (paths.flat(1)).filter(function (item) {
-                            return realPaths.includes(item);
-                        });
-                        G.view.graph.thePaths = [...new Set(paths.sort(function (a, b) {
-                            return a - b
-                        }))];
-                        G.view.refreshStyles(true, true);
-
-                    }, {long: true, min: 0, max: sorted.length - 1, default: 0});
-                    if(G.firstHotspots ==  undefined || G.firstHotspots ==false) {
-                        G.firstHotspots = true;
-                        this.addCheckbox(downloadButtonsElem, toNormalText("Reset"), (value) => {
-                            if (value) {
-                                G.view.graph.thePaths = undefined;
-                                G.view.refreshStyles(true, true);
-                            }
-                        });
-                    }
-
-
-                }
+                addHotspotFiltering();
             },
             "PEOPLE (at least two names)": () => {
                 G.labelFilter = "people";
-                G.view.graph.hotspotsIds = [];
-                let myarr = {};
-                Algs.getAvgNumOfConnectionsByLabel(G.view.graph, G.labelFilter);
-                G.view.refreshStyles(true, true);
-
-                let downloadButtonsElem = getE("spots_color-mapping");
-                if (G.view.graph && G.view.graph && G.view.graph.hotspotsIds) {
-                    for (let j = 0; j < G.view.graph.hotspotsIds.length; j++) {
-                        let u = 0;
-                        if (Object.keys(myarr).indexOf(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0]) == -1) {
-                            if (G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]]) {
-                                u = G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]][0];
-                            } else if (G.view.graph.fullpathAssignment[G.view.graph.hotspotsIds[j]]) {
-                                u = G.view.graph.fullpathAssignment[G.view.graph.hotspotsIds[j]][0];
-                            } else if (G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]]) {
-                                u = G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]][0];
-                            }
-                            myarr[G.view.graph.hotspotsIds[j]] = u;
-
-
-                        }
-
-                    }
-                    keysSorted = Object.keys(myarr).sort(function (a, b) {
-                        return myarr[a] - myarr[b]
-                    });
-                    sorted = [];
-                    for (let j = 0; j < keysSorted.length; j++) {
-                        sorted.push(keysSorted[j]);
-                    }
-                    var x = document.getElementsByClassName("range-slider");
-                    if (x.length > 0) {
-                        x[0].remove();
-                    }
-                    this.addRangeSlider(downloadButtonsElem, "HotSpots", (begin, end) => {
-                        let paths = [];
-                        let count = 0;
-                        let realPaths = Algs.getHotspotsPaths();
-                        for (let i = begin; i <= end; i++) {
-                            if (paths.length == 0) {
-                                if (G.view.graph.snVertexPaths[sorted[i]]) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                } else if (G.view.graph.fullpathAssignment[sorted[i]]) {
-                                    paths.push(G.view.graph.fullpathAssignment[sorted[i]]);
-                                } else if (G.view.graph.snVertexPaths[sorted[i]]) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                }
-                            } else {
-                                if (G.view.graph.snVertexPaths[sorted[i]] && G.view.graph.snVertexPaths[sorted[i]][0] != undefined) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                } else if (G.view.graph.fullpathAssignment[sorted[i]] && G.view.graph.fullpathAssignment[sorted[i]][0] != undefined) {
-                                    paths.push(G.view.graph.fullpathAssignment[sorted[i]]);
-                                } else if (G.view.graph.snVertexPaths[sorted[i]] && G.view.graph.snVertexPaths[sorted[i]][0] != undefined) {
-                                    paths.push(G.view.graph.snVertexPaths[sorted[i]]);
-                                }
-                            }
-                            count = count + 1;
-                        }
-                        paths = (paths.flat(1)).filter(function (item) {
-                            return realPaths.includes(item);
-                        });
-                        G.view.graph.thePaths = [...new Set(paths.sort(function (a, b) {
-                            return a - b
-                        }))];
-                        G.view.refreshStyles(true, true);
-
-                    }, {long: true, min: 0, max: sorted.length - 1, default: 0});
-                    if(G.firstHotspots ==  undefined || G.firstHotspots ==false) {
-                        G.firstHotspots = true;
-                        this.addCheckbox(downloadButtonsElem, toNormalText("Reset"), (value) => {
-                            if (value) {
-                                G.view.graph.thePaths = undefined;
-                                G.view.refreshStyles(true, true);
-                            }
-                        });
-                    }
-
-
-                }
+                addHotspotFiltering();
             },
         });
 

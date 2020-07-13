@@ -962,41 +962,46 @@ G.addModule("ui", {
 		});
 	},
 	showSemanticsText: function () {
+        let story = Algs.getStories();
+        let storytext = "";
+        for(let i =0; i<Object.keys(story).length;i++) {
+            storytext += story[Object.keys(story)[i]];
+        }
 		let datasetID = G.graph.datasetID;
 		if (G.graph && (!G.showingSelectedIDs)) {
 			G.showingSelectedIDs = true;
 			getE("selected-vertices-ids").style.display = "block";
-
-			if (G.analytics.datasetIDMaps[datasetID]) {
-
-				if (G.analytics.datasetIDMaps[datasetID].idMap) {
-					try {
-						d3.json("datasetIDMaps/" + datasetID + "/" + G.analytics.getVertexIDsString()).then((d) => {
-							if (d && d.length > 0) {
-								let ids = d.join(",");
-								getE("selected-vertices-ids-content").value = ids;
-								if (G.analytics.datasetIDMaps[datasetID].func) {
-									G.analytics.datasetIDMaps[datasetID].func(ids);
-								}
-
-							} else {
-								getE("selected-vertices-ids-content").value = G.analytics.getVertexIDsString();
-							}
-						});
-					} catch (e) {
-						getE("selected-vertices-ids-content").value = G.analytics.getVertexIDsString();
-					}
-				} else {
-					//no extra id map
-					getE("selected-vertices-ids-content").value = G.analytics.getVertexIDsString();
-					if (G.analytics.datasetIDMaps[datasetID].func) {
-						G.analytics.datasetIDMaps[datasetID].func(G.analytics.getVertexIDsString());
-					}
-				}
-
-			} else {
-				getE("selected-vertices-ids-content").value = G.analytics.getVertexIDsString();
-			}
+            getE("selected-vertices-ids-content").value = storytext;
+			// if (G.analytics.datasetIDMaps[datasetID]) {
+            //
+			// 	if (G.analytics.datasetIDMaps[datasetID].idMap) {
+			// 		try {
+			// 			d3.json("datasetIDMaps/" + datasetID + "/" + G.analytics.getVertexIDsString()).then((d) => {
+			// 				if (d && d.length > 0) {
+			// 					let ids = d.join(",");
+			// 					getE("selected-vertices-ids-content").value = ids;
+			// 					if (G.analytics.datasetIDMaps[datasetID].func) {
+			// 						G.analytics.datasetIDMaps[datasetID].func(ids);
+			// 					}
+            //
+			// 				} else {
+			// 					getE("selected-vertices-ids-content").value = G.analytics.getVertexIDsString();
+			// 				}
+			// 			});
+			// 		} catch (e) {
+			// 			getE("selected-vertices-ids-content").value = G.analytics.getVertexIDsString();
+			// 		}
+			// 	} else {
+			// 		//no extra id map
+			// 		getE("selected-vertices-ids-content").value = G.analytics.getVertexIDsString();
+			// 		if (G.analytics.datasetIDMaps[datasetID].func) {
+			// 			G.analytics.datasetIDMaps[datasetID].func(G.analytics.getVertexIDsString());
+			// 		}
+			// 	}
+            //
+			// } else {
+			// 	getE("selected-vertices-ids-content").value = G.analytics.getVertexIDsString();
+			// }
 
 		} else {
 			//hide on second press
