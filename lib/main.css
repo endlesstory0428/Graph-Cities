@@ -218,10 +218,10 @@ p.interlayer-info-extra{
 }
 
 div#selected-vertices-ids{
-	width:68%;
-	height:80%;
-	left:16%;
-	z-index:5;
+    width: 30%;
+    height: 70%;
+    left: 70%;
+    z-index: 5;
 }
 
 div#new-graph-menu{
