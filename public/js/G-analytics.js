@@ -411,7 +411,10 @@ G.addModule("analytics",{
 	
 	downloadVertexIDs:function(){
         function downloadInnerHtml(filename, mimeType) {
-            let text = G.view.graph.story;
+            let text = "";
+            for(let i =0; i<Object.keys(G.view.graph.story).length;i++) {
+                text +=  G.view.graph.story[Object.keys(G.view.graph.story)[i]];
+            }
             var link = document.createElement('a');
             mimeType = mimeType || 'text/plain';
 
