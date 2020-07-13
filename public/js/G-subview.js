@@ -3127,6 +3127,12 @@ G.addModule("subview",{
 					color:[
 						(data,oldValue,link,index,array,graph)=>{
                             if(G.snNodesColorByHotSpot || G.snNodesColorByLabel){
+
+                                if(G.snNodesColorByHotSpot || G.snNodesColorByLabel) {
+                                    if (G.view.graph.hotspotsPathsHighlight && G.view.graph.hotspotsPathsHighlight.indexOf(G.view.graph.snEdgePaths[index]) != -1) {
+                                        let c=new THREE.Color(); c.setHSL(9 * 0.7 + 0.15, 1, .2);return c;
+                                    }
+                                }
                                 return -1;
                             }
 
@@ -3168,6 +3174,7 @@ G.addModule("subview",{
                                          return oldValue+G.controls.get("snPathThickness",3);
                                     } else return 1;
                                 } else  return oldValue+G.controls.get("snPathThickness",3);
+
                             }
 							else{//first see if it's shown for another reason, then return 0 if only paths are shown (it should be called hide other edges)
 								if(data.clusteringLinks){if(data.edgeClustering[index]!==undefined){return;}}

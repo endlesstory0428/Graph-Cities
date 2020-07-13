@@ -410,8 +410,19 @@ G.addModule("analytics",{
 	
 	
 	downloadVertexIDs:function(){
-		downloadString(this.getVertexIDsString(),G.graph.name);
-	},
+        function downloadInnerHtml(filename, mimeType) {
+            let text = G.view.graph.story;
+            var link = document.createElement('a');
+            mimeType = mimeType || 'text/plain';
+
+            link.setAttribute('download', filename);
+            link.setAttribute('href', 'data:' + mimeType + ';charset=utf-8,' + encodeURIComponent(text));
+            link.click();
+        }
+
+        var fileName =  'Story.txt'; // You can use the .txt extension if you want
+        downloadInnerHtml(fileName,'text/html');
+    },
 	downloadImage:function(){
 		downloadCanvas(G.renderer.domElement,G.graph.name);
 	},
