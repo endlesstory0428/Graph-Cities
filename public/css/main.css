@@ -288,6 +288,7 @@ div.menu-content{
 div.dialog-content,div.menu-content{
 	position:relative;
 	overflow-y:auto;height:45%;bottom:0;
+    text-align: left;
 }
 .simple{
 	margin:0;padding:0;border:none;box-sizing: border-box;flex: 1 1 auto;

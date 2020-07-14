@@ -415,6 +415,9 @@ G.addModule("analytics",{
             for(let i =0; i<Object.keys(G.view.graph.story).length;i++) {
                 text +=  G.view.graph.story[Object.keys(G.view.graph.story)[i]];
             }
+            text = text.replace(/\<span style='color: red'>/g, '');
+            text = text.replace(/\<\/span>/g, '');
+            text = text.replace(/\<\/br>/g, '');
             var link = document.createElement('a');
             mimeType = mimeType || 'text/plain';
 

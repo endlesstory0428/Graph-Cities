@@ -166,6 +166,7 @@ G.addModule("controls",{
                 G.controls.addRangeSlider(downloadButtonsElem, "HotSpots", (begin, end) => {
                     let paths = [];
                     G.view.graph.hotspotsPathsHighlight = [];
+                    G.view.graph.story={};
 
                     let count = 0;
                     let realPaths = Algs.getHotspotsPaths();
@@ -574,7 +575,7 @@ G.addModule("controls",{
             }
 
             var fileName =  'Hotspots.txt'; // You can use the .txt extension if you want
-            downloadInnerHtml(fileName,'text/html');
+            downloadInnerHtml(fileName,'text');
 
 
         });
