@@ -962,16 +962,16 @@ G.addModule("ui", {
 		});
 	},
 	showSemanticsText: function () {
-        let story = Algs.getStories();
-        let storytext = "";
-        for(let i =0; i<Object.keys(story).length;i++) {
-            storytext += story[Object.keys(story)[i]];
-        }
 		let datasetID = G.graph.datasetID;
 		if (G.graph && (!G.showingSelectedIDs)) {
 			G.showingSelectedIDs = true;
+            let story = Algs.getStories();
+            let storytext = "";
+            for(let i =0; i<Object.keys(story).length;i++) {
+                storytext += story[Object.keys(story)[i]];
+            }
 			getE("selected-vertices-ids").style.display = "block";
-            getE("selected-vertices-ids-content").value = storytext;
+            getE("selected-vertices-ids-content").innerHTML = storytext;
 			// if (G.analytics.datasetIDMaps[datasetID]) {
             //
 			// 	if (G.analytics.datasetIDMaps[datasetID].idMap) {
