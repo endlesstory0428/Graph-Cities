@@ -185,7 +185,7 @@ G.addModule("loading",{
 	},
 	loadSummary:async function(g){///takes a path or a summary object. for UI purposes, also load all summaries of levels above this graph
 		if(typeof g=="string"){
-			if(this.graphsCache[g])return this.graphsCache[g];
+			//if(this.graphsCache[g])return this.graphsCache[g];
 			let path=g;g=new Graph();let loadedSummary=false;
 			await d3.json("datasets/"+path+"/summary.json.gz").then((summary)=>{
 				if(summary){
@@ -468,7 +468,7 @@ G.addModule("loading",{
 			console.warn("no graph to load");return;
 		}
 		if(typeof graph=="string"){
-			if(this.graphsCache[graph])return this.graphsCache[graph];
+			//if(this.graphsCache[graph])return this.graphsCache[graph];
 			//allow loading a data path directly?
 			let graphPath=graph;
 			//manage union loading in the client
@@ -580,10 +580,9 @@ G.addModule("loading",{
 			if(graph.colorScaleName){graph.modifiers.nodeColor.colorScaleName=graph.colorScaleName;}
 		}
 		graph.parent=graph.metagraph||graph.originalGraph||graph.wholeGraph;
-		
-		
-		G.broadcast("loadGraph",graph);//now loading and displaying graphs are different messages. preprocessing & analytics etc apply to all loaded graphs in the hierarchy, but display only affects the view and is applied to the top level graph.
-		return graph;
+
+        G.broadcast("loadGraph",graph);//now loading and displaying graphs are different messages. preprocessing & analytics etc apply to all loaded graphs in the hierarchy, but display only affects the view and is applied to the top level graph.
+        return graph;
 	},
 	checkNames:(g)=>{
 		if(!g.dataPath)throw Error();
@@ -624,10 +623,8 @@ G.addModule("loading",{
 			//if(graph.name===undefined){graph.name=toNormalText(graph.datasetID);}
 			//else{graph.name=toNormalText(graph.name);}
 		}
-
-		this.graph=graph;
-		G.graph=graph;
-
+        this.graph=graph;
+        G.graph=graph;
 		//window.history.pushState(graph.dataPath, "", "/?dataPath="+graph.dataPath);
 		//I think this can be annoying when I want to refresh when debugging. have a separate "get link" button?
 		

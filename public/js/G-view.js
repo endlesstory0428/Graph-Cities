@@ -344,6 +344,47 @@ G.addModule("view",{
             if ((this.graph != graph) && (!options.noMoveCamera)) G.resetView();//exclude expansion in-place
             this.graph = graph;
 
+            if(graph.dataPath.includes("layer")&& graph.dataPath.includes("1")) {
+                //data.dataPath=undefined;
+                ccs = Algs.getSortedCCsAndCCIDs(graph);
+
+                getE("number-ccs-graph").innerText = "Select a connected component between 0 and " +ccs.length;
+                info = getE("layer-1-info");
+                //console.log(graph.labelsByID[Algs.getMainVertexInCC(graph,ccs[G.graph.selectedccId])]);
+                items = Algs.getMainVertexInCC(graph,ccs[G.graph.selectedccId]);
+                for(item in items) {
+                    G.controls.addCheckbox(info, toNormalText(graph.labelsByID[items[item]][0]), (value, id) => {
+                        if (value) {
+                            for(cc in ccs){
+                                if(ccs[cc].vertexList.indexOf(Number(id))!=-1){
+                                    G.graph.selectedccId = cc;
+                                    ccg = Algs.getInducedSubgraph(graph, ccs[G.graph.selectedccId].vertexList);
+                                    v = ccg.vertices.length;
+                                    e = ccg.edges.length;
+                                    getE("num-edges-vertices").innerHTML =  "|V|" +v +" |E|"+e;
+
+                                    break;
+                                }
+                            }
+                            document.getElementById("vertical").style.display="none";
+                            //document.getElementById("horizontal").style.display="none";
+                            document.getElementById("path").style.display = "block"
+
+                            G.analytics.showSparseNet(G.graph);
+                            G.cameraControls.setTarget(null);
+                            let vec=G.view.getNodePos(id);
+                            if(vec.x != undefined || vec.y != undefined || vec.z != undefined )
+                                G.cameraControls.setTarget(vec,true);
+                        } else {
+                            graph.snPaths = undefined;
+                            G.subview.disableModifier("sparsenet");
+                        }
+                    }, null ,items[item],true);
+                }
+
+            }
+
+
             if(G.drawFixedPoints){
                 graph.heightProperty="fixedPointLayer";
             }
@@ -391,7 +432,7 @@ G.addModule("view",{
             G.cameraControls.setTarget(null);//stop zooming into the old node
             G.cameraControls.lastZoomTime = new Date().getTime();//prevent immediate zoom-out due to camera position
 
-            if (this.model.nodes.length > 10000) {
+            if (this.model.nodes.length > 20000) {
                 G.simulationRunning = false;
             } else {
                 G.simulationRunning = true;

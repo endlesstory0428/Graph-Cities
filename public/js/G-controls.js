@@ -646,6 +646,22 @@ G.addModule("controls",{
             //     G.graph.trackIndex++;
             //
             // });
+            let ccButtonsElem = getE("cc-buttons-area");
+            this.addButton(ccButtonsElem, "Sparsenet", () => {
+                let value=getE("cc-id").value;
+                if(Number.isInteger(Number(value))) {
+                    G.graph.selectedccId = Number(value);
+                }else {
+                    G.graph.selectedccId = 0;
+                }
+                graph.snPaths = undefined;
+                document.getElementById("vertical").style.display="none";
+                //document.getElementById("horizontal").style.display="none";
+                document.getElementById("path").style.display = "block"
+
+                G.analytics.showSparseNet(G.graph);
+
+            });
 
             this.addButton(drawingButtonsElem, "Update", () => {
                 let value=getE('number-of-next-paths').value;
@@ -1855,7 +1871,7 @@ G.addModule("controls",{
 		else {pivot1.call(d3.drag().on("drag",cb).on("end",cb));pivot2.call(d3.drag().on("drag",cb).on("end",cb));}
 		return options;
 	},
-    addCheckbox(parentElem, text, func, options, id=null){
+    addCheckbox(parentElem, text, func, options, id=null, val = false){
         let arr = [];
 
         if (!options) options = {};
@@ -1866,12 +1882,22 @@ G.addModule("controls",{
         if(arr.indexOf(text)!=-1) {
             s.attr("style","display:none;");
         }
-        if(text == "Reset"){
+        if(text == "Reset" || val){
             s.attr("style","margin-top: 20px;margin-left: 15px;");
 
         }
-        let label = s.append("p").attr("class", "material-checkbox-label").text(text);
-        let checkbox = s.append("input").attr("type", "checkbox").attr("class", "material-checkbox");
+        let checkbox = null;
+        let label = null;
+        if(val) {
+            s.attr("style","padding-bottom: 20px;padding-top:20px;width: 100%;");
+            checkbox = s.append("input").attr("type", "checkbox").attr("class", "material-checkbox");
+            label = s.append("p").attr("class", "material-checkbox-label").text(text);
+            label.attr("style","font-size: small;text-align: left;width: 100%;padding-left: 5px;");
+        } else {
+            label = s.append("p").attr("class", "material-checkbox-label").text(text);
+            checkbox = s.append("input").attr("type", "checkbox").attr("class", "material-checkbox");
+
+        }
         let checkboxElem = checkbox.node();
         if(id) {
             checkbox.on("input", () => func(checkboxElem.checked, id));
