@@ -771,8 +771,16 @@ G.addModule("ui", {
 				return;
 			} else {
 				//show CCs if it's too large?
-				G.display(graph.dataPath + "/layer/" + d.layer);
-			}
+                // ccs = Algs.getSortedCCsAndCCIDs(graph);
+                // //l = graph.dataPath;
+                // g = Algs.getInducedSubgraph(graph, ccs[0].vertexList);
+                // g.dataPath = l;
+                // G.display(g);
+
+
+                G.display(graph.dataPath + "/layer/" + d.layer);
+
+            }
 		});
 		this.ribbonSelection = ribbonSelection;
 

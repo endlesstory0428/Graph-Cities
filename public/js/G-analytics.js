@@ -1660,11 +1660,33 @@ G.addModule("analytics",{
 		if(graph.dataPath&&(graph.dataPath.indexOf("custom")==-1)){data.dataPath=graph.dataPath;}
 
 		if(options)data.options=options;
-		if(graph.dataPath.includes("layer")) {
-            data.data = this.getGraphVerticesAndEdges(graph);
+		let ccg = undefined;
+		if(graph.dataPath.includes("layer")&& graph.dataPath.includes("1")) {
+		    //data.dataPath=undefined;
+		    ccs = Algs.getSortedCCsAndCCIDs(graph);
+            ccg = Algs.getInducedSubgraph(graph, ccs[G.graph.selectedccId].vertexList);
+            v = ccg.vertices.length;
+            e = ccg.edges.length;
+            console.log(v);
+            console.log(e);
+            data.data = this.getGraphVerticesAndEdges(ccg);
+            if(graph.dataPath.includes("1")){
+                data.dataPath = "";
+            }
+            //console.log(graph.labelsByID[Algs.getMainVertexInCC(graph,ccs[G.graph.selectedccId])]);
         }
-		if(!graph.snPaths){G.messaging.requestCustomData("sparsenet",data,(result)=>{
+		if(!graph.snPaths){
+		    G.messaging.requestCustomData("sparsenet",data,(result)=>{
 		    if(result&&result.length>0){
+		        if(graph.dataPath.includes("layer")&& graph.dataPath.includes("1")&&ccg) {
+                    for (let i = 0; i < result.length; i++) {
+                        temp = [];
+                        for (let j = 0; j < result[i].length; j++) {
+                            temp.push(graph.vertexMap[ccg.vertices.id[result[i][j]]]);
+                        }
+                        result[i] = temp;
+                    }
+                }
 		        graph.snPaths=result;
                 let paths=graph.snPaths;let snPathEdgeMap={};
                 for(let pathID=0;pathID<paths.length;pathID++){
@@ -1673,7 +1695,9 @@ G.addModule("analytics",{
                         let tempID=path[i];
                         let vertex=graph.vertices[tempID];
                         if(i>0){
-                            snPathEdgeMap[graph.vertices.edges[tempID][path[i-1]]]=pathID;
+                            if(snPathEdgeMap[graph.vertices.edges[tempID][path[i-1]]]!=undefined) {
+                                snPathEdgeMap[graph.vertices.edges[tempID][path[i - 1]]] = pathID;
+                            }
                         }
                     }
                 }
