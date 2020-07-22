@@ -20,53 +20,61 @@
       import { TrackballControls } from './node_modules/three/examples/jsm/controls/TrackballControls.js';
       import { GUI } from './node_modules/three/examples/jsm/libs/dat.gui.module.js';
       import { BufferGeometryUtils } from './three.js/examples/jsm/utils/BufferGeometryUtils.js';
+      import { OBJLoader } from './three.js/examples/jsm/loaders/OBJLoader.js';
+      import { Water } from './three.js/examples/jsm/objects/Water.js';
+      import { Sky } from './three.js/examples/jsm/objects/Sky.js';
       // THREE.Cache.enabled = true;
 
-      var perspectiveCamera, orthographicCamera, controls, scene, renderer;
+      let perspectiveCamera, orthographicCamera, controls, scene, renderer;
 
-      var spiral = [];
-      var frustumSize = 400;
-      var aspect = window.innerWidth/window.innerHeight;
-      var scene = new THREE.Scene();
+      let spiral = [];
+      let frustumSize = 400;
+      let aspect = window.innerWidth/window.innerHeight;
+      scene = new THREE.Scene();
       scene.background = new THREE.Color('skyblue');
-      // var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+      // let camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
 
-      var raycaster = new THREE.Raycaster();
-      var mouse = new THREE.Vector2();
-      var objects = [];
-      var INTERSECTED;
-      var city_tracking = {};
-      var city_all = {};
-      var city_mesh = [];
-      var city_to_load = 0;
-      var groundMesh;
-      var source_dir = "data/";
-      // var source_dir;
-      var y_scale = 10; // scale up the height of building
-      var x_scale = 800000.0; // scale down the coordinates span
-      var default_persp = [0,200,400]
+      let raycaster = new THREE.Raycaster();
+      let mouse = new THREE.Vector2();
+      let objects = [];
+      let INTERSECTED;
+      let city_tracking = {};
+      let city_all = {};
+      let city_mesh = [];
+      let city_to_load = 0;
+      let groundMesh;
+      let source_dir = "data/";
+      let land_obj = "models/island.obj";
+      // let source_dir;
+      // let y_scale = 50; // scale up the height of building
+      let last = [-187.86920742571192,-69.84011743155536]
+      let y_scale = Math.sqrt(last[0] ** 2 + last[1] ** 2) / 4.565727849181679;
+      // let x_scale = 800000.0; // scale down the coordinates span
+      let x_scale = 1;
+      let default_persp = [0,200,400]
         // GUI parameters
-        var params = {
+        let params = {
             orthographicCamera: false,
             resetCamera: function() {
                 // TrackballControls.reset();
             },
-            ground: "#8B4513",
+            ground: "#CCA262",
             colorMap: "jet",
             hideBuilding: false
         };
-        var building_params = {
+        let building_params = {
             floor: '',
             layer: ''
         };
-
+      let water;
       init();
       animate();
 
       function init() {
         perspectiveCamera = new THREE.PerspectiveCamera( 60, aspect, 1, 2000 );
-        perspectiveCamera.position.z = 400;
-        perspectiveCamera.position.y = 200;
+        perspectiveCamera.position.z = 900;
+        perspectiveCamera.position.y = 400;
+        perspectiveCamera.far = 5000;
 
         orthographicCamera = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 1, 1000 );
         orthographicCamera.position.z = 20;
@@ -75,7 +83,7 @@
         renderer.setSize( window.innerWidth, window.innerHeight );
         document.body.appendChild( renderer.domElement );
         
-        var manager = new THREE.LoadingManager();
+        let manager = new THREE.LoadingManager();
         manager.onStart = function(url,itemsLoaded,itemsTotal) {
           console.log('Started loading file: '+url+'.\nLoaded '+itemsLoaded+' of '+itemsTotal+' files.');
         };
@@ -83,8 +91,8 @@
         loadFile(source_dir,manager);
 
         // GUI folders
-        var gui = new GUI();
-        var f1 = gui.addFolder('Building Info');
+        let gui = new GUI();
+        let f1 = gui.addFolder('Building Info');
         f1.add(building_params, 'floor').name('floor number').listen();
         f1.add(building_params, 'layer').name('layer info').listen();
         f1.add(params, 'colorMap', ['jet','others']).name('color map').onChange(function () {
@@ -92,7 +100,7 @@
             render();
         });
         f1.open();
-        var f2 = gui.addFolder('Camera Control');
+        let f2 = gui.addFolder('Camera Control');
         f2.add(params, 'resetCamera').name('reset camera');
         f2.add(params, 'orthographicCamera').name('use orthographic').onChange(
             function( value ) {
@@ -100,21 +108,25 @@
             createControls( value ? orthographicCamera : perspectiveCamera );
         });
         f2.open();
-        var f3 = gui.addFolder('Environment Control');
+        let f3 = gui.addFolder('Environment Control');
         f3.addColor(params, 'ground').name('ground color').onChange( function( colorValue ) {
-            colorValue = parseInt(colorValue.replace('#','0x'),16);
-            var colorObject = new THREE.Color( colorValue );
+            colorValue = parseInt(colorValue.replace('#','0x'), 16);
+            let colorObject = new THREE.Color( colorValue );
             groundMesh.material.color = colorObject;
             animate();
         });
         f3.open();
 
         // ground
-        var groundGeo = new THREE.BoxBufferGeometry(800,0.1,800);
-        var groundMat = new THREE.MeshBasicMaterial( {color:params.ground} );
-        groundMesh = new THREE.Mesh( groundGeo, groundMat );
-        groundMesh.translateY(-0.1);
-        scene.add( groundMesh );
+        // let groundGeo = new THREE.BoxBufferGeometry(800,0.1,800);
+        let groundMat = new THREE.MeshBasicMaterial( {color:params.ground} );
+        groundMat.side = THREE.DoubleSide;
+        // groundMesh = new THREE.Mesh( groundGeo, groundMat );
+        // groundMesh.translateY(-0.5);
+        // scene.add( groundMesh );
+
+        let groundUrl = "models/island.obj";
+        let groundMesh = objLoader(groundUrl, groundMat);
 
         document.body.appendChild( renderer.domElement );
         document.addEventListener( 'mousemove', onMouseMove, false );
@@ -122,15 +134,59 @@
         // window.addEventListener( 'reset_camera', onResetCamera, false);
         createControls( perspectiveCamera );
 
-        var size = 800;
-        var divisions = 80;
-        var gridHelper = new THREE.GridHelper( size, divisions );
-        scene.add( gridHelper );
+        // let size = 1200;
+        // let divisions = 24;
+        // let gridHelper = new THREE.GridHelper( size, divisions );
+        // scene.add( gridHelper );
+
+        let sun = new THREE.Vector3();
+        //water
+        let waterGeo = new THREE.PlaneBufferGeometry(10000,10000);
+        water = new Water( waterGeo, {
+            textureWidth: 512, 
+            textureHeight: 512,
+            waterNormals: new THREE.TextureLoader().load( 'textures/waternormals.jpg', function ( texture ) {
+                texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+            } ),
+            alpha:  1.0,
+            sunDirection: new THREE.Vector3(),
+            sunColor: 0xffffff,
+            waterColor: 0x001e0f,
+            distortionScale: 4,
+        } );
+        water.rotation.x = - Math.PI/2;
+        scene.add(water);
+
+        //skybox
+        var sky = new Sky();
+        sky.scale.setScalar(10000);
+        scene.add(sky);
+        var uniforms = sky.material.uniforms;
+        uniforms[ 'turbidity' ].value = 10;
+        uniforms[ 'rayleigh' ].value = 2;
+        uniforms[ 'mieCoefficient' ].value = 0.005;
+        uniforms[ 'mieDirectionalG' ].value = 0.8;
+        var parameters = {
+            inclination: 0.35,
+            azimuth: 0.205
+        };
+        var pmremGenerator = new THREE.PMREMGenerator( renderer );
+        function updateSun() {
+            var theta = Math.PI * ( parameters.inclination - 0.5 );
+            var phi = 2 * Math.PI * ( parameters.azimuth - 0.5 );
+            sun.x = Math.cos( phi );
+            sun.y = Math.sin( phi ) * Math.sin( theta );
+            sun.z = Math.sin( phi ) * Math.cos( theta );
+            sky.material.uniforms[ 'sunPosition' ].value.copy( sun );
+            water.material.uniforms[ 'sunDirection' ].value.copy( sun ).normalize();
+            scene.environment = pmremGenerator.fromScene( sky ).texture;
+        }
+        updateSun();
       }
 
       function loadFile(file,manager) {
-        var loader = new THREE.FileLoader(manager);
-        var blob = null;
+        let loader = new THREE.FileLoader(manager);
+        let blob = null;
         loader.responseType = "blob";
         loader.load(file,
           function(data) {
@@ -145,43 +201,70 @@
         );
       }
 
+      //load ground OBJ file
+      function objLoader(obj_url,obj_material) {
+        var loader = new OBJLoader();
+        loader.load(
+            obj_url,
+            function ( object ) {
+                object.traverse(function(child){
+                    console.log("child type: "+child.type);
+                    if(child.type == "Mesh") {
+                        child.material = obj_material;
+                    }
+                });
+                object.position.x=-140;
+                object.position.z=20;
+                object.scale.set(33,1,33);
+                
+                scene.add( object );
+            },
+            function ( xhr ) {
+                console.log( obj_url + ' ' + ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+            },
+            function ( error ) {
+                console.log( 'An error happened when loading ' + obj_url );
+            }
+        );
+      }
+
       function getAsText(file,url) {
-        var reader = new FileReader();
+        let reader = new FileReader();
         reader.readAsText(file);
         reader.onProgress = updateProgress;
         reader.onload = loaded;
         reader.onerror = errorHandler;
         reader.url = url;
-        var text = reader.result;
+        let text = reader.result;
       }
 
       function updateProgress(evt) {
         if(evt.lengthComputable) {
-          var loaded = (evt.loaded/evt.total);
+          let loaded = (evt.loaded/evt.total);
         }
       }
 
       function loaded(evt) {
-        var fileString = evt.target.result;
-        var isFolder = fileString.startsWith("<!DOCTYPE HTML PUBLIC");
-        var lines = null;
+        let fileString = evt.target.result;
+        let isFolder = fileString.startsWith("<!DOCTYPE HTML PUBLIC");
+        let lines = null;
         if(isFolder) {
           lines = fileString.split('\n');
-          var doc = new DOMParser().parseFromString(fileString, "text/html");
-          var files = doc.getElementsByTagName("LI");
+          let doc = new DOMParser().parseFromString(fileString, "text/html");
+          let files = doc.getElementsByTagName("LI");
           city_to_load = Math.trunc((files.length-1)/2);
           console.log("loaded: city_to_load = "+city_to_load);
-          for(var i=0;i<files.length;i++){
-            var file_url = source_dir+files[i].firstChild.innerHTML;
+          for(let i=0;i<files.length;i++){
+            let file_url = source_dir+files[i].firstChild.innerHTML;
             console.log("loaded: loading file: "+file_url);
             loadFile(file_url);
           }
         } else {
-          var filename = evt.target.url;
-          var layer_name;
+          let filename = evt.target.url;
+          let layer_name;
           lines = fileString.split('\n');
-          var element_count = (lines[0].split(' ')).length;
-          if(element_count == 4) {
+          let element_count = (lines[0].split(' ')).length;
+          if(element_count == 4 || element_count == 5) {
             loadSpiral(lines,filename);
           } else if(element_count == 6) {
             // console.log("color file");
@@ -196,22 +279,23 @@
       }
 
       function fileToLayer(filename) {
-        var start = filename.lastIndexOf('/');
-        var end = filename.lastIndexOf('_');
+        let start = filename.lastIndexOf('/');
+        let end = filename.lastIndexOf('_');
         return filename.substring(start+1,end);
       }
 
       function getLayerAllObj(layer_name) {
-        var layer_all = {
+        let layer_all = {
           coords:[],
           colors:{},
-          shapes:[]
+          shapes:[],
+          b_value:0
         };
         return layer_all;
       }
 
       function getLayerTrackingObj(layer_name) {
-        var layer_tracking = {
+        let layer_tracking = {
           ready_to_move: false,
           ready_to_color: false
         };
@@ -227,7 +311,7 @@
 
       // add a new floor shape to a given building
       function addNewFloor(layer_name, h, inner_r, outer_r) {
-        var floor = {
+        let floor = {
           height: h,
           inner_radius: inner_r,
           outer_radius: outer_r
@@ -243,29 +327,32 @@
         } else if (!(layer_name) in city_all) {
           city_all[layer_name] = getLayerTrackingObj(layer_name);
         }
-        var i;
-        var tmp_outer_radius = 0;
+        let i;
+        let tmp_outer_radius = 0;
         
         for(i=0; i<lines.length; i++) {
-            var elements = lines[i].split(' ');
+            let elements = lines[i].split(' ');
             // console.log("loadFloor: floor "+i);
             // console.log(elements);
             if (elements.length == 3) {
                 if (elements[1] == 0) {
-                    // console.log("loadFloor: add new floor "+city_all[layer_name].shapes.length);
-                    addNewFloor(layer_name,0.0,parseFloat(elements[2]),0.0);
-                    } else if (i%2 == 0 && i < lines.length-2) {
-                    tmp_outer_radius = elements[2];
-                    } else if (i%2 == 1) {
-                    // console.log("loadFloor: add new floor "+city_all[layer_name].shapes.length);
-                    if(i == lines.length-2) {
+                  // console.log("loadFloor: add new floor "+city_all[layer_name].shapes.length);
+                  addNewFloor(layer_name,0.0,parseFloat(elements[2]),0.0);
+                } 
+                else if (i%2 == 0 && i < lines.length-2) {
+                  tmp_outer_radius = elements[2];
+                } 
+                else if (i%2 == 1) {
+                  // console.log("loadFloor: add new floor "+city_all[layer_name].shapes.length);
+                  if(i == lines.length-2) {
                       tmp_outer_radius = 0;
-                    }
-                    // console.log("loadFloor: add new floor "+elements[0]+' '+elements[1]+' '+elements[2]+' '+tmp_outer_radius);
-                    addNewFloor(layer_name,parseFloat(elements[1]),parseFloat(elements[2]),parseFloat(tmp_outer_radius));
+                  }
+                  // console.log("loadFloor: add new floor "+elements[0]+' '+elements[1]+' '+elements[2]+' '+tmp_outer_radius);
+                  addNewFloor(layer_name,parseFloat(elements[1]),parseFloat(elements[2]),parseFloat(tmp_outer_radius));
                 }
             }
         }
+        city_all[layer_name].b_value = lines[lines.length-1];
         // shape of building is ready, check if coordinated is ready
         if(city_all[layer_name].coords.length > 0) {
           city_tracking[layer_name].ready_to_move = true;
@@ -283,16 +370,16 @@
           city_tracking[layer_name] = getLayerTrackingObj(layer_name);
         }
         // inner structure of colors in layer_all dictionary
-        var color_dict = {
+        let color_dict = {
           disc:[],
           inner:[],
           outer:[]
         };
         // read lines from a color file into "colors" dictionary
-        var i;
+        let i;
         for(i=0; i<color_list.length; i++) {
-          var elements = color_list[i].split(' ');
-          var rgb = {
+          let elements = color_list[i].split(' ');
+          let rgb = {
               r: parseFloat(elements[3]),
               g: parseFloat(elements[4]),
               b: parseFloat(elements[5])
@@ -313,9 +400,9 @@
       function loadSpiral(lines,filename) {
         // console.log("loading spiral");
         // console.log(filename);
-        for(var i=0; i<lines.length-1; i++) {
-          var elements = lines[i].split(' ');
-          var layer_name = elements[0];
+        for(let i=0; i<lines.length-1; i++) {
+          let elements = lines[i].split(' ');
+          let layer_name = elements[0];
           //update global dictionaries if new layer appears
           if (!(layer_name in city_tracking)) {
             city_tracking[layer_name] = getLayerTrackingObj(layer_name);
@@ -323,7 +410,7 @@
           if (!(layer_name in city_all)) {
             city_all[layer_name] = getLayerAllObj(layer_name);
           }
-          city_all[layer_name].coords = [elements[1]/x_scale, elements[2]/x_scale];
+          city_all[layer_name].coords = [elements[1]/x_scale, elements[2]/x_scale, elements[0]]; /* X, Z, rotation */
           //coordinates is ready, check if shape of building is ready
           if(city_all[layer_name].shapes.length > 0) {
             city_tracking[layer_name].ready_to_move = true;
@@ -339,7 +426,7 @@
       }
 
       function colorToHex(c) {
-        var hex = c.toString(16);
+        let hex = c.toString(16);
         return hex.length == 1 ? "0" + hex : hex;
       }
 
@@ -350,19 +437,19 @@
 
       //given a normalized vector, compute the Euler angles of rotation for bars in truss structure
       function truss_rotate(b) {
-        var i,j;
-        var a = [0,1,0];
+        let i,j;
+        let a = [0,1,0];
         b[0] = -b[0];
         b[2] = -b[2];
-        var v = [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
-        var c = a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
-        var I = [[1,0,0],[0,1,0],[0,0,1]];
-        var v_matrix = [[0,-v[2],v[1]],[v[2],0,-v[0]],[-v[1],v[0],0]];
-        var v_matrix_2 = [[-v[2]*v[2]-v[1]*v[1],v[0]*v[1],v[0]*v[2]],[v[0]*v[1],-v[0]*v[0]-v[2]*v[2],v[1]*v[2]],[v[0]*v[2],v[1]*v[2],-v[0]*v[0]-v[1]*v[1]]];
-        var R = [];
+        let v = [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+        let c = a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+        let I = [[1,0,0],[0,1,0],[0,0,1]];
+        let v_matrix = [[0,-v[2],v[1]],[v[2],0,-v[0]],[-v[1],v[0],0]];
+        let v_matrix_2 = [[-v[2]*v[2]-v[1]*v[1],v[0]*v[1],v[0]*v[2]],[v[0]*v[1],-v[0]*v[0]-v[2]*v[2],v[1]*v[2]],[v[0]*v[2],v[1]*v[2],-v[0]*v[0]-v[1]*v[1]]];
+        let R = [];
         if(c == -1) {
           for(j=0; j<3; j++) {
-            var line = [];
+            let line = [];
             for(i=0; i<3; i++) {
               line.push(I[i][j] + v_matrix[i][j] + v_matrix_2[i][j]);
             }
@@ -370,17 +457,17 @@
           }
         } else {
           for(j=0; j<3; j++) {
-            var line = [];
+            let line = [];
             for(i=0; i<3; i++) {
               line.push(I[i][j] + v_matrix[i][j] + v_matrix_2[i][j]/(1+c));
             }
             R.push(line);
           }
         }
-        var sy = Math.sqrt(R[0][0]*R[0][0]+R[1][0]*R[1][0]);
+        let sy = Math.sqrt(R[0][0]*R[0][0]+R[1][0]*R[1][0]);
         // https://www.learnopencv.com/rotation-matrix-to-euler-angles/
-        var singular = sy<1e-8;
-        var x,y,z;
+        let singular = sy<1e-8;
+        let x,y,z;
         if(!singular) {
           x = Math.atan2(R[2][1],R[2][2]);
           y = Math.atan2(-R[2][0],sy);
@@ -390,7 +477,7 @@
           y = Math.atan2(-R[2][0],sy);
           z = 0;
         }
-         var rotate_rad = [x,y,z];
+         let rotate_rad = [x,y,z];
         return rotate_rad;
       }
 
@@ -399,9 +486,9 @@
       }
 
       function normalize(v) {
-        var length = mag(v);
-        var i;
-        var normalized = [];
+        let length = mag(v);
+        let i;
+        let normalized = [];
         for(i=0; i<3; i++) {
           normalized.push(v[i]/length);
         }
@@ -409,83 +496,93 @@
       }
 
       function obtain_truss(center,top_radius,btm_radius,height,r,g,b) {
-        var thickness = 0.05;
-        var number = 6;
-        var truss_geo = new THREE.BufferGeometry();
-        var i;
+        let thickness = 0.1;
+        let number = 6;
+        let truss_geo = new THREE.BufferGeometry();
+        let i;
         for (i = 0; i<number; i++) {
-          var theta = i*(360/number);
-          var theta_sin = Math.sin(theta*Math.PI/180);
-          var theta_cos = Math.cos(theta*Math.PI/180);
-          var top = [theta_cos*top_radius,height/2,theta_sin*top_radius];
-          var btm = [theta_cos*btm_radius,-height/2,theta_sin*btm_radius];
-          var top_btm = [top[0]-btm[0], top[1]-btm[1], top[2]-btm[2]];
-          var length = mag(top_btm);
-          var normalized_top_btm = normalize(top_btm);
-          var mid_radius = (top_radius+btm_radius)/2;
-          var bar_center = [center[0]+theta_cos*mid_radius,center[1],center[2]+theta_sin*mid_radius];
-          var bar = new THREE.CylinderBufferGeometry(thickness,thickness,length,8,8);
+          let theta = i*(360/number);
+          let theta_sin = Math.sin(theta*Math.PI/180);
+          let theta_cos = Math.cos(theta*Math.PI/180);
+          let top = [theta_cos*top_radius,height/2,theta_sin*top_radius];
+          let btm = [theta_cos*btm_radius,-height/2,theta_sin*btm_radius];
+          let top_btm = [top[0]-btm[0], top[1]-btm[1], top[2]-btm[2]];
+          let length = mag(top_btm);
+          let normalized_top_btm = normalize(top_btm);
+          let mid_radius = (top_radius+btm_radius)/2;
+          let bar_center = [center[0]+theta_cos*mid_radius,center[1],center[2]+theta_sin*mid_radius];
+          let bar = new THREE.CylinderBufferGeometry(thickness,thickness,length,8,8);
           // rotate the side bars
-          var rotated = truss_rotate(normalized_top_btm);
+          let rotated = truss_rotate(normalized_top_btm);
           bar.rotateX(rotated[0]);
           bar.rotateY(rotated[1]);
           bar.rotateZ(rotated[2]);
           bar.translate(bar_center[0],bar_center[1],bar_center[2]);
-          var bar_mesh = new THREE.Mesh(bar);
+          let bar_mesh = new THREE.Mesh(bar);
           bar_mesh.updateMatrix();
           // merge all bars together
           BufferGeometryUtils.mergeBufferGeometries([truss_geo,bar_mesh.geometry],bar_mesh.matrix);
         }
         // create torus geometry
-        var torus_geo = new THREE.TorusGeometry(top_radius,thickness,16,100);
+        let torus_geo = new THREE.TorusGeometry(top_radius,thickness,16,100);
         torus_geo.rotateX(90*Math.PI/180);
-        var material = new THREE.MeshBasicMaterial({color:rgbToHex(r,g,b)});
-        var torus_mesh = new THREE.Mesh(torus_geo, material);
-        var torus_flat = new THREE.Object3D();
+        let material = new THREE.MeshBasicMaterial({color:rgbToHex(r,g,b)});
+        let torus_mesh = new THREE.Mesh(torus_geo, material);
+        let torus_flat = new THREE.Object3D();
         torus_flat.add(torus_mesh);
         torus_flat.translateX(center[0]);
         torus_flat.translateY(center[1]+height/2);
         torus_flat.translateZ(center[2]);
-        scene.add(torus_flat);
+        // scene.add(torus_flat);
         // merge torus with bars
         // truss_geo.merge(torus_mesh.geometry,torus_mesh.matrix);
         // truss_geo.merge(torus_flat.geometry,torus_flat.matrix);
-        var truss_mesh = new THREE.Mesh(truss_geo,material);
+        let truss_mesh = new THREE.Mesh(truss_geo,material);
         return truss_mesh;
       }
 
       // check city_tracking, create buildings that are ready to color & move
       // delete colored and moved building from city_tracking
       function createCityMeshes() {
-        for (var layer in city_tracking) {
+        for (let layer in city_tracking) {
             if(city_tracking[layer].ready_to_move && city_tracking[layer].ready_to_color) {
-                var layer_shape = city_all[layer].shapes;
-                var height = layer_shape.length;
+                let layer_shape = city_all[layer].shapes;
+                let height = layer_shape.length;
+                // translate in X,Z direction
+                let X = city_all[layer].coords[0];
+                let Z = city_all[layer].coords[1];
+                // // create grass polygon
+                // let grass_edge = Math.log2(city_all[layer].b_value);
+                // let grass_radius = 24.56992917882274 / 2;
+                // let grass_mesh = new THREE.Mesh( 
+                //   new THREE.CylinderBufferGeometry(grass_radius, grass_radius, 0.5, grass_edge), 
+                //   new THREE.MeshBasicMaterial({color: 0x567d46})
+                // );
+                // grass_mesh.translateX = X;
+                // grass_mesh.translateY = 0.2;
+                // grass_mesh.translateZ = Z;
+                // scene.add(grass_mesh);
                 // loop from bottom floor to top floor
-                var h;
-                for (h=1; h<height; h++) {
-                    // create inner frustum geometry
-                    var top_in_r = layer_shape[h].inner_radius;
-                    var btm_in_r = layer_shape[h-1].inner_radius;
-                    var tall = y_scale*(layer_shape[h].height - layer_shape[h-1].height);
-                    var floor = new THREE.CylinderBufferGeometry(top_in_r,btm_in_r,tall,16,16);
+                for (let h=1; h<height; h++) {
                     // translate in Y direction
-                    var Y = y_scale*(0.5*layer_shape[h].height + 0.5*layer_shape[h-1].height);
-                    // translate in X,Z direction
-                    var X = city_all[layer].coords[0];
-                    var Z = city_all[layer].coords[1];
-                    // floor.translate(0,Y,0);
+                    let Y = y_scale*(0.5*layer_shape[h].height + 0.5*layer_shape[h-1].height);
+                    // create inner frustum geometry
+                    let top_in_r = layer_shape[h].inner_radius;
+                    let btm_in_r = layer_shape[h-1].inner_radius;
+                    let tall = y_scale*(layer_shape[h].height - layer_shape[h-1].height);
+                    let floor = new THREE.CylinderBufferGeometry(top_in_r,btm_in_r,tall,16,16);
                     floor.translate(X,Y,Z);
                     // apply colors
+                    let r, g, b;
                     try {
-                        var r = parseInt(city_all[layer].colors.inner[h-1].r*255);
-                        var g = parseInt(city_all[layer].colors.inner[h-1].g*255);
-                        var b = parseInt(city_all[layer].colors.inner[h-1].b*255);    
+                        r = parseInt(city_all[layer].colors.inner[h-1].r*255);
+                        g = parseInt(city_all[layer].colors.inner[h-1].g*255);
+                        b = parseInt(city_all[layer].colors.inner[h-1].b*255);    
                     } catch(err) {
                         console.log(err.message+" "+layer);
                     }
-                    var material = new THREE.MeshBasicMaterial({color:rgbToHex(r,g,b)});
-                    var frustum_mesh = new THREE.Mesh(floor,material);
+                    let material = new THREE.MeshBasicMaterial({color:rgbToHex(r,g,b)});
+                    let frustum_mesh = new THREE.Mesh(floor,material);
                     frustum_mesh.floor_name = h;
                     frustum_mesh.layer_name = layer.substring(8);
                     // draw inner frustums
@@ -495,15 +592,15 @@
                     // outer frustums
                     if(h<height-1) {
                         //create outer frustum as truss structure
-                        var top_out_r = layer_shape[h].outer_radius;
-                        var btm_out_r = layer_shape[h-1].inner_radius;
+                        let top_out_r = layer_shape[h].outer_radius;
+                        let btm_out_r = layer_shape[h-1].inner_radius;
                         r = parseInt(city_all[layer].colors.outer[h-1].r*255);
                         g = parseInt(city_all[layer].colors.outer[h-1].g*255);
                         b = parseInt(city_all[layer].colors.outer[h-1].b*255);
-                        var truss_mesh = obtain_truss([X,Y,Z],top_out_r,btm_out_r,tall,r,g,b);
+                        let truss_mesh = obtain_truss([X,Y,Z],top_out_r,btm_out_r,tall,r,g,b);
                         // console.log("createCityMeshes: create a set of truss");
                         // draw outer frustums
-                        scene.add(truss_mesh);
+                        // scene.add(truss_mesh);
                     }
                 }
                 console.log("createCityMeshes: loaded "+layer+", city to load = "+city_to_load);
@@ -524,7 +621,7 @@
 
       function onWindowResize() {
 
-        var aspect = window.innerWidth / window.innerHeight;
+        let aspect = window.innerWidth / window.innerHeight;
 
         perspectiveCamera.aspect = aspect;
         perspectiveCamera.updateProjectionMatrix();
@@ -554,17 +651,19 @@
       }
 
       function render() {
-        var camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
+        let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
         renderer.render(scene, camera);
+        // let time = performance.now() * 0.001;
+        // water.material.uniforms[ 'time' ].value += 1.0 / 60.0;
       }
 
       function onMouseMove( event ) {
         mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
         mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
-        var camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
+        let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
         raycaster.setFromCamera( mouse, camera );
 
-        var intersects = raycaster.intersectObjects( objects );
+        let intersects = raycaster.intersectObjects( objects );
         // Toggle rotation bool for meshes that we clicked
         if (intersects.length > 0) {
           // if the closest object intersected is not the currently stored intersection object
