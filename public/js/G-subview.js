@@ -179,6 +179,7 @@ G.addModule("subview",{
 					isArray:true,value:(graph)=>{
 						//if is a subview, follow metagraph colors
 						if(graph!=G.view.graph)return graph.nodes.map(()=>undefined);
+						if(G.setcolorsnow && G.setcolorsnow.length>0) return G.setcolorsnow;
 						//else if it has height values (here we don't care what is the height rule, just the values), use the height/total height; for now heights are either all undefined or all numbers
 						let heights=graph.nodes.height;
 						if(!graph.snPaths) {
@@ -2749,12 +2750,30 @@ G.addModule("subview",{
 						
 					},//must update the attachmentSequence range
 				},
+                pathSequence1:{
+                    value:(g,params)=>0,
+                    type:"integer",
+                    min:(g,params)=>0,
+                    max:(g,params)=>g.snPaths.length-1,
+                    func:(value,graph,params)=>{
+                        //to avoid annoying need to adjust that again
+                        params.attachmentSequence1=value;
+                        G.subview.refreshModifierControls("sparsenet");
+
+                    },//must update the attachmentSequence range
+                },
 				attachmentSequence:{//affects the display of worms, etc
 					value:(g,params)=>params.pathSequence,
 					type:"integer",
 					min:(g,params)=>0,
 					max:(g,params)=>params.pathSequence,
 				},
+                attachmentSequence1:{//affects the display of worms, etc
+                    value:(g,params)=>params.pathSequence1,
+                    type:"integer",
+                    min:(g,params)=>0,
+                    max:(g,params)=>params.pathSequence1,
+                },
 				showPathColors:{type:"boolean",value:true,},
 				randomPathColors:{type:"boolean",value:false,},
 
@@ -2786,6 +2805,7 @@ G.addModule("subview",{
 					//let ratio=G.controls.get("snPathSequenceRatio",1);//hide those after this ratio
 					//let count=Math.ceil(snPaths.length*ratio);
 					params.attachmentSequence=Math.floor(params.attachmentSequence);//hack
+                    params.attachmentSequence1=Math.floor(params.attachmentSequence1);//hack
                     g.snPathSequence = params.pathSequence;
                     if(G.view.graph.thePaths){
                         paths =[];
@@ -2795,7 +2815,7 @@ G.addModule("subview",{
                         params.attachmentSequence = paths.length;
                         return paths;
                     }
-                    return snPaths.slice(0,params.pathSequence);
+                    return snPaths.slice(params.pathSequence1,params.pathSequence);
 				},
 				randomNumbers:(g,params)=>{return params.paths.map(()=>Math.random());},
 				pathColors:(g,params)=>{

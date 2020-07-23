@@ -444,11 +444,19 @@ G.addModule("ui", {
 		if (summaryText) title = title + " (" + summaryText + ")";
 		getE("minimal-graph-title").innerText = title;
 		let V = graph.vertices.length, E = graph.edges.length;
+		let ccSorted = Algs.getSortedCCsAndCCIDs(graph);
+		let CC = [...new Set(Algs.getCCIDs(graph))].length;
 		let p = (2*E / (V * (V - 1))), k = Math.log(E / V) / Math.log(Math.log(V));
-		let VEText = "|V|: " + V + ", |E|: " + E;//+", avg. degree: "+shortStr(2*E/V)+", density: "+shortStr(p)+", sparsity:"+shortStr(k);
-		if (p == 1) {
+		let VEText = "|V|: " + V + ", |E|: " + E + ", |CC|: "+CC;//+", avg. degree: "+shortStr(2*E/V)+", density: "+shortStr(p)+", sparsity:"+shortStr(k);
+        if(ccSorted.length>1) {
+            let maxCCV = ccSorted[0].V;
+            let minCCV = ccSorted[ccSorted.length - 1].V;
+            VEText += ", min CC |V|: " + minCCV + ", max CC |V|: " + maxCCV;
+        }
+        if (p == 1) {
 			VEText += " (complete)";
 		}
+
 		if (graph.heightPropertyType == "edges" && (graph.nodes.length != V)) {
 			VEText += ", clones: " + graph.edges[graph.heightPropertyName].verticesWithClones + ", total clone multiplicity: " + graph.nodes.length;
 		}
@@ -468,6 +476,7 @@ G.addModule("ui", {
 
 			if (visibleNodes != G.view.model.nodes.length) {
 				VEText += ", visible nodes: " + visibleNodes;
+				G.visibleNodes = visibleNodes;
 			}
 			if (visibleEdges != E) {
 				VEText += ", visible edges: " + visibleEdges;
@@ -497,11 +506,14 @@ G.addModule("ui", {
 			this.showTopLevelGraphStats(G.getGraph(graph.datasetID));
 			this.topLevelGraphPath = graph.datasetID;
 		}
-		if(graph.wholeGraph == undefined || graph.name == graph.wholeGraph) {
+
             let degrees = Algs.getDegrees(graph).reduce((json, val) => ({...json, [val]: (json[val] | 0) + 1}), {});
-            degreePlot(false, "vertices", "count", degrees, Object.keys(degrees), Object.values(degrees), 300, 190);
-            degreePlot(true, "vertices", "count", degrees, Object.keys(degrees), Object.values(degrees), 300, 190);
-        }
+            let cc = Algs.getCCIDandNumVertices(graph).reduce((json, val) => ({...json, [val]: (json[val] | 0) + 1}), {});
+
+            degreePlot(false, "num vertices", "number of connected components", cc, Object.keys(cc), Object.values(degrees), 300, 190, 0,"cc-plot");
+            //degreePlot(false, "vertices", "count", degrees, Object.keys(degrees), Object.values(degrees), 300, 190, 0);
+            degreePlot(true, "vertices", "count", degrees, Object.keys(degrees), Object.values(degrees), 300, 190, 0);
+
 
 		//global partitions: CC and layer markers
 		//layers: use the triangle?
@@ -1229,7 +1241,7 @@ function drawPlot(xName, yName, xValues, yValues, svgSelection, totalWidth, tota
 
 }
 
-function degreePlot(isLog, xName, yName, input, xValues, yValues, svgSelection, totalWidth, totalHeight) {
+function degreePlot(isLog, xName, yName, input, xValues, yValues, svgSelection, totalWidth, totalHeight, id=null) {
 
 
     data = null;
@@ -1246,6 +1258,17 @@ function degreePlot(isLog, xName, yName, input, xValues, yValues, svgSelection, 
             y: Math.log(Object.values(input)[i]),
             id: parseInt(Object.keys(input)[i]),
             label: `Degree ${Object.keys(input)[i]}`,
+        }));
+    } else if(id){
+        title = "|V| to |CC|"
+        $("#cc-plot").html("");
+        inp = Object.keys(input);
+        out = Object.values(input);
+        data = d3.range(Object.keys(input).length).map((d, i) => ({
+            x: parseInt(Object.keys(input)[i]),
+            y: Object.values(input)[i],
+            id: parseInt(Object.keys(input)[i]),
+            label: `test}`,
         }));
     } else {
         title = "Degree Distribution"
@@ -1285,6 +1308,8 @@ function degreePlot(isLog, xName, yName, input, xValues, yValues, svgSelection, 
     container = null;
     if(isLog) {
         container = d3.select('#log-degree-plot');
+    } else if(id){
+        container = d3.select('#cc-plot');
     } else {
         container = d3.select('#degree-plot');
     }
@@ -1365,6 +1390,3 @@ function degreePlot(isLog, xName, yName, input, xValues, yValues, svgSelection, 
         .style('opacity', 0);
 
 }
-
-
-

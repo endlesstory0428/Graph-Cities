@@ -82,7 +82,7 @@ G.addModule("view",{
 		promises.push(d3.text("shaders/simulation.fs").then((data)=>{if(data){this.shaderSources["simulation.fs"]=data;}}));
 		this.shaderPromise=Promise.all(promises);
 	},
-	init:function(){
+	init:function(object, canvasName = "canvas"){
 		this.raycaster=new THREE.Raycaster();
 		window.addEventListener("resize", this.resizeCanvas, false);
 		this.loadShaders();
@@ -92,7 +92,7 @@ G.addModule("view",{
 			return Math.max(10000,maxHeight,maxRadius);
 		};
 		G.resetView=this.resetView;
-		let canvas=d3.select("#canvas").append("canvas").node();
+		let canvas=d3.select("#" + canvasName).append("canvas").node();
 		//add listeners before context creation
 		canvas.addEventListener("webglcontextlost", function(event) {
 			event.preventDefault();
@@ -104,9 +104,9 @@ G.addModule("view",{
 
 
 		G.renderer = new THREE.WebGLRenderer( {
-			antialias: false, canvas: canvas, context: context ,
-			clearColor: 0xffffff, //??
-			//clearAlpha: 0,
+			antialias: true, canvas: canvas, context: context ,
+			alpha: true,
+            clearColor: 0xffffff,
 			preserveDrawingBuffer: true,
 		} );
 		//var canvas=G.renderer.domElement;
@@ -262,7 +262,9 @@ G.addModule("view",{
 		if(G.drawFixedPoints && G.drawsparsenet){
             graph.colorScaleName = "blueRed";
         }
-
+        myDiv = document.getElementById("parent-image");
+        myDiv.innerHTML = "";
+        $("#sparsenet-info-menu").html("");
         if(graph.vertices.layout)for(let i=0;i<graph.vertices.layout.length;i++){if(!graph.vertices.layout[i])throw Error();}
 		while(graph.representation)graph=G.getGraph(graph.dataPath+"/metagraphs/"+graph.representation);//only use the real displayed top level graph
         graph.snPathsTemp=[];
@@ -344,44 +346,114 @@ G.addModule("view",{
             if ((this.graph != graph) && (!options.noMoveCamera)) G.resetView();//exclude expansion in-place
             this.graph = graph;
 
-            if(graph.dataPath.includes("layer")&& graph.dataPath.includes("1")) {
+            if(graph.dataPath.includes("layer")&&(graph.dataPath.includes("1") ||graph.dataPath.includes("2"))) {
                 //data.dataPath=undefined;
+                getE("layer-1-info").innerHTML = ""
                 ccs = Algs.getSortedCCsAndCCIDs(graph);
 
-                getE("number-ccs-graph").innerText = "Select a connected component between 0 and " +ccs.length;
+                getE("number-ccs-graph").innerText = "Select a connected component between 0 and " + ccs.length;
                 info = getE("layer-1-info");
                 //console.log(graph.labelsByID[Algs.getMainVertexInCC(graph,ccs[G.graph.selectedccId])]);
-                items = Algs.getMainVertexInCC(graph,ccs[G.graph.selectedccId]);
-                for(item in items) {
-                    G.controls.addCheckbox(info, toNormalText(graph.labelsByID[items[item]][0]), (value, id) => {
+                G.graph.showingSparsenet = false;
+                items = Algs.getMainVertexInCC(graph);
+                for (item in items) {
+                    if(graph.labelsByID[items[item]] && graph.labelsByID[items[item]][0]){
+                        if(graph.labelsByID[items[item]][0].indexOf("–") != -1 ) {
+                            textlabel = graph.labelsByID[items[item]][0].substring(0, graph.labelsByID[items[item]][0].indexOf("–"));
+                        } else if(graph.labelsByID[items[item]][0].indexOf("(") != -1){
+                            textlabel = graph.labelsByID[items[item]][0].substring(0, graph.labelsByID[items[item]][0].indexOf("("));
+                        }else if(graph.labelsByID[items[item]][0].indexOf("-") != -1){
+                            textlabel = graph.labelsByID[items[item]][0].substring(0, graph.labelsByID[items[item]][0].indexOf("-"));
+                        } else {
+                            textlabel = graph.labelsByID[items[item]][0];
+                        }
+                        for (cc in ccs) {
+                            if (ccs[cc].vertexList.indexOf(Number(items[item])) != -1) {
+                                G.graph.selectedccId = cc;
+                                ccg = Algs.getInducedSubgraph(graph, ccs[G.graph.selectedccId].vertexList);
+                                v = ccg.vertices.length;
+                                e = ccg.edges.length;
+                                break;
+                            }
+                        }
+                        let image = "";
+                        if(graph.dataPath.includes("2")) {
+                            if (v <= 7) image = "/images/shortline.png";
+                            if(v >7 && v<=10) image = "/images/longline.png";
+                            if(v >10) image = "/images/twolines.png";
+                        }else {
+                            if (v <= 31) image = "/images/longline.png";
+                            if(v >31 && v<211) image = "/images/star1.png";
+                            if(v >=211) image = "/images/starwithtail.png";
+
+                        }
+                        G.controls.addCheckbox(info, toNormalText(textlabel), (value, id) => {
                         if (value) {
-                            for(cc in ccs){
-                                if(ccs[cc].vertexList.indexOf(Number(id))!=-1){
+                            G.view.graph.trees = true;
+                            for (cc in ccs) {
+                                if (ccs[cc].vertexList.indexOf(Number(id)) != -1) {
                                     G.graph.selectedccId = cc;
                                     ccg = Algs.getInducedSubgraph(graph, ccs[G.graph.selectedccId].vertexList);
                                     v = ccg.vertices.length;
                                     e = ccg.edges.length;
-                                    getE("num-edges-vertices").innerHTML =  "|V|" +v +" |E|"+e;
+                                    getE("num-edges-vertices").innerHTML = "|V|" + v + " |E|" + e;
 
                                     break;
                                 }
                             }
-                            document.getElementById("vertical").style.display="none";
+                            document.getElementById("vertical").style.display = "none";
                             //document.getElementById("horizontal").style.display="none";
-                            document.getElementById("path").style.display = "block"
+                            document.getElementById("path").style.display = "block";
 
+                                var img = new Image();
+                                G.renderer.render(G.scene, G.camera);
+                                img.src = G.renderer.domElement.toDataURL();
+
+                            G.setcolors = G.view.graph.nodes.colorValue;
                             G.analytics.showSparseNet(G.graph);
                             G.cameraControls.setTarget(null);
                             let vec=G.view.getNodePos(id);
                             if(vec.x != undefined || vec.y != undefined || vec.z != undefined )
                                 G.cameraControls.setTarget(vec,true);
+                            myDiv = document.getElementById("parent-image");
+                            myDiv.innerHTML = "";
+                            var elem = document.createElement("img");
+                            elem.setAttribute("src", img.src);
+                            elem.setAttribute("height", "250");
+                            elem.setAttribute("width", "500");
+                            elem.setAttribute("border", "5");
+                            elem.addEventListener("click", function() {
+                                myDiv = document.getElementById("parent-image");
+                                myDiv.innerHTML = "";
+                                G.setcolorsnow = G.setcolors;
+                                G.subview.disableModifier("sparsenet");
+                                graph.snPaths = undefined;
+
+
+                            });
+                            myDiv.appendChild(elem)
+                            // G.cameraControls.setTarget(null);
+                            // let vec=G.view.getNodePos(id);
+                            // if(vec.x != undefined || vec.y != undefined || vec.z != undefined )
+                            //     G.cameraControls.setTarget(vec,true);
                         } else {
+                            G.view.resetView();
+                            G.view.graph.trees = false;
                             graph.snPaths = undefined;
+                            G.cameraControls.setTarget(null);
+                            getE("num-edges-vertices").innerHTML = "";
+                            myDiv = document.getElementById("parent-image");
+                            myDiv.innerHTML = "";
+                            G.setcolorsnow = G.setcolors;
                             G.subview.disableModifier("sparsenet");
                         }
-                    }, null ,items[item],true);
+                    }, null, items[item], true, image);
+                }
                 }
 
+
+            } else {
+                info = getE("layer-1-info").innerHTML = "";
             }
 
 

@@ -5,10 +5,10 @@ const G={
 		let module=new Module();module.name=name;Object.assign(module,obj);
 		this[name]=module;this.modules[name]=module;this.moduleList.push(module);
 	},
-	init:function init3d() {
-		this.canvasContainer=getE("canvas");
+	init:function init3d(canvasName) {
+		this.canvasContainer=getE(canvasName);
 		for(let module of this.moduleList){
-			if(typeof module.init=="function")module.init(this);
+			if(typeof module.init=="function")module.init(this, canvasName);
 		}//follow the script loading order 
 	},
 	broadcast:async function(name){
@@ -257,10 +257,21 @@ class Module{
 								modObj.needsUpdate=true;this.onModifiersChanged(name);
 								if(name =="sparsenet") {
                                     G.addLog("showing " + G.view.graph.snPathSequence + " path out of " + G.view.graph.snPaths.length);
-                                    getE("showing-paths").textContent=""+G.view.graph.snPathSequence+" sparsenet paths out of " + G.view.graph.snPaths.length;
-                                    getE("num-vertices").textContent=""+[...new Set(G.view.graph.snPaths.flat(1))].length+" sparsenet vertices";
-                                    getE("num-worms").textContent=""+[...new Set(Object.keys(G.view.graph.snWorms))].length+" warms vertices";
-                                    getE("num-edges").textContent=""+Object.keys(G.view.graph.snEdgePaths).length+" sparsenet edges";
+                                    let count =0;
+                                    Object.keys(G.view.graph.modifiers.sparsenet.vertexPaths).filter((v) =>{
+                                        if(G.view.graph.modifiers.sparsenet.vertexPaths[v].length > 1 ){
+                                            return count +=1;
+                                        }
+                                    });
+                                    let sparsenetMenu = [
+                                        ""+G.view.graph.snPathSequence+" sparsenet paths out of " + G.view.graph.snPaths.length,
+                                        "Number of subtrees: " + count,
+                                        "|worms| : "+[...new Set(Object.keys(G.view.graph.snWorms))].length,
+                                        "|sparsenet V| : "+Object.keys(G.view.graph.modifiers.sparsenet.vertexPaths).length,
+                                        "|sparsenet E| : "+Object.keys(G.view.graph.snEdgePaths).length];
+                                    let infoElem=getE("sparsenet-info-menu");
+                                    $("#sparsenet-info-menu").html("");
+                                    G.controls.addDropdownMenu(infoElem,"Sparsenet Info",sparsenetMenu);
                                 }
 							},paramObj.cache);
 							
@@ -533,7 +544,8 @@ function getProperty(array,i,name){
 }
 
 window.addEventListener('load', function() {
-    G.init();
+    G.init("canvas");
+    //G.init("canvas2");
 })
 
 
