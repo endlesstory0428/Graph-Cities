@@ -9,6 +9,7 @@ class ForceSimulation{
 		if(ForceSimulation.initialized)return;
 		ForceSimulation.renderer = new THREE.WebGLRenderer( {
 			antialias: false, //canvas: canvas, context: context,
+            alpha:true,
 			preserveDrawingBuffer: true,
 		} );
 		var canvas=ForceSimulation.renderer.domElement;

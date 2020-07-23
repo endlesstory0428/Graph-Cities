@@ -1661,24 +1661,23 @@ G.addModule("analytics",{
 
 		if(options)data.options=options;
 		let ccg = undefined;
-		if(graph.dataPath.includes("layer")&& graph.dataPath.includes("1")) {
+		if(graph.dataPath.includes("layer")&& (graph.dataPath.includes("1")|| (graph.dataPath.includes("2")&& !G.graph.showingSparsenet))) {
 		    //data.dataPath=undefined;
 		    ccs = Algs.getSortedCCsAndCCIDs(graph);
             ccg = Algs.getInducedSubgraph(graph, ccs[G.graph.selectedccId].vertexList);
             v = ccg.vertices.length;
             e = ccg.edges.length;
-            console.log(v);
-            console.log(e);
             data.data = this.getGraphVerticesAndEdges(ccg);
-            if(graph.dataPath.includes("1")){
+            if(graph.dataPath.includes("1") || graph.dataPath.includes("2")  ){
                 data.dataPath = "";
             }
             //console.log(graph.labelsByID[Algs.getMainVertexInCC(graph,ccs[G.graph.selectedccId])]);
         }
 		if(!graph.snPaths){
 		    G.messaging.requestCustomData("sparsenet",data,(result)=>{
+                G.setcolorsnow = null;
 		    if(result&&result.length>0){
-		        if(graph.dataPath.includes("layer")&& graph.dataPath.includes("1")&&ccg) {
+		        if(graph.dataPath.includes("layer")&& (graph.dataPath.includes("1")||graph.dataPath.includes("2"))&&ccg) {
                     for (let i = 0; i < result.length; i++) {
                         temp = [];
                         for (let j = 0; j < result[i].length; j++) {
@@ -1707,6 +1706,13 @@ G.addModule("analytics",{
                 graph.snEdgePaths = snPathEdgeMap;
                 let sparsenetSubgraph = Algs.getFilteredSubgraph(this.graph, null, (x) => (x != 0), "sparsenet");
                 graph.sparsenetSubgraph= sparsenetSubgraph;
+                let drawingButtonsElem = getE("drawing-buttons-area");
+                G.controls.addRangeSlider(drawingButtonsElem, "sparsenet paths", (begin, end) => {
+                    G.view.graph.modifiers.sparsenet.pathSequence1 = begin;
+                    G.view.graph.modifiers.sparsenet.pathSequence = end;
+                    G.subview.onModifiersChanged("sparsenet");
+                    G.view.refreshStyles(true, true);
+                }, {long: false, min: 0, max: G.view.graph.snPaths.length, default: 0});
 		        G.enableModifier("sparsenet",graph);
 		    }else{
 		        G.addLog("invalid sparsenet result");}
@@ -2152,6 +2158,15 @@ G.addModule("analytics",{
                     if(isEnglish)
                         label = a[0];
                     else label = a[1];
+                }
+                if(label.indexOf("–") != -1 ) {
+                    label = label.substring(0, label.indexOf("–"));
+                } else if(label.indexOf("(") != -1){
+                    label = label.substring(0, label.indexOf("("));
+                }else if(label.indexOf("-") != -1){
+                    label = label.substring(0, label.indexOf("-"));
+                } else {
+                    label = label;
                 }
                 labels.push(label)
             }

@@ -28,6 +28,7 @@
 		<script type="text/javascript" src="lib/three.js"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 
+
 		<script type="text/javascript" src="lib/util.js"></script>
 		<script type="text/javascript" src="lib/controls.js"></script>
 
@@ -54,7 +55,7 @@
 	</head>
 
 	<body>
-		<div id="canvas" ></div>
+        <div id="canvas" ></div>
 		<div id="label-container" class="simple fixed" style="background:transparent;width:100%;height:100%;pointer-events:none;"></div>
 
 		<!-- grid-like controls -->
@@ -128,13 +129,14 @@
 
 
 
-		<div id="right-panel" class="simple column fixed" style="position:absolute;top:10%;height:80%;right:0;width:10%;min-width:170px;box-sizing: border-box;margin-right:1px;">
+		<div id="right-panel" class="simple column fixed" style="z-index: 3;position:absolute;top:10%;height:80%;right:0;width:10%;min-width:170px;box-sizing: border-box;margin-right:1px;">
 
             <div id="controls-menu" class="simple column scrolling-y" style="width:100%;font-family: monospace;">
 
 			</div>
 
 		</div>
+
 
 		<div id="bottom-bar" class="simple fixed" style="position:absolute;bottom:0;height:11%;width:100%;box-sizing: border-box;background-color:rgba(0,0,0,0.05)">
 
@@ -146,6 +148,9 @@
 				</div>
 <!--				<p class="simple" style="width:100%;font-size:small;text-align:center;">DESIGN: James Abello, NSF Project</p>-->
 			</div>
+
+            <div id="parent-image" class="simple fixed centering"  style="left: 70%;bottom: 100%;background-color: transparent;z-index: 1;" >
+            </div>
 			<div id="bottom-right-corner" class="simple fixed centering"  style="width:10%;bottom:0;height:100%;left:90%;background-color:transparent;" >
 				<div id="graph-semantics-buttons-area" class="simple column"></div>
 			</div>
@@ -189,6 +194,8 @@
         <div id="graph-info-bar" class="panel" style="width:20%;height: 655px;min-width:170px;overflow-y: scroll;">
             <div id="info-menu">
             </div>
+            <div id="sparsenet-info-menu">
+            </div>
             <div>
                 <p id="showing-paths"></p>
                 <p id="num-vertices"></p>
@@ -222,14 +229,13 @@
                 </div>
         </div>
         <div id="graph-plot-bar" class="panel" style="width:20%;height: 655px;min-width:170px;overflow-y: scroll;">
+            <div id="cc-plot" style="padding-top: 20px;padding-bottom: 20px;">
+            </div>
             <div id="degree-plot" style="padding-top: 20px;padding-bottom: 20px;">
-
-
             </div>
             <div id="log-degree-plot" style="padding-top: 20px;padding-bottom: 20px;">
-
-
             </div>
+
         </div>
         <div id="graph-menu" class="panel" style="width:20%;height: 655px;min-width:170px;overflow-y: scroll;background: white;">
                 <div>

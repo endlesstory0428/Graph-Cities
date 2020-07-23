@@ -29,16 +29,18 @@ G.addModule("controls",{
 			}
 		}
 		G.saveLayout=saveLayout;
-
+        function downloadImage(data, filename = 'untitled.png') {
+            var a = document.createElement('a');
+            a.href = data;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+        }
 		function saveImage(){
-			let path=this.graph.dataPath;
-			if(path){
-				G.messaging.sendCustomData("save",{type:"image",path:path,data:G.renderer.domElement.toDataURL("image/png")});
-				G.addLog("saved");
-			}
-			else{
-				G.addLog("error: the save path is unknown");
-			}
+            var img = new Image();
+            G.renderer.render(G.scene, G.camera);
+            img.src = G.renderer.domElement.toDataURL();
+            downloadImage(img.src);
 		}
 
 
@@ -915,21 +917,59 @@ G.addModule("controls",{
 		});
 		let drawSubgraph=()=>{
 			if(!this.graph)return;
-			let subgraph=Algs.getInducedSubgraph(this.graph,this.graph.selectedVertices);
-			subgraph.modifiers={};
-			if(this.graph.modifiers.nodeColor){}
-			if(this.graph.modifiers.nodeColor){subgraph.modifiers.nodeColor=copyObj(this.graph.modifiers.nodeColor);}
-			if(this.graph.colorScaleName){subgraph.colorScaleName=this.graph.colorScaleName;}
-			if(this.graph.cloneProperty){subgraph.cloneProperty=this.graph.cloneProperty;}
-			if(this.graph.heightProperty){subgraph.heightProperty=this.graph.heightProperty;}
-			if(this.graph.heightPropertyTypeHint){subgraph.heightPropertyTypeHint=this.graph.heightPropertyTypeHint;}
-			subgraph.dataPath=this.graph.dataPath+"/customSubgraph/0";
-			subgraph.wholeGraph=this.graph.dataPath;
-			subgraph.isCustom=true;
-			G.loading.saveGraph(subgraph);
-			G.display(subgraph);
+            G.graph.showingSparsenet = false;
+			// let subgraph=Algs.getInducedSubgraph(this.graph,this.graph.selectedVertices);
+			// subgraph.modifiers={};
+			// if(this.graph.modifiers.nodeColor){}
+			// if(this.graph.modifiers.nodeColor){subgraph.modifiers.nodeColor=copyObj(this.graph.modifiers.nodeColor);}
+			// if(this.graph.colorScaleName){subgraph.colorScaleName=this.graph.colorScaleName;}
+			// if(this.graph.cloneProperty){subgraph.cloneProperty=this.graph.cloneProperty;}
+			// if(this.graph.heightProperty){subgraph.heightProperty=this.graph.heightProperty;}
+			// if(this.graph.heightPropertyTypeHint){subgraph.heightPropertyTypeHint=this.graph.heightPropertyTypeHint;}
+			// subgraph.dataPath=this.graph.dataPath+"/customSubgraph/0";
+			// subgraph.wholeGraph=this.graph.dataPath;
+			// subgraph.isCustom=true;
+			// G.loading.saveGraph(subgraph);
+			// G.display(subgraph);
+            ccs = Algs.getSortedCCsAndCCIDs(this.graph);
+           this.graph.snPaths = undefined;
+           selected = Number(Object.keys(this.graph.selectedVertices)[0]);
+            for (cc in ccs) {
+                if (ccs[cc].vertexList.indexOf(selected) != -1) {
+                    G.graph.selectedccId = cc;
+                    ccg = Algs.getInducedSubgraph(this.graph, ccs[G.graph.selectedccId].vertexList);
+                    v = ccg.vertices.length;
+                    e = ccg.edges.length;
+                    getE("num-edges-vertices").innerHTML = "|V|" + v + " |E|" + e;
+
+                    break;
+                }
+            }
+            document.getElementById("vertical").style.display = "none";
+            //document.getElementById("horizontal").style.display="none";
+            document.getElementById("path").style.display = "block"
+            var img = new Image();
+            G.renderer.render(G.scene, G.camera);
+            img.src = G.renderer.domElement.toDataURL();
+            G.setcolors = G.view.graph.nodes.colorValue;
+            G.analytics.showSparseNet(G.graph);
+            myDiv = document.getElementById("parent-image");
+            myDiv.innerHTML = "";
+            var elem = document.createElement("img");
+            elem.setAttribute("src", img.src);
+            elem.setAttribute("height", "250");
+            elem.setAttribute("width", "500");
+            elem.setAttribute("border", "5");
+            elem.addEventListener("click", function() {
+                myDiv = document.getElementById("parent-image");
+                myDiv.innerHTML = "";
+                G.setcolorsnow = G.setcolors;
+                G.view.graph.snPaths = undefined;
+                G.subview.disableModifier("sparsenet");
+            });
+            myDiv.appendChild(elem)
 		}
-		this.addButton(this.contextMenus.empty,"draw selected subgraph",drawSubgraph);
+		this.addButton(this.contextMenus.empty,"draw selected sparsenet",drawSubgraph);
 		this.addButton(this.contextMenus.empty,"go to parent",()=>G.showMetagraph());
 		let togglePinSelection=()=>{
 			if(!this.graph)return;
@@ -1139,7 +1179,20 @@ G.addModule("controls",{
 			G.vertexLabels.show();
 		});
         this.addKeyListener(G.canvasContainer,"a",()=>{
-            G.vertexLabels.show(undefined, G.view.graph.snExtremePoints.slice(290,310));
+            //G.vertexLabels.show(undefined, G.view.graph.snExtremePoints.slice(290,310));
+            if(G.view.graph.modifiers.sparsenet){
+                sum =0;
+                m =[];
+                for(i=0;i<Object.keys(G.view.graph.modifiers.sparsenet.vertexPaths).length;i++){
+                    num = G.view.graph.modifiers.sparsenet.vertexPaths[Object.keys(G.view.graph.modifiers.sparsenet.vertexPaths)[i]].length;
+                    if(num>Math.log2(G.visibleNodes)){
+                        m.push(Object.keys(G.view.graph.modifiers.sparsenet.vertexPaths)[i]);
+                    }
+                }
+                G.vertexLabels.show(undefined, m);
+
+            }
+
         });
 
 
@@ -1352,6 +1405,7 @@ G.addModule("controls",{
                     document.getElementById("path").style.display = "block"
 
                     G.analytics.showSparseNet(G.graph);
+
                 }
             }
 			//removed moving
@@ -1790,7 +1844,7 @@ G.addModule("controls",{
 		}
 
 	},
-	addRangeSlider(parentElem,text,func,options){
+	addRangeSlider(parentElem,text,func,options, id =""){
 		let min=0,max=1;let lazy=false;
 		if(!options)options={};
 		//allow changing the range later through this object
@@ -1800,6 +1854,9 @@ G.addModule("controls",{
 		if("end" in options==false)options.end=options.max;
 
 		let s=d3.select(parentElem).append("div").attr("class","range-slider");
+		if(id != ""){
+		    s.attr("id", id);
+        }
 		if(options.vertical)s.attr("class","range-slider-vertical");
 		let elem=s.node();elem.__options=options;
 
@@ -1871,7 +1928,7 @@ G.addModule("controls",{
 		else {pivot1.call(d3.drag().on("drag",cb).on("end",cb));pivot2.call(d3.drag().on("drag",cb).on("end",cb));}
 		return options;
 	},
-    addCheckbox(parentElem, text, func, options, id=null, val = false){
+    addCheckbox(parentElem, text, func, options, id=null, val = false, image =null){
         let arr = [];
 
         if (!options) options = {};
@@ -1893,10 +1950,10 @@ G.addModule("controls",{
             checkbox = s.append("input").attr("type", "checkbox").attr("class", "material-checkbox");
             label = s.append("p").attr("class", "material-checkbox-label").text(text);
             label.attr("style","font-size: small;text-align: left;width: 100%;padding-left: 5px;");
+            s.append("img").attr("src", image).attr("height", "50").attr("width", "50");
         } else {
             label = s.append("p").attr("class", "material-checkbox-label").text(text);
             checkbox = s.append("input").attr("type", "checkbox").attr("class", "material-checkbox");
-
         }
         let checkboxElem = checkbox.node();
         if(id) {
