@@ -118,12 +118,8 @@
         f3.open();
 
         // ground
-        // let groundGeo = new THREE.BoxBufferGeometry(800,0.1,800);
         let groundMat = new THREE.MeshBasicMaterial( {color:params.ground} );
         groundMat.side = THREE.DoubleSide;
-        // groundMesh = new THREE.Mesh( groundGeo, groundMat );
-        // groundMesh.translateY(-0.5);
-        // scene.add( groundMesh );
 
         let groundUrl = "models/island.obj";
         let groundMesh = objLoader(groundUrl, groundMat);
@@ -288,8 +284,7 @@
         let layer_all = {
           coords:[],
           colors:{},
-          shapes:[],
-          b_value:0
+          shapes:[]
         };
         return layer_all;
       }
@@ -410,7 +405,18 @@
           if (!(layer_name in city_all)) {
             city_all[layer_name] = getLayerAllObj(layer_name);
           }
-          city_all[layer_name].coords = [elements[1]/x_scale, elements[2]/x_scale, elements[0]]; /* X, Z, rotation */
+          city_all[layer_name].coords = [elements[1]/x_scale, elements[2]/x_scale, elements[3]]; /* X, Z, rotation */
+          //grass
+          let F = parseInt(layer_name.split('_').pop()); /* # of fixed points represented by selected building */
+          if(F > 1) {
+            let grassRadius = parseFloat(elements[4]);
+            let grassFace = Math.log2(8 * (F - 1));
+            let grassGeo = new THREE.CylinderBufferGeometry(grassRadius, grassRadius, 0.2, grassFace);
+            grassGeo.translate(city_all[layer_name].coords[0], 1, city_all[layer_name].coords[1]);
+            let grassMat = new THREE.MeshBasicMaterial( {color: 0x7cfc00} );
+            let grassMesh = new THREE.Mesh(grassGeo, grassMat);
+            scene.add(grassMesh);                
+          }
           //coordinates is ready, check if shape of building is ready
           if(city_all[layer_name].shapes.length > 0) {
             city_tracking[layer_name].ready_to_move = true;
@@ -551,17 +557,6 @@
                 // translate in X,Z direction
                 let X = city_all[layer].coords[0];
                 let Z = city_all[layer].coords[1];
-                // // create grass polygon
-                // let grass_edge = Math.log2(city_all[layer].b_value);
-                // let grass_radius = 24.56992917882274 / 2;
-                // let grass_mesh = new THREE.Mesh( 
-                //   new THREE.CylinderBufferGeometry(grass_radius, grass_radius, 0.5, grass_edge), 
-                //   new THREE.MeshBasicMaterial({color: 0x567d46})
-                // );
-                // grass_mesh.translateX = X;
-                // grass_mesh.translateY = 0.2;
-                // grass_mesh.translateZ = Z;
-                // scene.add(grass_mesh);
                 // loop from bottom floor to top floor
                 for (let h=1; h<height; h++) {
                     // translate in Y direction
