@@ -9,7 +9,11 @@
 		<link id="style-light" rel="stylesheet" type="text/css" href="lib/light.css"  />
 		<link id="style-dark" rel="stylesheet" type="text/css" href="lib/dark.css" disabled="true"/>
 		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+        <!-- jQuery library -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 
+        <!-- Latest compiled JavaScript -->
+        <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 
 		<script data-require="jquery@*" data-semver="2.2.0" src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
 		<link rel="stylesheet" href="https://code.jquery.com/ui/1.11.3/themes/smoothness/jquery-ui.css" />
@@ -194,6 +198,7 @@
         <div id="graph-info-bar" class="panel" style="width:20%;height: 655px;min-width:170px;overflow-y: scroll;">
             <div id="info-menu">
             </div>
+
             <div id="sparsenet-info-menu">
             </div>
             <div>
@@ -336,6 +341,7 @@
                     </table>
                 </div>
             </div>
+            <div id="sparsenet_paths_filter"></div>
             <div class="row align-items-center">
                 <div class="col-sm-2"><p id="value-range"></p></div>
                 <div class="col-sm"><div id="slider-range"></div></div>
@@ -360,6 +366,8 @@
                     <label for="english">English</label><br>
                     <input type="radio" id="danish" name="language" value="da">
                     <label for="danish">Danish</label><br>
+                    <input type="radio" id="dutch" name="language" value="du">
+                    <label for="dutch">Dutch</label><br>
                 </div>
             </div>
         </div>
@@ -369,10 +377,6 @@
 		</div>
         <div id="graph-dataset-bar" class="panel" style="min-width:300px;height: 655px;overflow-y: scroll;font-size: x-small;display:block;">
                 <div id="dataset-menu-1">
-                </div>
-                <div class="custom-control custom-checkbox" style="padding-right: 5rem;">
-                    <input type="checkbox" class="custom-control-input" id="drawing_option_1">
-                    <label class="custom-control-label" for="drawing_option_1" style="font-size: medium;">Using SparseNet Display</label>
                 </div>
                 <div class="custom-control custom-checkbox" style="padding-right: 7.8rem;">
                     <input type="checkbox" class="custom-control-input" id="drawing_option_2">
@@ -439,7 +443,7 @@
 			<p style="">Edgelist</p>
 			<textarea id="edge-list-menu-content" class="dialog-content" style="height:70%;width:90%;"></textarea>
 			<button style="" onclick="getE('edge-list-menu').style.display='none';let g=buildGraphFromText(null,getE('edge-list-menu-content').value.trim());g.name='Custom graph';G.display(g);">Go!</button>
-			<input type="file" id="edge-list-file">upload file</>
+			<input type="file" id="edge-list-file">upload file</input>
 			<button style="" onclick="let fr = new FileReader();fr.onload = function(){getE('edge-list-menu').style.display='none';let g=buildGraphFromText(null,fr.result);g.name='Custom graph';G.display(g);};fr.readAsText(document.getElementById('edge-list-file').files[0]);">Use file</button>
 
 			<button style="" onclick="let fr = new FileReader();fr.onload = function(){
@@ -486,14 +490,18 @@
 		</div>
 
 
-		<div id="selected-vertices-ids" class="panel menu" style="display:none">
-			<p style="font-size: 24px;padding:10px;">Generated Stories</p>
-			<button style="float:right" onclick="G.analytics.downloadVertexIDs()">Download</button>
-			<div id="selected-vertices-ids-content" style="font-size: larger;width:90%;height:80%;background-color:rgba(255,255,255,0.6);" class="dialog-content"></div>
-		</div>
+        <div id="selected-vertices-ids" class="panel menu" style="display:none">
+            <p style="font-size: 24px;padding:10px;">Generated Stories</p>
+            <button style="float:right" onclick="G.analytics.downloadVertexIDs()">Download</button>
+            <div id="selected-vertices-ids-content" style="font-size: larger;width:90%;height:80%;background-color:rgba(255,255,255,0.6);" class="dialog-content"></div>
+        </div>
+        <div id="annotations-box" class="panel menu" style="z-index:99999;display: none;background: white;">
+            <div  id="sampleeditor" style="z-index:99999;">
+            </div>
+        </div>
 
 		<div id="wavemap-menu" class="panel menu opaque" style="z-index: 4;" >
-			<p style="font-size: 24px;padding:10px;">Wave Map</span>
+            <p style="font-size: 24px;padding:10px;">Wave Map</p>
 			<button class="close-button material small" onclick="selectE('wavemap-menu').style('display','none');">×</button>
 			<div id="wavemap-menu-content" class="dialog-content">
 			<svg id="wavemap" width="300" height="300"></svg>
@@ -512,12 +520,32 @@
 					<div class="modal-body">
                         <div id="sett"></div>
                         <div style="padding-right:20%" id="subgraph_canvas" ></div>
-
                     </div>
 				</div>
 			</div>
 		</div>
 	</body>
 	<script src="https://code.jquery.com/ui/1.11.3/jquery-ui.min.js"></script>
+    <script>
+        function openBox(evt, cityName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tablinks");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+
+            document.getElementById(cityName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+
+        $(function(){
+            $("#sampleeditor").load("textEditor.html");
+        });
+
+    </script>
 
 </html>

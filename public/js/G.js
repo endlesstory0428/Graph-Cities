@@ -263,15 +263,28 @@ class Module{
                                             return count +=1;
                                         }
                                     });
-                                    let sparsenetMenu = [
-                                        ""+G.view.graph.snPathSequence+" sparsenet paths out of " + G.view.graph.snPaths.length,
-                                        "Number of subtrees: " + count,
-                                        "|worms| : "+[...new Set(Object.keys(G.view.graph.snWorms))].length,
-                                        "|sparsenet V| : "+Object.keys(G.view.graph.modifiers.sparsenet.vertexPaths).length,
-                                        "|sparsenet E| : "+Object.keys(G.view.graph.snEdgePaths).length];
-                                    let infoElem=getE("sparsenet-info-menu");
-                                    $("#sparsenet-info-menu").html("");
-                                    G.controls.addDropdownMenu(infoElem,"Sparsenet Info",sparsenetMenu);
+                                    if(getE(G.graph.selectedId+"a")) {
+                                        let sparsenetMenu = [
+                                            "" + G.view.graph.snPathSequence + " sparsenet paths out of " + G.view.graph.snPaths.length,
+                                            "|V| : " + G.ccgv,
+                                            "|E| : " + G.ccge,
+                                            "Number of subtrees: " + count,
+                                            "|sparsenet V| : " + Object.keys(G.view.graph.modifiers.sparsenet.vertexPaths).length,
+                                            "|sparsenet E| : " + Object.keys(G.view.graph.snEdgePaths).length];
+                                        let a = getE(G.graph.selectedId + "a");
+                                        a.innerHTML = "";
+                                        for (let i = 0; i < sparsenetMenu.length; i++) {
+                                            a.innerHTML += sparsenetMenu[i] + "\n</br>";
+                                        }
+                                    } else {
+                                        let sparsenetMenu = [
+                                            ""+G.view.graph.snPathSequence+" sparsenet paths out of " + G.view.graph.snPaths.length,
+                                            "|sparsenet V| : "+Object.keys(G.view.graph.modifiers.sparsenet.vertexPaths).length,
+                                            "|sparsenet E| : "+Object.keys(G.view.graph.snEdgePaths).length];
+                                        let infoElem=getE("sparsenet-info-menu");
+                                        $("#sparsenet-info-menu").html("");
+                                        G.controls.addDropdownMenu(infoElem,"Sparsenet Info",sparsenetMenu);
+                                    }
                                 }
 							},paramObj.cache);
 							

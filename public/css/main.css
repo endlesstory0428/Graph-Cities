@@ -543,6 +543,12 @@ div#selected-vertices-ids{
     left: 70%;
     z-index: 5;
 }
+div#annotations-box{
+    width: 30%;
+    height: 76%;
+    left: 70%;
+    z-index: 5;
+}
 	
 div#new-graph-menu{
 	display:block;
@@ -1275,4 +1281,71 @@ circle.dot {
 }
 .modal-backdrop.show{
     opacity: .05 !important;
+}
+.tab {
+    display: none;
+    position: absolute;
+    top: 20%;
+    right: 25%;
+    text-align: center;
+    font-size: 14px;
+    overflow: hidden;
+    width: 30%;
+    height: 76%;
+    left: 70%;
+    z-index: 5;
+}
+.tab button {
+    background-color: inherit;
+    float: left;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    transition: 0.3s;
+    font-size: 17px;
+}
+.tab button:hover {
+    background-color: #ddd;
+}
+.tab button.active {
+    background-color: #ccc;
+}
+.tabcontent {
+    display: none;
+    position: absolute;
+    top: 25%;
+    right: 25%;
+    text-align: center;
+    font-size: 14px;
+    overflow: hidden;
+    width: 30%;
+    height: 76%;
+    left: 70%;
+    z-index: 5;
+}
+.editor
+{
+    border:solid 1px #ccc;
+    padding: 20px;
+    min-height:200px;
+    text-align: left;
+}
+
+.sample-toolbar
+{
+    border:solid 1px #ddd;
+    background:#f4f4f4;
+    padding: 5px;
+    border-radius:3px;
+}
+
+.sample-toolbar > span
+{
+    cursor:pointer;
+}
+
+.sample-toolbar > span:hover
+{
+    text-decoration:underline;
 }

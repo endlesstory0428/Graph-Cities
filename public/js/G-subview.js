@@ -64,17 +64,6 @@ G.addModule("subview",{
 			},
 			originalObjectType:"vertices",
 			getOriginalObjectID:(graph,nodeID)=>{
-			    // if(!G.view.graph.labelsByID || !G.view.graph.labelsByID[nodeID] ){
-			    //     if(!G.view.graph.labelsByID) {
-                //         G.view.graph.labelsByID = [];
-                //     }
-                //     let label = "";
-                //     if (G.view.graph.labels.find(record => record.new_id == G.view.graph.vertices.id[nodeID])) {
-                //         let a = G.view.graph.labels.find(record => record.new_id == G.view.graph.vertices.id[nodeID]);
-                //         label = a.name;
-                //     }
-                //     G.view.graph.labelsByID[nodeID] = label;
-                // }
 				if("original" in graph.nodes)return graph.nodes.original[nodeID];//clone object
 				else return graph.nodes.index[nodeID];
 			},
@@ -147,6 +136,24 @@ G.addModule("subview",{
 						});
 					},
 				},
+                isAnnotated:{
+                    isArray:true,value:(graph)=>{
+                        let vertices=graph.vertices,nodes=graph.nodes;return nodes.map((node,i,array)=>{
+                            let vertexID=array.original[i];
+                            if(graph.annotatedVertices && vertexID in graph.annotatedVertices)return 1;
+                            else return 0;//note: an attribute has to be numeric not boolean
+                        });
+                    },
+                },
+                isFullyDiscovered:{
+                    isArray:true,value:(graph)=>{
+                        let vertices=graph.vertices,nodes=graph.nodes;return nodes.map((node,i,array)=>{
+                            let vertexID=array.original[i];
+                            if(graph.fullyDiscovered && vertexID in graph.fullyDiscovered)return 1;
+                            else return 0;//note: an attribute has to be numeric not boolean
+                        });
+                    },
+                },
 				
 				height:{isArray:true,value:(graph)=>{
 					let heightPropertyType=G.view.graph.heightPropertyType,heightPropertyName=G.view.graph.heightPropertyName;
@@ -191,7 +198,7 @@ G.addModule("subview",{
                                     return heights.map((x) => (min == max) ? (0.5) : ((max - x) / (max - min)));
                                 }//reverse coloring?
                                 // else return heights.map((x)=>(min==max)?(0.5):((x-min)/(max-min)));
-                                else return heights.map((x) => (min == max) ? (0.5) : ((max - x) / (max - min)));
+                                else return heights.map((x) => (min == max) ? (0.5) : ((max - x ) / (max - min)));
                                 // else {
                                 //
                                 //     return heights.map((x)=>{
@@ -217,7 +224,7 @@ G.addModule("subview",{
                                 if(graph.snPaths && G.snNodesColorByLabel) {
                                     let label = "";
                                     if(G.view.graph.labelsByID && G.view.graph.labelsByID[i]) {
-                                        label = G.view.graph.labelsByID[i][0];
+                                        label = G.controls.getLabel(i);
                                     }
                                     if (label.includes("TMI")) {
                                         G.view.graph.colorScaleName = "blueRed";
@@ -244,7 +251,7 @@ G.addModule("subview",{
                                 if(G.view.graph.snWorms && graph.snPaths && graph.snnumConnections && G.snNodesColorByHotSpot ) {
                                     let label = "";
                                     if(G.view.graph.labelsByID && G.view.graph.labelsByID[i]) {
-                                        label = G.view.graph.labelsByID[i][0];
+                                        label = G.controls.getLabel(i);
                                     }
                                     if(G.labelFilter == "places"){
                                         if ((label.split(" ")).length == 1 && (G.view.graph.snnumConnections[i] < G.view.graph.snnumConnections[G.labelFilter] || G.view.graph.snnumConnections[i] == 0 || !G.view.graph.snnumConnections[i])) {
@@ -626,13 +633,19 @@ G.addModule("subview",{
 					value:(graph)=>{
 						let sources=graph.edges.source,targets=graph.edges.target;
                         graph.egonet={}
-						if(graph.hoveredVertex && graph.showingEgonets) {
+                        let edgesFilter = 512;
+						if(graph.hoveredVertex != undefined && graph.showingEgonets) {
 						    if(graph.egonetMap[graph.hoveredVertex] == undefined) {
-                                Algs.getFilteredSubgraph(graph,graph.hoveredVertex,(x)=>(x!=0),"egonet");
+						        if(graph.subgraphID && G.loading.graphsCache[graph.vertices.id[graph.hoveredVertex]]&& G.loading.graphsCache[graph.vertices.id[graph.hoveredVertex]][0]){
+                                    edgesFilter = 4;
+						            Algs.getFilteredSubgraph(graph,graph.hoveredVertex,(x)=>(x!=0),"egonet", G.loading.graphsCache[graph.vertices.id[graph.hoveredVertex]][0]);
+                                } else {
+                                    Algs.getFilteredSubgraph(graph, graph.hoveredVertex, (x) => (x != 0), "egonet");
+                                }
 						    } else {
 						        graph.egonet = graph.egonetMap[graph.hoveredVertex];
                             }
-							if(graph.egonetMap[graph.hoveredVertex].edges.length>=512 && graph.egonetMap[graph.hoveredVertex].edges.length<2048) {
+							if(graph.egonetMap[graph.hoveredVertex].edges.length>=edgesFilter) {
 
                                 let vec=G.view.getNodePos(graph.hoveredVertex);
                                 G.cameraControls.setTarget(vec,true);
@@ -679,7 +692,7 @@ G.addModule("subview",{
                                     Graph.numDimensions(3); // Re-heat simulation
                                 }
 
-                                $("#egonet_id").text(G.view.graph.labels.find(record => record.new_id ==graph.hoveredVertex ).name);
+                                $("#egonet_id").text(G.view.graph.labelsByID[graph.hoveredVertex][G.controls.getLabelIndex()]);
                                 G.simulationRunning=false;
                                 G.resizeNodes = false;
                                 document.getElementById("egonet-close").addEventListener('click', function(){
@@ -690,6 +703,7 @@ G.addModule("subview",{
                                     modalEgonet.style.left =-300 + "px";
                                 else modalEgonet.style.left =450 + "px";
                                 graph.nodes.size[graph.hoveredVertex]=10;
+                                jQuery.noConflict();
                                 $('#egonet').modal('show');
 							}
 
@@ -2782,7 +2796,7 @@ G.addModule("subview",{
 				enableForce:{type:"boolean",value:true,},
 				prioritizeSNForce:{type:"boolean",value:true,},
 				hideOtherLinks:{type:"boolean",value:true,},
-				showWarms:{type:"boolean",value:false,},
+				showNeighbors:{type:"boolean",value:false,},
 				showPathAssignment:{type:"boolean",value:false,},//will show all edges between other vertices and the path it's asigned to, with teh color of that path. (unlike showing worms, which may show edges between a vertex and multiple paths
 				
 				showClustering:{type:"boolean",value:false,},
@@ -3097,7 +3111,7 @@ G.addModule("subview",{
                             }
                             if(vertexID in data.vertexPaths)return;
                             if(data.showClustering)return;
-                            if(data.showWarms||data.showPathAssignment){
+                            if(data.showNeighbors||data.showPathAssignment){
                                 if(data.pathAssignment[vertexID]!==undefined&&(data.pathAssignment[vertexID]<=data.attachmentSequence))return;
                             }
                             return 0;
@@ -3171,7 +3185,7 @@ G.addModule("subview",{
 									if(data.edgePathAssignment[edgeID]!==undefined)return data.pathColors[data.edgePathAssignment[edgeID]];
 									//else it's not an assigned path link, see if it's on worms
 								}
-								if(data.showWarms){
+								if(data.showNeighbors){
 								    graph.snEdgeAdjacentToPath=[]
 									if(data.edgeAdjacentToPath[edgeID]!==undefined){
 										let pathID=data.edgeAdjacentToPath[edgeID];
@@ -3199,7 +3213,7 @@ G.addModule("subview",{
 							else{//first see if it's shown for another reason, then return 0 if only paths are shown (it should be called hide other edges)
 								if(data.clusteringLinks){if(data.edgeClustering[index]!==undefined){return;}}
 								if(data.showPathAssignment){if(data.edgePathAssignment[index]!==undefined)return;}
-								if(data.showWarms){
+								if(data.showNeighbors){
 
                                     // for( i in Object.keys(data.pathAssignment)){
                                     //     console.log(graph.getNeighborsByID(i));
@@ -3215,7 +3229,7 @@ G.addModule("subview",{
 								if(data.hideOtherLinks) {
                                     return 0;//showing other things overrides showing only paths?
                                 }
-								if(data.showWarms && !data.hideOtherLinks) {
+								if(data.showNeighbors && !data.hideOtherLinks) {
                                     if (Object.keys(data.pathAssignment).indexOf(svID.toString()) != -1 && Object.keys(data.pathAssignment).indexOf(tvID.toString()) != -1) {
                                         if(!G.view.graph.snWorms){
                                             G.view.graph.snWorms=[];
@@ -3258,7 +3272,7 @@ G.addModule("subview",{
 									let v=oldValue/Math.max(factor,1);//the special edges should keep higher strength?
 									if(data.clusteringLinks){if(data.edgeClustering[index]!==undefined){return ;}}
 									if(data.showPathAssignment){if(data.edgePathAssignment[index]!==undefined)return ;}
-									if(data.showWarms){if(data.edgeAdjacentToPath[index]!==undefined){
+									if(data.showNeighbors){if(data.edgeAdjacentToPath[index]!==undefined){
 										if(data.edgeAdjacentToPath[index]!=-2)return;//is not a crossing edge
 										else return v;//decrease crossing edge strength, because they tend to destroy the layout
 									}}

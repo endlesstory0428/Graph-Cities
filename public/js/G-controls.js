@@ -66,7 +66,7 @@ G.addModule("controls",{
 
 
 		this.addButton(semanticsButtomsElem,"Generate Story",()=>{G.ui.showSemanticsText();});
-		this.addButton(semanticsButtomsElem,"show labels",()=>{G.ui.showLabels()});
+        this.addButton(semanticsButtomsElem,"Add Annotations",()=>{G.ui.showTextEditor();});
 
 		//this.addSlider(styleControlsElem,"waves",(value)=>{G.controls.set("radialLimitFactor",value);},{min:1,max:60,default:1});
 		this.addSlider(styleControlsElem,"vertical spread",(value)=>{G.controls.set("heightFactor",value);},{min:0,max:5,default:1,},"1","vertical");
@@ -138,7 +138,8 @@ G.addModule("controls",{
             if (G.view.graph && G.view.graph && G.view.graph.hotspotsIds) {
                 for (let j = 0; j < G.view.graph.hotspotsIds.length; j++) {
                     let u = 0;
-                    if (Object.keys(G.view.graph.hotspotsPathsMapping).indexOf(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0]) == -1) {
+                    if (Object.keys(G.view.graph.hotspotsPathsMapping).indexOf(G.controls.getLabel(G.view.graph.hotspotsIds[j])) == -1) {
+
                         if (G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]]) {
                             u = G.view.graph.snVertexPaths[G.view.graph.hotspotsIds[j]][0];
                         } else if (G.view.graph.fullpathAssignment[G.view.graph.hotspotsIds[j]]) {
@@ -557,9 +558,8 @@ G.addModule("controls",{
                 let arr  = {};
                 let arr2 = [];
                 for (let j = 0; j< G.view.graph.hotspotsIds.length; j++) {
-                    if(Object.keys(arr).indexOf(G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0])==-1) {
-                        arr[G.view.graph.labelsByID[G.view.graph.hotspotsIds[j]][0]] = G.view.graph.snwormsList[G.view.graph.hotspotsIds[j]].length;
-
+                    if(Object.keys(arr).indexOf(G.controls.getLabel(G.view.graph.hotspotsIds[j]))==-1) {
+                        arr[G.controls.getLabel(G.view.graph.hotspotsIds[j])] = G.view.graph.snwormsList[G.view.graph.hotspotsIds[j]].length;
                     }
 
                 }
@@ -582,6 +582,8 @@ G.addModule("controls",{
 
         });
 		let selectionButtonsElem=getE("selection-buttons-area");
+        let annotationSelectButtonsElem=getE("annotation-select");
+        let annotationDeleteButtonsElem=getE("annotation-delete");
 		this.addButton(selectionButtonsElem,"select by ID",()=>{
 		    let value=getE('select-vertex-input').value;
 		    let values = [];
@@ -589,16 +591,46 @@ G.addModule("controls",{
                 values = value.split(',')
             } else {
                 let result=this.graph.vertices.id.indexOf(value);
+                neigh = G.view.graph.getNeighborIDsByID(result);
+                layers = Object.keys(this.graph.parentLayersMap[this.graph.vertices.id[result]]);
+                if(G.view.graph.subgraphID ) {
+                    if (G.loading.graphsCache[value]) {
+                        G.loading.graphsCache[value][1].push(G.view.graph.subgraphID);
+                        if (G.loading.graphsCache[value][0] && G.loading.graphsCache[value][1] && layers.every(r =>  G.loading.graphsCache[value][1].includes(Number(r)))) {
+                            if (!this.graph.fullyDiscovered) {
+                                this.graph.fullyDiscovered = [];
+                            }
+                            this.graph.fullyDiscovered[result] = 1;
+                            this.graph.nodes.isFullyDiscovered[result] = 1;
+                            G.view.refreshStyles(true, true);
+                        }
+                        G.loading.graphsCache[value][0].push(neigh);
+                        G.loading.graphsCache[value][0] = G.loading.graphsCache[value][0].flat(1);
+                    } else {
+                        G.loading.graphsCache[value] = [[], []]
+                        G.loading.graphsCache[value][0].push(neigh);
+                        G.loading.graphsCache[value][0] = G.loading.graphsCache[value][0].flat(1);
+                        G.loading.graphsCache[value][1].push(G.view.graph.subgraphID);
+
+                    }
+                }
+
+
+
                 //Algs.getVertexShortestPathInAllFixedPoints(this.graph, result);
                 G.cameraControls.setTarget(null);
-                if(result!=-1) {
-                    let vec=G.view.getNodePos(value);
-                    if(vec.x != undefined || vec.y != undefined || vec.z != undefined )
-                        G.cameraControls.setTarget(vec,true);
+                if(result!=-1 && !this.graph.selectedVertices[result]) {
+                    let vec = G.view.getNodePos(result);
+                    if (vec.x != undefined || vec.y != undefined || vec.z != undefined) {
+                        G.cameraControls.setTarget(vec, true, true);
+                    }
+                } else {
+                    G.cameraControls.setTarget(null);
+                }
                     if(this.graph.heightProperty == "fixedPointLayer")
                         G.toggleSelectVertex(this.graph.vertexMap[value]);
                     else G.toggleSelectVertex(this.graph.vertexMap[value]);
-                }
+
             }
             if(values.length > 0) {
               for(let i=0; i< values.length; i++) {
@@ -616,6 +648,73 @@ G.addModule("controls",{
             }
 
 		});
+        this.addButton(annotationDeleteButtonsElem,"Archive by ID",()=>{
+            let vertexId=getE('annotation-delete-vertex-input').value;
+            divEl = document.getElementById(vertexId);
+            copydivEl = divEl;
+            text = divEl.textContent;
+            if (text.match(/\(x(\d+)\)/) && text.match(/x(\d+)\)/).length > 0) {
+                countertext = text.match(/\(x(\d+)\)/);
+                counter = Number(countertext[1]);
+                parent = divEl.parentNode;
+                divEl.parentNode.removeChild(divEl);
+                copydivEl.textContent = copydivEl.textContent.replace("(x"+counter+")", "(-" + counter + ")");
+                copydivEl.setAttribute("isArchived", "1");
+                delete this.graph.annotatedVertices[G.view.graph.vertexMap[vertexId]];
+                this.graph.nodes.isAnnotated[G.view.graph.vertexMap[vertexId]] =0;
+                G.view.refreshStyles(true, true);
+                parent.appendChild(copydivEl);
+            } else {
+                countertext = 1;
+                counter = 1;
+                parent = divEl.parentNode;
+                divEl.parentNode.removeChild(divEl);
+                copydivEl.textContent = copydivEl.textContent + "(-" + counter + ")";
+                copydivEl.setAttribute("isArchived", "1");
+                delete this.graph.annotatedVertices[G.view.graph.vertexMap[vertexId]];
+                this.graph.nodes.isAnnotated[G.view.graph.vertexMap[vertexId]] =0;
+                G.view.refreshStyles(true, true);
+                parent.appendChild(copydivEl);
+            }
+
+
+        });
+        this.addButton(annotationSelectButtonsElem,"select by ID",()=>{
+            let value=getE('annotation-select-vertex-input').value;
+            let values = [];
+            if (value.indexOf(',') > -1) {
+                values = value.split(',')
+            } else {
+                let result=this.graph.vertices.id.indexOf(value);
+                //Algs.getVertexShortestPathInAllFixedPoints(this.graph, result);
+                G.cameraControls.setTarget(null);
+                if(result!=-1) {
+                    let vec=G.view.getNodePos(this.graph.vertices.id.indexOf(value));
+                    if(vec.x != undefined || vec.y != undefined || vec.z != undefined ) {
+                        G.cameraControls.setTarget(vec, true, true);
+                    }
+                    if(this.graph.heightProperty == "fixedPointLayer")
+                        G.toggleSelectVertex(this.graph.vertexMap[value]);
+                    else G.toggleSelectVertex(this.graph.vertexMap[value]);
+                }
+            }
+            if(values.length > 0) {
+                for(let i=0; i< values.length; i++) {
+                    let result=this.graph.vertices.id.indexOf(values[i]);
+                    G.cameraControls.setTarget(null);
+                    if(result!=-1) {
+                        let vec=G.view.getNodePos(values[i]);
+                        if(vec.x != undefined || vec.y != undefined || vec.z != undefined )
+                            G.cameraControls.setTarget(vec,true);
+                        if(this.graph.heightProperty == "fixedPointLayer")
+                            G.toggleSelectVertex(this.graph.vertexMap[values[i]]);
+                        else G.toggleSelectVertex(this.graph.vertexMap[values[i]]);
+                    }
+                }
+            }
+
+        });
+
         // this.addButton(selectionButtonsElem,"Show Selected Vertex Paths",()=>{
         //     let value=getE('select-vertex-input').value;
         //     let values = [];
@@ -969,7 +1068,69 @@ G.addModule("controls",{
             });
             myDiv.appendChild(elem)
 		}
+        let addLabeltoNote=(selected = null)=> {
+            if (!this.graph) return;
+            if(selected == null)
+                selected = Number(Object.keys(this.graph.selectedVertices)[0]);
+            if(selected != undefined) {
+                label = this.graph.labelsByID[selected][G.controls.getLabelIndex()];
+                vertexId = Object.keys(G.view.graph.vertexMap).find((v) => {
+                    if (this.graph.vertexMap[v] == selected)
+                        return v;
+                });
+                if (!this.graph.annotatedVertices) {
+                    this.graph.annotatedVertices = {};
+                }
+                if (document.getElementById(vertexId) == null) {
+                    this.graph.annotatedVertices[selected] = {counter: 1};
+                    label = "<div parent=\"" + this.graph.dataPath + "\" id=\"" + vertexId + "\">" + "Vertex Id:" + vertexId + ": " + label + "</div>";
+                    document.getElementById('textBox').innerHTML = label+document.getElementById('textBox').innerHTML;
+                } else {
+                    divEl = document.getElementById(vertexId);
+                    copydivEl = divEl;
+                    parentn = divEl.parentNode;
+                    parentn.removeChild(divEl);
+                    text = copydivEl.textContent;
+                    isArchived = copydivEl.getAttribute("isArchived");
+                    if(isArchived){
+                        copydivEl.setAttribute("parent",this.graph.dataPath);
+                        regmatch = copydivEl.textContent.match(/\(-(\d+)\)/);
+                        if(regmatch && regmatch.length>0){
+                            copydivEl.textContent = copydivEl.textContent.replaceAll(regmatch[0], "x");
+                            label = "<div parent=\"" + copydivEl.getAttribute("parent") + "\" id=\"" + vertexId + "\">" + copydivEl.textContent+ "</div>";
+                            document.getElementById('textBox').innerHTML = label+document.getElementById('textBox').innerHTML;
+                        }
+
+                    }
+                    parent = divEl.getAttribute("parent").split(",");
+                    if (text.match(/\(x(\d+)\)/) && text.match(/x(\d+)\)/).length > 0 && parent.indexOf(this.graph.dataPath) == -1) {
+                        countertext = text.match(/\(x(\d+)\)/);
+                        counter = Number(countertext[1]);
+                        counter += 1;
+                        this.graph.annotatedVertices[selected] = {counter: counter};
+                        copydivEl.textContent = divEl.textContent.replace(countertext[0], "(x" + counter + ")");
+                        copydivEl.setAttribute("parent", parent + "," + this.graph.dataPath)
+                        label = "<div parent=\"" + copydivEl.getAttribute("parent") + "\" id=\"" + vertexId + "\">" +  copydivEl.textContent+ "</div>";
+                        document.getElementById('textBox').innerHTML = label+document.getElementById('textBox').innerHTML;
+
+                    } else {
+                        if (parent.indexOf(this.graph.dataPath) == -1) {
+                            this.graph.annotatedVertices[selected] = {counter: 2};
+                            copydivEl.textContent = divEl.textContent + "(x2)";
+                            copydivEl.setAttribute("parent", parent + "," + this.graph.dataPath)
+                            label = "<div parent=\"" + copydivEl.getAttribute("parent") + "\" id=\"" + vertexId + "\">" +  copydivEl.textContent+ "</div>";
+                            document.getElementById('textBox').innerHTML = label+document.getElementById('textBox').innerHTML;
+
+                        }
+                    }
+                }
+                G.view.refreshStyles(true, true);
+            } else {
+                G.addLog("Please select a vertex to add it to annotations");
+            }
+        }
 		this.addButton(this.contextMenus.empty,"draw selected sparsenet",drawSubgraph);
+        this.addButton(this.contextMenus.empty,"add label to annotations",addLabeltoNote);
 		this.addButton(this.contextMenus.empty,"go to parent",()=>G.showMetagraph());
 		let togglePinSelection=()=>{
 			if(!this.graph)return;
@@ -1310,7 +1471,7 @@ G.addModule("controls",{
 		G.view["node texture"]="dot";
 		sceneFolder.add(G.view, "node texture", {"glow":"glow","particle":"particle","dot":"dot"}).onChange(function(value){
 			let mat=G.view.templates.nodes.material;
-			if(mat){mat.uniforms.texture.value=G.view.textures[value];mat.needsUpdate=true;}
+			if(mat){mat.uniforms.t.value=G.view.textures[value];mat.needsUpdate=true;}
 		});
 		G.animation.rotate=false;
 		G.animation["rotate speed"]=0;
@@ -1346,75 +1507,93 @@ G.addModule("controls",{
 		G.canvasContainer.appendChild(toolTipElem);
 
 		G.showingTooltip=false;
-		window.addEventListener("keydown", ev=>{
-			if ( ev.keyCode === 32) { }
-            if ( ev.key === 'e') {
-                if(G.graph.showingEgonets) {
-                    G.graph.showingEgonets = false;
-                    G.cameraControls.setTarget(null);
+        window.addEventListener("keydown", ev => {
+            if (ev.path[0].id != "textBox") {
+                if (ev.keyCode === 32) {
                 }
-                else G.graph.showingEgonets=true;
-            }
-            if ( ev.key === 'n') {
-                if(G.graph.showingNeighbors) {
-                    G.graph.showingNeighbors = false;
-                    const distinct = (value, index,self) => {
-                        return self.indexOf(value) === index;
-                    };
-                    // if(G.graph.snPathsFlat && G.graph.snPathsTemp)
-                    //     G.graph.snPathsFlat = G.graph.snPathsFlat.concat(G.graph.snPathsTemp)
-                    //     G.graph.snPathsFlat = G.graph.snPathsFlat.filter(distinct);
+                if (ev.key === 'e') {
+                    if (G.graph.showingEgonets) {
+                        G.graph.showingEgonets = false;
+                        G.cameraControls.setTarget(null);
+                    } else G.graph.showingEgonets = true;
                 }
-                else {
-                    G.graph.showingNeighbors = true;
+                if (ev.key === 'n') {
+                    if (G.graph.showingNeighbors) {
+                        G.graph.showingNeighbors = false;
+                        const distinct = (value, index, self) => {
+                            return self.indexOf(value) === index;
+                        };
+                        // if(G.graph.snPathsFlat && G.graph.snPathsTemp)
+                        //     G.graph.snPathsFlat = G.graph.snPathsFlat.concat(G.graph.snPathsTemp)
+                        //     G.graph.snPathsFlat = G.graph.snPathsFlat.filter(distinct);
+                    } else {
+                        G.graph.showingNeighbors = true;
+
+                    }
 
                 }
+                if (ev.key === 'm') {
+                    if (G.graph.showingPaths) {
+                        G.graph.showingPaths = false;
+                    } else {
+                        G.graph.snPathsTemp = (G.graph.snPathsTemp.concat(G.graph.snPaths.slice(this.index, this.index + 1))).flat(1);
+                        this.index += 1;
+                        getE("showing-paths").textContent = "" + this.index + " sparsenet paths out of " + G.graph.snPaths.length;
 
-            }
-            if ( ev.key === 'm') {
-                if(G.graph.showingPaths) {
-                    G.graph.showingPaths = false;
-                }
-                else {
-                    G.graph.snPathsTemp = (G.graph.snPathsTemp.concat(G.graph.snPaths.slice(this.index, this.index+1))).flat(1);
-                    this.index +=1;
-                    getE("showing-paths").textContent=""+this.index+" sparsenet paths out of " + G.graph.snPaths.length;
-
-                    G.graph.showingPaths = true;
-                    G.graph.showingNeighbors = false;
-                    const distinct = (value, index,self) => {
-                        return self.indexOf(value) === index;
-                    };
-                    if(G.graph.snPathsFlat && G.graph.snPathsTemp)
-                        G.graph.snPathsFlat = G.graph.snPathsFlat.concat(G.graph.snPathsTemp)
+                        G.graph.showingPaths = true;
+                        G.graph.showingNeighbors = false;
+                        const distinct = (value, index, self) => {
+                            return self.indexOf(value) === index;
+                        };
+                        if (G.graph.snPathsFlat && G.graph.snPathsTemp)
+                            G.graph.snPathsFlat = G.graph.snPathsFlat.concat(G.graph.snPathsTemp)
                         G.graph.snPathsFlat = G.graph.snPathsFlat.filter(distinct);
 
+                    }
+
+                }
+                if (ev.key === 's') {
+                    if (G.graph.showingSparsenet) {
+                        G.graph.firstShowSparsenet = true;
+                        G.graph.showingSparsenet = false;
+                    } else {
+                        G.graph.showingSparsenet = true;
+                        G.graph.showingSparsenet = true;
+                        document.getElementById("vertical").style.display = "none";
+                        //document.getElementById("horizontal").style.display="none";
+                        document.getElementById("path").style.display = "block"
+
+                        G.analytics.showSparseNet(G.graph);
+
+                    }
+                }
+                if (ev.key === 'a') {
+                    if(G.view.graph.modifiers.sparsenet){
+                        sum =0;
+                        m =[];
+                        for(i=0;i<Object.keys(G.view.graph.modifiers.sparsenet.vertexPaths).length;i++){
+                            num = G.view.graph.modifiers.sparsenet.vertexPaths[Object.keys(G.view.graph.modifiers.sparsenet.vertexPaths)[i]].length;
+                            if(num>Math.log2(G.visibleNodes)){
+                                m.push(Object.keys(G.view.graph.modifiers.sparsenet.vertexPaths)[i]);
+                            }
+                        }
+                        G.vertexLabels.show(undefined, m);
+
+                    }
+                }
+                if (ev.key === 'l') {
+                    G.vertexLabels.show();
                 }
 
             }
-            if ( ev.key === 's') {
-                if(G.graph.showingSparsenet) {
-                    G.graph.firstShowSparsenet = true;
-                    G.graph.showingSparsenet = false;
-                }
-                else {
-                    G.graph.showingSparsenet = true;
-                    G.graph.showingSparsenet = true;
-                    document.getElementById("vertical").style.display="none";
-                    //document.getElementById("horizontal").style.display="none";
-                    document.getElementById("path").style.display = "block"
-
-                    G.analytics.showSparseNet(G.graph);
-
-                }
-            }
-			//removed moving
-		});
+            //removed moving
+        });
 		window.addEventListener("keyup", ev=>{
+            if (ev.path[0].id != "textBox") {
 			if ( ev.keyCode === 32) { //toggles tooltip
 			if(!G.showingTooltip){G.showingTooltip=true;G.toolTipElem.style.opacity="1";}
 			if(G.showingTooltip){G.showingTooltip=false;G.toolTipElem.style.opacity="0.7";}
-		}
+		}}
 		});
 		G.showingControls=false;
         G.showingControls1=false;
@@ -1425,11 +1604,19 @@ G.addModule("controls",{
 			//removed moving
 		});
 		window.addEventListener("keyup", ev=>{
-
-            if ( ev.key==="`" ) {
-				if(G.showingControls){G.showingControls=false;getE("graph-menu").style.display="none";getE("style-menu").style.display="none";}
-				else{G.showingControls=true;getE("graph-menu").style.display="block";getE("style-menu").style.display="block";}
-			}
+            if (ev.path[0].id != "textBox") {
+                if (ev.key === "`") {
+                    if (G.showingControls) {
+                        G.showingControls = false;
+                        getE("graph-menu").style.display = "none";
+                        getE("style-menu").style.display = "none";
+                    } else {
+                        G.showingControls = true;
+                        getE("graph-menu").style.display = "block";
+                        getE("style-menu").style.display = "block";
+                    }
+                }
+            }
 		});
         let b=getE("panel-show");
         document.getElementById("info-bar-show").addEventListener('click', function(){
@@ -1448,6 +1635,7 @@ G.addModule("controls",{
                 getE("graph-menu").style.display="none";
                 getE("graph-dataset-bar").style.display="none";
                 getE("graph-info-bar").style.display="block";
+
                 G.showingControls1=true;
                 G.showingControls2=false;
                 G.showingControls3=false;
@@ -1551,9 +1739,6 @@ G.addModule("controls",{
             }
         }, false);
         G.drawsparsenet = false;
-        document.getElementById("drawing_option_1").addEventListener('click', function(){
-            G.drawsparsenet = true;
-        }, false);
         G.drawFixedPoints = false;
         document.getElementById("drawing_option_2").addEventListener('click', function(){
             G.drawFixedPoints = true;
@@ -1928,8 +2113,54 @@ G.addModule("controls",{
 		else {pivot1.call(d3.drag().on("drag",cb).on("end",cb));pivot2.call(d3.drag().on("drag",cb).on("end",cb));}
 		return options;
 	},
+    getLabelIndex(){
+        var language = "en";
+        var labelIndex ="";
+        var x = document.getElementsByName("language");
+        for (i = 0; i < x.length; i++) {
+            if (x[i].checked) {
+                language = x[i].value;
+                break;
+            }
+
+        }
+        isEnglish = language == "en";
+        isDanish = language == "da";
+        isDutch = language == "du";
+        if (isEnglish)
+            labelIndex = 0;
+        else if (isDanish) labelIndex = 1;
+        else if (isDutch) labelIndex = 2;
+        return labelIndex;
+    },
+    getLabel(originalObjectID) {
+	    var language = "en";
+	    var label ="";
+        var x = document.getElementsByName("language");
+        for (i = 0; i < x.length; i++) {
+            if (x[i].checked) {
+                language = x[i].value;
+                break;
+            }
+
+        }
+        isEnglish = language == "en";
+        isDanish = language == "da";
+        isDutch = language == "du";
+        if (G.view.graph.labelsByID[originalObjectID]) {
+            let a = G.view.graph.labelsByID[originalObjectID];
+            if (isEnglish)
+                label = a[0];
+            else if (isDanish) label = a[1];
+            else if (isDutch) label = a[2];
+        }
+        return label;
+    },
     addCheckbox(parentElem, text, func, options, id=null, val = false, image =null){
         let arr = [];
+        if(text == "show warms"){
+            text = "show neighbors";
+        }
 
         if (!options) options = {};
         let s = d3.select(parentElem).append("div").attr("class", "material-checkbox");
@@ -2278,6 +2509,7 @@ type: "nodes"*/
                 }
                 let subgraphLevel = result.subview.subgraphLevel;
                 let subgraph = result.subview.graph;
+                let vertexId = G.view.graph.vertices.id[originalObjectID];
 
                 // let originalDesc="";
                 // if(originalObjectType){
@@ -2295,44 +2527,58 @@ type: "nodes"*/
                 // }
                 if (G.view.graph && G.view.graph.snWorms) {
                     if (G.view.graph.labelsByID != "null") {
-                        let label = "";
-                        let isEnglish = true;
-                        var x = document.getElementsByName("language");
-                        for (i = 0; i < x.length; i++) {
-                            if (x[i].checked)
-                                if (x[i].value != "en")
-                                    isEnglish = false;
-
-                        }
-                        if (G.view.graph.labelsByID[originalObjectID]) {
-                            let a = G.view.graph.labelsByID[originalObjectID];
-                            if (isEnglish)
-                                label = a[0];
-                            else label = a[1];
-                        }
+                        let label = G.controls.getLabel(originalObjectID);
                         G.toolTipElem.textContent = "Vertex: " + originalObjectID + " " + label;
+
                         let menu = G.controls.contextMenus["hoveredVertex"];
                         menu.innerHTML = "";
-                        G.controls.contextMenus.hoveredVertex.textContent = "Vertex: " + originalObjectID + " " + label;
+                        let vertexLayers ="";
+                        if(this.graph.parentLayersMap && this.graph.parentLayersMap[this.graph.vertices.id[originalObjectID]]){
+                            layers = Object.keys(this.graph.parentLayersMap[this.graph.vertices.id[originalObjectID]]);
+                            vertexLayers += "This vertex appears in Fixed Points " + layers.sort().reverse();
+                        }
+                        G.controls.contextMenus.hoveredVertex.textContent = "Vertex: " + vertexId + " " + label ;
                         G.controls.contextMenus.hoveredVertex.item = document.createElement('div');
+                        let vertexLayersDiv = document.createElement('div');
+                        vertexLayersDiv.setAttribute("class", "material-checkbox-label");
+                        vertexLayersDiv.style.display = "none";
+                        vertexLayersDiv.innerHTML += vertexLayers + "\n</br>";
                         var link = document.createElement('a');
                         link.setAttribute("id","downloadLink");
                         link.textContent = "Download";
                         link.classList.add("download-link");
                         link.style.color="blue";
                         link.style.display="none";
+                        var copy = document.createElement('a');
+                        copy.setAttribute("id","addToNotes");
+                        copy.textContent = "Add to Annotations";
+                        copy.classList.add("download-link");
+                        copy.style.color="blue";
+                        copy.style.display="none";
+                        G.controls.addCheckbox(G.controls.contextMenus.hoveredVertex, toNormalText("Show Vertex Layers"), (value) => {
+                            if (value) {
+                                vertexLayersDiv.style.display = "block";
+                            } else {
+                                vertexLayersDiv.style.display = "none";
+                            }
+                        });
+                        G.controls.contextMenus.hoveredVertex.append(vertexLayersDiv);
+
                         if (G.view.graph && G.view.graph.snWorms) {
                             if (G.view.graph.snwormsList[originalObjectID] && G.view.graph.snwormsList[originalObjectID].length > 0) {
                                 G.controls.addCheckbox(G.controls.contextMenus.hoveredVertex, toNormalText("Show Neighbors"), (value) => {
                                     if (value) {
                                         G.controls.contextMenus.hoveredVertex.item.style.display = "block";
-                                        link.style.display="inline";
+                                        link.style.display="block";
+                                        copy.style.display="block";
                                     } else {
                                         G.controls.contextMenus.hoveredVertex.item.style.display = "none";
                                         link.style.display="none";
+                                        copy.style.display="none";
                                     }
                                 });
                                 menu.appendChild(link);
+                                menu.appendChild(copy);
                                 let classify = [];
                                 G.controls.contextMenus.hoveredVertex.item.classList.add("hovered-tooltip-text");
                                 G.controls.contextMenus.hoveredVertex.item.innerHTML = "";
@@ -2379,10 +2625,14 @@ type: "nodes"*/
                                             //     G.controls.contextMenus.hoveredVertex.item.innerHTML += result[Object.keys(result)[k]][i].label + "\n</br>";
                                             G.controls.addCheckbox(G.controls.contextMenus.hoveredVertex.item, toNormalText(Object.keys(result)[k]), (value, id) => {
                                                 if (value) {
-                                                    document.getElementById("label" + id).style.display = "block";
+                                                    if(document.getElementById("label" + id)) {
+                                                        document.getElementById("label" + id).style.display = "block";
+                                                    }
                                                     link.style.display = "inline";
                                                 } else {
-                                                    document.getElementById("label" + id).style.display = "none";
+                                                    if(document.getElementById("label" + id)) {
+                                                        document.getElementById("label" + id).style.display = "none";
+                                                    }
                                                     link.style.display = "none";
                                                 }
                                             }, {}, k);
@@ -2402,7 +2652,9 @@ type: "nodes"*/
                                 function downloadInnerHtml(filename, elId, mimeType) {
                                     if(result) {
                                         for (k in Object.keys(result)) {
-                                            document.getElementById("label" + k).style.display = "block";
+                                            if(document.getElementById("label" + k)) {
+                                                document.getElementById("label" + k).style.display = "block";
+                                            }
                                         }
                                     }
                                     var elHtml = document.getElementsByClassName(elId)[0].innerText;
@@ -2413,20 +2665,27 @@ type: "nodes"*/
                                     link.setAttribute('href', 'data:' + mimeType + ';charset=utf-8,' + encodeURIComponent(elHtml));
                                     link.click();
                                 }
+                                function addToNotes(elId) {
+                                    var elHtml = document.getElementsByClassName(elId)[0].innerHTML;
+                                    elHtml= elHtml.replaceAll("<input type=\"checkbox\" class=\"material-checkbox\">", "");
+                                    elHtml +="</br>";
+                                    document.getElementById('textBox').innerHTML +=elHtml;
+                                }
 
                                 var fileName =  'Vertex'+originalObjectID+'_'+label+'.txt'; // You can use the .txt extension if you want
 
                                 $('#downloadLink').click(function(){
                                     downloadInnerHtml(fileName, 'hovered-tooltip-text','text/html');
                                 });
+                                $('#addToNotes').click(function(){
+                                    addToNotes('hovered-tooltip-text');
+                                });
                             }
                         }
-                        this.graph.hoveredVertex = originalObjectID;
-                        G.view.refreshStyles(true, true);
-
                     } else
-                        G.toolTipElem.textContent = "Vertex: " + originalObjectID;
-
+                        G.toolTipElem.textContent = "Vertex: " + vertexId;
+                    this.graph.hoveredVertex = originalObjectID;
+                    G.view.refreshStyles(true, true);
                     G.showContextMenu("hoveredVertex");
 
                     switch (result.type) {
@@ -2456,31 +2715,17 @@ type: "nodes"*/
                     let originalTypeSingular=null;
                     if(originalObjectType&&G.analytics.templates[originalObjectType]){originalTypeSingular=G.analytics.templates[originalObjectType].singularName;}
                     let subgraphLevel=result.subview.subgraphLevel;let subgraph=result.subview.graph;
-
-                    // let originalDesc="";
-                    // if(originalObjectType){
-                    // 	originalDesc=((originalTypeSingular?toNormalText(originalTypeSingular):toSingularName(toNormalText(originalObjectType)))+" "+originalObjectID+(subgraphLevel?" (in subgraph "+subgraph.shortName+") ":""));
-                    // 	if(G.analytics.templates[originalObjectType]&&G.analytics.templates[originalObjectType].getDescription){
-                    // 		originalDesc+=G.analytics.templates[originalObjectType].getDescription(originalObject,originalObjectID,result.subview.graph[originalObjectType]);
-                    // 	}
-                    // 	originalDesc+="\n";
-                    // }
-                    // let viewTypeSingular=null;
-                    // if(G.view.templates[type].singularName){viewTypeSingular=G.view.templates[type].singularName;}
-                    // let viewDesc=(toNormalText((viewTypeSingular?viewTypeSingular:toSingularName(result.type)))+" "+objID);
-                    // if(G.view.templates[type]&&G.view.templates[type].getDescription){
-                    // 	viewDesc+=" "+G.view.templates[type].getDescription(obj,objID,G.view.model[result.type]);
-                    // }
                     if(G.view.graph.labelsByID != "null") {
-                        let label = "";
-                        if(G.view.graph.labelsByID[originalObjectID]) {
-                            let a = G.view.graph.labelsByID[originalObjectID];
-                            label = a[0];
+                        vertesLayers = "";
+                        if(this.graph.parentLayersMap && this.graph.parentLayersMap[this.graph.vertices.id[originalObjectID]]) {
+                            layers = Object.keys(this.graph.parentLayersMap[this.graph.vertices.id[originalObjectID]]);
+                            vertesLayers += ", appears in Fixed Points: "+layers.sort().reverse()
                         }
-                        G.toolTipElem.textContent = "Vertex: " + originalObjectID + " " + label;
+                        let label = G.controls.getLabel(originalObjectID);
+                        G.toolTipElem.textContent = "Vertex: " + vertexId + " " + label+ vertesLayers ;
                     }
                     else
-                        G.toolTipElem.textContent = "Vertex: " +originalObjectID;
+                        G.toolTipElem.textContent = "Vertex: " +vertexId;
                     G.toolTipElem.style.display="";
 
                     switch (result.type)
@@ -2502,9 +2747,14 @@ type: "nodes"*/
                             }
                             //highlight edges and neighhbors
 
-                            this.graph.hoveredVertex=originalObjectID;
+                            this.graph.hoveredVertex = originalObjectID;
+                            G.view.refreshStyles(true, true);
                     }
 
+                }
+                if(this.graph.parentLayersMap && this.graph.parentLayersMap[this.graph.vertices.id[originalObjectID]]){
+                    layers = Object.keys(this.graph.parentLayersMap[this.graph.vertices.id[originalObjectID]]);
+                    G.addLog("This vertex appears in Fixed Points: " + layers.sort().reverse());
                 }
             }
 			else{
@@ -2586,7 +2836,9 @@ type: "nodes"*/
 			let graph=G.view.graph;
 			graph.selectedVertexCount=Object.keys(graph.selectedVertices).length;
 			getE("selected-vertices").textContent="Selected "+graph.selectedVertexCount+" vertices";
-			if(graph.selectedVertexCount>0){
+            getE("annotation-selected-vertices").textContent="Selected "+graph.selectedVertexCount+" vertices";
+
+            if(graph.selectedVertexCount>0){
 				if(graph.selectedVertexCount==1){
 					graph.egonet={};
 					let selectedID=Object.keys(graph.selectedVertices)[0];
@@ -2971,7 +3223,6 @@ type: "nodes"*/
 		}
 		//function hoverEnd(){if ((this.graph) && (G.onhover))G.onhover(null);}
 		addHoverListener(domElement,()=>G.hoverDelay,hoverOnCurrentObject,hoverEnd);
-
 
 
 

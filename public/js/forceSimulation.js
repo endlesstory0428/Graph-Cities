@@ -162,18 +162,15 @@ class ForceSimulation{
 	}
 	animateOnce() {
 		if(this.graphChanged){
-			this.graphChanged=false;this.initSimulation();
-		}
+			this.graphChanged=false;
+            this.initSimulation();
+        }
 		if(!this.simulation)return;
 		this.stats.begin();
-		
-		
-		
 		var delta = this.clock.getDelta();
 		this.timer += delta;
 		this.uniforms.timer.value = this.timer;
 		if(this.simulationRunning){
-			this.simulation.nextStep();
 			this.positionsChanged=true;
 			if(!this.simulationStarted){this.simulationStarted=true;console.log("started simulation");}
 			if(this.syncing){this.syncPositions();}
