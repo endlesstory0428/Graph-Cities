@@ -19,7 +19,7 @@ G.colorScales={ //[0,1], use with THREE.Color.setStyle()
 	spring:d3.scaleSequential(d3.interpolateHslLong("#ff0000","#f8f")),
 	spectral:d3.scaleSequential(d3.interpolateSpectral),
 	lightSpectral:d3.scaleSequential(d3.interpolateCubehelixLong("#d7d0ff","#f7b6ab")),
-	orange:d3.scaleSequential(d3.interpolateHslLong("#a00000","#ffd878")),
+	orange:d3.scaleSequential(d3.interpolateHslLong("#EF110D","#FFE035")),
 	orangeLight:(value)=>orangeTemp(1-value),
 	//blackRed:(value)=>orangeTemp(1-(value/2)),
 	blackRed:d3.scaleSequential(d3.interpolateCubehelix("#200000","#ff2020")),
@@ -133,7 +133,6 @@ G.addModule("view",{
 			G.cameras[name].position.z = 1000;//sqrt instead of cbrt because the layout is often quite flat
 		}
 		G.cameraControls = new MyControls(G.cameras,G.renderer.domElement,G);
-
 		G.scene = new THREE.Scene();var scene=G.scene;
 		scene.background = new THREE.Color(0xffffff);
 		G.lightStyle=true;
@@ -190,7 +189,7 @@ G.addModule("view",{
 		//the simulation shouldn't need to know the camera position, but the movement needs to happen in the simulation and
 		//we need to calculate the real movemnet for it
 
-		canvas.tabIndex=1;//to make it focusable and accept key events
+		//canvas.tabIndex=1;//to make it focusable and accept key events
 		let moveLength=50;
 		G.controls.addKeyListener(canvas,37,()=>{G.view.nodeMovement.copy(G.cameraControls.leftVector).multiplyScalar(moveLength);},()=>{G.view.nodeMovement.set(0,0,0)});
 		G.controls.addKeyListener(canvas,38,()=>{G.view.nodeMovement.copy(G.cameraControls.forwardVector).multiplyScalar(moveLength);},()=>{G.view.nodeMovement.set(0,0,0)});
@@ -217,7 +216,6 @@ G.addModule("view",{
 					this.subviews[i].graph.vertices.addProperty("layout",null,layouts[i]);
 					for(let v of layouts[i]){if(!v)throw Error();}
 				}
-
 				//try reusing parts of the old (main) layout if the new graph has no layout and there's a significant overlap (but if the overlap is tiny, don't reuse as it could make the layout look worse)
 				if((!newGraph.vertices.layout)&&(newGraph.datasetID==this.subviews[0].graph.datasetID)){
 					//here if it has a layout it should have been loaded
@@ -243,9 +241,6 @@ G.addModule("view",{
 
 			}
 		}
-
-
-
 		let minimap=getE("minimap");
 		//save minimap before the child graph is shown
 		if(this.graph&&(!this.graph.imageData)&&(this.graph.vertices.length>0||this.graph.globalRings&&this.graph.globalRings.length>0)){
@@ -254,6 +249,127 @@ G.addModule("view",{
 		if(newGraph.parent&&newGraph.parent.imageData){minimap.src=newGraph.parent.imageData;minimap.style.display="block";}//works even if the parent is not the current graph
 		else{minimap.src="images/blank.png";minimap.style.display="none";}
 	},
+    beforeDisplayingGraphLayer(graph){
+        if(graph.dataPath.includes("layer")&&(graph.dataPath.includes("1") ||graph.dataPath.includes("2"))) {
+            getE("layer-1-info").innerHTML = ""
+            ccs = Algs.getSortedCCsAndCCIDs(graph);
+            getE("number-ccs-graph").innerText = "Select a connected component between 0 and " + ccs.length;
+            info = getE("layer-1-info");
+            G.graph.showingSparsenet = false;
+            items = Algs.getMainVertexInCC(graph);
+            for (item in items) {
+                if(graph.labelsByID[items[item]] && graph.labelsByID[items[item]][0]){
+                    if(graph.labelsByID[items[item]][0].indexOf("–") != -1 ) {
+                        textlabel = graph.labelsByID[items[item]][0].substring(0, graph.labelsByID[items[item]][0].indexOf("–"));
+                    } else if(graph.labelsByID[items[item]][0].indexOf("(") != -1){
+                        textlabel = graph.labelsByID[items[item]][0].substring(0, graph.labelsByID[items[item]][0].indexOf("("));
+                    }else if(graph.labelsByID[items[item]][0].indexOf("-") != -1){
+                        textlabel = graph.labelsByID[items[item]][0].substring(0, graph.labelsByID[items[item]][0].indexOf("-"));
+                    } else {
+                        textlabel = graph.labelsByID[items[item]][0];
+                    }
+                    for (cc in ccs) {
+                        if (ccs[cc].vertexList.indexOf(Number(items[item])) != -1) {
+                            G.graph.selectedccId = cc;
+                            ccg = Algs.getInducedSubgraph(graph, ccs[G.graph.selectedccId].vertexList);
+                            v = ccg.vertices.length;
+                            e = ccg.edges.length;
+                            break;
+                        }
+                    }
+                    let image = "";
+                    if(graph.dataPath.includes("2")) {
+                        if (v <= 7) image = "/images/shortline.png";
+                        if(v >7 && v<=10) image = "/images/longline.png";
+                        if(v >10) image = "/images/twolines.png";
+                    }else {
+                        if (v <= 31) image = "/images/longline.png";
+                        if(v >31 && v<211) image = "/images/star1.png";
+                        if(v >=211) image = "/images/starwithtail.png";
+                    }
+                    if(G.view.graph.nodes){
+                        G.setcolorsorig = G.view.graph.nodes.colorValue;
+                    }
+                    G.controls.addCheckbox(info, toNormalText(textlabel), (value, id) => {
+                        if (value) {
+                            G.view.graph.trees = true;
+                            for (cc in ccs) {
+                                if (ccs[cc].vertexList.indexOf(Number(id)) != -1) {
+                                    G.graph.selectedccId = cc;
+                                    G.graph.selectedId = id;
+                                    ccg = Algs.getInducedSubgraph(graph, ccs[G.graph.selectedccId].vertexList);
+                                    G.ccgv = ccg.vertices.length;
+                                    G.ccge = ccg.edges.length;
+                                    break;
+                                }
+                            }
+                            document.getElementById("vertical").style.display = "none";
+                            document.getElementById("path").style.display = "block";
+
+                            var img = new Image();
+                            G.view.graph.selectedCCVertices = ccs[G.graph.selectedccId].vertexList;
+                            G.setcolorsnow= G.view.graph.nodes.colorValue;
+                            for(let m=0; m<G.setcolorsnow.length;m++){
+                                if(G.view.graph.selectedCCVertices.indexOf(m)!=-1){
+                                    G.setcolorsnow[m]=undefined;
+                                }
+                            }
+                            G.view.refreshStyles(true,true);
+                            G.renderer.render(G.scene, G.camera);
+                            img.src = G.renderer.domElement.toDataURL();
+                            G.setcolors = G.view.graph.nodes.colorValue;
+                            G.analytics.showSparseNet(G.graph);
+                            G.cameraControls.setTarget(null);
+                            let vec=G.view.getNodePos(id);
+                            if(vec.x != undefined || vec.y != undefined || vec.z != undefined )
+                                G.cameraControls.setTarget(vec,true);
+                            myDiv = document.getElementById("parent-image");
+                            myDiv.innerHTML = "";
+                            var elem = document.createElement("img");
+                            elem.setAttribute("src", img.src);
+                            elem.setAttribute("height", "250");
+                            elem.setAttribute("width", "500");
+                            elem.setAttribute("border", "5");
+                            elem.addEventListener("click", function() {
+                                G.view.resetView();
+                                G.view.graph.trees = false;
+                                graph.snPaths = undefined;
+                                G.cameraControls.setTarget(null);
+                                getE("num-edges-vertices").innerHTML = "";
+                                myDiv = document.getElementById("parent-image");
+                                myDiv.innerHTML = "";
+                                G.setcolorsnow =  G.setcolorsorig;
+                                G.subview.disableModifier("sparsenet");
+                            });
+                            myDiv.appendChild(elem)
+                        } else {
+                            let a = getE(G.graph.selectedId+"a");
+                            a.innerHTML = "";
+                            a.style.border = "";
+                            a.style.borderStyle= "";
+                            G.view.resetView();
+                            G.view.graph.trees = false;
+                            graph.snPaths = undefined;
+                            G.cameraControls.setTarget(null);
+                            getE("num-edges-vertices").innerHTML = "";
+                            myDiv = document.getElementById("parent-image");
+                            myDiv.innerHTML = "";
+                            G.setcolorsnow =  G.setcolorsorig;
+                            G.subview.disableModifier("sparsenet");
+                        }
+                    }, null, items[item], true, image);
+                    g = document.createElement('div');
+                    g.setAttribute("style", "text-align:left; font-size:small; margin: 5px;");
+                    g.setAttribute("id", items[item]+"a");
+                    info.append(g);
+                }
+            }
+
+
+        } else {
+            info = getE("layer-1-info").innerHTML = "";
+        }
+    },
 	displayGraph:async function(graph,options){
 		if(!options)options={};
 		if(G.drawFixedPoints) {
@@ -328,6 +444,50 @@ G.addModule("view",{
 					graph.vertices.addProperty("layout",null,layout);
 				}
 			});
+			annpath = "";
+            if(G.graph.wholeGraph) {
+               annpath = G.graph.wholeGraph;
+            } else {
+                annpath = G.graph.dataPath;
+            }
+            await d3.json("datasets/"+annpath+"/annotations.json.gz").then((annotations)=>{
+
+                    if(annotations){
+                        if(annotations == ""){
+                            graph.annotatedVertices = {};
+                            this.refreshStyles(true,true);
+                        }
+                        $('#textBox').each(function(){
+                            this.contentEditable = true;
+                        });
+                        graph.annotations = annotations;
+                        document.getElementById('textBox').innerHTML = annotations;
+                    }else {
+                        document.getElementById('textBox').innerHTML = "";
+                        graph.annotations = "";
+                        graph.annotatedVertices = {};
+                    }
+
+            });
+            await d3.json("datasets/"+annpath+"/annotationsdatetime.json.gz").then((annotationsdatetime)=>{
+
+                if(annotationsdatetime){
+                    graph.annotationEditTime = annotationsdatetime;
+                    document.getElementById('lastSaved').innerHTML = annotationsdatetime;
+                }
+
+            });
+            await d3.json("datasets/"+graph.dataPath+"/annotatedVertices.json.gz").then((annotatedVertices)=>{
+
+                if(annotatedVertices){
+                    graph.annotatedVertices = annotatedVertices;
+
+                }else {
+                    graph.annotatedVertices = {};
+                }
+
+            });
+
 			//either load the layout or know it's missing
 		}
 		this.beforeDisplayGraph(graph);
@@ -346,116 +506,9 @@ G.addModule("view",{
             if ((this.graph != graph) && (!options.noMoveCamera)) G.resetView();//exclude expansion in-place
             this.graph = graph;
 
-            if(graph.dataPath.includes("layer")&&(graph.dataPath.includes("1") ||graph.dataPath.includes("2"))) {
-                //data.dataPath=undefined;
-                getE("layer-1-info").innerHTML = ""
-                ccs = Algs.getSortedCCsAndCCIDs(graph);
-
-                getE("number-ccs-graph").innerText = "Select a connected component between 0 and " + ccs.length;
-                info = getE("layer-1-info");
-                //console.log(graph.labelsByID[Algs.getMainVertexInCC(graph,ccs[G.graph.selectedccId])]);
-                G.graph.showingSparsenet = false;
-                items = Algs.getMainVertexInCC(graph);
-                for (item in items) {
-                    if(graph.labelsByID[items[item]] && graph.labelsByID[items[item]][0]){
-                        if(graph.labelsByID[items[item]][0].indexOf("–") != -1 ) {
-                            textlabel = graph.labelsByID[items[item]][0].substring(0, graph.labelsByID[items[item]][0].indexOf("–"));
-                        } else if(graph.labelsByID[items[item]][0].indexOf("(") != -1){
-                            textlabel = graph.labelsByID[items[item]][0].substring(0, graph.labelsByID[items[item]][0].indexOf("("));
-                        }else if(graph.labelsByID[items[item]][0].indexOf("-") != -1){
-                            textlabel = graph.labelsByID[items[item]][0].substring(0, graph.labelsByID[items[item]][0].indexOf("-"));
-                        } else {
-                            textlabel = graph.labelsByID[items[item]][0];
-                        }
-                        for (cc in ccs) {
-                            if (ccs[cc].vertexList.indexOf(Number(items[item])) != -1) {
-                                G.graph.selectedccId = cc;
-                                ccg = Algs.getInducedSubgraph(graph, ccs[G.graph.selectedccId].vertexList);
-                                v = ccg.vertices.length;
-                                e = ccg.edges.length;
-                                break;
-                            }
-                        }
-                        let image = "";
-                        if(graph.dataPath.includes("2")) {
-                            if (v <= 7) image = "/images/shortline.png";
-                            if(v >7 && v<=10) image = "/images/longline.png";
-                            if(v >10) image = "/images/twolines.png";
-                        }else {
-                            if (v <= 31) image = "/images/longline.png";
-                            if(v >31 && v<211) image = "/images/star1.png";
-                            if(v >=211) image = "/images/starwithtail.png";
-
-                        }
-                        G.controls.addCheckbox(info, toNormalText(textlabel), (value, id) => {
-                        if (value) {
-                            G.view.graph.trees = true;
-                            for (cc in ccs) {
-                                if (ccs[cc].vertexList.indexOf(Number(id)) != -1) {
-                                    G.graph.selectedccId = cc;
-                                    ccg = Algs.getInducedSubgraph(graph, ccs[G.graph.selectedccId].vertexList);
-                                    v = ccg.vertices.length;
-                                    e = ccg.edges.length;
-                                    getE("num-edges-vertices").innerHTML = "|V|" + v + " |E|" + e;
-
-                                    break;
-                                }
-                            }
-                            document.getElementById("vertical").style.display = "none";
-                            //document.getElementById("horizontal").style.display="none";
-                            document.getElementById("path").style.display = "block";
-
-                                var img = new Image();
-                                G.renderer.render(G.scene, G.camera);
-                                img.src = G.renderer.domElement.toDataURL();
-
-                            G.setcolors = G.view.graph.nodes.colorValue;
-                            G.analytics.showSparseNet(G.graph);
-                            G.cameraControls.setTarget(null);
-                            let vec=G.view.getNodePos(id);
-                            if(vec.x != undefined || vec.y != undefined || vec.z != undefined )
-                                G.cameraControls.setTarget(vec,true);
-                            myDiv = document.getElementById("parent-image");
-                            myDiv.innerHTML = "";
-                            var elem = document.createElement("img");
-                            elem.setAttribute("src", img.src);
-                            elem.setAttribute("height", "250");
-                            elem.setAttribute("width", "500");
-                            elem.setAttribute("border", "5");
-                            elem.addEventListener("click", function() {
-                                myDiv = document.getElementById("parent-image");
-                                myDiv.innerHTML = "";
-                                G.setcolorsnow = G.setcolors;
-                                G.subview.disableModifier("sparsenet");
-                                graph.snPaths = undefined;
-
-
-                            });
-                            myDiv.appendChild(elem)
-                            // G.cameraControls.setTarget(null);
-                            // let vec=G.view.getNodePos(id);
-                            // if(vec.x != undefined || vec.y != undefined || vec.z != undefined )
-                            //     G.cameraControls.setTarget(vec,true);
-                        } else {
-                            G.view.resetView();
-                            G.view.graph.trees = false;
-                            graph.snPaths = undefined;
-                            G.cameraControls.setTarget(null);
-                            getE("num-edges-vertices").innerHTML = "";
-                            myDiv = document.getElementById("parent-image");
-                            myDiv.innerHTML = "";
-                            G.setcolorsnow = G.setcolors;
-                            G.subview.disableModifier("sparsenet");
-                        }
-                    }, null, items[item], true, image);
-                }
-                }
-
-
-            } else {
-                info = getE("layer-1-info").innerHTML = "";
-            }
-
+            this.beforeDisplayingGraphLayer(graph);
+            if(graph.annotations && graph.annotations == "")
+                graph.annotatedVertices = {};
 
             if(G.drawFixedPoints){
                 graph.heightProperty="fixedPointLayer";
@@ -859,6 +912,12 @@ G.addModule("view",{
 				isSelected:{
 					value:(node,i,array)=>array.isSelected?array.isSelected[i]:0,
 				},
+                isAnnotated:{
+                    value:(node,i,array)=>array.isAnnotated?array.isAnnotated[i]:0,
+                },
+                isFullyDiscovered:{
+                    value:(node,i,array)=>array.isFullyDiscovered?array.isFullyDiscovered[i]:0,
+                },
 				size:{
 					value:(node,i,array)=>{
 						let result=array.size[i];
@@ -1485,18 +1544,18 @@ G.addModule("view",{
 					brightness:[
 						(data,oldValue,link,index,array,model)=>{
 							let sID=array.source[index],tID=array.target[index];
-                            if(G.snHighlightPathNodesColor && G.snNodesColorByLabel && G.view.graph.snVertexPaths && G.view.graph.labelsByID[sID] && G.view.graph.labelsByID[sID][0].includes("ATU")) {
+                            if(G.snHighlightPathNodesColor && G.snNodesColorByLabel && G.view.graph.snVertexPaths && G.view.graph.labelsByID[sID] && G.controls.getLabel(sID).includes("ATU")) {
                                 a = G.view.graph.getNeighbors(sID);
                                 first = false;
                                 second = false;
                                 for (let b in a) {
-                                    if (G.view.graph.labelsByID[a[b]]&& G.view.graph.labelsByID[a[b]][0].includes("TMI") && Object.keys(G.view.graph.snVertexPaths).indexOf(a[b])!=-1)
+                                    if (G.view.graph.labelsByID[a[b]]&& G.controls.getLabel(a[b]).includes("TMI") && Object.keys(G.view.graph.snVertexPaths).indexOf(a[b])!=-1)
                                         first = true;
-                                    if (G.view.graph.labelsByID[a[b]] &&G.view.graph.labelsByID[a[b]][0].includes("ETK") && Object.keys(G.view.graph.snVertexPaths).indexOf(a[b])!=-1)
+                                    if (G.view.graph.labelsByID[a[b]] &&G.controls.getLabel(a[b]).includes("ETK") && Object.keys(G.view.graph.snVertexPaths).indexOf(a[b])!=-1)
                                         second = true;
 
                                 }
-                                if(G.view.graph.labelsByID[sID] && first && second && G.view.graph.labelsByID && G.view.graph.labelsByID[sID][0].includes("ATU") && (G.view.graph.labelsByID[tID] && G.view.graph.labelsByID[tID][0].includes("TMI")||G.view.graph.labelsByID[tID][0].includes("ETK"))) {
+                                if(G.view.graph.labelsByID[sID] && first && second && G.view.graph.labelsByID && G.controls.getLabel(sID).includes("ATU") && (G.view.graph.labelsByID[tID] && G.controls.getLabel(tID).includes("TMI")||G.controls.getLabel(tID).includes("ETK"))) {
                                     return 10;
                                 }
                             }

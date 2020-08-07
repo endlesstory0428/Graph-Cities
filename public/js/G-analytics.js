@@ -311,17 +311,23 @@ G.addModule("analytics",{
 		let sources=g.edges.source,targets=g.edges.target;
 		let partitions={},partitionCount=0;//v,e counts
 		let cloneMaps=new Array(g.vertices.length);
+		let origCloneMaps = new Array(g.vertices.length);
 		let highestLayers=new Array(g.vertices.length);
 		let edgeSources=new Array(g.edges.length);
 		let edgeTargets=new Array(g.edges.length);
 		let max=-Infinity,min=Infinity;
-		for(let i=0;i<g.vertices.length;i++){cloneMaps[i]={};highestLayers[i]=null;}
+		for(let i=0;i<g.vertices.length;i++){
+		    cloneMaps[i]={};highestLayers[i]=null;
+		    origCloneMaps[g.vertices.id[i]] = {};}
 		let clones=[];
 		let cloneCount=0;
 		for(let eID=0;eID<g.edges.length;eID++){
 			let e=g.edges[eID],layer=edgePartition[eID];
 			let sID=sources[eID],tID=targets[eID];
-			if((sID in highestLayers==false)||(highestLayers[sID]<layer)){highestLayers[sID]=layer;}
+            let svertexId = g.vertices.id[sID];
+            let tvertexId = g.vertices.id[tID];
+
+            if((sID in highestLayers==false)||(highestLayers[sID]<layer)){highestLayers[sID]=layer;}
 			if((tID in highestLayers==false)||(highestLayers[tID]<layer)){highestLayers[tID]=layer;}
 			let sCloneID,tCloneID;
 			if((layer in partitions)==false){
@@ -337,8 +343,12 @@ G.addModule("analytics",{
 				let cloneObj={original:sID,edges:{},value:layer};
 				clones.push(cloneObj);
 				partitions[layer].v++;
+                if((layer in origCloneMaps[svertexId])==false){
+                    origCloneMaps[svertexId][layer]=svertexId;
+                }
 			}
-			else{sCloneID=cloneMaps[sID][layer];}
+			else{sCloneID=cloneMaps[sID][layer];
+			}
 			if((layer in cloneMaps[tID])==false){
 				tCloneID=clones.length;
 				cloneMaps[tID][layer]=tCloneID;
@@ -346,6 +356,9 @@ G.addModule("analytics",{
 				let cloneObj={original:tID,edges:{},value:layer};
 				clones.push(cloneObj);
 				partitions[layer].v++;
+                if((layer in origCloneMaps[tvertexId])==false){
+                    origCloneMaps[tvertexId][layer]=tvertexId;
+                }
 				//partitions[layer].vertices.push(cloneObj);//??
 			}
 			else{tCloneID=cloneMaps[tID][layer];}
@@ -375,7 +388,7 @@ G.addModule("analytics",{
 				if(count>1){verticesWithClones++;}
 			}
 		}
-        return {cloneCount:cloneCount,cloneMaps:cloneMaps,clones:clones,verticesWithClones:verticesWithClones,edgeSources:edgeSources,edgeTargets:edgeTargets,partitions:partitions,partitionCount:partitionCount,max:max,min:min};
+        return {cloneCount:cloneCount,origCloneMaps: origCloneMaps, cloneMaps:cloneMaps,clones:clones,verticesWithClones:verticesWithClones,edgeSources:edgeSources,edgeTargets:edgeTargets,partitions:partitions,partitionCount:partitionCount,max:max,min:min};
 	},
 	
 	getVertexCCMetagraph(g,propertyName){
@@ -429,9 +442,63 @@ G.addModule("analytics",{
         var fileName =  'Story.txt'; // You can use the .txt extension if you want
         downloadInnerHtml(fileName,'text/html');
     },
+    downloadFile:function(text) {
+        function downloadInnerHtml(filename, mimeType) {
+            var link = document.createElement('a');
+            mimeType = mimeType || 'text/plain';
+
+            link.setAttribute('download', filename);
+            link.setAttribute('href', 'data:' + mimeType + ';charset=utf-8,' + encodeURIComponent(text));
+            link.click();
+        }
+
+        var fileName =  'textFile.txt'; // You can use the .txt extension if you want
+        downloadInnerHtml(fileName,'text/html');
+    },
 	downloadImage:function(){
 		downloadCanvas(G.renderer.domElement,G.graph.name);
 	},
+    cacheNotes:function(text){
+	    if(text == "") {
+            G.view.graph.annotatedVertices = {};
+            G.view.refreshStyles(true, true);
+        }
+        G.graph.annotation = text;
+        path ="";
+        if(G.graph.wholeGraph) {
+            path = G.graph.wholeGraph;
+        } else {
+            path = G.graph.dataPath;
+        }
+        var today = new Date();
+        var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+        var time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+        var dateTime = date+' '+time;
+        G.graph.annotationEditTime = "Last Saved:" + dateTime;
+        document.getElementById('lastSaved').innerHTML =  G.graph.annotationEditTime;
+        G.messaging.sendCustomData("save",{type:"annotations",path:path,data:text});
+        G.messaging.sendCustomData("save",{type:"annotationsdatetime",path:path,data:G.graph.annotationEditTime});
+
+        G.saveLayout();
+    },
+    appendStory: function(isChecked){
+	    if(isChecked){
+            let text = "";
+            for(let i =0; i<Object.keys(G.view.graph.story).length;i++) {
+                text +=  G.view.graph.story[Object.keys(G.view.graph.story)[i]];
+            }
+            text = text.replace(/\<span style='color: red'>/g, '');
+            text = text.replace(/\<\/span>/g, '');
+            text = text.replace(/\<\/br>/g, '');
+            document.getElementById('textBox').innerHTML =text;
+        } else {
+	        if(G.view.graph.annotations) {
+                document.getElementById('textBox').innerHTML = G.view.graph.annotations;
+            } else {
+                document.getElementById('textBox').innerHTML = "Insert your Note";
+            }
+        }
+    },
 	getGraphVerticesAndEdges:function(g){
 		if(!g)g=G.graph;
 		if(!g){G.addLog("nothing to download");return;}
@@ -1661,23 +1728,22 @@ G.addModule("analytics",{
 
 		if(options)data.options=options;
 		let ccg = undefined;
-		if(graph.dataPath.includes("layer")&& (graph.dataPath.includes("1")|| (graph.dataPath.includes("2")&& !G.graph.showingSparsenet))) {
-		    //data.dataPath=undefined;
-		    ccs = Algs.getSortedCCsAndCCIDs(graph);
+        ccs = Algs.getSortedCCsAndCCIDs(graph);
+        if(graph.dataPath.includes("layer")&& (ccs.length>1 && !G.graph.showingSparsenet)) {
             ccg = Algs.getInducedSubgraph(graph, ccs[G.graph.selectedccId].vertexList);
             v = ccg.vertices.length;
             e = ccg.edges.length;
             data.data = this.getGraphVerticesAndEdges(ccg);
-            if(graph.dataPath.includes("1") || graph.dataPath.includes("2")  ){
-                data.dataPath = "";
-            }
-            //console.log(graph.labelsByID[Algs.getMainVertexInCC(graph,ccs[G.graph.selectedccId])]);
+            data.dataPath = "";
+        }
+        if(!data.data  && graph.dataPath.includes("layer")) {
+            data.data = this.getGraphVerticesAndEdges(graph);
         }
 		if(!graph.snPaths){
 		    G.messaging.requestCustomData("sparsenet",data,(result)=>{
                 G.setcolorsnow = null;
 		    if(result&&result.length>0){
-		        if(graph.dataPath.includes("layer")&& (graph.dataPath.includes("1")||graph.dataPath.includes("2"))&&ccg) {
+		        if(graph.dataPath.includes("layer")&& ccg) {
                     for (let i = 0; i < result.length; i++) {
                         temp = [];
                         for (let j = 0; j < result[i].length; j++) {
@@ -1694,7 +1760,7 @@ G.addModule("analytics",{
                         let tempID=path[i];
                         let vertex=graph.vertices[tempID];
                         if(i>0){
-                            if(snPathEdgeMap[graph.vertices.edges[tempID][path[i-1]]]!=undefined) {
+                            if(graph.vertices.edges[tempID][path[i-1]]!=undefined) {
                                 snPathEdgeMap[graph.vertices.edges[tempID][path[i - 1]]] = pathID;
                             }
                         }
@@ -1706,14 +1772,40 @@ G.addModule("analytics",{
                 graph.snEdgePaths = snPathEdgeMap;
                 let sparsenetSubgraph = Algs.getFilteredSubgraph(this.graph, null, (x) => (x != 0), "sparsenet");
                 graph.sparsenetSubgraph= sparsenetSubgraph;
-                let drawingButtonsElem = getE("drawing-buttons-area");
-                G.controls.addRangeSlider(drawingButtonsElem, "sparsenet paths", (begin, end) => {
+                let sparsenetPathsElem = getE("sparsenet_paths_filter");
+                sparsenetPathsElem.innerHTML = "";
+                G.controls.addRangeSlider(sparsenetPathsElem, "sparsenet paths", (begin, end) => {
                     G.view.graph.modifiers.sparsenet.pathSequence1 = begin;
                     G.view.graph.modifiers.sparsenet.pathSequence = end;
                     G.subview.onModifiersChanged("sparsenet");
                     G.view.refreshStyles(true, true);
                 }, {long: false, min: 0, max: G.view.graph.snPaths.length, default: 0});
+
 		        G.enableModifier("sparsenet",graph);
+		        if(G.graph.selectedId) {
+                    let count = 0;
+                    Object.keys(G.view.graph.modifiers.sparsenet.vertexPaths).filter((v) => {
+                        if (G.view.graph.modifiers.sparsenet.vertexPaths[v].length > 1) {
+                            return count += 1;
+                        }
+                    });
+                    let sparsenetMenu = [
+                        "" + G.view.graph.snPathSequence + " sparsenet paths out of " + G.view.graph.snPaths.length,
+                        "|V| : " + G.ccgv,
+                        "|E| : " + G.ccge,
+                        "Number of subtrees: " + count,
+                        "|sparsenet V| : " + Object.keys(G.view.graph.modifiers.sparsenet.vertexPaths).length,
+                        "|sparsenet E| : " + Object.keys(G.view.graph.snEdgePaths).length];
+                    let infoElem = getE("sparsenet-info-menu");
+                    $("#sparsenet-info-menu").html("");
+                    let a = getE(G.graph.selectedId + "a");
+                    a.style.border = "black";
+                    a.style.borderStyle = "ridge";
+                    a.innerHTML = "";
+                    for (let i = 0; i < sparsenetMenu.length; i++) {
+                        a.innerHTML += sparsenetMenu[i] + "\n</br>";
+                    }
+                }
 		    }else{
 		        G.addLog("invalid sparsenet result");}
 		});

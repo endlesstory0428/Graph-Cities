@@ -775,7 +775,12 @@ G.addModule("ui", {
 		let ribbonMenuSelection = d3.select("#ribbon-menu-contents");
 		ribbonMenuSelection.selectAll("div").remove();
 		let ribbonSelection = ribbonMenuSelection.selectAll("div").data(layersArray).enter().append("div").attr("class", "ribbon").on("click", (d) => {
-
+            if(G.graph.dataPath && Object.keys(G.graph.annotatedVertices)) {
+                if( !Object.keys(G.graph.annotatedVertices) ||  Object.keys(G.graph.annotatedVertices).length==0)
+                    G.graph.annotatedVertices ={};
+                G.analytics.cacheNotes(document.getElementById('textBox').innerHTML);
+                G.messaging.sendCustomData("save", {type: "annotatedVertices", path: G.graph.dataPath, data: G.graph.annotatedVertices});
+            }
 			if (G.graph.dataPath == graph.dataPath + "/layer/" + d.layer) {
 				//displaying this layer; show top level instead
 
@@ -788,8 +793,9 @@ G.addModule("ui", {
                 // g = Algs.getInducedSubgraph(graph, ccs[0].vertexList);
                 // g.dataPath = l;
                 // G.display(g);
-
-
+                if(graph.edges.properties.fixedPointLayer && graph.edges.properties.fixedPointLayer.value && graph.edges.properties.fixedPointLayer.value.origCloneMaps) {
+                    G.origCloneMaps = graph.edges.properties.fixedPointLayer.value.origCloneMaps;
+                }
                 G.display(graph.dataPath + "/layer/" + d.layer);
 
             }
@@ -982,55 +988,54 @@ G.addModule("ui", {
 		});
 	},
 	showSemanticsText: function () {
-		let datasetID = G.graph.datasetID;
+        getE("selected-vertices-ids-content").innerHTML = "";
 		if (G.graph && (!G.showingSelectedIDs)) {
 			G.showingSelectedIDs = true;
+            let d = document.createElement("div");
+            d.setAttribute("id", "storyTitle");
+            d.innerHTML = "Suggested Story Title(s) : ";
+            getE("selected-vertices-ids-content").appendChild(d);
             let story = Algs.getStories();
             let storytext = "";
             for(let i =0; i<Object.keys(story).length;i++) {
                 storytext += story[Object.keys(story)[i]];
             }
+            document.getElementById("storyTitle").innerHTML = "Suggested Story Title(s) : "+[...new Set(G.view.graph.storyTitle.flat(1))];
+            document.getElementById("storyTitle").innerHTML += "</br> Vertices used for title suggestion also appear in Fixed Points: "+
+                [...new Set(G.view.graph.storyLayers.flat(1))].sort().reverse() + "</br><hr>  ";
 			getE("selected-vertices-ids").style.display = "block";
-            getE("selected-vertices-ids-content").innerHTML = storytext;
-			// if (G.analytics.datasetIDMaps[datasetID]) {
-            //
-			// 	if (G.analytics.datasetIDMaps[datasetID].idMap) {
-			// 		try {
-			// 			d3.json("datasetIDMaps/" + datasetID + "/" + G.analytics.getVertexIDsString()).then((d) => {
-			// 				if (d && d.length > 0) {
-			// 					let ids = d.join(",");
-			// 					getE("selected-vertices-ids-content").value = ids;
-			// 					if (G.analytics.datasetIDMaps[datasetID].func) {
-			// 						G.analytics.datasetIDMaps[datasetID].func(ids);
-			// 					}
-            //
-			// 				} else {
-			// 					getE("selected-vertices-ids-content").value = G.analytics.getVertexIDsString();
-			// 				}
-			// 			});
-			// 		} catch (e) {
-			// 			getE("selected-vertices-ids-content").value = G.analytics.getVertexIDsString();
-			// 		}
-			// 	} else {
-			// 		//no extra id map
-			// 		getE("selected-vertices-ids-content").value = G.analytics.getVertexIDsString();
-			// 		if (G.analytics.datasetIDMaps[datasetID].func) {
-			// 			G.analytics.datasetIDMaps[datasetID].func(G.analytics.getVertexIDsString());
-			// 		}
-			// 	}
-            //
-			// } else {
-			// 	getE("selected-vertices-ids-content").value = G.analytics.getVertexIDsString();
-			// }
-
+            getE("selected-vertices-ids-content").innerHTML += storytext;
 		} else {
-			//hide on second press
 			if (G.showingSelectedIDs) {
 				G.showingSelectedIDs = false;
 				getE("selected-vertices-ids").style.display = "none";
 			}
 		}
 	},
+
+    showTextEditor: function () {
+        getE("textBox").contentEditable = "true";
+        if (G.graph && (!G.showingTextEditor)) {
+            if(G.view.graph.story){
+                getE("switchBox-div").style.display="block";
+            } else {
+                getE("switchBox-div").style.display="none";
+            }
+            G.showingTextEditor = true;
+            if(G.graph.annotation){
+                getE("textBox").innerHTML=G.graph.annotation;
+                if(G.graph.annotationEditTime){
+                    getE("lastSaved").innerHTML= G.graph.annotationEditTime;
+                }
+            }
+            getE("annotations-box").style.display = "block";
+        } else {
+            if (G.showingTextEditor) {
+                G.showingTextEditor = false;
+                getE("annotations-box").style.display = "none";
+            }
+        }
+    },
 
 
 	//this module should manage information on the UI, like tables and descriptions, not controls and gestures.
@@ -1146,7 +1151,6 @@ G.addModule("ui", {
 		//trapezoids.append("p").style("position","absolute").style("top",(d)=>(d.nextLayerWidthDiff<0)?"":"-40px").style("bottom",(d)=>(d.nextLayerWidthDiff>=0)?"":"-40px").text(function(d){return "L "+d.index+" to "+(d.index+1)+", e: "+d.edgesToNextLayer+", d: "+d.nextInterlayerDensity.toString().substring(0,5);});
 		//remove last redundant element
 		//let lastLayer=containerElem.lastElementChild;lastLayer.removeChild(lastLayer.lastElementChild);
-		console.log(data);
 		if (!this.trapezoidArrow) {
 			this.trapezoidArrow = container.append("div").attr("class", "chosen-arrow").style("position", "absolute").style("font-size", "small").text("\u2192").style("left", "0px").style("visibility", "hidden").style("transform", "translateY(-50%)");
 			this.showTrapezoidArrow = (i) => {
@@ -1260,7 +1264,8 @@ function degreePlot(isLog, xName, yName, input, xValues, yValues, svgSelection, 
             label: `Degree ${Object.keys(input)[i]}`,
         }));
     } else if(id){
-        title = "|V| to |CC|"
+        inp = Object.keys(input);
+        title = "|V| to |CC|" + " ,|V| = [" + Math.min(...inp) +","+ Math.max(...inp)+"]"
         $("#cc-plot").html("");
         inp = Object.keys(input);
         out = Object.values(input);
@@ -1300,7 +1305,6 @@ function degreePlot(isLog, xName, yName, input, xValues, yValues, svgSelection, 
 
 // radius of points in the scatterplot
     const pointRadius = 3;
-
     const xScale = d3.scaleLinear().domain([Math.min(...inp), Math.max(...inp)]).range([0, plotAreaWidth]);
     const yScale = d3.scaleLinear().domain([Math.min(...out), Math.max(...out)]).range([plotAreaHeight, 0]);
     const colorScale = d3.scaleLinear().domain([Math.min(...inp), Math.max(...inp)]).range(['#f7b6ab','#8d0089']);
@@ -1339,13 +1343,12 @@ function degreePlot(isLog, xName, yName, input, xValues, yValues, svgSelection, 
 
 
 // set up axis generating functions
-    const xTicks = Math.round(plotAreaWidth / 50);
+    const xTicks = Math.round(plotAreaWidth/50);
     const yTicks = Math.round(plotAreaHeight / 50);
 
     const xAxis = d3.axisBottom(xScale)
         .ticks(xTicks)
         .tickSizeOuter(0);
-
     const yAxis = d3
         .axisLeft(yScale)
         .ticks(yTicks)

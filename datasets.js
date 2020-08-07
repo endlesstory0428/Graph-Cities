@@ -479,10 +479,12 @@ let DataTemplates = {//these functions all take a graph(that has a dataPath etc)
                     layerCCSummary[layer.subgraphID] = {};
                     layerCCSummary[layer.subgraphID].V = layer.vertices.length;//add layer V and E
                     layerCCSummary[layer.subgraphID].E = layer.edges.length;
+                    layerCCSummary[layer.subgraphID].vertexList = layer.vertices;
                 } else {
                     layerCCSummary[layer.subgraphID] = layer.subgraphs.CC;//has distrbutions and large CC IDs
                     layerCCSummary[layer.subgraphID].V = layer.vertices.length;//add layer V and E
                     layerCCSummary[layer.subgraphID].E = layer.edges.length;
+                    layerCCSummary[layer.subgraphID].vertexList = layer.vertices;
                 }
 
 

@@ -25,6 +25,8 @@ attribute vec3 customColor;
 attribute float usingCustomColor;
 attribute float isExpanded;
 attribute float isSelected;
+attribute float isAnnotated;
+attribute float isFullyDiscovered;
 
 varying vec2 vUv;
 varying vec4 vPosition;
@@ -32,6 +34,8 @@ varying float id;
 varying vec3 vColor;
 varying float vIsExpanded;
 varying float vIsSelected;
+varying float vIsAnnotated;
+varying float vIsFullyDiscovered;
 
 uniform vec2 mousePos;
 uniform vec2 mouseScreenPos;
@@ -110,4 +114,6 @@ void main() {
 
 	vIsExpanded=isExpanded;
 	vIsSelected=isSelected;
+	vIsAnnotated=isAnnotated;
+	vIsFullyDiscovered = isFullyDiscovered;
 }

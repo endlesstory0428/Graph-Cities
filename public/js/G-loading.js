@@ -184,7 +184,7 @@ G.addModule("loading",{
 		G.broadcast("loadGraph",g);
 	},
 	loadSummary:async function(g){///takes a path or a summary object. for UI purposes, also load all summaries of levels above this graph
-		if(typeof g=="string"){
+        if(typeof g=="string"){
 			//if(this.graphsCache[g])return this.graphsCache[g];
 			let path=g;g=new Graph();let loadedSummary=false;
 			await d3.json("datasets/"+path+"/summary.json.gz").then((summary)=>{
@@ -196,13 +196,14 @@ G.addModule("loading",{
 				throw Error();
 				return;
 			}
-			this.graphsCache[g.dataPath]=g;console.log("saved "+g.dataPath);
+            this.graphsCache[g.dataPath]=g;console.log("saved "+g.dataPath);
 			if(!g.name)g.name=pathToText(g.dataPath);//??
 			//also load summary of the original (for metagraphs) or metagraph (for subgraphs)
 			let parentPath=this.getParentPath(g,false);//false: does not consider skipped metagraphs and history
 			if(parentPath)await this.loadSummary(parentPath);
-			
-		}
+            G.addLog("Loading Graph, Please Wait .....");
+
+        }
 		if((g instanceof Graph)==false){throw Error();}
 		return g;
 	},
@@ -234,6 +235,13 @@ G.addModule("loading",{
                     labels = data;
                 });
             }
+            if(g.wholeGraph == undefined || g.name == g.wholeGraph) {
+                await d3.csv("datasets/"+g.dataPath+"_dutch_labels.csv").then((data)=>{
+                    if(typeof data=="string")
+                        data=JSON.parse(data);
+                    dutchLabels = data;
+                });
+            }
 
             if(g.wholeGraph == undefined || g.name == g.wholeGraph) {
                 await d3.csv("datasets/AllTMI.csv").then((data)=>{
@@ -258,7 +266,7 @@ G.addModule("loading",{
 				if(typeof data=="string")data=JSON.parse(data);
 				targets=data.value;
 			});
-			g.loadVerticesAndEdges(ids,sources,targets, labels, TMIclassification, ATUclassification);
+			g.loadVerticesAndEdges(ids,sources,targets, labels, TMIclassification, ATUclassification, dutchLabels);
 		}
 
 		for(let objName in g.objects){
@@ -480,8 +488,9 @@ G.addModule("loading",{
 				let subgraphIDList=subgraphIDs.split("+").map(x=>Number(x)).sort(compareBy(x=>Number(x),true));//standardize, to make comparing equality easier
 				let originalGraph=segments.slice(0,segments.length-2).join("/");
 				graphPath=originalGraph+"/"+subgraphType+"/"+subgraphIDList.join("+");
-				if(this.graphsCache[graphPath])return this.graphsCache[graphPath];//as a special case, if this graph's dataset was renamed, the standardized path would use the renamed dataset name, not the intrinsic name in the data, cause here we don't know what is the intrinsic name
-				
+				if(this.graphsCache[graphPath]) {
+                    return this.graphsCache[graphPath];//as a special case, if this graph's dataset was renamed, the standardized path would use the renamed dataset name, not the intrinsic name in the data, cause here we don't know what is the intrinsic name
+                }
 				//if(unionCachePath==originalGraph+"/"+subgraphType+"/"+subgraphIDList.join("+"))return unionCache;
 				let subgraphList=[];let isCustom=false;
 				for(let ID of subgraphIDList){
@@ -623,8 +632,18 @@ G.addModule("loading",{
 			//if(graph.name===undefined){graph.name=toNormalText(graph.datasetID);}
 			//else{graph.name=toNormalText(graph.name);}
 		}
+		if(G.origCloneMaps) {
+            arr = graph.vertices.id;
+            let origCloneMaps = G.origCloneMaps;
+            b ={};
+            Object.keys(origCloneMaps).filter((v) => {
+                if(arr.indexOf(v.toString())!=-1){ b[v]= origCloneMaps[v];}
+            })
+            graph.parentLayersMap = b;
+        }
         this.graph=graph;
         G.graph=graph;
+
 		//window.history.pushState(graph.dataPath, "", "/?dataPath="+graph.dataPath);
 		//I think this can be annoying when I want to refresh when debugging. have a separate "get link" button?
 		
