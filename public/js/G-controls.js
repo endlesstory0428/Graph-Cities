@@ -19,10 +19,27 @@ G.addModule("controls",{
 		function saveLayout(){
 			let path=G.controls.graph.dataPath;
 			if(path){
-				let data=G.view.getVerticesPos();
-				if(!data){G.addLog("failed to get layout");return;}
-				G.messaging.sendCustomData("save",{type:"layout",path:path,data:data});
-				G.addLog("saved");
+			    if(G.drawOnHover){
+			        let data = [];
+                    data.push(G.view.getVerticesPos());
+                    data.push(G.view.graph.nodes.size);
+                    data.push(G.view.graph.links.brightness);
+                    data.push(G.view.graph.explored);
+                    if (!data) {
+                        G.addLog("failed to get layout");
+                        return;
+                    }
+                    G.messaging.sendCustomData("save", {type: "layout", path: path, data: data});
+                    G.addLog("saved");
+                } else {
+                    let data = G.view.getVerticesPos();
+                    if (!data) {
+                        G.addLog("failed to get layout");
+                        return;
+                    }
+                    G.messaging.sendCustomData("save", {type: "layout", path: path, data: data});
+                    G.addLog("saved");
+                }
 			}
 			else{
 				G.addLog("error: the save path is unknown");
@@ -73,9 +90,7 @@ G.addModule("controls",{
 		this.addSlider(styleControlsElem,"horizontal spread",(value)=>{G.controls.set("radiusFactor",value);},{min:1,max:60,default:1}, "2", "horizontal");
         this.addSlider(styleControlsElem,"node size",(value)=>{G.controls.set("nodeSizeFactor",value);},{long:true,min:0.1,max:10,default:1});
         this.addSlider(styleControlsElem, "link thickness", (value) => {
-            if(G.view.graph.highlightPath && G.view.graph.highlightPath.length>0) {
-                G.controls.set("snlinkBrightnessFactor",value);
-            }
+                G.controls.set("linkThicknessFactor",value);
         }, {long:true,min:0.1,max:10,default:1});
         let styleRotateElem=getE("rotate_speed");
         this.addSlider(styleRotateElem,"rotate speed",(value)=>{G.animation["rotate speed"]=value;},{long:true,min:-1,max:1,default:0});
@@ -592,29 +607,28 @@ G.addModule("controls",{
             } else {
                 let result=this.graph.vertices.id.indexOf(value);
                 neigh = G.view.graph.getNeighborIDsByID(result);
-                layers = Object.keys(this.graph.parentLayersMap[this.graph.vertices.id[result]]);
-                if(G.view.graph.subgraphID ) {
-                    if (G.loading.graphsCache[value]) {
-                        G.loading.graphsCache[value][1].push(G.view.graph.subgraphID);
-                        if (G.loading.graphsCache[value][0] && G.loading.graphsCache[value][1] && layers.every(r =>  G.loading.graphsCache[value][1].includes(Number(r)))) {
-                            if (!this.graph.fullyDiscovered) {
-                                this.graph.fullyDiscovered = [];
+                    if (G.view.graph.subgraphID) {
+                        layers = Object.keys(this.graph.parentLayersMap[this.graph.vertices.id[result]]);
+                        if (G.loading.graphsCache[value]) {
+                            G.loading.graphsCache[value][1].push(G.view.graph.subgraphID);
+                            if (G.loading.graphsCache[value][0] && G.loading.graphsCache[value][1] && layers.every(r => G.loading.graphsCache[value][1].includes(Number(r)))) {
+                                if (!this.graph.fullyDiscovered) {
+                                    this.graph.fullyDiscovered = [];
+                                }
+                                this.graph.fullyDiscovered[result] = 1;
+                                this.graph.nodes.isFullyDiscovered[result] = 1;
+                                G.view.refreshStyles(true, true);
                             }
-                            this.graph.fullyDiscovered[result] = 1;
-                            this.graph.nodes.isFullyDiscovered[result] = 1;
-                            G.view.refreshStyles(true, true);
+                            G.loading.graphsCache[value][0].push(neigh);
+                            G.loading.graphsCache[value][0] = G.loading.graphsCache[value][0].flat(1);
+                        } else {
+                            G.loading.graphsCache[value] = [[], []]
+                            G.loading.graphsCache[value][0].push(neigh);
+                            G.loading.graphsCache[value][0] = G.loading.graphsCache[value][0].flat(1);
+                            G.loading.graphsCache[value][1].push(G.view.graph.subgraphID);
                         }
-                        G.loading.graphsCache[value][0].push(neigh);
-                        G.loading.graphsCache[value][0] = G.loading.graphsCache[value][0].flat(1);
-                    } else {
-                        G.loading.graphsCache[value] = [[], []]
-                        G.loading.graphsCache[value][0].push(neigh);
-                        G.loading.graphsCache[value][0] = G.loading.graphsCache[value][0].flat(1);
-                        G.loading.graphsCache[value][1].push(G.view.graph.subgraphID);
 
                     }
-                }
-
 
 
                 //Algs.getVertexShortestPathInAllFixedPoints(this.graph, result);
@@ -648,6 +662,72 @@ G.addModule("controls",{
             }
 
 		});
+        if(G.graph && G.graph.subgraphID){
+            this.addButton(selectionButtonsElem,"show vertex neighbors",()=>{
+                let value=getE('select-vertex-input').value;
+                let values = [];
+                if (value.indexOf(',') > -1) {
+                    values = value.split(',')
+                }
+                else {
+                    let result=this.graph.vertices.id.indexOf(value);
+                    neigh = G.view.graph.getNeighborIDsByID(result);
+                    if (G.view.graph.subgraphID) {
+                        layers = Object.keys(this.graph.parentLayersMap[this.graph.vertices.id[result]]);
+                        if (G.loading.graphsCache[value]) {
+                            G.loading.graphsCache[value][1].push(G.view.graph.subgraphID);
+                            if (G.loading.graphsCache[value][0] && G.loading.graphsCache[value][1] && layers.every(r => G.loading.graphsCache[value][1].includes(Number(r)))) {
+                                if (!this.graph.fullyDiscovered) {
+                                    this.graph.fullyDiscovered = [];
+                                }
+                                this.graph.fullyDiscovered[result] = 1;
+                                this.graph.nodes.isFullyDiscovered[result] = 1;
+                                G.view.refreshStyles(true, true);
+                            }
+                            G.loading.graphsCache[value][0].push(neigh);
+                            G.loading.graphsCache[value][0] = G.loading.graphsCache[value][0].flat(1);
+                        } else {
+                            G.loading.graphsCache[value] = [[], []]
+                            G.loading.graphsCache[value][0].push(neigh);
+                            G.loading.graphsCache[value][0] = G.loading.graphsCache[value][0].flat(1);
+                            G.loading.graphsCache[value][1].push(G.view.graph.subgraphID);
+                        }
+
+                    }
+
+
+                    //Algs.getVertexShortestPathInAllFixedPoints(this.graph, result);
+                    G.cameraControls.setTarget(null);
+                    if(result!=-1 && !this.graph.selectedVertices[result]) {
+                        let vec = G.view.getNodePos(result);
+                        if (vec.x != undefined || vec.y != undefined || vec.z != undefined) {
+                            G.cameraControls.setTarget(vec, true, true);
+                        }
+                    } else {
+                        G.cameraControls.setTarget(null);
+                    }
+                    if(this.graph.heightProperty == "fixedPointLayer")
+                        G.toggleSelectVertex(this.graph.vertexMap[value]);
+                    else G.toggleSelectVertex(this.graph.vertexMap[value]);
+
+                }
+                if(values.length > 0) {
+                    for(let i=0; i< values.length; i++) {
+                        let result=this.graph.vertices.id.indexOf(values[i]);
+                        G.cameraControls.setTarget(null);
+                        if(result!=-1) {
+                            let vec=G.view.getNodePos(values[i]);
+                            if(vec.x != undefined || vec.y != undefined || vec.z != undefined )
+                                G.cameraControls.setTarget(vec,true);
+                            if(this.graph.heightProperty == "fixedPointLayer")
+                                G.toggleSelectVertex(this.graph.vertexMap[values[i]]);
+                            else G.toggleSelectVertex(this.graph.vertexMap[values[i]]);
+                        }
+                    }
+                }
+
+            });
+        }
         this.addButton(annotationDeleteButtonsElem,"Archive by ID",()=>{
             let vertexId=getE('annotation-delete-vertex-input').value;
             divEl = document.getElementById(vertexId);
@@ -1743,6 +1823,9 @@ G.addModule("controls",{
         document.getElementById("drawing_option_2").addEventListener('click', function(){
             G.drawFixedPoints = true;
         }, false);
+        document.getElementById("drawing_option_3").addEventListener('click', function(){
+            G.drawOnHover = true;
+        }, false);
         document.getElementById("rotate_option").addEventListener('click', function(){
             if(G.animation.rotate) {
                 G.animation.rotate=false;
@@ -1860,7 +1943,6 @@ G.addModule("controls",{
         if(text == "Download HotSpots") {
             s.attr("style", "margin-top: 20px;");
         }
-        console.log(parentElem);
 		let buttonElem=s.node();
 		s.on("click",()=>func());
 		if(rightclickfunc){
@@ -2836,7 +2918,6 @@ type: "nodes"*/
 			let graph=G.view.graph;
 			graph.selectedVertexCount=Object.keys(graph.selectedVertices).length;
 			getE("selected-vertices").textContent="Selected "+graph.selectedVertexCount+" vertices";
-            getE("annotation-selected-vertices").textContent="Selected "+graph.selectedVertexCount+" vertices";
 
             if(graph.selectedVertexCount>0){
 				if(graph.selectedVertexCount==1){
