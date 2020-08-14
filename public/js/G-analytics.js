@@ -205,6 +205,12 @@ G.addModule("analytics",{
 				return (v>2)?shortStr(Math.log(e/v,Math.log(v))):"N/A";
 			}
 		},
+        ccCount:{
+            value:(g)=>{
+                let CC = [...new Set(Algs.getCCIDs(g))].length;
+                return CC;
+            }
+        },
 
 	},
 	
@@ -478,8 +484,6 @@ G.addModule("analytics",{
         document.getElementById('lastSaved').innerHTML =  G.graph.annotationEditTime;
         G.messaging.sendCustomData("save",{type:"annotations",path:path,data:text});
         G.messaging.sendCustomData("save",{type:"annotationsdatetime",path:path,data:G.graph.annotationEditTime});
-
-        G.saveLayout();
     },
     appendStory: function(isChecked){
 	    if(isChecked){
@@ -1793,9 +1797,9 @@ G.addModule("analytics",{
                         "" + G.view.graph.snPathSequence + " sparsenet paths out of " + G.view.graph.snPaths.length,
                         "|V| : " + G.ccgv,
                         "|E| : " + G.ccge,
-                        "Number of subtrees: " + count,
-                        "|sparsenet V| : " + Object.keys(G.view.graph.modifiers.sparsenet.vertexPaths).length,
-                        "|sparsenet E| : " + Object.keys(G.view.graph.snEdgePaths).length];
+                        "Number of visible subtrees: " + count,
+                        "visible nodes : " + Object.keys(G.view.graph.modifiers.sparsenet.vertexPaths).length,
+                        "visible edges : " + Object.keys(G.view.graph.snEdgePaths).length];
                     let infoElem = getE("sparsenet-info-menu");
                     $("#sparsenet-info-menu").html("");
                     let a = getE(G.graph.selectedId + "a");
@@ -1828,7 +1832,16 @@ G.addModule("analytics",{
             graph.snEdgePaths = snPathEdgeMap;
             let sparsenetSubgraph = Algs.getFilteredSubgraph(graph, null, (x) => (x != 0), "sparsenet");
             graph.sparsenetSubgraph= sparsenetSubgraph;
-		    G.enableModifier("sparsenet",graph);
+            let sparsenetPathsElem = getE("sparsenet_paths_filter");
+            sparsenetPathsElem.innerHTML = "";
+            G.controls.addRangeSlider(sparsenetPathsElem, "sparsenet paths", (begin, end) => {
+                G.view.graph.modifiers.sparsenet.pathSequence1 = begin;
+                G.view.graph.modifiers.sparsenet.pathSequence = end;
+                G.subview.onModifiersChanged("sparsenet");
+                G.view.refreshStyles(true, true);
+            }, {long: false, min: 0, max: G.view.graph.snPaths.length, default: 0});
+
+            G.enableModifier("sparsenet",graph);
 		}//this only sets snPaths, and other intermediate data are managed by the subview.
 
 	},

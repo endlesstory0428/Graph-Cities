@@ -431,18 +431,44 @@ G.addModule("view",{
 		if(graph.vertices.id.isAbstract){console.log("warning: showing abstract graph");return;}
 		if(graph.dataPath&&graph.vertices.length>0&&(graph.vertices.layout===undefined)&&(!graph.isCustom)){//don't load layout for abstract top level
 			await d3.json("datasets/"+graph.dataPath+"/layout.json.gz").then((layout)=>{
-				if(!Array.isArray(layout)){
-					if(layout==null){}
-					else{console.log("error: precomputed layout invalid");console.log(layout);}
+			    if(!Array.isArray(layout)){
+                        if (layout == null) {
+                        } else {
+                            console.log("error: precomputed layout invalid");
+                            console.log(layout);
+                        }
 				}
 				else{
 					if(layout){G.addLog("using precomputed layout");}
-					//make sure the number of items is the same as the vertex count, in case the graph changed
-					if(layout.length>graph.vertices.length){layout=layout.slice(0,graph.vertices.length);}
-					while(layout.length<graph.vertices.length){layout.push(new THREE.Vector3())}
-					for(let i=0;i< layout.length;i++){if(!layout[i])throw Error();}
-					graph.vertices.addProperty("layout",null,layout);
+					if(Array.isArray(layout[0])) {
+                        //make sure the number of items is the same as the vertex count, in case the graph changed
+                        if (layout[0].length > graph.vertices.length) {
+                            layout = layout[0].slice(0, graph.vertices.length);
+                        }
+                        while (layout[0].length < graph.vertices.length) {
+                            layout[0].push(new THREE.Vector3())
+                        }
+                        for (let i = 0; i < layout[0].length; i++) {
+                            if (!layout[0][i]) throw Error();
+                        }
+                        graph.vertices.addProperty("layout", null, layout[0]);
+                        if (Array.isArray(layout[1]))
+                            graph.savedNodes = layout[1];
+                        if (Array.isArray(layout[2]) || Array.isArray(Object.keys(layout[2])))
+                            graph.savedLinks = layout[2];
+                        if (Array.isArray(layout[3]))
+                            graph.explored = layout[3];
+                    } else {
+                        if(layout){G.addLog("using precomputed layout");}
+                        //make sure the number of items is the same as the vertex count, in case the graph changed
+                        if(layout.length>graph.vertices.length){layout=layout.slice(0,graph.vertices.length);}
+                        while(layout.length<graph.vertices.length){layout.push(new THREE.Vector3())}
+                        for(let i=0;i< layout.length;i++){if(!layout[i])throw Error();}
+                        graph.vertices.addProperty("layout",null,layout);
+                    }
 				}
+
+
 			});
 			annpath = "";
             if(G.graph.wholeGraph) {
@@ -525,6 +551,10 @@ G.addModule("view",{
             graph.heightPropertyType = heightPropertyType;
             graph.heightPropertyName = heightPropertyName;
             let results = this.getObjectsFromHierarchy(graph);
+            if(graph.savedNodes && graph.savedLinks ) {
+                graph.nodes.size = graph.savedNodes;
+                graph.links.brightness = graph.savedLinks;
+            }
             Object.assign(this, results);//model etc are now defined globally on the view module
             this.setModifiersTarget(this.model);//the global modifiers are different from local ones;
 
@@ -927,7 +957,7 @@ G.addModule("view",{
                             }
 
 
-						result=result*Math.pow(0.5,array.subgraphLevel[i]);
+                        result=result*.3;
 						return result;
 					},
 				},
@@ -1117,7 +1147,7 @@ G.addModule("view",{
 					dynamic:true
 				},
 				thicknessFactor:{
-					value:()=>G.controls.get("linkThicknessFactor",0.5),
+					value:()=>G.controls.get("linkThicknessFactor",0.2),
 					dynamic:true
 				}
 			},
