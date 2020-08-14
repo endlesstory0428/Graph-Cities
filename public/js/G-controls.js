@@ -2236,6 +2236,8 @@ G.addModule("controls",{
             else if (isDanish) label = a[1];
             else if (isDutch) label = a[2];
         }
+        if(label) return label
+        else return ""
         return label;
     },
     addCheckbox(parentElem, text, func, options, id=null, val = false, image =null){
@@ -2665,22 +2667,23 @@ type: "nodes"*/
                                 G.controls.contextMenus.hoveredVertex.item.classList.add("hovered-tooltip-text");
                                 G.controls.contextMenus.hoveredVertex.item.innerHTML = "";
                                 for (let i = 0; i < G.view.graph.snwormsList[originalObjectID].length; i++) {
-                                    r= "";
-                                    if (G.view.graph.snwormsList[originalObjectID][i].includes("TMI")) {
-                                        r = G.view.graph.snwormsList[originalObjectID][i].match(/[A-Z][0-9]{1,9}/);
-                                    } else if(G.view.graph.snwormsList[originalObjectID][i].includes("ATU")) {
-                                        r = G.view.graph.snwormsList[originalObjectID][i].match(/[A-Z] # [0-9]{1,9}/);
-                                    }
-                                    if(r && r.length>0) {
+                                    r = "";
+                                    if (G.view.graph.snwormsList[originalObjectID][i]){
+                                        if (G.view.graph.snwormsList[originalObjectID][i].includes("TMI")) {
+                                            r = G.view.graph.snwormsList[originalObjectID][i].match(/[A-Z][0-9]{1,9}/);
+                                        } else if (G.view.graph.snwormsList[originalObjectID][i].includes("ATU")) {
+                                            r = G.view.graph.snwormsList[originalObjectID][i].match(/[A-Z] # [0-9]{1,9}/);
+                                        }
+                                    if (r && r.length > 0) {
                                         r = r[0];
-                                        if(G.view.graph.snwormsList[originalObjectID][i].includes("TMI") || G.view.graph.snwormsList[originalObjectID][i].includes("ATU") ) {
+                                        if (G.view.graph.snwormsList[originalObjectID][i].includes("TMI") || G.view.graph.snwormsList[originalObjectID][i].includes("ATU")) {
                                             if (G.view.graph.snwormsList[originalObjectID][i].includes("TMI")) {
                                                 a = (G.view.graph.TMIclassification.filter(record => record.start.substring(0, 1) == r.substring(0, 1))).filter(
                                                     record => (Number(record.start.substring(1)) < Number(r.substring(1))
                                                         && Number(record.end.substring(1)) > Number(r.substring(1))));
                                             } else if (G.view.graph.snwormsList[originalObjectID][i].includes("ATU")) {
-                                                a = (G.view.graph.ATUclassification.filter(record => (Number(record.start )< Number(r.substring(4)))
-                                                        && (Number(record.end) > Number(r.substring(4)))));
+                                                a = (G.view.graph.ATUclassification.filter(record => (Number(record.start) < Number(r.substring(4)))
+                                                    && (Number(record.end) > Number(r.substring(4)))));
                                             }
                                             if (a && a[0] && a[0].label) {
                                                 classify.push({
@@ -2695,6 +2698,7 @@ type: "nodes"*/
                                         g.innerHTML += G.view.graph.snwormsList[originalObjectID][i] + "\n</br>";
                                         G.controls.contextMenus.hoveredVertex.item.append(g);
                                     }
+                                }
                                 }
                                 if(classify.length > 0) {
                                     result = classify.reduce((h, {label, classif}) => {

@@ -1054,6 +1054,10 @@ G.addModule("ui", {
 		});
 	},
 	showSemanticsText: function () {
+	    if(G.snNodesColorByLabel || G.snNodesColorByHotSpot) {
+            G.addLog("Please remove the color nodes by label or hotspot option");
+            return;
+        }
         getE("selected-vertices-ids-content").innerHTML = "";
 		if (G.graph && (!G.showingSelectedIDs)) {
 			G.showingSelectedIDs = true;
