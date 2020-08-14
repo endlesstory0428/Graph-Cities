@@ -364,7 +364,16 @@ G.addModule("subview",{
 
 							let answer=metanodeFactor*waveStartFactor*selectionFactor;//*subgraphFactor;//s*diversitySize*degreeFactor
 							checkNumber(answer);
-							if(!G.view.graph.showingSparsenet && G.view.graph.ccCount==1 && G.drawOnHover) {
+
+                            if (!G.view.graph.showingSparsenet && G.drawOnHover) {
+                                if (G.view.graph.ccCount > 1) {
+                                    if (G.graph.selectedccOnHover) {
+                                        if (G.graph.selectedccOnHover.vertexList.indexOf(vertexID) != -1)
+                                            G.graphInCC = true;
+                                        else G.graphInCC = false;
+                                    }
+
+                                }
                                 if (graph.hoveredVertex != undefined) {
                                     if (!graph.explored) {
                                         graph.explored = [];
@@ -376,12 +385,14 @@ G.addModule("subview",{
                                         graph.explored = [...new Set(graph.explored.flat(1))];
                                     }
                                 }
-                                if (graph.hoveredVertex != undefined && graph.hoveredVertex != vertexID) {
-                                    if (graph.explored && graph.explored.indexOf(vertexID.toString()) == -1 && neig.indexOf(vertexID.toString()) == -1)
-                                        answer = 0;
-                                } else if (graph.hoveredVertex == undefined && graph.savedNodes) {
-                                    answer = graph.savedNodes[i];
-                                }
+                                if (G.graphInCC == undefined || G.graphInCC == true)
+                                    if (graph.hoveredVertex != undefined && graph.hoveredVertex != vertexID) {
+                                        if (graph.explored && graph.explored.indexOf(vertexID.toString()) == -1 && neig.indexOf(vertexID.toString()) == -1)
+                                            answer = 0;
+                                    } else if (graph.hoveredVertex == undefined && graph.savedNodes) {
+                                        answer = graph.savedNodes[i];
+                                    }
+
                             }
 							if(!G.drawsparsenet) {
                                 return answer;
@@ -664,13 +675,23 @@ G.addModule("subview",{
 							} else {
                                 if(graph.hoveredVertex==source||graph.hoveredVertex==target)
                                     hoverFactor=5;
-                                else if(!G.view.graph.showingSparsenet && G.view.graph.ccCount==1 && G.drawOnHover) {
-                                    if (graph.hoveredVertex == undefined && graph.savedLinks) {
-                                        hoverFactor = graph.savedLinks[edgeID];
-                                    } else if (graph.explored && graph.explored.indexOf(source.toString()) != -1 && graph.explored.indexOf(target.toString()) != -1)
-                                        hoverFactor = 5;
-                                    else if (graph.hoveredVertex != undefined) {
-                                        hoverFactor = 0;
+                                else if(!G.view.graph.showingSparsenet  && G.drawOnHover) {
+                                    if(G.view.graph.ccCount>1) {
+                                        if(G.graph.selectedccOnHover){
+                                            if(G.graph.selectedccOnHover.vertexList.indexOf(source) !=-1 && G.graph.selectedccOnHover.vertexList.indexOf(target) !=-1)
+                                                G.graphInCC = true;
+                                            else G.graphInCC = false;
+                                        } else G.graphInCC = false
+
+                                    } else G.graphInCC =undefined
+                                    if(G.graphInCC == undefined || G.graphInCC == true) {
+                                        if (graph.hoveredVertex == undefined && graph.savedLinks) {
+                                            hoverFactor = graph.savedLinks[edgeID];
+                                        } else if (graph.explored && graph.explored.indexOf(source.toString()) != -1 && graph.explored.indexOf(target.toString()) != -1)
+                                            hoverFactor = 5;
+                                        else if (graph.hoveredVertex != undefined) {
+                                            hoverFactor = 0;
+                                        }
                                     }
                                 }
                             }
