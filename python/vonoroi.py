@@ -2,6 +2,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+import sys
 from scipy.spatial import Voronoi, voronoi_plot_2d
 
 def get_voronoi_vertices(vor, spiral_index):
@@ -29,11 +30,11 @@ def plan_full_path(vor, path_point_index, path_vertex_index):
             direction_1 = B-A
             direction_2 = len(region)-direction_1
             if(direction_1 <= direction_2): # go right
-                print("go right")
+                # print("go right")
                 for j in range(A+1,B):
                     path.append(vor.vertices[region[j]])
             else: 
-                print("go left")
+                # print("go left")
                 for j in range(A+1,-1,-1):
                     path.append(vor.vertices[region[j]])
                 for j in range(len(region),B,-1):
@@ -42,11 +43,11 @@ def plan_full_path(vor, path_point_index, path_vertex_index):
             direction_1 = A-B
             direction_2 = len(region)-direction_1
             if(direction_1 < direction_2): # go left
-                print("go left")
+                # print("go left")
                 for j in range(A-1,B,-1):
                     path.append(vor.vertices[region[j]])
             else:
-                print("go right")
+                # print("go right")
                 for j in range(A+1,len(region)):
                     path.append(vor.vertices[region[j]])
                 for j in range(0,B):
@@ -78,15 +79,16 @@ def ridge_between_points(vor, point_A, point_B):
     try:
         ridge_point = vor.ridge_points.tolist().index([point_A,point_B])
     except ValueError:
-        print("ridge not in list")
+        pass
+        # print("ridge not in list")
     try:
         ridge_point = vor.ridge_points.tolist().index([point_B,point_A])
     except ValueError:
-        print("ridge not in list")
+        pass
+        # print("ridge not in list").
     return ridge_point
 
 def main():
-    # points = np.random.rand(10,2) #random
     points, names = [], []
     spiral_points = {}
     spiral_file = open('../data/SPIRAL.txt','r')
@@ -101,19 +103,7 @@ def main():
         spiral_points[point_name] = point
     # print(names)
     vor = Voronoi(points)
-    fig = voronoi_plot_2d(vor)
-
-    # emphasize the voronoi vertices and edges
-    # plt.plot(vor.vertices[:,0], vor.vertices[:,1],'ko',ms=8)
-    # for vpair in vor.ridge_vertices:
-    #     if vpair[0] >= 0 and vpair[1] >= 0:
-    #         v0 = vor.vertices[vpair[0]]
-    #         v1 = vor.vertices[vpair[1]]
-    #         # Draw a line from v0 to v1.
-    #         plt.plot([v0[0], v1[0]], [v0[1], v1[1]], 'k', linewidth=2)
-
-    # print the ridge points => occur edge between two points
-    # print(vor.ridge_points)
+    voronoi_plot_2d(vor)
 
     # create a graph from spiral points
     graph = {}
@@ -128,23 +118,35 @@ def main():
             graph[point_B].append(point_A)
         else:
             graph[point_B] = [point_A]
+    
+    print(*names,sep='\n')
+    start_point = input('Please enter the start:\n')
+    if start_point in names:
+        print(f'You chose {start_point} as the start')
+    else:
+        while start_point not in names:
+            start_point = input('Please re-enter the start:\n')
+    
+    end_point = input('Please enter the end:\n')
+    if end_point in names:
+        print(f'You chose {end_point} as the end')
+    else:
+        while end_point not in names:
+            end_point = input('Please re-enter the end:\n')    
 
     # find a path with BFS
-    start_point = '22_6161'
-    end_point = '37_49855555'
+    # start_point = '22_6161'
+    # end_point = '37_49855555'
     path = bfs(graph, start_point, end_point)
     print("path between {} and {} is".format(start_point,end_point))
     print(path)
-    
-    # print(vor.point_region)
-    # print(vor.regions)
+
     path_point_index = []
     for p in path:
         path_point_index.append(names.index(p))
     # print(path_point_index) # [40, 20, 7, 0, 3, 13, 29, 51]
 
     # check if the point pair has ridge (voronoi edge) between them
-    # print(vor.ridge_points)
     ridge_list = []
     for i in range(len(path_point_index)-1):
         ridge_list.append(ridge_between_points(vor, path_point_index[i], path_point_index[i+1]))
@@ -159,7 +161,6 @@ def main():
     path_vertex_index = [] # list of voronoi vertex index, excluding start and end points
     for i in range(len(ridge_list)):
         print(ridge_list[i])
-        # vertex_of_ridge = [vor.vertices[ridge_list[i]][0], vor.vertices[ridge_list[i+1]]]
         vertex_pair = vor.ridge_vertices[ridge_list[i]]
         O = path_vertex[-1]
         A_index = vertex_pair[0]
@@ -174,22 +175,21 @@ def main():
         if(distance_A <= distance_B):
             path_vertex.append(A.tolist())
             path_vertex_index.append(A_index)
-            print("A added")
+            # print("A added")
         else:
             path_vertex.append(B.tolist())
             path_vertex_index.append(B_index)
-            print("B added")
+            # print("B added")
     path_vertex.append(end_coord)
     
-    # print(path_vertex)
     # path_vertex_x = [x[0] for x in path_vertex]
     # path_vertex_y = [x[1] for x in path_vertex]
-    # plt.plot(path_vertex_x, path_vertex_y, linewidth=3)
+    # plt.plot(path_vertex_x, path_vertex_y, linewidth=2)
     
     path_full = plan_full_path(vor, path_point_index, path_vertex_index)
     path_full_x = [x[0] for x in path_full]
     path_full_y = [x[1] for x in path_full]
-    plt.plot(path_full_x, path_full_y, linewidth=3)
+    plt.plot(path_full_x, path_full_y, linewidth=2)
     plt.show() #draw the Voronoi image
 
 if __name__ == '__main__':
