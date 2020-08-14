@@ -1240,6 +1240,8 @@ div.dropdown-body,div.dropdown-select-body{
     padding: 0px;
 }
 div.dropdown-item{
+    white-space: pre-wrap;
+    overflow-wrap: break-word !important;
 	cursor:pointer;
 	height: 24px;
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.26);

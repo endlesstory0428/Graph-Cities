@@ -61,4 +61,3 @@ $RECYCLE.BIN/
 *.lnk
 .idea/workspace.xml
 .DS_Store
-package.json

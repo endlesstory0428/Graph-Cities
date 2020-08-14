@@ -447,6 +447,7 @@ G.addModule("ui", {
 		let ccSorted = Algs.getSortedCCsAndCCIDs(graph);
 		let CC = [...new Set(Algs.getCCIDs(graph))].length;
 		let p = (2*E / (V * (V - 1))), k = Math.log(E / V) / Math.log(Math.log(V));
+		graph.numCC= CC;
 		let VEText = "|V|: " + V + ", |E|: " + E + ", |CC|: "+CC;//+", avg. degree: "+shortStr(2*E/V)+", density: "+shortStr(p)+", sparsity:"+shortStr(k);
         if(ccSorted.length>1) {
             let maxCCV = ccSorted[0].V;
@@ -641,6 +642,77 @@ G.addModule("ui", {
 
 
 	},
+    addShowNeigborsButton: function(){
+            let selectionButtonsElem=getE("selection-buttons-area");
+            if(document.querySelectorAll('#selection-buttons-area button').length < 2) {
+                G.controls.addButton(selectionButtonsElem, "show vertex neighbors", () => {
+                    document.getElementById("graph-menu").style.display="none";
+                    document.getElementById("graph-fork-bar").style.display="block";
+                let value = getE('select-vertex-input').value;
+                let values = [];
+                if (value.indexOf(',') > -1) {
+                    values = value.split(',')
+                } else {
+                    let result = this.graph.vertices.id.indexOf(value);
+                    neigh = G.view.graph.getNeighborIDsByID(result);
+                    if (G.view.graph.subgraphID) {
+                        layers = Object.keys(this.graph.parentLayersMap[this.graph.vertices.id[result]]);
+                        if (G.loading.graphsCache[value]) {
+                            G.loading.graphsCache[value][1].push(G.view.graph.subgraphID);
+                            if (G.loading.graphsCache[value][0] && G.loading.graphsCache[value][1] && layers.every(r => G.loading.graphsCache[value][1].includes(Number(r)))) {
+                                if (!this.graph.fullyDiscovered) {
+                                    this.graph.fullyDiscovered = [];
+                                }
+                                this.graph.fullyDiscovered[result] = 1;
+                                this.graph.nodes.isFullyDiscovered[result] = 1;
+                                G.view.refreshStyles(true, true);
+                            }
+                            G.loading.graphsCache[value][0].push(neigh);
+                            G.loading.graphsCache[value][0] = G.loading.graphsCache[value][0].flat(1);
+                        } else {
+                            G.loading.graphsCache[value] = [[], []]
+                            G.loading.graphsCache[value][0].push(neigh);
+                            G.loading.graphsCache[value][0] = G.loading.graphsCache[value][0].flat(1);
+                            G.loading.graphsCache[value][1].push(G.view.graph.subgraphID);
+                        }
+
+                    }
+
+
+                    //Algs.getVertexShortestPathInAllFixedPoints(this.graph, result);
+                    G.cameraControls.setTarget(null);
+                    if (result != -1 && !this.graph.selectedVertices[result]) {
+                        let vec = G.view.getNodePos(result);
+                        if (vec.x != undefined || vec.y != undefined || vec.z != undefined) {
+                            G.cameraControls.setTarget(vec, true, true);
+                        }
+                    } else {
+                        G.cameraControls.setTarget(null);
+                    }
+                    if (this.graph.heightProperty == "fixedPointLayer")
+                        G.toggleSelectVertex(this.graph.vertexMap[value]);
+                    else G.toggleSelectVertex(this.graph.vertexMap[value]);
+                    this.showNeighbors(value);
+
+                }
+                if (values.length > 0) {
+                    for (let i = 0; i < values.length; i++) {
+                        let result = this.graph.vertices.id.indexOf(values[i]);
+                        G.cameraControls.setTarget(null);
+                        if (result != -1) {
+                            let vec = G.view.getNodePos(values[i]);
+                            if (vec.x != undefined || vec.y != undefined || vec.z != undefined)
+                                G.cameraControls.setTarget(vec, true);
+                            if (this.graph.heightProperty == "fixedPointLayer")
+                                G.toggleSelectVertex(this.graph.vertexMap[values[i]]);
+                            else G.toggleSelectVertex(this.graph.vertexMap[values[i]]);
+                        }
+                    }
+                }
+
+            });
+            }
+    },
 
 	showTopLevelGraphStats: function (graph) {
 		let topLevelName = (graph.name);
@@ -668,85 +740,6 @@ G.addModule("ui", {
 		let ccSvg2 = d3.select("#top-level-cc-plot2");
 		let ccRibbon = d3.select("#top-level-cc-ribbon-area");
 		let wavesRibbon = d3.select("#top-level-waves-ribbon-area");
-		if (graph.subgraphs.CC) {
-			let vdist = graph.subgraphs.CC.Vdist;
-			let edist = graph.subgraphs.CC.Edist;
-			let vedist = graph.subgraphs.CC.VEdist;
-			let vedistIDs = graph.subgraphs.CC.VEdistIDs;
-			let VERecords = Object.keys(vedist).map((str) => {
-				let [v, e] = str.split(","), count = vedist[str];
-				v = Number(v), e = Number(e);
-				return {key: str, v: v, e: e, avgDeg: 2 * e / v, count: count, totalV: v * count, totalE: e * count};
-			}).sort(compareBy("e")).sort(compareBy("v"));
-			let maxAvgDeg = Math.max.apply(null, VERecords.map((x) => x.avgDeg));
-			ccRibbon.selectAll("p").remove();
-			let ccRects = ccRibbon.selectAll("p").data(VERecords).enter().append("p");
-			ccRects.attr("class", "bar-segment").style("color", "black").style("background-color", (x) => G.colorScales.lightSpectral(x.e / E)).style("width", (x) => Math.ceil(x.avgDeg * 100 / maxAvgDeg) + "%").style("height", "92%")/*.style("flex",(x)=>x.e/E+" 0 0")*/.text((x) => {
-                    return "CC with |V|:" + x.v + ", |E|:" + x.e;
-			});
-			//right now, only clicking a bucket with one unbucketed CC can display that CC; later we'll be able to open bucketed CCs
-			ccRects.on("click", (d) => {
-				d3.event.stopPropagation();
-				if (d.key in vedistIDs && vedistIDs[d.key].length == 1) {
-					let ccpath = graph.dataPath + "/cc/" + vedistIDs[d.key][0];
-					if (G.graph.dataPath == ccpath) {
-						G.display(graph.dataPath);
-					} else {
-						G.display(ccpath);
-					}
-				} else {
-					G.addLog("please select a single large CC");
-				}
-			});
-			ccRects.append("span").attr("class", "selector-bottom").text("\u25c0").style("color", "black").style("visibility", "hidden");
-			this.ccRects = ccRects;
-			let hoverOnCC = (obj) => {
-				let data = obj.__data__;
-				let tip = this.CCTooltipElement;
-				let tipSelection = d3.select(tip);
-				let str = ((data.count == 1) ? "CC " : (data.count + " CCs")) + ", |V|: " + data.v + ", |E|: " + data.e;
-				tipSelection.text(str);
-				this.showTooltip(tip);
-				//v and e distributions
-			}
-			let hoverEndCC = () => {
-				this.hideTooltip(this.CCTooltipElement);
-			}
-			addHoverListener(ccRects.nodes(), () => G.hoverDelay, hoverOnCC, hoverEndCC);
-			//tipSelection.on("mouseout",hoverEnd);
-
-			//ccSvg.style("display","");ccSvg2.style("display","");
-			//drawPlot("CC |V|","count",Object.keys(vdist),Object.values(vdist),ccSvg,190,50);
-			//drawPlot("CC |E|","count",Object.keys(edist),Object.values(edist),ccSvg2,190,50);
-
-			/*
-            let totalCCs=Object.values(vdist).reduce((a,b)=>a+b,0);
-            topLevelSummary="";
-            if(V){topLevelSummary+=" |V|:"+V;}
-            if(E){topLevelSummary+=", |E|:"+E;}
-            if(totalCCs){topLevelSummary+=", CCs:"+totalCCs;}
-            getE("top-level-summary").textContent=topLevelSummary;
-
-            let CCEdgeBuckets=[];
-            let CCSizes=Object.keys(edist).map((x)=>Number(x)).sort(compareBy((x=>x)));
-            let bucketSize=Math.pow(2,Math.ceil(Math.log(E)/(2*Math.log(2)))); //next power of 2 from sqrt(E)
-            let buckets=bucketizeArray(CCSizes,(s)=>edist[s]*s,bucketSize);//Math.pow(2,Math.sqrt(V)) ??
-
-            let bucketsArea=getE("top-level-cc-buckets-area");
-            d3.select(bucketsArea).selectAll("div").remove();
-            d3.select(bucketsArea).selectAll("div").data(buckets).enter().append("div").style("flex",(bucket)=>Math.floor(bucket.totalSize*100/E)+" 0 auto").style("text-align","center").style("border",(bucket)=>"1px solid "+colorScale(bucket.totalSize/E)).text((bucket)=>(bucket.length==1)?("CC with "+bucket.totalSize+" edges"):(bucket.length+" CCs, "+bucket.totalSize+" total edges")).on("click",(bucket)=>{
-                if(bucket.length>1){G.addLog("please select a single CC instead");return;}
-                else{G.loading.showCC(graph.id,0);}
-
-            });
-            */
-
-			//todo: get the correct CCID - the distribution doesn't abe individual CC identifers.
-			//.style("background-color",(bucket)=>colorScale(bucket.totalSize/E))
-			//style("display","inline-flex").
-			//});
-
-		}
 
 
 		//layer ribbons
@@ -774,6 +767,7 @@ G.addModule("ui", {
 
 		let ribbonMenuSelection = d3.select("#ribbon-menu-contents");
 		ribbonMenuSelection.selectAll("div").remove();
+        ribbonMenuSelection.selectAll("span").remove();
 		let ribbonSelection = ribbonMenuSelection.selectAll("div").data(layersArray).enter().append("div").attr("class", "ribbon").on("click", (d) => {
             if(G.graph.dataPath && Object.keys(G.graph.annotatedVertices)) {
                 if( !Object.keys(G.graph.annotatedVertices) ||  Object.keys(G.graph.annotatedVertices).length==0)
@@ -796,11 +790,83 @@ G.addModule("ui", {
                 if(graph.edges.properties.fixedPointLayer && graph.edges.properties.fixedPointLayer.value && graph.edges.properties.fixedPointLayer.value.origCloneMaps) {
                     G.origCloneMaps = graph.edges.properties.fixedPointLayer.value.origCloneMaps;
                 }
+                if(G.view.graph.wholeGraph==undefined) {
+                    G.origAdjlist = G.view.graph.vertices.edges;
+                    G.origVertexMap = G.view.graph.vertices.id;
+                    G.origLabelsById = G.view.graph.labelsByID;
+                }
                 G.display(graph.dataPath + "/layer/" + d.layer);
+                this.addShowNeigborsButton();
 
             }
 		});
 		this.ribbonSelection = ribbonSelection;
+        var fadeSpeed = 25; // a value between 1 and 1000 where 1000 will take 10
+        var tipMessage = "The content of the tooltip...";
+        if (graph.subgraphs.CC) {
+            let vedist = graph.subgraphs.CC.VEdist;
+            let VERecords = Object.keys(vedist).map((str) => {
+                let [v, e] = str.split(","), count = vedist[str];
+                v = Number(v), e = Number(e);
+                return {key: str, v: v, e: e, avgDeg: 2 * e / v, count: count, totalV: v * count, totalE: e * count};
+            }).sort(compareBy("e")).sort(compareBy("v"));
+            ccCount =0; treesCount =0; singleEdgeCount =0; pathCount=0;
+            ccCountV = 0; ccCountE = 0;
+            for(i in VERecords){
+                if(VERecords[i].v ==2 && VERecords[i].e ==1) singleEdgeCount= singleEdgeCount+VERecords[i].count;
+                else if(VERecords[i].v ==3 && VERecords[i].e ==2) pathCount=pathCount+VERecords[i].count;
+                else if(VERecords[i].v-1 == VERecords[i].e) treesCount= treesCount+VERecords[i].count;
+                else if(VERecords[i].v != VERecords[i].e) {
+                    ccCount = ccCount + VERecords[i].count;
+                    ccCountV = VERecords[i].v;
+                    ccCountE = VERecords[i].e;
+                }
+            }
+            tipMessage = "Original Graph CCs Info:"
+            tipMessage += "<br/>    CC with |V|: " + ccCountV + ", |E|"+ccCountE;
+            tipMessage+="<br/>      |Trees| : "+treesCount;
+            tipMessage+="<br/>      |Paths| : "+pathCount;
+            tipMessage+="<br/>      |Single edges| : "+singleEdgeCount;
+        }
+
+        var showTip = function () {
+            if(document.getElementById("tip")) {
+                document.getElementById("tip").remove();
+            }
+
+                var tip = document.createElement("span");
+                tip.className = "tooltip";
+                tip.id = "tip";
+                tip.innerHTML = tipMessage;
+                document.getElementById("ribbon-menu-contents").appendChild(tip);
+                tip.style.opacity = "0"; // to start with...
+                tip.style.borderStyle = "double";
+                var intId = setInterval(function () {
+                    newOpacity = parseFloat(tip.style.opacity) + 0.1;
+                    tip.style.opacity = newOpacity.toString();
+                    if (tip.style.opacity == "1") {
+                        clearInterval(intId);
+                    }
+                }, fadeSpeed);
+        };
+        var hideTip = function () {
+            var tip = document.getElementById("tip");
+            var intId = setInterval(function () {
+                if(tip) {
+                    newOpacity = parseFloat(tip.style.opacity) - 0.1;
+                    tip.style.opacity = newOpacity.toString();
+                    if (tip.style.opacity == "0") {
+                        clearInterval(intId);
+                        tip.remove();
+                    }
+                }
+            }, fadeSpeed);
+            if(tip) {
+                tip.remove();
+            }
+        };
+        document.getElementById("ribbon-menu-contents").addEventListener("mouseover", showTip, false);
+        document.getElementById("ribbon-menu-contents").addEventListener("mouseout", hideTip, false);
 
 		/*.on("contextmenu",(d)=>{
             d3.event.stopPropagation();
@@ -1000,9 +1066,13 @@ G.addModule("ui", {
             for(let i =0; i<Object.keys(story).length;i++) {
                 storytext += story[Object.keys(story)[i]];
             }
-            document.getElementById("storyTitle").innerHTML = "Suggested Story Title(s) : "+[...new Set(G.view.graph.storyTitle.flat(1))];
-            document.getElementById("storyTitle").innerHTML += "</br> Vertices used for title suggestion also appear in Fixed Points: "+
-                [...new Set(G.view.graph.storyLayers.flat(1))].sort().reverse() + "</br><hr>  ";
+            if(G.view.graph.storyTitle) {
+                document.getElementById("storyTitle").innerHTML = "Suggested Story Title(s) : " + [...new Set(G.view.graph.storyTitle.flat(1))];
+            }
+            if(G.view.graph.storyLayers) {
+                document.getElementById("storyTitle").innerHTML += "</br> Vertices used for title suggestion also appear in Fixed Points: " +
+                    [...new Set(G.view.graph.storyLayers.flat(1))].sort().reverse() + "</br><hr>  ";
+            }
 			getE("selected-vertices-ids").style.display = "block";
             getE("selected-vertices-ids-content").innerHTML += storytext;
 		} else {
@@ -1034,6 +1104,263 @@ G.addModule("ui", {
                 G.showingTextEditor = false;
                 getE("annotations-box").style.display = "none";
             }
+        }
+    },
+    showNeighbors: function(vertexId){
+        let edgesFilter = 4;
+        vertexId = G.graph.vertices.id.indexOf(vertexId);
+        if(vertexId!= undefined) {
+            if(G.graph.egonetMap[vertexId] == undefined) {
+                if(G.graph.subgraphID){
+                    edgesFilter = 4;
+                    let vertexAllNeighbors = Object.keys(G.origAdjlist[G.origVertexMap.indexOf(G.graph.vertices.id[vertexId])]);
+                    Algs.getFilteredSubgraph(G.graph,vertexId,(x)=>(x!=0),"egonet", vertexAllNeighbors);
+                }
+            } else {
+                if(G.graph.subgraphID) {
+                    edgesFilter = 4;
+                }
+                G.graph.egonet = G.graph.egonetMap[vertexId];
+            }
+            if(G.graph.egonetMap[vertexId].edges.length>=edgesFilter) {
+                let vec=G.view.getNodePos(vertexId);
+                G.cameraControls.setTarget(vec,true);
+                const nodeColorScale = d3.scaleOrdinal(d3.schemeRdYlGn[4]);
+                const Graph = ForceGraph3D({ controlType: 'orbit' })
+                (document.getElementById('subgraph_canvas'))
+                    .graphData(G.graph.egonetMap[vertexId].initData)
+                    .backgroundColor('#ffffff')
+                    .nodeColor(node => node.color? node.color: 'gray')
+                    .linkColor(link => link.color? link.color: 'maroon')
+                    .nodeThreeObject(node => {
+                        if(G.graph.egonet.hightlightVertex.indexOf(node.id) !=-1) {
+                            // use a sphere as a drag handle
+                            const obj = new THREE.Mesh(
+                                new THREE.SphereGeometry(Graph.nodeRelSize()),
+                                new THREE.MeshBasicMaterial({depthWrite: false, transparent: false, opacity: .1})
+                            );
+
+                            // add text sprite as child
+                            const sprite = new SpriteText(Algs.clearText(node.label));
+                            sprite.color = node.color;
+                            sprite.textHeight = 2.5;
+                            obj.add(sprite);
+
+                            return obj;
+                        } else {
+                            return new THREE.Mesh(
+                                new THREE.SphereGeometry(Graph.nodeRelSize()),
+                                new THREE.MeshLambertMaterial({
+                                    color: node.color,
+                                    transparent: true,
+                                    opacity: 0.75
+                                })
+
+                            );
+                        }
+                    })
+                    .linkWidth(1.0)
+                    .nodeRelSize(1)
+                    .linkOpacity(1)
+                    .nodeLabel(node => `<span style="color: black">${node.label}</span>`)
+                    .enableNavigationControls(true)
+                    .width(465)
+                    .height(408)
+                    .showNavInfo(false)
+                    .onNodeClick(node => {
+                        const distance = 40;
+                        const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
+                        G.graph.cameraPosition(
+                            { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, // new position
+                            node,
+                            300
+                        );
+                    });
+
+
+                //Define GUI
+                const Settings = function() {
+                    this.linkWidth = .4;
+                    this.nodeSize = .5;
+                };
+
+                const settings = new Settings();
+                const linkForce = Graph.linkWidth(settings.linkWidth);
+                const nodeSizeForce = Graph.nodeThreeObject(node => {
+                    if(G.graph.egonet.hightlightVertex.indexOf(node.id) !=-1) {
+                        // use a sphere as a drag handle
+                        const obj = new THREE.Mesh(
+                            new THREE.SphereGeometry(settings.nodeSize),
+                            new THREE.MeshBasicMaterial({depthWrite: false, transparent: false, opacity: .1})
+                        );
+
+                        // add text sprite as child
+                        const sprite = new SpriteText(Algs.clearText(node.label));
+                        sprite.color = node.color;
+                        sprite.textHeight = 2.5;
+                        obj.add(sprite);
+
+                        return obj;
+                    } else {
+                        return new THREE.Mesh(
+                            new THREE.SphereGeometry(settings.nodeSize),
+                            new THREE.MeshLambertMaterial({
+                                color: node.color,
+                                transparent: true,
+                                opacity: 0.75
+                            })
+
+                        );
+                    }
+                });
+                let verticesList=getE("vertices-list");
+                $("#vertices-list").html("");
+                verticesListMenu = G.graph.egonet.verticesList;
+                G.controls.addDropdownMenu(verticesList,"Vertices List",verticesListMenu);
+                G.controls.addButton(verticesList,"Add to Annotations",()=>{
+
+                    text = G.graph.egonet.verticesList.join('</br>');
+                    document.getElementById('textBox').innerHTML +="</br>";
+                    document.getElementById('textBox').innerHTML +=text;
+                });
+                const gui = new dat.GUI({ autoPlace: false });
+                $("#sett").html("");
+                $('#sett').append($(gui.domElement));
+                const controllerOne = gui.add(settings, 'linkWidth', 0, 3);
+                const controllertwo = gui.add(settings, 'nodeSize', 0, 5);
+                controllerOne.onChange(updateLinkDistance);
+                controllertwo.onChange(updateNodeSize);
+                function updateLinkDistance() {
+                    linkForce.linkWidth(settings.linkWidth);
+                    Graph.numDimensions(3); // Re-heat simulation
+                }
+                function updateNodeSize() {
+                    Graph.nodeThreeObject(node => {
+                        if(G.graph.egonet.hightlightVertex.indexOf(node.id) !=-1) {
+                            // use a sphere as a drag handle
+                            const obj = new THREE.Mesh(
+                                new THREE.SphereGeometry(settings.nodeSize),
+                                new THREE.MeshBasicMaterial({depthWrite: false, transparent: false, opacity: .1})
+                            );
+
+                            // add text sprite as child
+                            const sprite = new SpriteText(Algs.clearText(node.label));
+                            sprite.color = node.color;
+                            sprite.textHeight = 2.5;
+                            obj.add(sprite);
+
+                            return obj;
+                        } else {
+                            return new THREE.Mesh(
+                                new THREE.SphereGeometry(settings.nodeSize),
+                                new THREE.MeshLambertMaterial({
+                                    color: node.color,
+                                    transparent: true,
+                                    opacity: 0.75
+                                })
+
+                            );
+                        }
+                    });
+                    Graph.numDimensions(3); // Re-heat simulation
+                }
+
+                $("#egonet_id").text(G.graph.labelsByID[vertexId][G.controls.getLabelIndex()] +" Neighbors");
+                $("#egonet_layers").text("This vertex appers in: "+ Object.keys(G.origCloneMaps[G.graph.vertices.id[vertexId]]).sort().reverse());
+                G.simulationRunning=false;
+                G.resizeNodes = false;
+                document.getElementById("egonet-close").addEventListener('click', function(){
+                    G.simulationRunning=true;
+                });
+                let modalEgonet = document.getElementById("egonet");
+                if(G.mouseScreenPos.x>700)
+                    modalEgonet.style.left =-300 + "px";
+                else modalEgonet.style.left =450 + "px";
+                G.graph.nodes.size[vertexId]=10;
+                jQuery.noConflict();
+                $('#egonet').modal('show');
+            }
+
+
+        }
+    },
+    showEgonet: function(){
+        G.graph.egonet={}
+        let edgesFilter = 512;
+        if(G.graph.hoveredVertex != undefined && G.graph.showingEgonets) {
+            if(G.graph.egonetMap[G.graph.hoveredVertex] == undefined) {
+                if(G.graph.subgraphID && G.loading.graphsCache[G.graph.vertices.id[G.graph.hoveredVertex]]&& G.loading.graphsCache[G.graph.vertices.id[G.graph.hoveredVertex]][0]){
+                    edgesFilter = 4;
+                    Algs.getFilteredSubgraph(G.graph,G.graph.hoveredVertex,(x)=>(x!=0),"egonet", G.loading.graphsCache[G.graph.vertices.id[G.graph.hoveredVertex]][0]);
+                } else {
+                    Algs.getFilteredSubgraph(G.graph, G.graph.hoveredVertex, (x) => (x != 0), "egonet");
+                }
+            } else {
+                G.graph.egonet = G.graph.egonetMap[G.graph.hoveredVertex];
+            }
+            if(G.graph.egonetMap[G.graph.hoveredVertex].edges.length>=edgesFilter) {
+
+                let vec=G.view.getNodePos(G.graph.hoveredVertex);
+                G.cameraControls.setTarget(vec,true);
+                const Graph = ForceGraph3D({ controlType: 'orbit' })
+                (document.getElementById('subgraph_canvas'))
+                    .graphData(G.graph.egonetMap[G.graph.hoveredVertex].initData)
+                    .backgroundColor('#ffffff')
+                    .nodeColor(node => 'gray')
+                    .linkColor(link => 'maroon' )
+                    .nodeLabel(node => `<span style="color: black">${node.label}</span>`)
+                    .enableNavigationControls(true)
+                    .width(465)
+                    .height(408)
+                    .showNavInfo(false)
+                    .onNodeClick(node => {
+                        const distance = 40;
+                        const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
+                        Graph.cameraPosition(
+                            { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, // new position
+                            node,
+                            300
+                        );
+                    });
+
+
+                //Define GUI
+                const Settings = function() {
+                    this.edgeLength = 0;
+                };
+
+                const settings = new Settings();
+                const linkForce = Graph
+                    .d3Force('link')
+                    .distance(settings.edgeLength);
+                const gui = new dat.GUI({ autoPlace: false });
+                $("#sett").html("");
+                $('#sett').append($(gui.domElement));
+                const controllerOne = gui.add(settings, 'edgeLength', 0, 300);
+
+                controllerOne.onChange(updateLinkDistance);
+
+                function updateLinkDistance() {
+                    linkForce.distance(settings.edgeLength);
+                    Graph.numDimensions(3); // Re-heat simulation
+                }
+
+                $("#egonet_id").text(G.view.graph.labelsByID[G.graph.hoveredVertex][G.controls.getLabelIndex()]);
+                G.simulationRunning=false;
+                G.resizeNodes = false;
+                document.getElementById("egonet-close").addEventListener('click', function(){
+                    G.simulationRunning=true;
+                });
+                let modalEgonet = document.getElementById("egonet");
+                if(G.mouseScreenPos.x>700)
+                    modalEgonet.style.left =-300 + "px";
+                else modalEgonet.style.left =450 + "px";
+                G.graph.nodes.size[G.graph.hoveredVertex]=10;
+                jQuery.noConflict();
+                $('#egonet').modal('show');
+            }
+
+
         }
     },
 
