@@ -364,6 +364,25 @@ G.addModule("subview",{
 
 							let answer=metanodeFactor*waveStartFactor*selectionFactor;//*subgraphFactor;//s*diversitySize*degreeFactor
 							checkNumber(answer);
+							if(!G.view.graph.showingSparsenet && G.view.graph.ccCount==1 && G.drawOnHover) {
+                                if (graph.hoveredVertex != undefined) {
+                                    if (!graph.explored) {
+                                        graph.explored = [];
+                                    }
+                                    graph.explored.push(graph.hoveredVertex.toString());
+                                    neig = graph.getNeighbors(graph.hoveredVertex);
+                                    if (neig) {
+                                        graph.explored.push(neig);
+                                        graph.explored = [...new Set(graph.explored.flat(1))];
+                                    }
+                                }
+                                if (graph.hoveredVertex != undefined && graph.hoveredVertex != vertexID) {
+                                    if (graph.explored && graph.explored.indexOf(vertexID.toString()) == -1 && neig.indexOf(vertexID.toString()) == -1)
+                                        answer = 0;
+                                } else if (graph.hoveredVertex == undefined && graph.savedNodes) {
+                                    answer = graph.savedNodes[i];
+                                }
+                            }
 							if(!G.drawsparsenet) {
                                 return answer;
                             } else {
@@ -632,83 +651,7 @@ G.addModule("subview",{
 					isArray:true,
 					value:(graph)=>{
 						let sources=graph.edges.source,targets=graph.edges.target;
-                        graph.egonet={}
-                        let edgesFilter = 512;
-						if(graph.hoveredVertex != undefined && graph.showingEgonets) {
-						    if(graph.egonetMap[graph.hoveredVertex] == undefined) {
-						        if(graph.subgraphID && G.loading.graphsCache[graph.vertices.id[graph.hoveredVertex]]&& G.loading.graphsCache[graph.vertices.id[graph.hoveredVertex]][0]){
-                                    edgesFilter = 4;
-						            Algs.getFilteredSubgraph(graph,graph.hoveredVertex,(x)=>(x!=0),"egonet", G.loading.graphsCache[graph.vertices.id[graph.hoveredVertex]][0]);
-                                } else {
-                                    Algs.getFilteredSubgraph(graph, graph.hoveredVertex, (x) => (x != 0), "egonet");
-                                }
-						    } else {
-						        graph.egonet = graph.egonetMap[graph.hoveredVertex];
-                            }
-							if(graph.egonetMap[graph.hoveredVertex].edges.length>=edgesFilter) {
-
-                                let vec=G.view.getNodePos(graph.hoveredVertex);
-                                G.cameraControls.setTarget(vec,true);
-                                const Graph = ForceGraph3D({ controlType: 'orbit' })
-                                    (document.getElementById('subgraph_canvas'))
-                                        .graphData(graph.egonetMap[graph.hoveredVertex].initData)
-                                        .backgroundColor('#ffffff')
-                                        .nodeColor(node => 'gray')
-                                        .linkColor(link => 'maroon' )
-                                        .nodeLabel(node => `<span style="color: black">${node.label}</span>`)
-                                        .enableNavigationControls(true)
-                                        .width(465)
-                                        .height(408)
-                                        .showNavInfo(false)
-                                        .onNodeClick(node => {
-                                            const distance = 40;
-                                            const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
-                                            Graph.cameraPosition(
-                                                { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, // new position
-                                                node,
-                                                300
-                                            );
-                                        });
-
-
-                                //Define GUI
-                                const Settings = function() {
-                                    this.edgeLength = 0;
-                                };
-
-                                const settings = new Settings();
-                                const linkForce = Graph
-                                    .d3Force('link')
-                                    .distance(settings.edgeLength);
-                                const gui = new dat.GUI({ autoPlace: false });
-                                $("#sett").html("");
-                                $('#sett').append($(gui.domElement));
-                                const controllerOne = gui.add(settings, 'edgeLength', 0, 300);
-
-                                controllerOne.onChange(updateLinkDistance);
-
-                                function updateLinkDistance() {
-                                    linkForce.distance(settings.edgeLength);
-                                    Graph.numDimensions(3); // Re-heat simulation
-                                }
-
-                                $("#egonet_id").text(G.view.graph.labelsByID[graph.hoveredVertex][G.controls.getLabelIndex()]);
-                                G.simulationRunning=false;
-                                G.resizeNodes = false;
-                                document.getElementById("egonet-close").addEventListener('click', function(){
-                                    G.simulationRunning=true;
-                                });
-                                let modalEgonet = document.getElementById("egonet");
-                                if(G.mouseScreenPos.x>700)
-                                    modalEgonet.style.left =-300 + "px";
-                                else modalEgonet.style.left =450 + "px";
-                                graph.nodes.size[graph.hoveredVertex]=10;
-                                jQuery.noConflict();
-                                $('#egonet').modal('show');
-							}
-
-
-						}
+						G.ui.showEgonet();
 						return graph.links.map((link,i,links)=>{
 							let result=1;
 							let edgeID=i;
@@ -719,7 +662,17 @@ G.addModule("subview",{
                                     hoverFactor=5;
 								}
 							} else {
-                                if(graph.hoveredVertex==source||graph.hoveredVertex==target)hoverFactor=5;
+                                if(graph.hoveredVertex==source||graph.hoveredVertex==target)
+                                    hoverFactor=5;
+                                else if(!G.view.graph.showingSparsenet && G.view.graph.ccCount==1 && G.drawOnHover) {
+                                    if (graph.hoveredVertex == undefined && graph.savedLinks) {
+                                        hoverFactor = graph.savedLinks[edgeID];
+                                    } else if (graph.explored && graph.explored.indexOf(source.toString()) != -1 && graph.explored.indexOf(target.toString()) != -1)
+                                        hoverFactor = 5;
+                                    else if (graph.hoveredVertex != undefined) {
+                                        hoverFactor = 0;
+                                    }
+                                }
                             }
                             if(!G.snHighlightPathNodesColor) {
                                 result*=hoverFactor;
@@ -769,14 +722,14 @@ G.addModule("subview",{
 							let hoverFactor=1;
                             if(graph.hoveredVertex && graph.showingEgonets){
                                 if(Object.keys(graph.egonetMap[graph.hoveredVertex].vertexMap).indexOf(source.toString())!=-1 && Object.keys(graph.egonetMap[graph.hoveredVertex].vertexMap).indexOf(target.toString())!=-1  ){
-                                    hoverFactor=5;
+                                    hoverFactor=2;
                                 }
                             } else {
                                 if(graph.hoveredVertex==source||graph.hoveredVertex==target)hoverFactor=2;
                             }
                             if(G.view.graph.highlightPath && G.view.graph.highlightPath.length>0) {
                                 if(G.view.graph.highlightPath.indexOf(source) != -1 && G.view.graph.highlightPath.indexOf(target) != -1){
-                                    hoverFactor=5;
+                                    hoverFactor=2;
                                 } else hoverFactor=.1;
                             }
 							result*=hoverFactor;

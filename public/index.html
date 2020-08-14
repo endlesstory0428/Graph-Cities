@@ -9,6 +9,7 @@
 		<link id="style-light" rel="stylesheet" type="text/css" href="lib/light.css"  />
 		<link id="style-dark" rel="stylesheet" type="text/css" href="lib/dark.css" disabled="true"/>
 		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
         <!-- jQuery library -->
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 
@@ -31,7 +32,10 @@
         <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.12.0/css/all.css" integrity="sha384-ekOryaXPbeCpWQNxMwSWVvQ0+1VrStoPJq54shlYhR8HzQgig1v5fas6YgOqLoKz" crossorigin="anonymous">
 		<script type="text/javascript" src="lib/three.js"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+        <script src="//unpkg.com/three"></script>
+        <script src="//unpkg.com/three-spritetext"></script>
 
+        <script src="//unpkg.com/3d-force-graph"></script>
 
 		<script type="text/javascript" src="lib/util.js"></script>
 		<script type="text/javascript" src="lib/controls.js"></script>
@@ -78,11 +82,11 @@
                 <a href="#" class="btn btn-circle" id="dataset-bar-show" style="z-index: 2;margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;">
                     <i class="fas fa-database"></i>
                 </a>
-                <a href="#" class="btn  btn-circle" id="info-bar-show" style="margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;" >
-                    <i class="fas fa-info-circle"></i>
-                </a>
                 <a href="#" class="btn btn-circle" id="plot-bar-show" style="margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;z-index: 3;">
                     <i class="fas fa-chart-scatter"></i>
+                </a>
+                <a href="#" class="btn  btn-circle" id="info-bar-show" style="margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;" >
+                    <i class="fas fa-info-circle"></i>
                 </a>
                 <a href="#" class="btn btn-circle" id="fork-bar-show" style="margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;z-index:3;">
                     <i class="fas fa-align-left"></i>
@@ -167,11 +171,10 @@
 			<div id="minimal-style-controls-area" class="simple fixed minimal" style="display: flex;flex-flow: column wrap;
 		justify-self: center;
 		align-self: flex-end;
-    bottom: 0;
-    height: 100%;
-    left: 10%;
-    right: 10%;">
-
+        bottom: 0;
+        height: 100%;
+        left: 10%;
+        right: 10%;">
 
 			</div>
 
@@ -218,8 +221,7 @@
         <div id="graph-fork-bar" class="panel" style="width:20%;height: 655px;min-width:170px;overflow-y: scroll;">
                 <div id="ribbon-menu" class="simple column" style="overflow-x:visible;overflow-y:auto;border:none;width:100%;height: 100%;">
                     <div style="width:100%;">
-                        <p style="float:left;font-size:x-small;">Layer</p>
-                        <p style="transform: translateX(15%);font-size:x-small;"># CCs</p>
+                        <p style="float:left;font-size:x-small;">Fixed Point</p>
                     </div>
 <!--                    <svg id="ribbon-scale" width="100" height="30" style="width:100%;height:30px;"/>-->
                     <div id="ribbon-menu-contents" class="menu-content" style="overflow-x:visible;overflow-y:auto;padding-bottom: 55px;">
@@ -378,10 +380,15 @@
         <div id="graph-dataset-bar" class="panel" style="min-width:300px;height: 655px;overflow-y: scroll;font-size: x-small;display:block;">
                 <div id="dataset-menu-1">
                 </div>
-                <div class="custom-control custom-checkbox" style="padding-right: 7.8rem;">
+                <div class="custom-control custom-checkbox">
                     <input type="checkbox" class="custom-control-input" id="drawing_option_2">
-                    <label class="custom-control-label" for="drawing_option_2" style="font-size: medium;" >Using Fixed Points</label>
+                    <label class="custom-control-label" for="drawing_option_2" style="font-size: medium;padding-right: 7.8rem;">Using Fixed Points</label>
                 </div>
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" id="drawing_option_3">
+                    <label class="custom-control-label" for="drawing_option_3" style="font-size: medium;" >Show Vertices and Edges on Hover</label>
+                </div>
+
         </div>
 
 
@@ -508,18 +515,21 @@
 			</div>
 		</div>
 		<div class="modal fade right" id="egonet" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
-			 aria-hidden="true">
+			 aria-hidden="true" style="overflow-y: hidden">
 			<div id="egonet-modal-dialog" class="modal-dialog modal-side modal-top-right" role="document">
 				<div class="modal-content">
-					<div class="modal-header">
-                        <h4 class="modal-title w-100" id="egonet_id"></h4>
+					<div class="modal-header" style="display: block !important;">
+                        <h5 class="modal-title w-100" id="egonet_id"></h5>
+
                         <button id="egonet-close" type="button" class="close" data-dismiss="modal" aria-label="Close">
 							<span aria-hidden="true">&times;</span>
 						</button>
+                        <h6 class="modal-title w-100" id="egonet_layers"></h6>
 					</div>
-					<div class="modal-body">
-                        <div id="sett"></div>
+					<div class="modal-body" style="overflow-y: auto">
+                        <div id="vertices-list" ></div>
                         <div style="padding-right:20%" id="subgraph_canvas" ></div>
+                        <div id="sett" style="padding-left: 150px"></div>
                     </div>
 				</div>
 			</div>
