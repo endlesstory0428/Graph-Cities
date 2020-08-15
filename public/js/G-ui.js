@@ -1054,6 +1054,10 @@ G.addModule("ui", {
 		});
 	},
 	showSemanticsText: function () {
+	    if(G.snNodesColorByLabel || G.snNodesColorByHotSpot) {
+            G.addLog("Please remove the color nodes by label or hotspot option");
+            return;
+        }
         getE("selected-vertices-ids-content").innerHTML = "";
 		if (G.graph && (!G.showingSelectedIDs)) {
 			G.showingSelectedIDs = true;
@@ -1266,7 +1270,7 @@ G.addModule("ui", {
                 }
 
                 $("#egonet_id").text(G.graph.labelsByID[vertexId][G.controls.getLabelIndex()] +" Neighbors");
-                $("#egonet_layers").text("This vertex appers in: "+ Object.keys(G.origCloneMaps[G.graph.vertices.id[vertexId]]).sort().reverse());
+                $("#egonet_layers").text("This vertex appears in fixed points: "+ Object.keys(G.origCloneMaps[G.graph.vertices.id[vertexId]]).sort().reverse());
                 G.simulationRunning=false;
                 G.resizeNodes = false;
                 document.getElementById("egonet-close").addEventListener('click', function(){
