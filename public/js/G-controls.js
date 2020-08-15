@@ -983,7 +983,7 @@ G.addModule("controls",{
 		*/
 
 
-		let hideFunc=function(e){setTimeout(()=>this.style.display="none",2000);};
+		let hideFunc=function(e){setTimeout(()=>this.style.display="none",5000);};
 		//context menus with actions
 		this.contextMenus={};
 		this.contextMenus.vertices=document.createElement("div");
@@ -1212,11 +1212,15 @@ G.addModule("controls",{
 		this.addButton(this.contextMenus.empty,"draw selected sparsenet",drawSubgraph);
         this.addButton(this.contextMenus.empty,"add label to annotations",addLabeltoNote);
 		this.addButton(this.contextMenus.empty,"go to parent",()=>G.showMetagraph());
-		let togglePinSelection=()=>{
-			if(!this.graph)return;
-			for(let i in this.graph.selectedVertices){this.graph.vertices.userPinned[i]=!this.graph.vertices.userPinned[i];}
-			G.view.refreshStyles(true,true);
-		}
+		let exploreCConHover=()=>{
+                if(!G.drawOnHover) {
+                    G.addLog("Incompatible drawing option - Select draw vertices on hover");
+                    return;
+                }
+                let cc = G.controls.getSelectedVertexCC();
+                G.view.refreshStyles(true, true);
+
+        }
         let shortestPathSelection=()=> {
             if (!this.graph) return;
             if(this.graph.snPaths) {
@@ -1354,7 +1358,8 @@ G.addModule("controls",{
 
 
         }
-		this.addButton(this.contextMenus.empty,"(un)pin selected vertices",togglePinSelection);
+        this.addButton(this.contextMenus.empty, "Explore on hover", exploreCConHover);
+
         this.addButton(this.contextMenus.empty,"Shortest Path",shortestPathSelection);
 		let unpinAllVertices=()=>{
 			if(!this.graph)return;
@@ -1406,7 +1411,6 @@ G.addModule("controls",{
 		this.addButton(this.contextMenus.empty,"draw visible subgraph",drawVisibleSubgraph);
 
 		this.addKeyListener(G.canvasContainer,"!",drawSubgraph);
-		this.addKeyListener(G.canvasContainer,"p",togglePinSelection);
 		this.addKeyListener(G.canvasContainer," ",()=>{
 			//unpause/pause, and also show labels if pausing, and hide labels if pausing (if it was paused for otehr reasons, G.ui.showLabels() wll not unpause)
 			if(G.simulationRunning){G.simulationRunning=false;}
@@ -1821,10 +1825,13 @@ G.addModule("controls",{
         G.drawsparsenet = false;
         G.drawFixedPoints = false;
         document.getElementById("drawing_option_2").addEventListener('click', function(){
-            G.drawFixedPoints = true;
+            if(G.drawFixedPoints) G.drawFixedPoints = false;
+            else G.drawFixedPoints = true;
         }, false);
         document.getElementById("drawing_option_3").addEventListener('click', function(){
-            G.drawOnHover = true;
+            if(G.drawOnHover)
+                G.drawOnHover = false;
+            else G.drawOnHover = true;
         }, false);
         document.getElementById("rotate_option").addEventListener('click', function(){
             if(G.animation.rotate) {
@@ -1889,6 +1896,20 @@ G.addModule("controls",{
 		while(graph.representation)graph=G.getGraph(graph.dataPath+"/metagraphs/"+graph.representation);
 		this.graph=graph;
 	},
+    getSelectedVertexCC:function(graph){
+
+        selected = Number(Object.keys(this.graph.selectedVertices)[0]);
+        if(!isNaN(selected) && selected != undefined) {
+            ccs = Algs.getSortedCCsAndCCIDs(this.graph);
+            this.graph.snPaths = undefined;
+            for (cc in ccs) {
+                if (ccs[cc].vertexList.indexOf(selected) != -1) {
+                    G.graph.selectedccOnHover = ccs[cc];
+                    break;
+                }
+            }
+        }
+    },
 
 
 
@@ -2236,6 +2257,8 @@ G.addModule("controls",{
             else if (isDanish) label = a[1];
             else if (isDutch) label = a[2];
         }
+        if(label) return label
+        else return ""
         return label;
     },
     addCheckbox(parentElem, text, func, options, id=null, val = false, image =null){
@@ -2665,22 +2688,23 @@ type: "nodes"*/
                                 G.controls.contextMenus.hoveredVertex.item.classList.add("hovered-tooltip-text");
                                 G.controls.contextMenus.hoveredVertex.item.innerHTML = "";
                                 for (let i = 0; i < G.view.graph.snwormsList[originalObjectID].length; i++) {
-                                    r= "";
-                                    if (G.view.graph.snwormsList[originalObjectID][i].includes("TMI")) {
-                                        r = G.view.graph.snwormsList[originalObjectID][i].match(/[A-Z][0-9]{1,9}/);
-                                    } else if(G.view.graph.snwormsList[originalObjectID][i].includes("ATU")) {
-                                        r = G.view.graph.snwormsList[originalObjectID][i].match(/[A-Z] # [0-9]{1,9}/);
-                                    }
-                                    if(r && r.length>0) {
+                                    r = "";
+                                    if (G.view.graph.snwormsList[originalObjectID][i]){
+                                        if (G.view.graph.snwormsList[originalObjectID][i].includes("TMI")) {
+                                            r = G.view.graph.snwormsList[originalObjectID][i].match(/[A-Z][0-9]{1,9}/);
+                                        } else if (G.view.graph.snwormsList[originalObjectID][i].includes("ATU")) {
+                                            r = G.view.graph.snwormsList[originalObjectID][i].match(/[A-Z] # [0-9]{1,9}/);
+                                        }
+                                    if (r && r.length > 0) {
                                         r = r[0];
-                                        if(G.view.graph.snwormsList[originalObjectID][i].includes("TMI") || G.view.graph.snwormsList[originalObjectID][i].includes("ATU") ) {
+                                        if (G.view.graph.snwormsList[originalObjectID][i].includes("TMI") || G.view.graph.snwormsList[originalObjectID][i].includes("ATU")) {
                                             if (G.view.graph.snwormsList[originalObjectID][i].includes("TMI")) {
                                                 a = (G.view.graph.TMIclassification.filter(record => record.start.substring(0, 1) == r.substring(0, 1))).filter(
                                                     record => (Number(record.start.substring(1)) < Number(r.substring(1))
                                                         && Number(record.end.substring(1)) > Number(r.substring(1))));
                                             } else if (G.view.graph.snwormsList[originalObjectID][i].includes("ATU")) {
-                                                a = (G.view.graph.ATUclassification.filter(record => (Number(record.start )< Number(r.substring(4)))
-                                                        && (Number(record.end) > Number(r.substring(4)))));
+                                                a = (G.view.graph.ATUclassification.filter(record => (Number(record.start) < Number(r.substring(4)))
+                                                    && (Number(record.end) > Number(r.substring(4)))));
                                             }
                                             if (a && a[0] && a[0].label) {
                                                 classify.push({
@@ -2695,6 +2719,7 @@ type: "nodes"*/
                                         g.innerHTML += G.view.graph.snwormsList[originalObjectID][i] + "\n</br>";
                                         G.controls.contextMenus.hoveredVertex.item.append(g);
                                     }
+                                }
                                 }
                                 if(classify.length > 0) {
                                     result = classify.reduce((h, {label, classif}) => {
@@ -2841,12 +2866,15 @@ type: "nodes"*/
             }
 			else{
 
+
 				if(G.view.graph && G.view.graph.snWorms) {
                     $(document).on('mouseover', 'div', function (e) {
                         if ($(e.target).attr('class') != "hovered-tooltip" &&
                             $(e.target).attr('class') != "material-checkbox" &&
                             $(e.target).attr('class') != "material-checkbox-label" &&
                             $(e.target).attr('class') != "hovered-tooltip-text" &&
+                            $(e.target).attr('class') != "context-menu" &&
+                            $(e.target).attr('class') != "material" &&
                             $(e.target).attr('class') != "download-link") {
                             let menu = G.controls.contextMenus["hoveredVertex"];
                             menu.innerHTML = "";
