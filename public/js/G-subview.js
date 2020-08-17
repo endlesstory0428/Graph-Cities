@@ -385,7 +385,7 @@ G.addModule("subview",{
                                         graph.explored = [...new Set(graph.explored.flat(1))];
                                     }
                                 }
-                                if (G.graphInCC == undefined || G.graphInCC == true)
+                                if (G.graphInCC == undefined || G.graphInCC == true || graph.savedNodes)
                                     if (graph.hoveredVertex != undefined && graph.hoveredVertex != vertexID) {
                                         if (graph.explored && graph.explored.indexOf(vertexID.toString()) == -1 && neig.indexOf(vertexID.toString()) == -1)
                                             answer = 0;
@@ -684,7 +684,7 @@ G.addModule("subview",{
                                         } else G.graphInCC = false
 
                                     } else G.graphInCC =undefined
-                                    if(G.graphInCC == undefined || G.graphInCC == true) {
+                                    if(G.graphInCC == undefined || G.graphInCC == true || graph.savedNodes) {
                                         if (graph.hoveredVertex == undefined && graph.savedLinks) {
                                             hoverFactor = graph.savedLinks[edgeID];
                                         } else if (graph.explored && graph.explored.indexOf(source.toString()) != -1 && graph.explored.indexOf(target.toString()) != -1)
