@@ -642,57 +642,60 @@ G.addModule("ui", {
 
 
 	},
-    addShowNeigborsButton: function(){
-            let selectionButtonsElem=getE("selection-buttons-area");
-            if(document.querySelectorAll('#selection-buttons-area button').length < 2) {
-                G.controls.addButton(selectionButtonsElem, "show vertex neighbors", () => {
-                    document.getElementById("graph-menu").style.display="none";
-                    document.getElementById("graph-fork-bar").style.display="block";
+    addShowNeigborsButton: function () {
+        let selectionButtonsElem = getE("selection-buttons-area");
+        if (document.querySelectorAll('#selection-buttons-area button').length < 2) {
+            G.controls.addButton(selectionButtonsElem, "show vertex neighbors", () => {
                 let value = getE('select-vertex-input').value;
                 let values = [];
                 if (value.indexOf(',') > -1) {
                     values = value.split(',')
                 } else {
                     let result = this.graph.vertices.id.indexOf(value);
-                    neigh = G.view.graph.getNeighborIDsByID(result);
-                    if (G.view.graph.subgraphID) {
-                        layers = Object.keys(this.graph.parentLayersMap[this.graph.vertices.id[result]]);
-                        if (G.loading.graphsCache[value]) {
-                            G.loading.graphsCache[value][1].push(G.view.graph.subgraphID);
-                            if (G.loading.graphsCache[value][0] && G.loading.graphsCache[value][1] && layers.every(r => G.loading.graphsCache[value][1].includes(Number(r)))) {
-                                if (!this.graph.fullyDiscovered) {
-                                    this.graph.fullyDiscovered = [];
+                    if (result != -1) {
+                        neigh = G.view.graph.getNeighborIDsByID(result);
+                        if (G.view.graph.subgraphID) {
+                            layers = Object.keys(this.graph.parentLayersMap[this.graph.vertices.id[result]]);
+                            if (G.loading.graphsCache[value]) {
+                                G.loading.graphsCache[value][1].push(G.view.graph.subgraphID);
+                                if (G.loading.graphsCache[value][0] && G.loading.graphsCache[value][1] && layers.every(r => G.loading.graphsCache[value][1].includes(Number(r)))) {
+                                    if (!this.graph.fullyDiscovered) {
+                                        this.graph.fullyDiscovered = [];
+                                    }
+                                    this.graph.fullyDiscovered[result] = 1;
+                                    this.graph.nodes.isFullyDiscovered[result] = 1;
+                                    G.view.refreshStyles(true, true);
                                 }
-                                this.graph.fullyDiscovered[result] = 1;
-                                this.graph.nodes.isFullyDiscovered[result] = 1;
-                                G.view.refreshStyles(true, true);
+                                G.loading.graphsCache[value][0].push(neigh);
+                                G.loading.graphsCache[value][0] = G.loading.graphsCache[value][0].flat(1);
+                            } else {
+                                G.loading.graphsCache[value] = [[], []]
+                                G.loading.graphsCache[value][0].push(neigh);
+                                G.loading.graphsCache[value][0] = G.loading.graphsCache[value][0].flat(1);
+                                G.loading.graphsCache[value][1].push(G.view.graph.subgraphID);
                             }
-                            G.loading.graphsCache[value][0].push(neigh);
-                            G.loading.graphsCache[value][0] = G.loading.graphsCache[value][0].flat(1);
-                        } else {
-                            G.loading.graphsCache[value] = [[], []]
-                            G.loading.graphsCache[value][0].push(neigh);
-                            G.loading.graphsCache[value][0] = G.loading.graphsCache[value][0].flat(1);
-                            G.loading.graphsCache[value][1].push(G.view.graph.subgraphID);
+
                         }
-
-                    }
-
-
-                    //Algs.getVertexShortestPathInAllFixedPoints(this.graph, result);
-                    G.cameraControls.setTarget(null);
-                    if (result != -1 && !this.graph.selectedVertices[result]) {
-                        let vec = G.view.getNodePos(result);
-                        if (vec.x != undefined || vec.y != undefined || vec.z != undefined) {
-                            G.cameraControls.setTarget(vec, true, true);
-                        }
-                    } else {
                         G.cameraControls.setTarget(null);
-                    }
-                    if (this.graph.heightProperty == "fixedPointLayer")
-                        G.toggleSelectVertex(this.graph.vertexMap[value]);
-                    else G.toggleSelectVertex(this.graph.vertexMap[value]);
-                    this.showNeighbors(value);
+                        if (result != -1 && !this.graph.selectedVertices[result]) {
+                            if (G.graph.nodes.size && G.graph.nodes.size[result] == 0) {
+                                G.addLog("Vertex doesn't exist in this layout");
+                                return;
+                            }
+                            let vec = G.view.getNodePos(result);
+                            if (vec.x != undefined || vec.y != undefined || vec.z != undefined) {
+                                G.cameraControls.setTarget(vec, true, true);
+                            }
+                        } else {
+                            G.cameraControls.setTarget(null);
+                        }
+                        if (this.graph.heightProperty == "fixedPointLayer")
+                            G.toggleSelectVertex(this.graph.vertexMap[value]);
+                        else G.toggleSelectVertex(this.graph.vertexMap[value]);
+                        document.getElementById("graph-menu").style.display = "none";
+                        document.getElementById("graph-fork-bar").style.display = "block";
+                        this.showNeighbors(value);
+                    } else G.addLog("Vertex doesn't exist in this dataset");
 
                 }
                 if (values.length > 0) {
@@ -711,7 +714,7 @@ G.addModule("ui", {
                 }
 
             });
-            }
+        }
     },
 
 	showTopLevelGraphStats: function (graph) {
@@ -1054,6 +1057,13 @@ G.addModule("ui", {
 		});
 	},
 	showSemanticsText: function () {
+        if(G.view.graph.dataPath && G.view.graph.dataPath.includes("fabula")){
+            G.addLog("This option isn't customized for this dataset");
+            return;
+        } else if(!G.view.graph.dataPath){
+            G.addLog("This option isn't customized for this dataset");
+            return;
+        }
 	    if(G.snNodesColorByLabel || G.snNodesColorByHotSpot) {
             G.addLog("Please remove the color nodes by label or hotspot option");
             return;
