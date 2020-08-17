@@ -771,6 +771,10 @@ G.addModule("controls",{
                 //Algs.getVertexShortestPathInAllFixedPoints(this.graph, result);
                 G.cameraControls.setTarget(null);
                 if(result!=-1) {
+                    if (G.graph.nodes.size && G.graph.nodes.size[result] == 0) {
+                        G.addLog("Vertex doesn't exist in this layout");
+                        return;
+                    }
                     let vec=G.view.getNodePos(this.graph.vertices.id.indexOf(value));
                     if(vec.x != undefined || vec.y != undefined || vec.z != undefined ) {
                         G.cameraControls.setTarget(vec, true, true);
@@ -778,7 +782,7 @@ G.addModule("controls",{
                     if(this.graph.heightProperty == "fixedPointLayer")
                         G.toggleSelectVertex(this.graph.vertexMap[value]);
                     else G.toggleSelectVertex(this.graph.vertexMap[value]);
-                }
+                } else G.addLog("Vertex doesn't exist in this dataset");
             }
             if(values.length > 0) {
                 for(let i=0; i< values.length; i++) {
@@ -1324,6 +1328,103 @@ G.addModule("controls",{
                     let target = parseInt(Object.keys(this.graph.selectedVertices)[1]);
                     let shortestPath = Algs.shortestPath(this.graph, source, target, false);
                     this.graph.highlightPath = shortestPath;
+
+                    if (G.snPathsAutoExplore) {
+                        var x = document.getElementsByName("auto-explore");
+                        let option_1 = false;
+                        let option_2 = false;
+                        let option_3 = false;
+                        G.autoExplorePathsOption=0;
+                        for(i = 0; i < x.length; i++) {
+                            if(x[i].checked) {
+                                if (x[i].value == "option_1") {
+                                    option_1 = true;
+                                    G.autoExplorePathsOption=1;
+                                }
+                                if (x[i].value == "option_2") {
+                                    G.autoExplorePathsOption=2;
+                                    option_2 = true;
+                                }
+                                if (x[i].value == "option_3") {
+                                    option_3 = true;
+                                    G.autoExplorePathsOption=3;
+                                }
+                            }
+
+                        }
+                        if(option_2) {
+                            G.view.interval_index = G.view.graph.highlightPath.length - 1;
+
+                            function showTime() {
+                                G.view.bool = true;
+                                if (G.view.interval_index == -1) {
+                                    G.view.bool = false;
+                                    clearInterval(G.view.timerId);
+                                    G.view.interval_index = G.view.graph.highlightPath.length - 1;
+                                }
+                                G.vertexLabels.show(G.view.bool, [G.view.graph.highlightPath[G.view.interval_index]]);
+                                G.view.interval_index = G.view.interval_index - 1;
+                            }
+                            G.view.timerId = setInterval(showTime, G.animation["auto explore speed"] * 1000);
+                        } else if(option_3) {
+                            G.view.interval_index1 = G.view.graph.highlightPath.length - 1;
+                            G.view.interval_index2 = 0;
+                            let stop1=0;
+                            let stop2=0;
+                            if(G.view.graph.highlightPath.length%2 == 0) {
+                                stop1= G.view.graph.highlightPath.length/2-1;
+                                stop2= G.view.graph.highlightPath.length/2;
+                            } else {
+                                stop1= Math.floor(G.view.graph.highlightPath.length / 2)-1;
+                                stop2= Math.floor(G.view.graph.highlightPath.length / 2)+1;
+                            }
+                            function showTime() {
+                                G.view.bool = true;
+                                if (G.view.interval_index1 == stop1 &&  G.view.interval_index2 == stop2) {
+                                    G.view.bool = false;
+                                    G.view.interval_index1 = G.view.graph.highlightPath.length - 1;
+                                    G.view.interval_index2 = 0;
+                                    clearInterval(G.view.timerId);
+                                }
+                                G.vertexLabels.show(G.view.bool, [G.view.graph.highlightPath[G.view.interval_index1],G.view.graph.highlightPath[G.view.interval_index2]]);
+                                G.view.interval_index1 = G.view.interval_index1 - 1;
+                                G.view.interval_index2 = G.view.interval_index2 + 1;
+                            }
+
+                            G.view.timerId = setInterval(showTime, G.animation["auto explore speed"] * 1000);
+
+                        } else if(option_1){
+                            if(G.view.graph.highlightPath.length%2 == 0) {
+                                G.view.interval_index1 = G.view.graph.highlightPath.length / 2 - 1;
+                                G.view.interval_index2 = G.view.graph.highlightPath.length / 2;
+                            } else {
+                                G.view.interval_index1 = Math.floor(G.view.graph.highlightPath.length / 2);
+                                G.view.interval_index2 = Math.floor(G.view.graph.highlightPath.length / 2);
+                            }
+                            function showTime() {
+                                G.view.bool = true;
+                                if (G.view.interval_index1 == -1 &&  G.view.interval_index2 == G.view.graph.highlightPath.length) {
+                                    G.view.bool = false;
+                                    clearInterval(G.view.timerId);
+                                    if(G.view.graph.highlightPath.length%2 == 0) {
+                                        G.view.interval_index1 = G.view.graph.highlightPath.length / 2 - 1;
+                                        G.view.interval_index2 = G.view.graph.highlightPath.length / 2;
+                                    } else {
+                                        G.view.interval_index1 = Math.floor(G.view.graph.highlightPath.length / 2);
+                                        G.view.interval_index2 = Math.floor(G.view.graph.highlightPath.length / 2);
+                                    }
+                                }
+                                G.vertexLabels.show(G.view.bool, [G.view.graph.highlightPath[G.view.interval_index1],G.view.graph.highlightPath[G.view.interval_index2]]);
+                                G.view.interval_index1 = G.view.interval_index1 - 1;
+                                G.view.interval_index2 = G.view.interval_index2 + 1;
+                            }
+
+                            G.view.timerId = setInterval(showTime, G.animation["auto explore speed"] * 1000);
+                        }
+                    } else {
+                        G.view.bool = true;
+                        G.vertexLabels.show(G.view.bool, Object.keys(this.graph.selectedVertices))
+                    }
                 } else {
                     this.graph.highlightPath = [];
                     G.view.bool = false;

@@ -1057,10 +1057,11 @@ G.addModule("ui", {
 		});
 	},
 	showSemanticsText: function () {
-        if(G.view.graph.dataPath && G.view.graph.dataPath.includes("fabula")){
+        if(!G.view.graph.dataPath){
             G.addLog("This option isn't customized for this dataset");
             return;
-        } else if(!G.view.graph.dataPath){
+        }
+        if(G.view.graph.dataPath && !G.view.graph.dataPath.includes("fabula")){
             G.addLog("This option isn't customized for this dataset");
             return;
         }
