@@ -599,14 +599,15 @@ G.addModule("controls",{
 		let selectionButtonsElem=getE("selection-buttons-area");
         let annotationSelectButtonsElem=getE("annotation-select");
         let annotationDeleteButtonsElem=getE("annotation-delete");
-		this.addButton(selectionButtonsElem,"select by ID",()=>{
-		    let value=getE('select-vertex-input').value;
-		    let values = [];
+        this.addButton(selectionButtonsElem, "select by ID", () => {
+            let value = getE('select-vertex-input').value;
+            let values = [];
             if (value.indexOf(',') > -1) {
                 values = value.split(',')
             } else {
-                let result=this.graph.vertices.id.indexOf(value);
-                neigh = G.view.graph.getNeighborIDsByID(result);
+                let result = this.graph.vertices.id.indexOf(value);
+                if (result != -1) {
+                    neigh = G.view.graph.getNeighborIDsByID(result);
                     if (G.view.graph.subgraphID) {
                         layers = Object.keys(this.graph.parentLayersMap[this.graph.vertices.id[result]]);
                         if (G.loading.graphsCache[value]) {
@@ -629,39 +630,40 @@ G.addModule("controls",{
                         }
 
                     }
-
-
-                //Algs.getVertexShortestPathInAllFixedPoints(this.graph, result);
-                G.cameraControls.setTarget(null);
-                if(result!=-1 && !this.graph.selectedVertices[result]) {
-                    let vec = G.view.getNodePos(result);
-                    if (vec.x != undefined || vec.y != undefined || vec.z != undefined) {
-                        G.cameraControls.setTarget(vec, true, true);
-                    }
-                } else {
                     G.cameraControls.setTarget(null);
-                }
-                    if(this.graph.heightProperty == "fixedPointLayer")
+                    if (result != -1 && !this.graph.selectedVertices[result]) {
+                        if (G.graph.nodes.size && G.graph.nodes.size[result] == 0) {
+                            G.addLog("Vertex doesn't exist in this layout");
+                            return;
+                        }
+                        let vec = G.view.getNodePos(result);
+                        if (vec.x != undefined || vec.y != undefined || vec.z != undefined) {
+                            G.cameraControls.setTarget(vec, true, true);
+                        }
+                    } else {
+                        G.cameraControls.setTarget(null);
+                    }
+                    if (this.graph.heightProperty == "fixedPointLayer")
                         G.toggleSelectVertex(this.graph.vertexMap[value]);
                     else G.toggleSelectVertex(this.graph.vertexMap[value]);
-
+                } else G.addLog("Vertex doesn't exist in this dataset");
             }
-            if(values.length > 0) {
-              for(let i=0; i< values.length; i++) {
-                  let result=this.graph.vertices.id.indexOf(values[i]);
-                  G.cameraControls.setTarget(null);
-                  if(result!=-1) {
-                      let vec=G.view.getNodePos(values[i]);
-                      if(vec.x != undefined || vec.y != undefined || vec.z != undefined )
-                          G.cameraControls.setTarget(vec,true);
-                      if(this.graph.heightProperty == "fixedPointLayer")
-                          G.toggleSelectVertex(this.graph.vertexMap[values[i]]);
-                      else G.toggleSelectVertex(this.graph.vertexMap[values[i]]);
-                  }
-              }
+            if (values.length > 0) {
+                for (let i = 0; i < values.length; i++) {
+                    let result = this.graph.vertices.id.indexOf(values[i]);
+                    G.cameraControls.setTarget(null);
+                    if (result != -1) {
+                        let vec = G.view.getNodePos(values[i]);
+                        if (vec.x != undefined || vec.y != undefined || vec.z != undefined)
+                            G.cameraControls.setTarget(vec, true);
+                        if (this.graph.heightProperty == "fixedPointLayer")
+                            G.toggleSelectVertex(this.graph.vertexMap[values[i]]);
+                        else G.toggleSelectVertex(this.graph.vertexMap[values[i]]);
+                    }
+                }
             }
 
-		});
+        });
         if(G.graph && G.graph.subgraphID){
             this.addButton(selectionButtonsElem,"show vertex neighbors",()=>{
                 let value=getE('select-vertex-input').value;
@@ -808,7 +810,7 @@ G.addModule("controls",{
         //
         // });
 
-            let drawingButtonsElem = getE("drawing-buttons-area");
+
             let drawingGraphText = getE("drawing-graph");
             // this.addButton(drawingButtonsElem, "Next Neighbors", () => {
             //     const distinct = (value, index, self) => {
@@ -827,33 +829,8 @@ G.addModule("controls",{
             //     G.graph.trackIndex++;
             //
             // });
-            let ccButtonsElem = getE("cc-buttons-area");
-            this.addButton(ccButtonsElem, "Sparsenet", () => {
-                let value=getE("cc-id").value;
-                if(Number.isInteger(Number(value))) {
-                    G.graph.selectedccId = Number(value);
-                }else {
-                    G.graph.selectedccId = 0;
-                }
-                graph.snPaths = undefined;
-                document.getElementById("vertical").style.display="none";
-                //document.getElementById("horizontal").style.display="none";
-                document.getElementById("path").style.display = "block"
 
-                G.analytics.showSparseNet(G.graph);
 
-            });
-
-            this.addButton(drawingButtonsElem, "Update", () => {
-                let value=getE('number-of-next-paths').value;
-                if(Number.isInteger(Number(value))) {
-                    G.graph.customPathNumbers = Number(value);
-                }else {
-                    G.graph.customPathNumbers = 1;
-                }
-                G.view.refreshStyles(true, true);
-
-            });
 
             let autoButtonsElem = getE("auto-buttons-area");
             this.addButton(autoButtonsElem, "Pause", () => {
@@ -1854,6 +1831,10 @@ G.addModule("controls",{
 
         }, false);
         document.getElementById("color_code_nodes_option_1").addEventListener('click', function(){
+            if(G.graph.dataPath != "fabula"){
+                G.addLog("This option isn't customized for this dataset");
+                return;
+            }
             if(G.snNodesColorByLabel) {
                 G.snNodesColorByLabel=false;
                 document.getElementById("labels_color-mapping").style.display="none";
@@ -1865,6 +1846,10 @@ G.addModule("controls",{
             }
         }, false);
         document.getElementById("color_code_nodes_option_2").addEventListener('click', function(){
+            if(G.graph.dataPath != "fabula"){
+                G.addLog("This option isn't customized for this dataset");
+                return;
+            }
             if(G.snNodesColorByHotSpot) {
                 document.getElementById("spots_color-mapping").style.display="none";
                 G.snNodesColorByHotSpot=false;
@@ -2443,6 +2428,7 @@ G.addModule("controls",{
 		//skip repeated messages
 		var lastlog=G.logElem.lastElementChild;if((lastlog)&&(lastlog.textContent==msg)){return;}
 		var p=document.createElement('p');p.textContent=msg;p.className = 'graph-log';
+		p.style.color = "red";
 		if(lastlog) {
             G.logElem.replaceChild(p, lastlog);
         }else {
