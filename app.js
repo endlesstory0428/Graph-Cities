@@ -1,3 +1,20 @@
+const app = express();
+const server = http.createServer(app);
+var io = require('socket.io')(server);
+
+io.on('connection', function(socket) {
+  console.log('connected socket!');
+
+  socket.on('greet', function(data) {
+    console.log(data);
+    socket.emit('respond', { hello: 'Hey, Mr.Client!' });
+  });
+  socket.on('disconnect', function() {
+    console.log('Socket disconnected');
+  });
+});
+
+
 'use strict';
 const Graph=require("./lib/graph.js"),Datasets=require("./datasets.js"),http = require('http'),util = require("util"),express = require('express'),zlib = require('zlib'),Buffer = require('buffer').Buffer,fs = require('node-fs'),path = require('path'),readline=require('readline'),{exec, spawn} = require('child_process'),io = require("socket.io");
 const cpp = require('compile-run');

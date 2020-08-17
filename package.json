@@ -1,21 +1,30 @@
 {
-  "name": "g-atlas",
-  "description": "graph visualization",
-  "version": "0.0.1",
-  "private": true,
-  "main": "app.js",
-  "dependencies": {
-    "bsearch": "^0.1.1",
-    "compile-run": "^2.3.2",
-    "express": "^4.17.1",
-    "graphology": "^0.16.0",
-    "html": "^1.0.0",
-    "jquery": "^3.5.1",
-    "node-fs": "^0.1.7",
-    "node-fs-extra": "^0.8.2",
-    "plotly": "^1.0.6",
-    "sigma": "^2.0.0-alpha29",
-    "socket.io": "*",
-    "union-find": "^1.0.2"
-  }
+	"name": "g-atlas",
+	"description": "graph visualization",
+	"version": "0.0.1",
+	"private": true,
+	"main": "app.js",
+	"dependencies": 
+	{
+		"bsearch": "^0.1.1",
+		"compile-run": "^2.3.2",
+		"express": "^4.17.1",
+		"graphology": "^0.16.0",
+		"html": "^1.0.0",
+		"jquery": "^3.5.1",
+		"node-fs": "^0.1.7",
+		"node-fs-extra": "^0.8.2",
+		"plotly": "^1.0.6",
+		"sigma": "^2.0.0-alpha29",
+		"socket.io": "*",
+		"union-find": "^1.0.2"
+	},
+	"engines": 
+	{
+		"node": "12.x.x"
+	},
+	"scripts": 
+	{
+		"start": "node app.js dataDir=data2 tempDir=temp2 port=8080"
+	}
 }
