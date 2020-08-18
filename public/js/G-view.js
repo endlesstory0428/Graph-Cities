@@ -253,7 +253,6 @@ G.addModule("view",{
         if(graph.dataPath.includes("layer")&&(graph.dataPath.includes("1") ||graph.dataPath.includes("2"))) {
             getE("layer-1-info").innerHTML = ""
             ccs = Algs.getSortedCCsAndCCIDs(graph);
-            getE("number-ccs-graph").innerText = "Select a connected component between 0 and " + ccs.length;
             info = getE("layer-1-info");
             G.graph.showingSparsenet = false;
             items = Algs.getMainVertexInCC(graph);

@@ -256,7 +256,9 @@ class Module{
 								if(paramObj.func)paramObj.func(value,target,target.modifiers[name]);
 								modObj.needsUpdate=true;this.onModifiersChanged(name);
 								if(name =="sparsenet") {
-                                    G.addLog("showing " + G.view.graph.snPathSequence + " path out of " + G.view.graph.snPaths.length);
+								    if(G.view.graph.thePaths != undefined)
+                                        G.addLog("Please remove the hotspots filter to see the paths");
+                                    else G.addLog("showing " + G.view.graph.snPathSequence + " path out of " + G.view.graph.snPaths.length);
                                     let count =0;
                                     Object.keys(G.view.graph.modifiers.sparsenet.vertexPaths).filter((v) =>{
                                         if(G.view.graph.modifiers.sparsenet.vertexPaths[v].length > 1 ){
