@@ -437,7 +437,7 @@
             let x_z = [city_all[layer_name].coords[0],  city_all[layer_name].coords[1]];
             let layer_name_end = layer_name.lastIndexOf('_');
             let simplified_layer_name = layer_name.slice(8,layer_name_end);
-            createBushMeshes(simplified_layer_name, x_z, F, grassRadius);
+            createBushMeshes(simplified_layer_name, x_z, grassFace, grassRadius);
           }
           //coordinates is ready, check if shape of building is ready
           if(city_all[layer_name].shapes.length > 0) {
@@ -661,17 +661,21 @@
         var r = grassRad/2.0;
         for (let i = 0; i < num_fp; i++) {
           var theta = 2.0*Math.PI*i/num_fp;
-          var x = coord[0] + r * Math.cos(theta)
-          var z = coord[1] + r * Math.sin(theta)
+          var x = coord[0] + r * Math.cos(theta);
+          var z = coord[1] + r * Math.sin(theta);
           console.log(coord, x, z, r, theta);
+          var rot = Math.random()*2*Math.PI;
           for (let j = 0; j < meshes.length; j++) {
-            var geo = meshes[j][0];
-            geo.translate(x,1,z);
+            var geo = meshes[j][0].clone();
+            geo.scale(y_scale/8,y_scale/8,y_scale/8);
+            geo.rotateY(rot);
             if (j == 0) {
               var mesh = new THREE.LineSegments( geo, meshes[j][1] );
+              mesh.position.set( x, 1, z );
               scene.add( mesh );
             } else {
               var mesh = new THREE.Mesh( geo, meshes[j][1] );
+              mesh.position.set( x, 1, z );
               scene.add( mesh );
             }
             // mesh.position.set( x, 1, z );
