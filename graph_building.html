@@ -415,8 +415,12 @@
             grassGeo.translate(city_all[layer_name].coords[0], 1, city_all[layer_name].coords[1]);
             let grassMat = new THREE.MeshBasicMaterial( {color: 0x7cfc00} );
             let grassMesh = new THREE.Mesh(grassGeo, grassMat);
-            scene.add(grassMesh);                
+            scene.add(grassMesh);
           }
+          let x_z = [city_all[layer_name].coords[0],  city_all[layer_name].coords[1]];
+          let layer_name_end = layer_name.lastIndexOf('_');
+          let simplified_layer_name = layer_name.slice(8,layer_name_end);
+          createBushMeshes(layer_name, x_z);
           //coordinates is ready, check if shape of building is ready
           if(city_all[layer_name].shapes.length > 0) {
             city_tracking[layer_name].ready_to_move = true;
@@ -604,6 +608,11 @@
                 
             }
         }
+      }
+
+      // layer name and coordinate of it on the ground, i.e [X,Z]
+      function createBushMeshes(layer, coord) {
+
       }
 
       function createControls( camera ) {
