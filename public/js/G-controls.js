@@ -216,6 +216,11 @@ G.addModule("controls",{
                     G.firstHotspots = true;
                     G.controls.addCheckbox(downloadButtonsElem, toNormalText("Reset"), (value) => {
                         if (value) {
+                            var x = document.getElementsByClassName("range-slider");
+                            if (x.length > 0) {
+                                x[0].remove();
+                            }
+
                             G.view.graph.thePaths = undefined;
                             G.view.refreshStyles(true, true);
                         }
@@ -1932,8 +1937,16 @@ G.addModule("controls",{
 
         }, false);
         document.getElementById("color_code_nodes_option_1").addEventListener('click', function(){
-            if(G.graph.dataPath != "fabula"){
+            if(!G.view.graph.dataPath){
                 G.addLog("This option isn't customized for this dataset");
+                return;
+            }
+            if(G.view.graph.dataPath && !G.view.graph.dataPath.includes("fabula")){
+                G.addLog("This option isn't customized for this dataset");
+                return;
+            }
+            if(!G.view.graph.snPaths){
+                G.addLog("Please start sparsenet to start this functionality");
                 return;
             }
             if(G.snNodesColorByLabel) {
@@ -1947,8 +1960,16 @@ G.addModule("controls",{
             }
         }, false);
         document.getElementById("color_code_nodes_option_2").addEventListener('click', function(){
-            if(G.graph.dataPath != "fabula"){
+            if(!G.view.graph.dataPath){
                 G.addLog("This option isn't customized for this dataset");
+                return;
+            }
+            if(G.view.graph.dataPath && !G.view.graph.dataPath.includes("fabula")){
+                G.addLog("This option isn't customized for this dataset");
+                return;
+            }
+            if(!G.view.graph.snPaths){
+                G.addLog("Please start sparsenet to start this functionality");
                 return;
             }
             if(G.snNodesColorByHotSpot) {
@@ -2226,7 +2247,7 @@ G.addModule("controls",{
 		if("max" in options==false)options.max=1;
 		if("begin" in options==false)options.begin=options.min;
 		if("end" in options==false)options.end=options.max;
-
+        if(options.end<0) return;
 		let s=d3.select(parentElem).append("div").attr("class","range-slider");
 		if(id != ""){
 		    s.attr("id", id);
