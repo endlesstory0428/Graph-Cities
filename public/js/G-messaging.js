@@ -2,7 +2,7 @@ G.addModule("messaging",{
 	datasetID:null,
 	socket:null,
 	init:function(){
-		let socket = io.connect("http://localhost:8080", {  transports: [  "websocket","flashsocket","polling" ] });
+		let socket = io.connect("/", {  transports: [  "websocket","flashsocket","polling" ] });
 		this.socket=socket;
 		socket.on("test",function(data){console.log(data);});
 		socket.on("connect", function(data) {
