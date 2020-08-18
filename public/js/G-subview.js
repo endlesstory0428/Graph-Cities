@@ -2782,6 +2782,7 @@ G.addModule("subview",{
 				//clustering has three methods: using landmarks without intersections, using landmarks with intersections, and using all points on paths (assigning other vertices to the best neighboring path). This only affects forces, not colors
 				
 				clear:{type:"button",func:(g)=>{
+				    G.graph.showingSparsenet = false;
 					G.disableModifier("sparsenet",g);
 					delete g.snPaths;
 				},},
