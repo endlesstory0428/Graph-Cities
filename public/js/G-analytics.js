@@ -1734,6 +1734,7 @@ G.addModule("analytics",{
 		let ccg = undefined;
         ccs = Algs.getSortedCCsAndCCIDs(graph);
         if(graph.dataPath.includes("layer")&& (ccs.length>1 && !G.graph.showingSparsenet)) {
+            graph.snPaths = undefined;
             ccg = Algs.getInducedSubgraph(graph, ccs[G.graph.selectedccId].vertexList);
             v = ccg.vertices.length;
             e = ccg.edges.length;
@@ -1847,10 +1848,12 @@ G.addModule("analytics",{
 	},
 	hideSparseNet:function(graph){
 		if(!graph)graph=G.graph;
+		G.graph.showingSparsenet = false;
 		G.disableModifier("sparsenet",graph);
 	},
 	clearSparseNet:function(graph){
 		if(!graph)graph=G.graph;
+        G.graph.showingSparsenet = false;
 		G.disableModifier("sparsenet",graph);
 		delete G.graph.snPaths;
 	},

@@ -229,7 +229,9 @@ class Module{
 			modObj.advancedControlsElem=modObj.advancedControlsSelection.node();
 			//only add a show more button if needed
 			modObj.modLabelSelection=modObj.controlsSelection.append("p").attr("class","modifier-controls-title").text(toNormalText(name)+" \u2716").on("click",()=>{
-				this.disableModifier(name);
+				if(name == "sparsenet")
+                    G.graph.showingSparsenet = false;
+			    this.disableModifier(name);
 			});
 			let hasAdvancedControls=false;
 			modMenuElem.appendChild(modObj.controlsElem);
