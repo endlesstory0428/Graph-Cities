@@ -175,11 +175,11 @@ def getFPMetaDagCover(g, l, lcc):
     wavesourcesfile = graph + '-wave-sources.csv'
     wavedistfile = graph + '-waves-info.json'
 
-    print('reading', wavedistfile)
+    print('reading', wavedistfile, file=sys.stderr)
     with open(wavedistfile) as infile:
         wdist = json.load(infile)
         del wdist['0']
-    print('read', wavedistfile)
+    print('read', wavedistfile, file=sys.stderr)
 
     wwccs = set()
     for w, info in wdist.items():
@@ -189,7 +189,7 @@ def getFPMetaDagCover(g, l, lcc):
             if winfo['layer-cc'] == int(lcc):
                 wwccs.add((int(w), int(wcc)))
 
-    print('reading', wavecsvfile)
+    print('reading', wavecsvfile, file=sys.stderr)
     iter_csv = pd.read_csv(
         wavecsvfile,
         header=None,
@@ -205,9 +205,9 @@ def getFPMetaDagCover(g, l, lcc):
         ]
     )
     # waves.drop(['wcc'], axis=1, inplace=True)
-    print('read', wavecsvfile)
+    print('read', wavecsvfile, file=sys.stderr)
 
-    print('reading', wavesourcesfile)
+    print('reading', wavesourcesfile, file=sys.stderr)
     iter_csv = pd.read_csv(
         wavesourcesfile,
         header=None,
@@ -217,7 +217,7 @@ def getFPMetaDagCover(g, l, lcc):
     )
     wavesets = pd.concat([chunk for chunk in iter_csv])
     # wavesets.drop(['wave'], axis=1, inplace=True)
-    print('read', wavesourcesfile)
+    print('read', wavesourcesfile, file=sys.stderr)
 
     wfsets = {}
     iwfsets = {}
@@ -278,7 +278,7 @@ def getFPMetaDagCover(g, l, lcc):
     for node in ds.itersets():
         verts = [int(x) for x in node]
         nid = ds.find(verts[0])
-        print(verts)
+        print(verts, file=sys.stderr)
         wavemat['nodes'][str(nid)] = {
             "num_vertices": len(verts),
             "num_edges": iesizes.get(nid, 0),
@@ -297,7 +297,7 @@ if __name__ == "__main__":
     layer = sys.argv[2]
     lcc = sys.argv[3]
 
-    print(graph, layer, lcc)
+    print(graph, layer, lcc, file=sys.stderr)
 
     output = getFPMetaDagCover(graph, layer, lcc)
     print(json.dumps(output, indent=2))
