@@ -4,7 +4,7 @@
     <title>Graph City Building</title>
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <!-- <link type="text/css" rel="stylesheet" href="./three.js/editor/css/main.css"> -->
-    <script src="lib/jquery-3.5.1.min.js"> </script>
+    <!-- <script src="lib/jquery-3.5.1.min.js"> </script> -->
     <style>
       body { margin: 0; }
       canvas { display: block; }
@@ -328,17 +328,18 @@
           inner_radius: inner_r,
           outer_radius: outer_r
         }
+        console.log("Layer_name!", layer_name);
         city_all[layer_name].shapes.push(floor);
       }
 
       // take layer name and lines from floor file, update the shape of building
       function loadFloor(lines,layer_name) {
         // console.log("loadFloor: "+layer_name);
-        if (!(layer_name) in city_all) {
-          city_all[layer_name] = getLayerAllObj(layer_name);
-        } else if (!(layer_name) in city_all) {
+        //if (!(layer_name) in city_all) {
+        city_all[layer_name] = getLayerAllObj(layer_name);
+        /*} else if (!(layer_name) in city_all) {
           city_all[layer_name] = getLayerTrackingObj(layer_name);
-        }
+        }*/
         let i;
         let tmp_outer_radius = 0;
         
