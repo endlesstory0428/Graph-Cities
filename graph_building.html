@@ -47,6 +47,7 @@
       let groundMesh;
       let source_dir = "data/";
       let spiral_file = "data/SPIRAL.txt";
+      let voronoi_file = "python/voronoi.txt";
       let land_obj = "models/island.obj";
       let manager = new THREE.LoadingManager();
       // let source_dir;
@@ -64,7 +65,8 @@
           },
           ground: "#CCA262",
           // colorMap: "jet",
-          hideBuilding: false
+          // hideBuilding: false
+          root: 'any building'
       };
       let building_params = {
           floor: '',
@@ -97,7 +99,7 @@
 
         loadBushData();
         loadFile(spiral_file,manager);
-
+        
         // GUI folders
         let gui = new GUI();
         let f1 = gui.addFolder('Building Info');
@@ -124,7 +126,10 @@
         //     animate();
         // });
         // f3.open();
-
+        
+        let f4 = gui.addFolder('Path Planning');
+        
+        f4.open();
         // ground
         // let groundMat = new THREE.MeshBasicMaterial( {color:params.ground} );
         // groundMat.side = THREE.DoubleSide;
@@ -204,6 +209,23 @@
         );
       }
 
+      function loadVoronoiFile(file,manager) {
+        let loader = new THREE.FileLoader(manager);
+        let blob = null;
+        loader.responseType = "blob";
+        loader.load(file,
+          function(data) {
+            getAsTextVoronoi(data,file);
+          },
+          function(xhr) {
+            console.log((file+' '+xhr.loaded/xhr.total*100)+'% loaded');
+          },
+          function(err) {
+            console.error('An error happened when loading '+file);
+          }
+        );
+      }
+
       //load ground OBJ file
       function groundObjLoader(obj_url,obj_material) {
         var loader = new OBJLoader();
@@ -242,11 +264,34 @@
         let text = reader.result;
       }
 
+      function getAsTextVoronoi(file,url) {
+        let reader = new FileReader();
+        reader.readAsText(file);
+        reader.onProgress = updateProgress;
+        reader.onload = loadedVoronoi;
+        reader.onerror = errorHandler;
+        reader.url = url;
+        let text = reader.result;
+      }
+
       function updateProgress(evt) {
         if(evt.lengthComputable) {
           let loaded = (evt.loaded/evt.total);
         }
       }
+
+      function updateDropdown(target, list){   
+        innerHTMLStr = "";
+        for(var i=0; i<list.length; i++){
+            var str = "<option value='" + list[i] + "'>" + list[i] + "</option>";
+            innerHTMLStr += str;        
+        }
+        if (innerHTMLStr != "") target.domElement.children[0].innerHTML = innerHTMLStr;
+      }
+
+      dropdown = gui.add(MyObject, 'Values', ['A', 'B']);
+
+      updateDropdown(dropdown, ['A', 'B', 'C', 'D']);
 
       // if using python http server
       function loaded(evt) {
@@ -271,18 +316,25 @@
           let element_count = (lines[0].split(' ')).length;
           // need to update when SPIRAL.txt updates
           if(element_count == 7) {
-            console.log("loaded: SPIRAL file");
+            // console.log("loaded: SPIRAL file");
             loadSpiral(lines,filename);
           } else if(element_count == 6) {
-            console.log("loaded: color file");
+            // console.log("loaded: color file");
             layer_name = fileToLayer(filename);
             loadColor(lines,layer_name);
           } else if(element_count == 3) {
-            console.log("loaded: floor file");
+            // console.log("loaded: floor file");
             layer_name = fileToLayer(filename);
             loadFloor(lines,layer_name);
           }
         }
+      }
+
+      function loadedVoronoi(evt) {
+        let fileString = evt.target.result;
+        let lines = fileString.split('\n');
+        let filename = evt.target.url;
+        loadVoronoi(lines,filename);
       }
 
       function fileToLayer(filename) {
@@ -296,6 +348,7 @@
           coords:[],
           colors:{},
           shapes:[],
+          voronoi:[],
           V:0,
           E:0
         };
@@ -370,7 +423,7 @@
 
       // take color file of a layer and save information to global dictionary
       function loadColor(color_list,layer_name) {
-        console.log("loadColor: " +layer_name);
+        // console.log("loadColor: " +layer_name);
         if (!(layer_name in city_all)) {
           city_all[layer_name] = getLayerAllObj(layer_name);
         }
@@ -448,7 +501,22 @@
           loadFile(color_file,manager);
           loadFile(floor_file,manager);
         }
+        loadVoronoiFile(voronoi_file,manager);
         // printGlobalDict("loadSpiral");
+      }
+
+      function loadVoronoi(lines,filename){
+        for(let i=0; i<lines.length-1; i++){
+          let elements = lines[i].split(' ');
+          let layer_name = elements[0];
+          let voronoi = [];
+          for(let j=1; j<elements.length; j=j+2){
+            let voronoi_vertex = [elements[j],elements[j+1]];
+            voronoi.push(voronoi_vertex);
+          }
+          city_all[layer_name].voronoi = voronoi;
+          // console.log("loadVoronoi: "+layer_name+".voronoi "+city_all[layer_name].voronoi);
+        }
       }
 
       function errorHandler(evt) {

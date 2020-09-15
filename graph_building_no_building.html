@@ -3,7 +3,7 @@
     <title>Graph City Building</title>
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <!-- <link type="text/css" rel="stylesheet" href="./three.js/editor/css/main.css"> -->
-    <script src="lib/jquery-3.5.1.min.js"> </script>
+    <!-- <script src="lib/jquery-3.5.1.min.js"> </script> -->
     <style>
       body { margin: 0; }
       canvas { display: block; }
@@ -44,7 +44,7 @@
       let city_to_load = 0;
       let groundMesh;
       let source_dir = "data/";
-      let land_obj = "models/island.obj";
+      // let land_obj = "models/island.obj";
       // let source_dir;
       // let y_scale = 50; // scale up the height of building
       let last = [-187.86920742571192,-69.84011743155536]
@@ -56,10 +56,10 @@
         let params = {
             orthographicCamera: false,
             resetCamera: function() {
-                // TrackballControls.reset();
+              controls.reset();
             },
-            ground: "#CCA262",
-            colorMap: "jet",
+            // ground: "#CCA262",
+            // colorMap: "jet",
             hideBuilding: false
         };
         let building_params = {
@@ -71,9 +71,9 @@
       animate();
 
       function init() {
-        perspectiveCamera = new THREE.PerspectiveCamera( 60, aspect, 1, 2000 );
-        perspectiveCamera.position.z = 800;
-        perspectiveCamera.position.y = 500;
+        perspectiveCamera = new THREE.PerspectiveCamera( 60, aspect, 1, 4000 );
+        perspectiveCamera.position.z = 1200;
+        perspectiveCamera.position.y = 1000;
         // perspectiveCamera.position.z = 5;
         // perspectiveCamera.position.y = 7;
 
@@ -83,7 +83,11 @@
         renderer = new THREE.WebGLRenderer();
         renderer.setSize( window.innerWidth, window.innerHeight );
         document.body.appendChild( renderer.domElement );
-        
+        document.addEventListener( 'mousemove', onMouseMove, false );
+        window.addEventListener( 'resize', onWindowResize, false );
+        // window.addEventListener( 'reset_camera', onResetCamera, false);
+        createControls( perspectiveCamera );
+
         let manager = new THREE.LoadingManager();
         manager.onStart = function(url,itemsLoaded,itemsTotal) {
           console.log('Started loading file: '+url+'.\nLoaded '+itemsLoaded+' of '+itemsTotal+' files.');
@@ -96,10 +100,10 @@
         let f1 = gui.addFolder('Building Info');
         f1.add(building_params, 'floor').name('floor number').listen();
         f1.add(building_params, 'layer').name('layer info').listen();
-        f1.add(params, 'colorMap', ['jet','others']).name('color map').onChange(function () {
-            // updateColorMap();
-            render();
-        });
+        // f1.add(params, 'colorMap', ['jet','others']).name('color map').onChange(function () {
+        //     // updateColorMap();
+        //     render();
+        // });
         f1.open();
         let f2 = gui.addFolder('Camera Control');
         f2.add(params, 'resetCamera').name('reset camera');
@@ -109,31 +113,62 @@
             createControls( value ? orthographicCamera : perspectiveCamera );
         });
         f2.open();
-        let f3 = gui.addFolder('Environment Control');
-        f3.addColor(params, 'ground').name('ground color').onChange( function( colorValue ) {
-            colorValue = parseInt(colorValue.replace('#','0x'), 16);
-            let colorObject = new THREE.Color( colorValue );
-            groundMesh.material.color = colorObject;
-            animate();
-        });
-        f3.open();
+        // let f3 = gui.addFolder('Environment Control');
+        // f3.addColor(params, 'ground').name('ground color').onChange( function( colorValue ) {
+        //     colorValue = parseInt(colorValue.replace('#','0x'), 16);
+        //     let colorObject = new THREE.Color( colorValue );
+        //     groundMesh.material.color = colorObject;
+        //     animate();
+        // });
+        // f3.open();
 
         // ground
         // let groundGeo = new THREE.BoxBufferGeometry(800,0.1,800);
-        let groundMat = new THREE.MeshBasicMaterial( {color:params.ground} );
-        groundMat.side = THREE.DoubleSide;
+
         // groundMesh = new THREE.Mesh( groundGeo, groundMat );
         // groundMesh.translateY(-0.5);
         // scene.add( groundMesh );
 
-        let groundUrl = "models/island.obj";
+        // // instantiate a loader
+        // var groundNormalLoader = new THREE.TextureLoader();
+        // // load a resource
+        // loader.load(
+        //   'textures/ground_normal.jpg',
+        //   //onLoad
+        //   function ( texture ) {
+        //     // in this example we create the material when the texture is loaded
+        //     let groundMat = new THREE.MeshBasicMaterial( {color:params.ground, map:texture} );
+        //   },
+        //   // onProgress callback currently not supported
+        //   undefined,
+        //   // onError callback
+        //   function ( err ) {
+        //     console.error( 'An error happened when loading ground normal.' );
+        //   }
+        // );
+        
+        // lights
+        var ambientLight = new THREE.AmbientLight( 0x404040 ); // soft white light
+        scene.add( ambientLight );
+        // var pointLight = new THREE.PointLight( 0xffffff, 1000, 1000 ); 
+        // pointLight.position.set( 50, 150, 50 ); 
+        // scene.add( pointLight );
+        var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5);
+        scene.add( directionalLight );
+
+        let groundNormal = new THREE.TextureLoader().load('textures/ground_2.jpg');
+        groundNormal.wrapS = THREE.RepeatWrapping;
+        groundNormal.wrapT = THREE.RepeatWrapping;
+        groundNormal.repeat.set( 10,10 );
+        groundNormal.rotation = 10;
+        let groundMat = new THREE.MeshBasicMaterial( {map:groundNormal} );
+        // groundMat.normalMap = groundNormal;
+        // groundMat.side = THREE.DoubleSide;
+        // let groundUrl = "models/island.obj";
+        let groundUrl = "models/flat_island.obj"
         let groundMesh = objLoader(groundUrl, groundMat);
 
-        document.body.appendChild( renderer.domElement );
-        document.addEventListener( 'mousemove', onMouseMove, false );
-        window.addEventListener( 'resize', onWindowResize, false );
-        // window.addEventListener( 'reset_camera', onResetCamera, false);
-        createControls( perspectiveCamera );
+
 
         //grid helper
         // let size = 800;
@@ -143,47 +178,65 @@
 
         let sun = new THREE.Vector3();
         //water
-        let waterGeo = new THREE.PlaneBufferGeometry(10000,10000);
-        water = new Water( waterGeo, {
-            textureWidth: 512, 
-            textureHeight: 512,
-            waterNormals: new THREE.TextureLoader().load( 'textures/waternormals.jpg', function ( texture ) {
-                texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-            } ),
-            alpha:  1.0,
-            sunDirection: new THREE.Vector3(),
-            sunColor: 0xffffff,
-            waterColor: 0x001e0f,
-            distortionScale: 4,
+        // let waterGeo = new THREE.PlaneBufferGeometry(5000,5000);
+        // water = new Water( waterGeo, {
+        //     textureWidth: 512, 
+        //     textureHeight: 512,
+        //     waterNormals: new THREE.TextureLoader().load( 'textures/waternormals.jpg', function ( texture ) {
+        //         texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+        //     } ),
+        //     alpha: 10,
+        //     sunDirection: new THREE.Vector3(),
+        //     sunColor: 0xffffff,
+        //     // waterColor: 0x001e0f,
+        //     waterColor: 0xffffff,
+        //     distortionScale: 4
+        // } );
+        // water.rotation.x = - Math.PI/2;
+        // water.position.y = -20;
+        // scene.add(water);
+        
+        // water - 2
+        let waterGeo = new THREE.BoxBufferGeometry( 5000, 50, 5000 );
+        let waterNormal = new THREE.TextureLoader().load( 'textures/waternormals.jpg', function ( texture ) {
+          texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+          texture.repeat.set( 4, 4 );
+        });        
+        let waterMat = new THREE.MeshPhongMaterial( {
+          color: 0x006994,
+          normalMap: waterNormal
         } );
-        water.rotation.x = - Math.PI/2;
-        scene.add(water);
+        waterMat.transparent=true;
+        waterMat.opacity=0.7;
+        let waterMesh = new THREE.Mesh( waterGeo, waterMat );
+        waterMesh.position.y=-50;
+        scene.add( waterMesh );
 
         //skybox
-        var sky = new Sky();
-        sky.scale.setScalar(10000);
-        scene.add(sky);
-        var uniforms = sky.material.uniforms;
-        uniforms[ 'turbidity' ].value = 10;
-        uniforms[ 'rayleigh' ].value = 2;
-        uniforms[ 'mieCoefficient' ].value = 0.005;
-        uniforms[ 'mieDirectionalG' ].value = 0.8;
-        var parameters = {
-            inclination: 0.35,
-            azimuth: 0.205
-        };
-        var pmremGenerator = new THREE.PMREMGenerator( renderer );
-        function updateSun() {
-            var theta = Math.PI * ( parameters.inclination - 0.5 );
-            var phi = 2 * Math.PI * ( parameters.azimuth - 0.5 );
-            sun.x = Math.cos( phi );
-            sun.y = Math.sin( phi ) * Math.sin( theta );
-            sun.z = Math.sin( phi ) * Math.cos( theta );
-            sky.material.uniforms[ 'sunPosition' ].value.copy( sun );
-            water.material.uniforms[ 'sunDirection' ].value.copy( sun ).normalize();
-            scene.environment = pmremGenerator.fromScene( sky ).texture;
-        }
-        updateSun();
+        // var sky = new Sky();
+        // sky.scale.setScalar(10000);
+        // scene.add(sky);
+        // var uniforms = sky.material.uniforms;
+        // uniforms[ 'turbidity' ].value = 10;
+        // uniforms[ 'rayleigh' ].value = 2;
+        // uniforms[ 'mieCoefficient' ].value = 0.005;
+        // uniforms[ 'mieDirectionalG' ].value = 0.8;
+        // var parameters = {
+        //     inclination: 0.45,
+        //     azimuth: 0.205
+        // };
+        // var pmremGenerator = new THREE.PMREMGenerator( renderer );
+        // function updateSun() {
+        //     var theta = Math.PI * ( parameters.inclination - 0.5 );
+        //     var phi = 2 * Math.PI * ( parameters.azimuth - 0.5 );
+        //     sun.x = Math.cos( phi );
+        //     sun.y = Math.sin( phi ) * Math.sin( theta );
+        //     sun.z = Math.sin( phi ) * Math.cos( theta );
+        //     sky.material.uniforms[ 'sunPosition' ].value.copy( sun );
+        //     water.material.uniforms[ 'sunDirection' ].value.copy( sun ).normalize();
+        //     scene.environment = pmremGenerator.fromScene( sky ).texture;
+        // }
+        // updateSun();
       }
 
       function loadFile(file,manager) {
@@ -264,8 +317,9 @@
                     }
                 });
                 object.position.x=-140;
+                object.position.y=-9;
                 object.position.z=20;
-                object.scale.set(33,1,33);
+                object.scale.set(0.6,0.1,0.48);
                 
                 scene.add( object );
             },
@@ -400,5 +454,6 @@
         }
       }
     </script>
+    <script src="test.js"></script>
   </body>
 </html>
