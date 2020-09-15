@@ -1,0 +1,414 @@
+<!-- vim: set ts=2 sw=2 expandtab :-->
+<head>
+  <style> body { margin: 0; } </style>
+
+  <script src="//unpkg.com/d3-dsv"></script>
+  <script src="//unpkg.com/dat.gui"></script>
+  <script src="//unpkg.com/d3-octree"></script>
+  <script src="//unpkg.com/d3-force-3d"></script>
+
+  <script src="//unpkg.com/3d-force-graph"></script>
+  <!--<script src="../../dist/3d-force-graph.js"></script>-->
+
+  <script src="https://d3js.org/d3-dsv.v2.min.js"></script>
+  <script src="https://d3js.org/d3-fetch.v2.min.js"></script>
+
+  <script src="DisjointSet.js"></script>
+  <script src="js-colormaps.js"></script>
+
+
+</head>
+
+<body>
+  <div id="graph"></div>
+
+  <script type="module">
+    import * as THREE from './node_modules/three/build/three.module.js';
+
+    const gui = new dat.GUI();
+
+    var data_info = { edges: '', vertices: '', displayed_edges: '', displayed_vertices: '' }
+    gui.add(data_info, 'edges').listen();
+    gui.add(data_info, 'vertices').listen();
+    gui.add(data_info, 'displayed_edges').listen();
+    gui.add(data_info, 'displayed_vertices').listen();
+
+    let inarr = document.getElementsByTagName('input');
+    for (let ind in Object.keys(inarr)) {
+          let textfield = inarr[ind];
+          textfield.setAttribute('readonly','');
+        }
+
+    // Interactivity Parameter
+    var IP = { max_edges: 2**13 }
+    gui.add(IP, 'max_edges');
+
+    //fixed point
+    const fixedpoint = { 'Fixed Point': 'cit-Patents/15-275340' }
+    gui.add(fixedpoint, 'Fixed Point', [
+          'cit-Patents/8-4342010',
+          'cit-Patents/2-13',
+          'cit-Patents/6-2182',
+          'cit-Patents/1-250725',
+          'cit-Patents/5-2061',
+          'cit-Patents/11-164183',
+          'cit-Patents/19-239987',
+          'cit-Patents/18-2914315',
+          'cit-Patents/15-3718944',
+          'cit-Patents/11-2983724',
+          'cit-Patents/3-3191982',
+          'cit-Patents/15-275340',
+          'cit-Patents/43-1965538',
+          'cit-Patents/19-2571623',
+          'cit-Patents/14-1037462',
+          'cit-Patents/8-27645',
+          'cit-Patents/1-140109',
+          'cit-Patents/22-919138',
+          'cit-Patents/7-30601',
+          'cit-Patents/13-30471',
+          'cit-Patents/12-508033',
+          'cit-Patents/9-28722',
+          'cit-Patents/17-1851996',
+          'cit-Patents/3-42',
+          'cit-Patents/4-1243',
+          'cit-Patents/10-196384',
+          'cit-Patents/13-3434164',
+          'cit-Patents/1-405063',
+          'cit-Patents/25-3804978',
+          'cit-Patents/16-1362234',
+          'cit-Patents/1-62999',
+          'cit-Patents/15-3515498',
+          'cit-Patents/21-3292172',
+          'cit-Patents/17-389660',
+          'cit-Patents/23-1433320',
+          'movies/57-15545',
+          'movies/33-11491',
+          'movies/29-13695',
+          'movies/14-14781',
+          'movies/7-11427',
+          'movies/4-11398',
+          'movies/37-23740',
+          'movies/16-11696',
+          'movies/48-13096',
+          'movies/14-11452',
+          'movies/15-11645',
+          'movies/9-12922',
+          'movies/30-12673',
+          'movies/60-12370',
+          'movies/123-11670',
+          'movies/29-11432',
+          'movies/37-12382',
+          'movies/62-12456',
+          'movies/50-12860',
+          'movies/2-15608',
+          'movies/283-11398',
+          'movies/76-12776',
+          'movies/18-13639',
+          'movies/527-11398',
+          'movies/26-11399',
+          'movies/3114-11398',
+          'movies/28-12051',
+          'movies/31-12735',
+          'movies/27-11403',
+          'movies/1246-11398',
+          'movies/101-11400',
+          'movies/15-17754',
+          'movies/2070-11400',
+          'movies/36-12116',
+          'movies/53-12597',
+          'movies/40-13169',
+          'movies/185-11398',
+          'movies/2-11398',
+          'movies/41-13114',
+          'movies/32-11773',
+          'movies/13-11413',
+          'movies/38-15906',
+          'movies/24-12180',
+          'movies/119-11833',
+          'movies/757-11398',
+          'movies/46-11766',
+          'movies/6-11398',
+          'movies/56-16757',
+          'movies/414-11398',
+          'movies/12-11399',
+          'movies/35-13487',
+          'movies/34-11472',
+          'movies/5-16664',
+          'movies/8-11589',
+          'movies/47-11398',
+          'movies/84-11398'
+        ])
+      .onChange(selection => {
+            let dsfp = selection.split('/');
+            let file = './dagmetas/' + dsfp[0] + '/dagmeta_' + dsfp[1] + '.json'
+            console.log("Loading: ", file);
+            loadFile(file);
+          });
+
+    // controls
+    const controls = { 'DAG Orientation': 'bu'};
+    gui.add(controls, 'DAG Orientation', ['td', 'bu', 'lr', 'rl', 'zout', 'zin', 'radialout', 'radialin', null])
+      .onChange(orientation => graph && graph.dagMode(orientation));
+
+    // graph config
+    const elem = document.getElementById("graph");
+    const NODE_REL_SIZE = 2;
+    const graph = ForceGraph3D()(elem)
+      .dagMode('bu')
+      .dagLevelDistance(50)
+      .backgroundColor('#414159')
+      .linkColor(() => 'rgba(255,255,255,0.4)')
+      .nodeRelSize(NODE_REL_SIZE)
+      .nodeId('id')
+      .nodeVal('size')
+      .nodeLabel('name')
+    //.nodeAutoColorBy('density')
+      .nodeColor('color')
+      .nodeOpacity(0.9)
+      .linkLabel('size')
+      .linkWidth('logsize')
+    //.linkDirectionalParticles(2)
+    //.linkDirectionalParticleWidth(0.8)
+    //.linkDirectionalParticleWidth('logsize')
+    //.linkDirectionalParticleSpeed(0.006)
+      .d3Force('collision', d3.forceCollide(node => Math.cbrt(node.size) * NODE_REL_SIZE))
+      .d3VelocityDecay(0.3);
+
+    // Decrease repel intensity
+    graph.d3Force('charge').strength(-15);
+
+    // Load Data
+
+    // const FILE = "./wavemaps/cit-Patents/dagmeta_8-4342010.json"; // tiny
+    // const FILE = "./wavemaps/cit-Patents/dagmeta_1-405063.json"; // tree
+    // const FILE = "./wavemaps/cit-Patents/dagmeta_3-3191982.json"; // clique
+    // const FILE = "./wavemaps/cit-Patents/dagmeta_10-196384.json"; // barely runs
+    // const FILE = "./wavemaps/cit-Patents/dagmeta_11-164183.json"; // barely interactive
+    // const FILE = "./wavemaps/cit-Patents/dagmeta_13-3434164.json"; // small connected
+    // const FILE = "./wavemaps/cit-Patents/dagmeta_14-1037462.json"; // cool
+    // const FILE = "./wavemaps/cit-Patents/dagmeta_15-275340.json"; // cool2
+    // const FILE = "./wavemaps/cit-Patents/dagmeta_17-389660.json"; // tall
+    // const FILE = "./wavemaps/cit-Patents/dagmeta_16-1362234.json"; // first example
+    // const FILE = "./wavemaps/cit-Patents/dagmeta_43-1965538.json"; // dense top
+    // const FILE = "./wavemaps/f_dagmeta_1-10126754.json";
+    // const FILE = "./dagmeta_101-11400.json";
+    // const FILE = "./wavemaps/movies/dagmeta_31-12735.json";
+    const FILE = "./dagmetas/cit-Patents/dagmeta_15-275340.json";
+    loadFile(FILE);
+
+    function loadFile(filename) {
+          d3.json(filename).then(function(data) {
+                // console.log(data);
+                let verts = 0;
+                let edges = 0;
+
+                const nodeset = disjointSet();
+                const nodemap = {};
+                const nodes = {};
+                for (const vert in data["nodes"]) {
+                      const vals = data["nodes"][vert]
+                      // console.log(vert, vals);
+                      const density = 2.0*vals["num_edges"]/(vals["num_vertices"]*vals["num_vertices"]);
+                      const node = {
+                            "id": vert,
+                            "set": vals["set"],
+                            "name": vals["num_vertices"],
+                            "density": density,
+                            "color": getColor(density),
+                            "size": vals["num_vertices"],
+                            "esize": vals["num_edges"],
+                            "level": vals["set"]
+                          };
+
+                      nodes[vert]=node;
+                      nodeset.add(node);
+                      nodemap[nodeset.find(node)]=node;
+
+                      verts += vals["num_vertices"];
+                    }
+
+                let links = [];
+                for (const sedge in data["edges"]) {
+                      const edge = sedge.split('-');
+                      const v0 = edge[0], v1 = edge[1]
+                      let parent = v0;
+                      let target = v1;
+                      if (nodes[v0].set > nodes[v1].set) {
+                            parent = v1;
+                            target = v0;
+                          }
+                      links.push({
+                            "source": nodeset.find(nodes[parent]),
+                            "target": nodeset.find(nodes[target]),
+                            //"targetNode": nodes[target],
+                            "logsize": Math.log2(data["edges"][sedge]+1),
+                            "size": data["edges"][sedge]
+                          });
+
+                      edges += data["edges"][sedge];
+                    }
+
+                let minset = 0
+                while (links.length > IP.max_edges) {
+                      minset++;
+                      for (const l in links) {
+                            let link = links[l];
+                            //console.log(link.source, link, links);
+                            if (nodemap[link.source].set < minset) {
+                                  nodeset.union(nodemap[link.source], nodemap[link.target])
+                                }
+                          }
+
+                      const filterLinks = []
+                      for (const l in links) {
+                            let link = links[l];
+                            if (nodeset.connected(nodemap[link.source], nodemap[link.target])) {
+                                  nodemap[nodeset.find(nodemap[link.source])].esize += link.size;
+                                }
+                            else {
+                                  link.source = nodeset.find(nodemap[link.source])
+                                  link.target = nodeset.find(nodemap[link.target])
+                                  //console.log(nodeset.find(nodemap[link.source]), nodeset.find(nodemap[link.target]));
+                                  filterLinks.push(link);
+                                  //console.log(filterLinks[filterLinks.length-1]);
+                                }
+                          }
+                      links = filterLinks;
+                      console.log("Reduced to: ", links.length);
+                    }
+
+                //let nodeArr = Object.values(nodes);
+                const nodesExt = nodeset.extract();
+                const nodeArr = []
+                for (let vert in nodesExt) {
+                      let maxset = 0;
+                      let num_vertices = 0;
+                      let num_edges = 0;
+                      for (let i in nodesExt[vert]) {
+                            //console.log(nodesExt[vert][i]);
+                            if (maxset < nodesExt[vert][i].set){
+          maxset = nodesExt[vert][i].set;
+          }
+          num_vertices += nodesExt[vert][i].size;
+          num_edges += nodesExt[vert][i].esize;
+          }
+
+          const density = 2.0*num_edges/(num_vertices*num_vertices);
+          const node = {
+          "id": nodeset.find(nodesExt[vert][0]),
+                               "set": maxset,
+                                    "name": num_vertices,
+                                          "density": density,
+                                           "color": getColor(density),
+                                            "size": num_vertices,
+                                             "esize": num_edges,
+                                              "level": maxset
+          };
+          nodeArr.push(node);
+          }
+          //console.log(nodeArr);
+
+          graph.graphData({ "nodes":nodeArr, "links":links });
+          console.log("Total:", verts, edges);
+          console.log("Shown:", nodeArr.length, links.length);
+          data_info.edges = edges;
+          data_info.vertices = verts;
+          data_info.displayed_edges = nodeArr.length;
+          data_info.displayed_vertices = links.length;
+          });
+          }
+
+          function getColor(d) {
+          //console.log(d);
+          let color = interpolateLinearly(enforceBounds(d), jet);
+          //console.log(color);
+          let c = new THREE.Color( color[0], color[1], color[2] );
+          return c.getStyle();
+          }
+
+          function enforceBounds(x) {
+          if (x < 0) {
+          return 0.0;
+          } else if (x > 1){
+                    return 1.0;
+                  } else {
+                        return x;
+                      }
+        }
+
+    function interpolateLinearly(x, values) {
+
+          // Split values into four lists
+          var x_values = [];
+          var r_values = [];
+          var g_values = [];
+          var b_values = [];
+          for (i in values) {
+                x_values.push(values[i][0]);
+                r_values.push(values[i][1][0]);
+                g_values.push(values[i][1][1]);
+                b_values.push(values[i][1][2]);
+              }
+
+          var i = 1;
+          while (x_values[i] < x) {
+          i = i+1;
+          }
+          i = i-1;
+
+          var width = Math.abs(x_values[i] - x_values[i+1]);
+          var scaling_factor = (x - x_values[i]) / width;
+
+          // Get the new color values though interpolation
+          var r = r_values[i] + scaling_factor * (r_values[i+1] - r_values[i])
+          var g = g_values[i] + scaling_factor * (g_values[i+1] - g_values[i])
+          var b = b_values[i] + scaling_factor * (b_values[i+1] - b_values[i])
+
+          return [enforceBounds(r), enforceBounds(g), enforceBounds(b)];
+
+          }
+
+          /*var requestURL = "../wavemaps/cit-Patents/dagmeta_1-250725.json";
+          var request = new XMLHttpRequest();
+          request.open('GET', requestURL);
+          request.responseType = 'json';
+          request.send();
+          request.onload = function() {
+          bushes = request.response;
+          }*/
+
+          /*
+          fetch('d3-dependencies.csv')
+          .then(r => r.text())
+   .then(d3.csvParse)
+   .then(data => {
+   const nodes = [], links = [];
+   data.forEach(({ size, path }) => {
+   const levels = path.split('/'),
+   level = levels.length - 1,
+   module = level > 0 ? levels[1] : null,
+   leaf = levels.pop(),
+   parent = levels.join('/');
+
+   const node = {
+   path,
+   leaf,
+   module,
+   size: +size || 20,
+   level
+   };
+
+   nodes.push(node);
+
+   if (parent) {
+   links.push({source: parent, target: path, targetNode: node});
+   }
+   });
+
+   graph(document.getElementById('graph'))
+   .graphData({ nodes, links });
+
+    // console.log(nodes, links);
+   });*/
+  </script>
+</body>
