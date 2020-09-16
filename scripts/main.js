@@ -23,6 +23,7 @@ let INTERSECTED;
 let city_tracking = {};
 let city_all = {};
 let city_list = [];
+let path_objects = [];
 let addBuildings = false;
 let city_to_load = 0; // hard-coded
 if(addBuildings){
@@ -118,10 +119,11 @@ function init() {
     dropdown.setValue('default');
     dropdown.onChange(
         function(value){
-            let selectedObject = scene.getObjectByName("current_path");
-            scene.remove(selectedObject);
+            path_objects.every(object => scene.remove(object));
             animate();
-            scene = PATH.pathPlanning(value, scene, city_all);
+            let result = PATH.pathPlanning(value, scene, city_all);
+            scene = result.scene;
+            path_objects = result.path;
         }  
     );
     f4.open();
@@ -291,7 +293,9 @@ function groundObjLoader(obj_url,obj_material) {
         }
         else{
             result = PATH.loadNeighbors(city_all, lines, filename);
-            scene = PATH.pathPlanning(city_list[0],scene,city_all);
+            let result_2 = PATH.pathPlanning(city_list[0],scene,city_all);
+            scene = result_2.scene;
+            path_objects = result_2.path;
         }
         city_all = result.all;
     }

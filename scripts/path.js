@@ -1,4 +1,3 @@
-import { removeListener } from 'cluster';
 import * as THREE from '../node_modules/three/build/three.module.js';
 
 function updateDropdown(target, list){   
@@ -43,8 +42,10 @@ function makeGraph(neighbors){
 
 function pathPlanning(root, scene, city_all){
     console.log("pathPlanning: root is "+root);
-    scene = makeSpanningTree(scene, city_all, root);
-    return scene;
+    let result = makeSpanningTree(scene, city_all, root);
+    scene = result.scene;
+    let path_objects = result.path;
+    return { scene: scene, path: path_objects };
 }
 
 function notIn(arr, target){
@@ -52,6 +53,7 @@ function notIn(arr, target){
 }
 
 function makeSpanningTree(scene, city_all, root){
+    let path_objects = [];
     let graph = city_all['graph'];
     let queue = [[root]];
     let visited = [];
@@ -76,17 +78,19 @@ function makeSpanningTree(scene, city_all, root){
                 let start_point = node;
                 let end_point = neighbor;
                 if(notIn(visited_neighbors, neighbor)){
-                    scene = connectNeighbors(scene, city_all[start_point], city_all[end_point]);
-                    console.log("makeSpanningTree: There's an connection between");
-                    console.log(start_point);
-                    console.log(end_point);
+                    let result = connectNeighbors(scene, city_all[start_point], city_all[end_point], path_objects);
+                    // console.log("makeSpanningTree: There's an connection between");
+                    // console.log(start_point);
+                    // console.log(end_point);
+                    scene = result.scene;
+                    path_objects = result.path;
                     visited_neighbors.push(neighbor);
                 }
             }
             visited.push(node);
         }
     }
-    return scene;
+    return {scene: scene, path: path_objects};
 }
 
 function findSharedEdge(list_1, list_2){
@@ -117,7 +121,7 @@ function getRotation(A, B){
     return Math.atan((A[0]-B[0])/(A[1]-B[1]));
 }
 
-function connectNeighbors(scene, building_1, building_2, width=100){
+function connectNeighbors(scene, building_1, building_2, path_objects, width=100){
     let start_coord = [building_1.coords[0], building_1.coords[1]];
     let end_coord = [building_2.coords[0], building_2.coords[1]];
     let start_vor = building_1.voronoi;
@@ -147,11 +151,11 @@ function connectNeighbors(scene, building_1, building_2, width=100){
         let path_segment_tmp_2 = new THREE.Object3D();
         path_segment_tmp_2.add(path_segment_tmp_1);
         path_segment_tmp_2.position.set(position[0],0,position[1]);
-        console.log("connectNeighbors: "+height+" "+position+" "+rotation);
-        path_segment_tmp_2.name = "current_path";
+        // console.log("connectNeighbors: "+height+" "+position+" "+rotation);
+        path_objects.push(path_segment_tmp_2);
         scene.add(path_segment_tmp_2);
     }
-    return scene;
+    return {scene: scene, path: path_objects};
 }
 
 function makeSpanningTreeDebug(graph, root){
@@ -216,6 +220,5 @@ function makeSpanningTreeDebug(graph, root){
 
 // let root = 'A';
 // makeSpanningTreeDebug(graph, root);
-
 
 export {updateDropdown, loadNeighbors, pathPlanning};
