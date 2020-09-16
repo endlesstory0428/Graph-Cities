@@ -5,6 +5,7 @@ import { BufferGeometryUtils } from '../three.js/examples/jsm/utils/BufferGeomet
 import { OBJLoader } from '../three.js/examples/jsm/loaders/OBJLoader.js';
 import { loadBushData } from './bush.js';
 import * as BUILD from './building.js';
+import * as PATH from './path.js';
 
 let perspectiveCamera, orthographicCamera, controls, scene, renderer;
 
@@ -21,13 +22,20 @@ let objects = [];
 let INTERSECTED;
 let city_tracking = {};
 let city_all = {};
-let city_mesh = [];
-let city_to_load = 77; // hard-coded
-let groundMesh;
-let source_dir = "data/";
-let spiral_file = "data/SPIRAL.txt";
-let voronoi_file = "python/voronoi.txt";
-let land_obj = "models/island.obj";
+let city_list = [];
+let addBuildings = false;
+let city_to_load = 0; // hard-coded
+if(addBuildings){
+    city_to_load = 77;
+}
+let dropdown;
+let source_dir = "../data/";
+let spiral_file = "../data/SPIRAL.txt";
+let voronoi_file = "../python/voronoi.txt";
+let neighbors_file = "../python/neighbors.txt";
+let land_obj = "../models/flat_island.obj";
+let ground_texture_file = "../textures/ground_2.jpg";
+let water_texture_file = "../textures/waternormals.jpg";
 let manager = new THREE.LoadingManager();
 // let source_dir;
 // let y_scale = 50; // scale up the height of building
@@ -35,7 +43,6 @@ let last = [-187.86920742571192,-69.84011743155536]
 let y_scale = Math.sqrt(last[0] ** 2 + last[1] ** 2) / 4.565727849181679;
 // let x_scale = 800000.0; // scale down the coordinates span
 let x_scale = 1;
-let default_persp = [0,200,400]
 // GUI parameters
 let params = {
     orthographicCamera: false,
@@ -56,105 +63,113 @@ init();
 animate();
 
 function init() {
-  perspectiveCamera = new THREE.PerspectiveCamera( 60, aspect, 1, 4000 );
-  perspectiveCamera.position.z = 850;
-  perspectiveCamera.position.y = 650;
+    perspectiveCamera = new THREE.PerspectiveCamera( 60, aspect, 1, 4000 );
+    perspectiveCamera.position.z = 850;
+    perspectiveCamera.position.y = 650;
 
-  orthographicCamera = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 1, 1000 );
-  orthographicCamera.position.z = 20;
+    orthographicCamera = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 1, 1000 );
+    orthographicCamera.position.z = 20;
 
-  renderer = new THREE.WebGLRenderer();
-  renderer.setSize( window.innerWidth, window.innerHeight );
-  document.body.appendChild( renderer.domElement );
-  document.addEventListener( 'mousemove', onMouseMove, false );
-  window.addEventListener( 'resize', onWindowResize, false );
-  // window.addEventListener( 'reset_camera', onResetCamera, false);
-  createControls( perspectiveCamera );
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    document.body.appendChild( renderer.domElement );
+    document.addEventListener( 'mousemove', onMouseMove, false );
+    window.addEventListener( 'resize', onWindowResize, false );
+    // window.addEventListener( 'reset_camera', onResetCamera, false);
+    createControls( perspectiveCamera );
 
-  // load files
-  manager.onStart = function(url,itemsLoaded,itemsTotal) {
-    console.log('Started loading file: '+url+'.\nLoaded '+itemsLoaded+' of '+itemsTotal+' files.');
-  };
+    // load files
+    manager.onStart = function(url,itemsLoaded,itemsTotal) {
+        console.log('Started loading file: '+url+'.\nLoaded '+itemsLoaded+' of '+itemsTotal+' files.');
+    };
 
-  loadBushData();
-  loadFile(spiral_file,manager);
-  
-  // GUI folders
-  let gui = new GUI();
-  let f1 = gui.addFolder('Building Info');
-  f1.add(building_params, 'floor').name('floor number').listen();
-  f1.add(building_params, 'layer').name('layer info').listen();
-  // f1.add(params, 'colorMap', ['jet','others']).name('color map').onChange(function () {
-  //     updateColorMap();
-  //     render();
-  // });
-  f1.open();
-  let f2 = gui.addFolder('Camera Control');
-  f2.add(params, 'resetCamera').name('reset camera');
-  f2.add(params, 'orthographicCamera').name('use orthographic').onChange(
-      function( value ) {
-          // controls.dispose();
-      createControls( value ? orthographicCamera : perspectiveCamera );
-  });
-  f2.open();
-  // let f3 = gui.addFolder('Environment Control');
-  // f3.addColor(params, 'ground').name('ground color').onChange( function( colorValue ) {
-  //     colorValue = parseInt(colorValue.replace('#','0x'), 16);
-  //     let colorObject = new THREE.Color( colorValue );
-  //     groundMesh.material.color = colorObject;
-  //     animate();
-  // });
-  // f3.open();
-  
-  let f4 = gui.addFolder('Path Planning');
-  
-  f4.open();
-  // ground
-  // let groundMat = new THREE.MeshBasicMaterial( {color:params.ground} );
-  // groundMat.side = THREE.DoubleSide;
+    loadBushData();
+    loadFile(spiral_file,manager);
 
-  // let groundUrl = "models/island.obj";
-  // let groundMesh = objLoader(groundUrl, groundMat);
+    // GUI folders
+    let gui = new GUI({width:350});
+    let f1 = gui.addFolder('Building Info');
+    f1.add(building_params, 'floor').name('floor number').listen();
+    f1.add(building_params, 'layer').name('layer info').listen();
+    // f1.add(params, 'colorMap', ['jet','others']).name('color map').onChange(function () {
+    //     updateColorMap();
+    //     render();
+    // });
+    f1.open();
+    let f2 = gui.addFolder('Camera Control');
+    f2.add(params, 'resetCamera').name('reset camera');
+    f2.add(params, 'orthographicCamera').name('use orthographic').onChange(
+        function( value ) {
+            // controls.dispose();
+        createControls( value ? orthographicCamera : perspectiveCamera );
+    });
+    f2.open();
+    // let f3 = gui.addFolder('Environment Control');
+    // f3.addColor(params, 'ground').name('ground color').onChange( function( colorValue ) {
+    //     colorValue = parseInt(colorValue.replace('#','0x'), 16);
+    //     let colorObject = new THREE.Color( colorValue );
+    //     groundMesh.material.color = colorObject;
+    //     animate();
+    // });
+    // f3.open();
+    
+    let f4 = gui.addFolder('Path Planning');
+    dropdown = f4.add(params, 'root', ['default','example 1', 'example 2']);
+    dropdown.setValue('default');
+    dropdown.onChange(
+        function(value){
+            let selectedObject = scene.getObjectByName("current_path");
+            scene.remove(selectedObject);
+            animate();
+            scene = PATH.pathPlanning(value, scene, city_all);
+        }  
+    );
+    f4.open();
 
-  // groud - 2
-  let groundNormal = new THREE.TextureLoader().load('textures/ground_2.jpg');
-  groundNormal.wrapS = THREE.RepeatWrapping;
-  groundNormal.wrapT = THREE.RepeatWrapping;
-  groundNormal.repeat.set( 10,10 );
-  groundNormal.rotation = 10;
-  let groundMat = new THREE.MeshBasicMaterial( {map:groundNormal} );
-  // groundMat.normalMap = groundNormal;
-  // groundMat.side = THREE.DoubleSide;
-  // let groundUrl = "models/island.obj";
-  let groundUrl = "models/flat_island.obj"
-  let groundMesh = groundObjLoader(groundUrl, groundMat);
-  
-  // let size = 1200;
-  // let divisions = 24;
-  // let gridHelper = new THREE.GridHelper( size, divisions );
-  // scene.add( gridHelper );
-  
-  // lights
-  var ambientLight = new THREE.AmbientLight( 0x404040 ); // soft white light
-  scene.add( ambientLight );
-  var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5);
-  scene.add( directionalLight );
-  
-  // water - 2
-  let waterGeo = new THREE.BoxBufferGeometry( 5000, 50, 5000 );
-  let waterNormal = new THREE.TextureLoader().load( 'textures/waternormals.jpg', function ( texture ) {
-    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set( 4, 4 );
-  });        
-  let waterMat = new THREE.MeshPhongMaterial( {
-    color: 0x006994,
-    normalMap: waterNormal
-  } );
-  waterMat.transparent=true;
-  waterMat.opacity=0.7;
-  let waterMesh = new THREE.Mesh( waterGeo, waterMat );
-  waterMesh.position.y=-50;
-  scene.add( waterMesh );
+    // ground
+    // let groundMat = new THREE.MeshBasicMaterial( {color:params.ground} );
+    // groundMat.side = THREE.DoubleSide;
+
+    // let groundUrl = "models/island.obj";
+    // let groundMesh = objLoader(groundUrl, groundMat);
+
+    // groud - 2
+    let groundNormal = new THREE.TextureLoader().load(ground_texture_file);
+    groundNormal.wrapS = THREE.RepeatWrapping;
+    groundNormal.wrapT = THREE.RepeatWrapping;
+    groundNormal.repeat.set( 10,10 );
+    groundNormal.rotation = 10;
+    let groundMat = new THREE.MeshBasicMaterial( {map:groundNormal} );
+    // groundMat.normalMap = groundNormal;
+    // groundMat.side = THREE.DoubleSide;
+    let groundMesh = groundObjLoader(land_obj, groundMat);
+    
+    // let size = 1200;
+    // let divisions = 24;
+    // let gridHelper = new THREE.GridHelper( size, divisions );
+    // scene.add( gridHelper );
+    
+    // lights
+    var ambientLight = new THREE.AmbientLight( 0x404040 ); // soft white light
+    scene.add( ambientLight );
+    var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5);
+    scene.add( directionalLight );
+    
+    // water - 2
+    let waterGeo = new THREE.BoxBufferGeometry( 5000, 50, 5000 );
+    let waterNormal = new THREE.TextureLoader().load( water_texture_file, function ( texture ) {
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set( 4, 4 );
+    });        
+    let waterMat = new THREE.MeshPhongMaterial( {
+        color: 0x006994,
+        normalMap: waterNormal
+    } );
+    waterMat.transparent=true;
+    waterMat.opacity=0.7;
+    let waterMesh = new THREE.Mesh( waterGeo, waterMat );
+    waterMesh.position.y=-50;
+    scene.add( waterMesh );
 }
 
 //load ground OBJ file
@@ -268,8 +283,16 @@ function groundObjLoader(obj_url,obj_material) {
     function loadedVoronoi(evt) {
         let fileString = evt.target.result;
         let lines = fileString.split('\n');
+        let element_count = (lines[0].split(' ').length);
         let filename = evt.target.url;
-        let result = BUILD.loadVoronoi(city_all,lines,filename);
+        let result;
+        if(element_count > 2){
+            result = BUILD.loadVoronoi(city_all, lines, filename);
+        }
+        else{
+            result = PATH.loadNeighbors(city_all, lines, filename);
+            scene = PATH.pathPlanning(city_list[0],scene,city_all);
+        }
         city_all = result.all;
     }
   
@@ -293,12 +316,17 @@ function groundObjLoader(obj_url,obj_material) {
             city_tracking = spiral.tracking;
             for (const [key, value] of Object.entries(city_all)){
                 let layer_name = key;
-                let color_file = source_dir + layer_name + "_color.txt";
-                let floor_file = source_dir + layer_name + "_floor.txt";
-                loadFile(color_file,manager);
-                loadFile(floor_file,manager);
+                city_list.push(layer_name);
+                if(addBuildings){
+                    let color_file = source_dir + layer_name + "_color.txt";
+                    let floor_file = source_dir + layer_name + "_floor.txt";
+                    loadFile(color_file,manager);
+                    loadFile(floor_file,manager);
+                }
             }
+            PATH.updateDropdown(dropdown, city_list);
             loadVoronoiFile(voronoi_file,manager);
+            loadVoronoiFile(neighbors_file,manager);
         } else if(element_count == 6) {
             // console.log("loaded: color file");
             layer_name = fileToLayer(filename);
