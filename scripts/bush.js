@@ -1,7 +1,7 @@
 import * as THREE from '../node_modules/three/build/three.module.js';
 
 let bushes = {};
-let source_dir = "data/";
+let source_dir = "../data/";
 let last = [-187.86920742571192,-69.84011743155536]
 let y_scale = Math.sqrt(last[0] ** 2 + last[1] ** 2) / 4.565727849181679;
 

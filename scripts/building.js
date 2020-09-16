@@ -156,7 +156,7 @@ function loadSpiral(scene, lines, city_all, city_tracking, x_scale) {
   return {all: city_all, tracking: city_tracking};
 }
 
-function loadVoronoi(city_all, lines,filename){
+function loadVoronoi(city_all, lines, filename){
   for(let i=0; i<lines.length-1; i++){
     let elements = lines[i].split(' ');
     let layer_name = elements[0];
