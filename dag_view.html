@@ -8,6 +8,7 @@
   </style>
 
   <script src="//unpkg.com/d3-dsv"></script>
+  <script src="//unpkg.com/d3-fetch"></script>
   <script src="//unpkg.com/dat.gui"></script>
   <script src="//unpkg.com/d3-octree"></script>
   <script src="//unpkg.com/d3-force-3d"></script>
@@ -16,8 +17,8 @@
   <!--<script src="../../dist/3d-force-graph.js"></script>-->
   <script src="//unpkg.com/force-graph"></script>
 
-  <script src="https://d3js.org/d3-dsv.v2.min.js"></script>
-  <script src="https://d3js.org/d3-fetch.v2.min.js"></script>
+  <!-- <script src="https://d3js.org/d3-dsv.v2.min.js"></script> -->
+  <!-- <script src="https://d3js.org/d3-fetch.v2.min.js"></script> -->
 
   <script src="DisjointSet.js"></script>
   <script src="js-colormaps.js"></script>
@@ -158,6 +159,7 @@
         let file = './dagmetas/' + dsfp[0] + '/dagmeta_' + dsfp[1] + '.json'
         console.log("Loading: ", file);
         loadFile(file);
+        loadLayer();
       });
 
     // controls
@@ -210,7 +212,22 @@
       //.onNodeHover(node => { console.log(node) })
       .onNodeClick(node => {
 
-        console.log("Node: ", node);
+        //console.log("Node: ", node);
+        console.log(DATA,nodeDS,nodeMAP);
+        const setid = nodeDS.find(nodeMAP[node.id]);
+        console.log("Setid: ", setid);
+        const nodefilter = new Set();
+        for (const sid in nodeDS._objects) {
+          if (nodeDS._relations[sid] === setid) {
+            //console.log(nodeDS._objects[sid], DATA.nodes[nodeDS._objects[sid].id]);
+            const vertices = DATA.nodes[nodeDS._objects[sid].id].vertices
+            for (const vert in vertices) {
+              nodefilter.add(vertices[vert]);
+            }
+          }
+        }
+        loadEdges(nodefilter);
+
         // Random tree
         const N = 50;
         const gData = {
@@ -225,23 +242,89 @@
             }))
         };
 
-        Graph.graphData(gData);
-        /*
-        Graph.graphData({
-          nodes: [{
-            id: 0
-          }, {
-            id: 1
-          }],
-          links: [{
-            source: 0,
-            target: 1
-          }]
-        });
-        */
-
-        console.log(gData, Graph);
+        //Graph.graphData(gData);
       });
+
+    var layer_nodes = [];
+    var layer_links = [];
+    var layer_loaded = false;
+    var prev_suffix = null;
+
+    function loadEdges(nodefilter) {
+      if (!layer_loaded) {
+        console.log("Not done loading edges!");
+        return
+      }
+      const [dataset,fp] = fixedpoint["Fixed Point"].split('/');
+      const [layer, lcc] = fp.split('-');
+      //console.log(nodefilter);
+      const nodes = [];
+      nodefilter.forEach(v => nodes.push({id: v}));
+      const links = [];
+      for (const i in layer_links) {
+        const edge = layer_links[i];
+        if (edge.layer == layer) {
+          if (nodefilter.has(edge.source) && nodefilter.has(edge.target)) {
+            links.push(edge);
+          }
+        }
+      }
+      //console.log(links);
+      Graph.graphData({nodes, links});
+    }
+
+    function loadLayer() {
+        layer_loaded = false;
+        const [dataset,fp] = fixedpoint["Fixed Point"].split('/');
+        const [layer, lcc] = fp.split('-');
+        console.log("Loading Layer: ",layer);
+        //console.log(dataset,layer,lcc);
+        const layerinfofile = "./" + dataset + "/" + dataset + "-layer-info.json";
+        d3.json(layerinfofile).then(function(data) {
+          //console.log(data[Number(layer)].file_suffix);
+          const suffix = data[Number(layer)].file_suffix;
+          if (suffix === prev_suffix) {
+            layer_loaded = true;
+            console.log("Layer Already Loaded: ", layer);
+            return
+          }
+          var loader = new THREE.FileLoader();
+          loader.load(
+            // resource URL
+            "./" + dataset + "/" + dataset + "_layers",
+            // onLoad callback
+            function ( data ) {
+              //console.log('layer-[0-9]+-'+suffix+'.csv')
+              const layerfile = "./" + dataset + "/" + dataset + "_layers/" + data.match('layer-[0-9]+-'+suffix+'.csv');
+              console.log("Loading: ", layerfile);
+              /*
+              loader.load(layerfile, function(text){
+                //console.log(text.split('\n'));
+                const lines = text.split('\n');
+                for (const i in lines) {
+                  const src_tgt_lay = lines[i].split(',');
+                  const src = Number(src_tgt_lay[0]);
+                  const tgt = Number(src_tgt_lay[1]);
+                  const lay = Number(src_tgt_lay[2]);
+                }
+              });
+              */
+              d3.text(layerfile).then(function(text) {
+                //console.log(text.split('\n'));
+                var ldata = d3.csvParseRows(text, function(d, i) {
+                   return {
+                      source: Number(d[0]),
+                      target: Number(d[1]),
+                      layer: Number(d[2])
+                   };
+                });
+                layer_links = ldata;
+                layer_loaded = true;
+                console.log("Layer Already Loaded: ", layer);
+              });
+            });
+        });
+    }
 
     window.addEventListener('resize', function() {
       graph
@@ -251,9 +334,6 @@
 
     // Decrease repel intensity
     graph.d3Force('charge').strength(-15);
-
-    console.log(graph.renderer());
-    console.log(graph.scene());
 
     // Load Data
 
@@ -272,7 +352,12 @@
     // const FILE = "./dagmeta_101-11400.json";
     // const FILE = "./wavemaps/movies/dagmeta_31-12735.json";
     const FILE = "./dagmetas/cit-Patents/dagmeta_15-275340.json";
+    loadLayer();
     loadFile(FILE);
+
+    let DATA = null;
+    let nodeDS = null;
+    let nodeMAP = null;
 
     function loadFile(filename) {
       d3.json(filename).then(function(data) {
@@ -371,6 +456,7 @@
           }
 
           const density = 2.0 * num_edges / (num_vertices * num_vertices);
+
           const node = {
             id: nodeset.find(nodesExt[vert][0]),
             set: maxset,
@@ -383,7 +469,7 @@
           };
           nodeArr.push(node);
         }
-        console.log(nodeArr);
+        //console.log(nodeArr);
         graph.graphData({
           nodes: nodeArr,
           links: links
@@ -394,6 +480,10 @@
         data_info.vertices = verts;
         data_info.displayed_edges = nodeArr.length;
         data_info.displayed_vertices = links.length;
+
+        DATA = data;
+        nodeDS = nodeset;
+        nodeMAP = nodemap;
       });
     }
 
