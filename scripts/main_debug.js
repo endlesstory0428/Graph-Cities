@@ -25,10 +25,14 @@ let city_all = {};
 let city_list = [];
 let path_objects = [];
 let truss_objects = [];
-let addBuildings = true;
+let addBuildings = false;
+let oneBuilding = true;
+let oneBuildingName = "wavemap_"+"1_10732131_247";
 let city_to_load = 0; // hard-coded
 if(addBuildings){
     city_to_load = 77;
+}else if(oneBuilding){
+    city_to_load = 1;
 }
 let dropdown;
 let source_dir = "../data/";
@@ -69,7 +73,10 @@ function init() {
     perspectiveCamera = new THREE.PerspectiveCamera( 60, aspect, 1, 4000 );
     perspectiveCamera.position.z = 850;
     perspectiveCamera.position.y = 650;
-
+    if(oneBuilding){
+        perspectiveCamera.position.z = 50;
+        perspectiveCamera.position.y = 80;       
+    }
     orthographicCamera = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 1, 1000 );
     orthographicCamera.position.z = 20;
 
@@ -87,7 +94,6 @@ function init() {
     };
 
     loadBushData();
-    console.log("test 1")
     loadFile(spiral_file,manager);
 
     // GUI folders
@@ -100,11 +106,10 @@ function init() {
     //     render();
     // });
     f1.open();
-
+    
     let f2 = gui.addFolder('Camera Control');
     f2.add(params, 'resetCamera').name('reset camera');
-    f2.add(params, 'orthographicCamera').name('use orthographic').onChange(
-        function( value ) {
+    f2.add(params, 'orthographicCamera').name('use orthographic').onChange(function( value ) {
             // controls.dispose();
         createControls( value ? orthographicCamera : perspectiveCamera );
     });
@@ -299,14 +304,14 @@ function groundObjLoader(obj_url,obj_material) {
         let result;
         if(element_count > 2){
             result = BUILD.loadVoronoi(city_all, lines, filename);
+            city_all = result.all;
         }
-        else{
+        else if(!oneBuilding){
             result = PATH.loadNeighbors(city_all, lines, filename);
             let result_2 = PATH.pathPlanning(city_list[0],scene,city_all);
             scene = result_2.scene;
             path_objects = result_2.path;
         }
-        city_all = result.all;
     }
   
     function fileToLayer(filename) {
@@ -336,6 +341,12 @@ function groundObjLoader(obj_url,obj_material) {
                     loadFile(color_file,manager);
                     loadFile(floor_file,manager);
                 }
+            }
+            if(oneBuilding){
+                let color_file = source_dir + oneBuildingName + "_color.txt";
+                let floor_file = source_dir + oneBuildingName + "_floor.txt";
+                loadFile(color_file,manager);
+                loadFile(floor_file,manager);
             }
             PATH.updateDropdown(dropdown, city_list);
             loadVoronoiFile(voronoi_file,manager);
@@ -386,12 +397,13 @@ function groundObjLoader(obj_url,obj_material) {
         // stats.update();
         if(city_to_load>0) {
             console.log("animate: run createCityMeshes()");
-            let result = BUILD.createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, city_to_load, y_scale);
+            let result = BUILD.createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, city_to_load, y_scale, oneBuilding);
             scene = result.scene;
             city_all = result.all;
             city_tracking = result.tracking;
             objects = result.objects;
             city_to_load = result.remain;
+            truss_objects = result.truss;
         }
         render();
     }

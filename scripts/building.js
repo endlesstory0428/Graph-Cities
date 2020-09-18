@@ -53,16 +53,22 @@ function loadFloor(lines,layer_name, city_all, city_tracking) {
             let result = addNewFloor(city_all,layer_name,0.0,parseFloat(elements[2]),0.0);
             city_all = result.all;
           } 
-          else if (i%2 == 0 && i < lines.length-2) {
-            tmp_outer_radius = elements[2];
+          else if (i%2 == 1){
+            if(i < lines.length-3) {
+              tmp_outer_radius = elements[2];
+            }
+            else {
+              let result = addNewFloor(city_all,layer_name,parseFloat(elements[1]),parseFloat(elements[2]),0.0);
+              city_all = result.all;
+            }
           } 
-          else if (i%2 == 1) {
+          else if (i%2 == 0) {
             // console.log("loadFloor: add new floor "+city_all[layer_name].shapes.length);
             if(i == lines.length-2) {
                 tmp_outer_radius = 0;
             }
             // console.log("loadFloor: add new floor "+elements[0]+' '+elements[1]+' '+elements[2]+' '+tmp_outer_radius);
-            let result = addNewFloor(city_all, layer_name,parseFloat(elements[1]),parseFloat(elements[2]),parseFloat(tmp_outer_radius));
+            let result = addNewFloor(city_all,layer_name,parseFloat(elements[1]),parseFloat(elements[2]),parseFloat(tmp_outer_radius));
             city_all = result.all;
           }
       }
@@ -183,7 +189,7 @@ function rgbToHex(r,g,b) {
 }
 
 //given a normalized vector, compute the Euler angles of rotation for bars in truss structure
-function truss_rotate(b) {
+function rotateTruss(b) {
   let i,j;
   let a = [0,1,0];
   b[0] = -b[0];
@@ -242,50 +248,56 @@ function normalize(v) {
   return normalized;
 }
 
-function obtain_truss(center,top_radius,btm_radius,height,r,g,b) {
-  let thickness = 0.1;
+function addTruss(scene,truss_objects,center,top_radius,btm_radius,height,r,g,b) {
+  let torus_thickness = 0.1, bar_thickness = 0.1;
   let number = 6;
   let truss_geo = new THREE.BufferGeometry();
+  let material = new THREE.MeshBasicMaterial({color:rgbToHex(r,g,b)});
   let i;
   for (i = 0; i<number; i++) {
     let theta = i*(360/number);
     let theta_sin = Math.sin(theta*Math.PI/180);
     let theta_cos = Math.cos(theta*Math.PI/180);
-    let top = [theta_cos*top_radius,height/2,theta_sin*top_radius];
+    let bar_top_radius = top_radius + torus_thickness;
+    let top = [theta_cos*bar_top_radius,height/2,theta_sin*bar_top_radius];
     let btm = [theta_cos*btm_radius,-height/2,theta_sin*btm_radius];
     let top_btm = [top[0]-btm[0], top[1]-btm[1], top[2]-btm[2]];
     let length = mag(top_btm);
     let normalized_top_btm = normalize(top_btm);
     let mid_radius = (top_radius+btm_radius)/2;
     let bar_center = [center[0]+theta_cos*mid_radius,center[1],center[2]+theta_sin*mid_radius];
-    let bar = new THREE.CylinderBufferGeometry(thickness,thickness,length,8,8);
+    let bar = new THREE.CylinderBufferGeometry(bar_thickness,bar_thickness,length,8,8);
     // rotate the side bars
-    let rotated = truss_rotate(normalized_top_btm);
+    let rotated = rotateTruss(normalized_top_btm);
     bar.rotateX(rotated[0]);
     bar.rotateY(rotated[1]);
     bar.rotateZ(rotated[2]);
     bar.translate(bar_center[0],bar_center[1],bar_center[2]);
-    let bar_mesh = new THREE.Mesh(bar);
+    let bar_mesh = new THREE.Mesh(bar,material);
     bar_mesh.updateMatrix();
+    scene.add(bar_mesh);
+    truss_objects.push(bar_mesh);
     // merge all bars together
     // BufferGeometryUtils.mergeBufferGeometries([truss_geo,bar_mesh.geometry],bar_mesh.matrix);
   }
   // create torus geometry
-  let torus_geo = new THREE.TorusGeometry(top_radius,thickness,16,100);
+  let torus_geo = new THREE.TorusBufferGeometry(top_radius,torus_thickness,8,30);
   torus_geo.rotateX(90*Math.PI/180);
-  let material = new THREE.MeshBasicMaterial({color:rgbToHex(r,g,b)});
   let torus_mesh = new THREE.Mesh(torus_geo, material);
   let torus_flat = new THREE.Object3D();
   torus_flat.add(torus_mesh);
   torus_flat.translateX(center[0]);
-  torus_flat.translateY(center[1]+height/2);
+  let Y = center[1]+height/2;
+  torus_flat.translateY(Y);
   torus_flat.translateZ(center[2]);
-  // scene.add(torus_flat);
+  // console.log("addTruss: top_radius = "+top_radius+" Y = "+Y);
+  scene.add(torus_flat);
+  truss_objects.push(torus_flat);
   // merge torus with bars
   // truss_geo.merge(torus_mesh.geometry,torus_mesh.matrix);
   // truss_geo.merge(torus_flat.geometry,torus_flat.matrix);
-  let truss_mesh = new THREE.Mesh(truss_geo,material);
-  return truss_mesh;
+  // let truss_mesh = new THREE.Mesh(truss_geo,material);
+  return {scene:scene, truss: truss_objects};
 }
 
 function createFlags(scene, coord, base_Y, V, E, fixed_point_number, mast_length) {
@@ -307,7 +319,7 @@ function createFlags(scene, coord, base_Y, V, E, fixed_point_number, mast_length
 
 // check city_tracking, create buildings that are ready to color & move
 // delete colored and moved building from city_tracking
-function createCityMeshes(scene, objects, city_all, city_tracking, city_to_load, y_scale) {
+function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, city_to_load, y_scale, oneBuilding=false) {
   for (let layer in city_tracking) {
       if(city_tracking[layer].ready_to_move && city_tracking[layer].ready_to_color) {
           let layer_shape = city_all[layer].shapes;
@@ -315,6 +327,10 @@ function createCityMeshes(scene, objects, city_all, city_tracking, city_to_load,
           // translate in X,Z direction
           let X = city_all[layer].coords[0];
           let Z = city_all[layer].coords[1];
+          if(oneBuilding){
+            X = 0;
+            Z = 0;
+          }
           // loop from bottom floor to top floor
           for (let h=1; h<height; h++) {
               // translate in Y direction
@@ -334,6 +350,7 @@ function createCityMeshes(scene, objects, city_all, city_tracking, city_to_load,
               } catch(err) {
                   console.log(err.message+" "+layer);
               }
+              // let material = new THREE.MeshStandardMaterial({color:rgbToHex(r,g,b),transparent:true,opacity:0.3});
               let material = new THREE.MeshBasicMaterial({color:rgbToHex(r,g,b)});
               let frustum_mesh = new THREE.Mesh(floor,material);
               frustum_mesh.floor_name = h;
@@ -350,10 +367,13 @@ function createCityMeshes(scene, objects, city_all, city_tracking, city_to_load,
                   r = parseInt(city_all[layer].colors.outer[h-1].r*255);
                   g = parseInt(city_all[layer].colors.outer[h-1].g*255);
                   b = parseInt(city_all[layer].colors.outer[h-1].b*255);
-                  let truss_mesh = obtain_truss([X,Y,Z],top_out_r,btm_out_r,tall,r,g,b);
+                  let result = addTruss(scene,truss_objects,[X,Y,Z],top_out_r,btm_out_r,tall,r,g,b);
+                  // let truss_mesh = result.truss;
+                  truss_objects = result.truss;
+                  scene = result.scene;
                   // console.log("createCityMeshes: create a set of truss");
                   // draw outer frustums
-                  scene.add(truss_mesh);
+                  // scene.add(truss_mesh);
               }
           }
           let flag_base_Y = y_scale * layer_shape[height-1].height;
@@ -366,7 +386,7 @@ function createCityMeshes(scene, objects, city_all, city_tracking, city_to_load,
           --city_to_load;
       }
   }
-  return {scene: scene, objects: objects, remain: city_to_load, all: city_all, tracking: city_tracking};
+  return {scene: scene, objects: objects, remain: city_to_load, all: city_all, tracking: city_tracking, truss: truss_objects};
 }
 
 export {loadColor, loadSpiral, loadFloor, loadVoronoi, createCityMeshes};

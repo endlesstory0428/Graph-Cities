@@ -64,7 +64,7 @@ function makeSpanningTree(scene, city_all, root){
     while(queue.length > 0 && count < 500){
         count ++;
         // console.log("makeSpanningTree: count = "+count+" queue.length = "+queue.length);
-        let path = queue.pop(0);
+        let path = queue.shift();
         let node = path[path.length-1];
         if(notIn(visited, node)){
             let neighbors = graph[node];
