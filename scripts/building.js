@@ -248,7 +248,7 @@ function normalize(v) {
   return normalized;
 }
 
-function addTruss(scene,truss_objects,center,top_radius,btm_radius,height,r,g,b) {
+function addTruss(scene,truss_objects,isNight,h,center,top_radius,btm_radius,height,r,g,b) {
   let torus_thickness = 0.1, bar_thickness = 0.1;
   let number = 6;
   let truss_geo = new THREE.BufferGeometry();
@@ -259,12 +259,13 @@ function addTruss(scene,truss_objects,center,top_radius,btm_radius,height,r,g,b)
     let theta_sin = Math.sin(theta*Math.PI/180);
     let theta_cos = Math.cos(theta*Math.PI/180);
     let bar_top_radius = top_radius + torus_thickness;
+    let bar_btm_radius = btm_radius + torus_thickness;
     let top = [theta_cos*bar_top_radius,height/2,theta_sin*bar_top_radius];
-    let btm = [theta_cos*btm_radius,-height/2,theta_sin*btm_radius];
+    let btm = [theta_cos*bar_btm_radius,-height/2,theta_sin*bar_btm_radius];
     let top_btm = [top[0]-btm[0], top[1]-btm[1], top[2]-btm[2]];
     let length = mag(top_btm);
     let normalized_top_btm = normalize(top_btm);
-    let mid_radius = (top_radius+btm_radius)/2;
+    let mid_radius = (top_radius+bar_btm_radius)/2;
     let bar_center = [center[0]+theta_cos*mid_radius,center[1],center[2]+theta_sin*mid_radius];
     let bar = new THREE.CylinderBufferGeometry(bar_thickness,bar_thickness,length,8,8);
     // rotate the side bars
@@ -277,6 +278,30 @@ function addTruss(scene,truss_objects,center,top_radius,btm_radius,height,r,g,b)
     bar_mesh.updateMatrix();
     scene.add(bar_mesh);
     truss_objects.push(bar_mesh);
+    if(isNight){
+      // for (let i = 1; i <= 3; i++) {
+        let theta_start_1=[0.5,-1.5,2.6], theta_start_2=[1.6,-0.5,3.7];
+        let j;
+        let out_frustum;
+        if(h % 2===0){
+          for(j=0; j<3; j++){
+            out_frustum = new THREE.CylinderBufferGeometry(top_radius,btm_radius,height,18,8,true,theta_start_1[j],2*Math.PI/6);
+            let out_frustum_mesh = new THREE.Mesh(out_frustum, material);
+            out_frustum_mesh.translateY(center[1]);
+            scene.add(out_frustum_mesh);
+            truss_objects.push(out_frustum_mesh);
+          }
+        }else if(h % 2 !== 0){
+          for(j=0; j<3; j++){
+            out_frustum = new THREE.CylinderBufferGeometry(top_radius,btm_radius,height,18,8,true,theta_start_2[j],2*Math.PI/6);
+            let out_frustum_mesh = new THREE.Mesh(out_frustum, material);
+            out_frustum_mesh.translateY(center[1]);
+            scene.add(out_frustum_mesh);
+            truss_objects.push(out_frustum_mesh);
+          }
+        }
+      // }
+    }
     // merge all bars together
     // BufferGeometryUtils.mergeBufferGeometries([truss_geo,bar_mesh.geometry],bar_mesh.matrix);
   }
@@ -319,7 +344,7 @@ function createFlags(scene, coord, base_Y, V, E, fixed_point_number, mast_length
 
 // check city_tracking, create buildings that are ready to color & move
 // delete colored and moved building from city_tracking
-function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, city_to_load, y_scale, oneBuilding=false) {
+function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, city_to_load, y_scale, isNight=false, oneBuilding=false) {
   for (let layer in city_tracking) {
       if(city_tracking[layer].ready_to_move && city_tracking[layer].ready_to_color) {
           let layer_shape = city_all[layer].shapes;
@@ -367,7 +392,7 @@ function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects
                   r = parseInt(city_all[layer].colors.outer[h-1].r*255);
                   g = parseInt(city_all[layer].colors.outer[h-1].g*255);
                   b = parseInt(city_all[layer].colors.outer[h-1].b*255);
-                  let result = addTruss(scene,truss_objects,[X,Y,Z],top_out_r,btm_out_r,tall,r,g,b);
+                  let result = addTruss(scene,truss_objects,isNight,h,[X,Y,Z],top_out_r,btm_out_r,tall,r,g,b);
                   // let truss_mesh = result.truss;
                   truss_objects = result.truss;
                   scene = result.scene;
