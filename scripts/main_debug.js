@@ -14,6 +14,7 @@ let frustumSize = 400;
 let aspect = window.innerWidth/window.innerHeight;
 scene = new THREE.Scene();
 scene.background = new THREE.Color('skyblue');
+// scene.background = new THREE.Color('midnightblue');
 // let camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
 
 let raycaster = new THREE.Raycaster();
@@ -25,9 +26,9 @@ let city_all = {};
 let city_list = [];
 let path_objects = [];
 let truss_objects = [];
+let window_objects = [];
 let addBuildings = false;
 let oneBuilding = true;
-let isNight = true;
 let oneBuildingName = "wavemap_"+"1_10732131_247";
 let city_to_load = 0; // hard-coded
 if(addBuildings){
@@ -60,7 +61,8 @@ let params = {
     // colorMap: "jet",
     // hideBuilding: false
     root: 'any building',
-    outer: true
+    outer: true,
+    isNight: false
 };
 let building_params = {
     floor: '',
@@ -88,6 +90,18 @@ function init() {
     window.addEventListener( 'resize', onWindowResize, false );
     // window.addEventListener( 'reset_camera', onResetCamera, false);
     createControls( perspectiveCamera );
+
+    // environment lights
+    let light_objects = {
+        ambientLight: new THREE.AmbientLight( 0x404040 ),
+        dayLights: [new THREE.DirectionalLight( 0xffffff, 0.8), new THREE.DirectionalLight( 0xffffff, 0.5)],
+        nightLight: new THREE.DirectionalLight( 0xffffff, 0.01)
+    };
+    scene.add(light_objects['ambientLight']);
+    light_objects['dayLights'][0].position.set(1000,1000,1000);
+    light_objects['dayLights'][1].position.set(-500,500,0);
+    light_objects['dayLights'].forEach(object => scene.add(object));
+    scene.add(light_objects['daySideLight']);
 
     // load files
     manager.onStart = function(url,itemsLoaded,itemsTotal) {
@@ -119,6 +133,10 @@ function init() {
     let f3 = gui.addFolder('Environment Control');
     f3.add(params, 'outer').name('outer frustums').onChange(function(value){
         truss_objects.forEach(object => object.visible=value);
+        animate();
+    });
+    f3.add(params, 'isNight').name('night view').onChange(function(value){
+        dayAndNight(value, light_objects, window_objects);
         animate();
     });
     // f3.addColor(params, 'ground').name('ground color').onChange( function( colorValue ) {
@@ -156,7 +174,7 @@ function init() {
     groundNormal.wrapT = THREE.RepeatWrapping;
     groundNormal.repeat.set( 10,10 );
     groundNormal.rotation = 10;
-    let groundMat = new THREE.MeshBasicMaterial( {map:groundNormal} );
+    let groundMat = new THREE.MeshStandardMaterial( {map:groundNormal} );
     // groundMat.normalMap = groundNormal;
     // groundMat.side = THREE.DoubleSide;
     let groundMesh = groundObjLoader(land_obj, groundMat);
@@ -165,12 +183,6 @@ function init() {
     // let divisions = 24;
     // let gridHelper = new THREE.GridHelper( size, divisions );
     // scene.add( gridHelper );
-    
-    // lights
-    var ambientLight = new THREE.AmbientLight( 0x404040 ); // soft white light
-    scene.add( ambientLight );
-    var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5);
-    scene.add( directionalLight );
     
     // water - 2
     let waterGeo = new THREE.BoxBufferGeometry( 5000, 50, 5000 );
@@ -367,6 +379,23 @@ function groundObjLoader(obj_url,obj_material) {
         }
     }
 
+    function dayAndNight( isNight, light_objects, window_objects ){
+        if(isNight){
+            scene.background = new THREE.Color('midnightblue');
+            light_objects['dayLights'].forEach(object => object.visible = false);
+            light_objects['nightLight'].visible = true;
+            window_objects.forEach(object => object.visible=true);
+            animate();
+        }
+        else{
+            scene.background = new THREE.Color('skyblue');
+            light_objects['dayLights'].forEach(object => object.visible = true);
+            light_objects['nightLight'].visible = false;
+            window_objects.forEach(object => object.visible=false);
+            animate();
+        }
+    }
+
     function createControls( camera ) {
         controls = new TrackballControls( camera, renderer.domElement );
         controls.rotateSpeed = 1.0;
@@ -398,13 +427,15 @@ function groundObjLoader(obj_url,obj_material) {
         // stats.update();
         if(city_to_load>0) {
             console.log("animate: run createCityMeshes()");
-            let result = BUILD.createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, city_to_load, y_scale, isNight, oneBuilding);
+            let result = BUILD.createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, city_to_load, y_scale, oneBuilding);
             scene = result.scene;
             city_all = result.all;
             city_tracking = result.tracking;
             objects = result.objects;
             city_to_load = result.remain;
             truss_objects = result.truss;
+            window_objects = result.window;
+            console.log("Here !!"+window_objects.length);
         }
         render();
     }
