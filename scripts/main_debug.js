@@ -435,7 +435,6 @@ function groundObjLoader(obj_url,obj_material) {
             city_to_load = result.remain;
             truss_objects = result.truss;
             window_objects = result.window;
-            console.log("Here !!"+window_objects.length);
         }
         render();
     }
