@@ -23,6 +23,7 @@
   <script src="DisjointSet.js"></script>
   <script src="js-colormaps.js"></script>
 </head>
+
 <body>
   <div>
     <div id="graph" style="float: left; width: 49.5%; height: 100%"></div>
@@ -156,7 +157,7 @@
       ])
       .onChange(selection => {
         let dsfp = selection.split('/');
-        let file = './dagmetas/' + dsfp[0] + '/dagmeta_' + dsfp[1] + '.json'
+        let file = './data_dags/' + dsfp[0] + '/dagmeta_' + dsfp[1] + '.json'
         console.log("Loading: ", file);
         loadFile(file);
         loadLayer();
@@ -351,7 +352,7 @@
     // const FILE = "./wavemaps/f_dagmeta_1-10126754.json";
     // const FILE = "./dagmeta_101-11400.json";
     // const FILE = "./wavemaps/movies/dagmeta_31-12735.json";
-    const FILE = "./dagmetas/cit-Patents/dagmeta_15-275340.json";
+    const FILE = "./data_dags/cit-Patents/dagmeta_15-275340.json";
     loadLayer();
     loadFile(FILE);
 
