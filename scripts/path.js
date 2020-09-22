@@ -121,7 +121,7 @@ function getRotation(A, B){
     return Math.atan((A[0]-B[0])/(A[1]-B[1]));
 }
 
-function connectNeighbors(scene, building_1, building_2, path_objects, width=100){
+function connectNeighbors(scene, building_1, building_2, path_objects, type='straight',width=100){
     let start_coord = [building_1.coords[0], building_1.coords[1]];
     let end_coord = [building_2.coords[0], building_2.coords[1]];
     let start_vor = building_1.voronoi;
@@ -131,12 +131,16 @@ function connectNeighbors(scene, building_1, building_2, path_objects, width=100
         return scene;
     }
     let path = [start_coord];
-    if(getDistance(start_coord, shared_edge[0]) < getDistance(start_coord, shared_edge[1])){
-        path.push(shared_edge[0]);  
+    if(type==='straight'){
+        path.push(end_coord);
     }else{
-        path.push(shared_edge[1]);
+        if(getDistance(start_coord, shared_edge[0]) < getDistance(start_coord, shared_edge[1])){
+            path.push(shared_edge[0]);  
+        }else{
+            path.push(shared_edge[1]);
+        }
+        path.push(end_coord);
     }
-    path.push(end_coord);
     for (let i = 0; i < path.length-1; i++) {
         let height = getDistance(path[i],path[i+1]);
         let geometry = new THREE.PlaneGeometry(4, height);
@@ -150,7 +154,7 @@ function connectNeighbors(scene, building_1, building_2, path_objects, width=100
         path_segment_tmp_1.rotateY(rotation); 
         let path_segment_tmp_2 = new THREE.Object3D();
         path_segment_tmp_2.add(path_segment_tmp_1);
-        path_segment_tmp_2.position.set(position[0],0,position[1]);
+        path_segment_tmp_2.position.set(position[0],2,position[1]);
         // console.log("connectNeighbors: "+height+" "+position+" "+rotation);
         path_objects.push(path_segment_tmp_2);
         scene.add(path_segment_tmp_2);
