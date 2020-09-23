@@ -3,7 +3,8 @@ import scipy.spatial
 from scipy.spatial import Voronoi
 from scipy.spatial import voronoi_plot_2d
 
-SPIRAL_FILE = '../data/com-friendster/SPIRAL.txt'
+# SPIRAL_FILE = '../data/com-friendster/SPIRAL.txt'
+SPIRAL_FILE = '../data/cit-Patents/SPIRAL.txt'
 # SPIRAL_FILE = '../data/movies/SPIRAL.txt'
 
 def createVoronoiText(vor,names,points):
