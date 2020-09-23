@@ -316,10 +316,11 @@ function addTruss(scene,truss_objects,window_objects,h,center,top_radius,btm_rad
   return {scene:scene, truss: truss_objects, window: window_objects};
 }
 
-function createFlags(scene, coord, base_Y, V, E, fixed_point_number, mast_length) {
+function createFlags(scene, coord, base_Y, V, E, fixed_point_number, mast_scale) {
   // console.log("coord of flag", fixed_point_number, "is", coord, "height of flag is", base_Y);
   let X = coord[0], Z = coord[1];
-  let flag_width = Math.log(V), flag_height = Math.log(E); 
+  let flag_width = Math.log(V), flag_height = Math.log(E);
+  let mast_length = mast_scale*0.1 + mast_scale*2.0*E/(V*(V-1));
   
   let flag = new THREE.Mesh( new THREE.BoxBufferGeometry(flag_width,flag_height,0.5), new THREE.MeshStandardMaterial( {color: 0xffffff}));
   flag.translateX(X+flag_width/2);
@@ -391,9 +392,9 @@ function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects
           }
           let flag_base_Y = y_scale * layer_shape[height-1].height;
           let fixed_point_number =  parseInt(layer.slice(layer.lastIndexOf('_')+1));
-          let mast_scale = 1;
-          let mast_length = mast_scale * height;
-          createFlags(scene, [X,Z], flag_base_Y, city_all[layer].V, city_all[layer].E, fixed_point_number, mast_length);
+          let mast_scale = y_scale;
+          // let mast_length = mast_scale * height;
+          createFlags(scene, [X,Z], flag_base_Y, city_all[layer].V, city_all[layer].E, fixed_point_number, mast_scale);
           console.log("createCityMeshes: loaded "+layer+", city to load = "+city_to_load);
           delete city_tracking[layer];
           --city_to_load;

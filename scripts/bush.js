@@ -1,11 +1,10 @@
 import * as THREE from '../node_modules/three/build/three.module.js';
 
 let bushes = {};
-let source_dir = "../data/";
 let last = [-187.86920742571192,-69.84011743155536]
 let y_scale = Math.sqrt(last[0] ** 2 + last[1] ** 2) / 4.565727849181679;
 
-export function loadBushData() {
+export function loadBushData(source_dir) {
     var requestURL = source_dir+"bushes.json";
     var request = new XMLHttpRequest();
   
@@ -16,6 +15,7 @@ export function loadBushData() {
   
     request.onload = function() {
       bushes = request.response;
+      // console.log(bushes)
     }
 }
 
@@ -33,24 +33,29 @@ export function createBushMeshes(scene, layer, coord, num_fp, grassRad) {
       "w": "[&&&p/W////W////W////W////W]",
       "p": "FF",
       "W": "[^F][&&&&P]"
-    }
+    };
   
-    var command = "A"
+    var command = "A";
   
-    var DATA = bushes[layer]
-    // console.log(layer, DATA)
-  
-    var turters = new Turtle(stepSize, rotationAngle);
-    var commandEx = processLSystem(iterations, command, rules);
-    // console.log("Iters:",iterations);
-    // console.log("Iters:",iterations+1);
-    var commandEx2 = processLSystem(iterations+1, command, rules);
-  
-    drawData(turters, DATA, commandEx, commandEx2);
-    var meshes = createBushMesh(turters.vertices, turters.leafVertices, turters.petalVertices);
-  
+    var indices = Object.keys(bushes).filter(key => {return key.match(layer)});
+    indices.sort(function(a,b){return a.split('_').length - b.split('_').length});
+    // console.log(layer, indices, indices.length, num_fp);
+      
     var r = grassRad/2.0;
     for (let i = 0; i < num_fp; i++) {
+      var DATA = bushes[indices[i+1]];
+      // console.log(DATA);
+    
+      var turters = new Turtle(stepSize, rotationAngle);
+      var commandEx = processLSystem(iterations, command, rules);
+      // console.log("Iters:",iterations);
+      // console.log("Iters:",iterations+1);
+      var commandEx2 = processLSystem(iterations+1, command, rules);
+    
+      drawData(turters, DATA, commandEx, commandEx2);
+      var meshes = createBushMesh(turters.vertices, turters.leafVertices, turters.petalVertices);
+
+
       var theta = 2.0*Math.PI*i/num_fp;
       var x = coord[0] + r * Math.cos(theta);
       var z = coord[1] + r * Math.sin(theta);
@@ -58,7 +63,7 @@ export function createBushMeshes(scene, layer, coord, num_fp, grassRad) {
       var rot = Math.random()*2*Math.PI;
       for (let j = 0; j < meshes.length; j++) {
         var geo = meshes[j][0].clone();
-        geo.scale(y_scale/8,y_scale/8,y_scale/8);
+        geo.scale(y_scale/10,y_scale/10,y_scale/10);
         geo.rotateY(rot);
         if (j == 0) {
           var mesh = new THREE.LineSegments( geo, meshes[j][1] );

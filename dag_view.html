@@ -23,6 +23,7 @@
   <script src="DisjointSet.js"></script>
   <script src="js-colormaps.js"></script>
 </head>
+
 <body>
   <div>
     <div id="graph" style="float: left; width: 49.5%; height: 100%"></div>
@@ -152,11 +153,88 @@
         'movies/5-16664',
         'movies/8-11589',
         'movies/47-11398',
-        'movies/84-11398'
+        'movies/84-11398',
+        'com-friendster/1-10126754',
+        'com-friendster/11-167',
+        'com-friendster/1-1443591',
+        'com-friendster/1-14609',
+        'com-friendster/1-15204409',
+        'com-friendster/1-1623531',
+        'com-friendster/1-17833995',
+        'com-friendster/120-11459',
+        'com-friendster/1-201283',
+        'com-friendster/12-131002',
+        'com-friendster/1-2878103',
+        'com-friendster/13-101',
+        'com-friendster/1-31820411',
+        'com-friendster/140-180407',
+        'com-friendster/14-14107',
+        'com-friendster/14-238083',
+        'com-friendster/1-5249714',
+        'com-friendster/15-690',
+        'com-friendster/1-58275384',
+        'com-friendster/1-60939141',
+        'com-friendster/16-1284',
+        'com-friendster/16-41201',
+        'com-friendster/169-11459',
+        'com-friendster/1-6980866',
+        'com-friendster/1-7241947',
+        'com-friendster/175-260453',
+        'com-friendster/1-754869',
+        'com-friendster/17-60024',
+        'com-friendster/18-13234024',
+        'com-friendster/1-8645756',
+        'com-friendster/19-19546040',
+        'com-friendster/20-123',
+        'com-friendster/20-9823427',
+        'com-friendster/2-101',
+        'com-friendster/21-1374',
+        'com-friendster/2-2407314',
+        'com-friendster/22-6161',
+        'com-friendster/234-262712',
+        'com-friendster/25-167',
+        'com-friendster/27-146',
+        'com-friendster/29-735',
+        'com-friendster/30-11086',
+        'com-friendster/304-1850520',
+        'com-friendster/3-101',
+        'com-friendster/31-4062912',
+        'com-friendster/32-248525',
+        'com-friendster/33-1467',
+        'com-friendster/34-87642',
+        'com-friendster/34-90152410',
+        'com-friendster/35-1750',
+        'com-friendster/38-1202',
+        'com-friendster/40-38645',
+        'com-friendster/4-101',
+        'com-friendster/41-1905',
+        'com-friendster/41-60187632',
+        'com-friendster/4-6552536',
+        'com-friendster/48-6608327',
+        'com-friendster/5-173',
+        'com-friendster/53-1266',
+        'com-friendster/54-1563',
+        'com-friendster/55-643725',
+        'com-friendster/58-2035500',
+        'com-friendster/6-284',
+        'com-friendster/65-4182',
+        'com-friendster/7-101',
+        'com-friendster/71-102807',
+        'com-friendster/7-19325784',
+        'com-friendster/75-49855703',
+        'com-friendster/77-49855703',
+        'com-friendster/80-49855703',
+        'com-friendster/8-176',
+        'com-friendster/82-49855703',
+        'com-friendster/86-49855703',
+        'com-friendster/89-1202',
+        'com-friendster/9-164816',
+        'com-friendster/9-201256',
+        'com-friendster/92-49855703'
       ])
       .onChange(selection => {
         let dsfp = selection.split('/');
-        let file = './dagmetas/' + dsfp[0] + '/dagmeta_' + dsfp[1] + '.json'
+        let file = './data_dags/' + dsfp[0] + '/dagmeta_' + dsfp[1] + '.json'
         console.log("Loading: ", file);
         loadFile(file);
         loadLayer();
@@ -181,6 +259,8 @@
       //.linkDirectionalParticles(2)
       .graphData(initData);
 
+    let clicked = null;
+
     // graph config
     const elem = document.getElementById("graph");
     const NODE_REL_SIZE = 2;
@@ -193,12 +273,12 @@
       .linkColor(() => 'rgba(0,0,0,1.0)')
       .nodeRelSize(NODE_REL_SIZE)
       .nodeId('id')
-      .nodeVal('size')
-      .nodeLabel('name')
+      .nodeVal('esize')
+      .nodeLabel(node => '<p style="color:black">'+node['name']+'</p>')
       //.nodeAutoColorBy('density')
-      .nodeColor('color')
+      .nodeColor(node => node === clicked ? 'rgba(255,160,0,0.8)' : node['color'])
       .nodeOpacity(0.9)
-      .linkLabel('size')
+      .linkLabel(link => '<p style="color:black">'+link['size']+'</p>')
       .linkWidth('logsize')
       //.linkDirectionalParticles(2)
       //.linkDirectionalParticleWidth(0.8)
@@ -211,14 +291,15 @@
       .enableNodeDrag(false)
       //.onNodeHover(node => { console.log(node) })
       .onNodeClick(node => {
-
+        clicked = node;
+        graph.nodeColor(node => node === clicked ? 'rgba(0,0,0,1)' : node['color']);
         //console.log("Node: ", node);
-        console.log(DATA,nodeDS,nodeMAP);
+        //console.log(DATA,nodeDS,nodeMAP);
         const setid = nodeDS.find(nodeMAP[node.id]);
         console.log("Setid: ", setid);
         const nodefilter = new Set();
         for (const sid in nodeDS._objects) {
-          if (nodeDS._relations[sid] === setid) {
+          if (nodeDS._findById(sid) === setid) {
             //console.log(nodeDS._objects[sid], DATA.nodes[nodeDS._objects[sid].id]);
             const vertices = DATA.nodes[nodeDS._objects[sid].id].vertices
             for (const vert in vertices) {
@@ -227,6 +308,7 @@
           }
         }
         loadEdges(nodefilter);
+        //Graph.zoomToFit();
 
         // Random tree
         const N = 50;
@@ -245,7 +327,7 @@
         //Graph.graphData(gData);
       });
 
-    var layer_nodes = [];
+    //var layer_nodes = [];
     var layer_links = [];
     var layer_loaded = false;
     var prev_suffix = null;
@@ -294,8 +376,8 @@
             "./" + dataset + "/" + dataset + "_layers",
             // onLoad callback
             function ( data ) {
-              //console.log('layer-[0-9]+-'+suffix+'.csv')
-              const layerfile = "./" + dataset + "/" + dataset + "_layers/" + data.match('layer-[0-9]+-'+suffix+'.csv');
+              //console.log('layer-*[0-9]*-'+suffix+'.csv')
+              const layerfile = "./" + dataset + "/" + dataset + "_layers/" + data.match('layer-*[0-9]*-'+suffix+'.csv');
               console.log("Loading: ", layerfile);
               /*
               loader.load(layerfile, function(text){
@@ -320,7 +402,8 @@
                 });
                 layer_links = ldata;
                 layer_loaded = true;
-                console.log("Layer Already Loaded: ", layer);
+                prev_suffix = suffix;
+                console.log("Layer Loaded: ", layer);
               });
             });
         });
@@ -351,7 +434,7 @@
     // const FILE = "./wavemaps/f_dagmeta_1-10126754.json";
     // const FILE = "./dagmeta_101-11400.json";
     // const FILE = "./wavemaps/movies/dagmeta_31-12735.json";
-    const FILE = "./dagmetas/cit-Patents/dagmeta_15-275340.json";
+    const FILE = "./data_dags/cit-Patents/dagmeta_15-275340.json";
     loadLayer();
     loadFile(FILE);
 
@@ -375,7 +458,7 @@
           const node = {
             id: vert,
             set: vals["set"],
-            name: vals["num_vertices"],
+            name: vals["num_edges"],
             density: density,
             color: getColor(density),
             size: vals["num_vertices"],
@@ -422,7 +505,8 @@
               nodeset.union(nodemap[link.source], nodemap[link.target])
             }
           }
-          const filterLinks = []
+          //const filterLinks = {};
+          const filterLinks = [];
           for (const l in links) {
             let link = links[l];
             if (nodeset.connected(nodemap[link.source], nodemap[link.target])) {
@@ -430,12 +514,23 @@
             } else {
               link.source = nodeset.find(nodemap[link.source]);
               link.target = nodeset.find(nodemap[link.target]);
+              /*let lkey = String([link.source,link.target]);
               //console.log(nodeset.find(nodemap[link.source]), nodeset.find(nodemap[link.target]));
+              if (!(lkey in filterLinks)) {
+                filterLinks[lkey] = {source:link.source, target:link.target, size:link.size};
+              } else {
+                //filterLinks[lkey].source = link.source;
+                //filterLinks[lkey].target = link.source;
+                filterLinks[lkey].size += link.size;
+              }*/
               filterLinks.push(link);
               //console.log(filterLinks[filterLinks.length-1]);
             }
           }
-          links = filterLinks;
+          /*for (const l in filterLinks) {
+            filterLinks[l].logsize = Math.log2(filterLinks[l].size+1);
+          }*/
+          links = Object.values(filterLinks);
           console.log("Reduced to: ", links.length);
         }
 
@@ -460,7 +555,7 @@
           const node = {
             id: nodeset.find(nodesExt[vert][0]),
             set: maxset,
-            name: num_vertices,
+            name: num_edges,
             density: density,
             color: getColor(density),
             size: num_vertices,
@@ -474,6 +569,7 @@
           nodes: nodeArr,
           links: links
         });
+        graph.zoomToFit();
         console.log("Total:", verts, edges);
         console.log("Shown:", nodeArr.length, links.length);
         data_info.edges = edges;

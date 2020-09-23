@@ -7,6 +7,10 @@ import scipy.spatial
 from scipy.spatial import Voronoi
 from scipy.spatial import voronoi_plot_2d
 
+SPIRAL_FILE = '../data/com-friendster/SPIRAL.txt'
+# SPIRAL_FILE = '../data/cit-Patents/SPIRAL.txt'
+# SPIRAL_FILE = '../data/movies/SPIRAL.txt'
+
 def get_voronoi_vertices(vor, spiral_index):
     region = vor.point_region[spiral_index]
     print("for spiral index {}".format(spiral_index))
@@ -239,7 +243,7 @@ def ridge_between_points(vor, point_A, point_B):
 def main():
     points, names = [], []
     spiral_points = {}
-    spiral_file = open('../data/SPIRAL.txt','r')
+    spiral_file = open(SPIRAL_FILE,'r')
     lines = spiral_file.readlines()
     for l in lines:
         line = l.split(' ')

@@ -3,6 +3,10 @@ import scipy.spatial
 from scipy.spatial import Voronoi
 from scipy.spatial import voronoi_plot_2d
 
+# SPIRAL_FILE = '../data/com-friendster/SPIRAL.txt'
+SPIRAL_FILE = '../data/cit-Patents/SPIRAL.txt'
+# SPIRAL_FILE = '../data/movies/SPIRAL.txt'
+
 def createVoronoiText(vor,names,points):
     file = open('voronoi.txt','w')
     for i in range(len(points)):
@@ -32,7 +36,7 @@ def createVoronoiNeighborsText(vor,names):
 def main():
     points, names = [], []
     spiral_points = {}
-    spiral_file = open('../data/SPIRAL.txt','r')
+    spiral_file = open(SPIRAL_FILE,'r')
     lines = spiral_file.readlines()
     for l in lines:
         line = l.split(' ')
