@@ -93,7 +93,6 @@ function init() {
     light_objects['dayLights'][0].position.set(1000,1000,1000);
     light_objects['dayLights'][1].position.set(-500,500,0);
     light_objects['dayLights'].forEach(object => scene.add(object));
-    scene.add(light_objects['daySideLight']);
 
     // load files
     manager.onStart = function(url,itemsLoaded,itemsTotal) {

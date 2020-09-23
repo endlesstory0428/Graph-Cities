@@ -248,12 +248,12 @@ function normalize(v) {
   return normalized;
 }
 
-function addTruss(scene,truss_objects,window_objects,h,center,top_radius,btm_radius,height,r,g,b) {
+function addTruss(scene,truss_objects,window_objects,h,center,top_radius,btm_radius,top_in_radius,height,r,g,b) {
   let torus_thickness = 0.1, bar_thickness = 0.1;
   let number = 6;
-  let truss_geo = new THREE.BufferGeometry();
   let color = rgbToHex(r,g,b);
-  let material = new THREE.MeshStandardMaterial({color:color,emissive:color});
+  let bars_geo = new THREE.Geometry();
+  let material = new THREE.MeshStandardMaterial({color:color});
   let i;
   for (i = 0; i<number; i++) {
     let theta = i*(360/number);
@@ -268,59 +268,51 @@ function addTruss(scene,truss_objects,window_objects,h,center,top_radius,btm_rad
     let normalized_top_btm = normalize(top_btm);
     let mid_radius = (top_radius+bar_btm_radius)/2;
     let bar_center = [center[0]+theta_cos*mid_radius,center[1],center[2]+theta_sin*mid_radius];
-    let bar = new THREE.CylinderBufferGeometry(bar_thickness,bar_thickness,length,8,8);
+    let bar = new THREE.CylinderGeometry(bar_thickness,bar_thickness,length,8,8);
     // rotate the side bars
     let rotated = rotateTruss(normalized_top_btm);
     bar.rotateX(rotated[0]);
     bar.rotateY(rotated[1]);
     bar.rotateZ(rotated[2]);
     bar.translate(bar_center[0],bar_center[1],bar_center[2]);
-    let bar_mesh = new THREE.Mesh(bar,material);
-    bar_mesh.updateMatrix();
-    scene.add(bar_mesh);
-    truss_objects.push(bar_mesh);
-    // night version windows
-    let theta_start_1=[0.5,-1.5,2.6], theta_start_2=[1.6,-0.5,3.7];
-    let j;
-    let out_frustum;
-    if(h % 2===0){
-      for(j=0; j<3; j++){
-        out_frustum = new THREE.CylinderBufferGeometry(bar_top_radius,bar_btm_radius,height,18,8,true,theta_start_1[j],2*Math.PI/6);
-        let out_frustum_mesh = new THREE.Mesh(out_frustum, material);
-        out_frustum_mesh.translateY(center[1]);
-        scene.add(out_frustum_mesh);
-        window_objects.push(out_frustum_mesh);
-      }
-    }else if(h % 2 !== 0){
-      for(j=0; j<3; j++){
-        out_frustum = new THREE.CylinderBufferGeometry(bar_top_radius,bar_btm_radius,height,18,8,true,theta_start_2[j],2*Math.PI/6);
-        let out_frustum_mesh = new THREE.Mesh(out_frustum, material);
-        out_frustum_mesh.translateY(center[1]);
-        scene.add(out_frustum_mesh);
-        window_objects.push(out_frustum_mesh);
-      }
-    }
-    window_objects.forEach(object => object.visible=false);
-    // merge all bars together
-    // BufferGeometryUtils.mergeBufferGeometries([truss_geo,bar_mesh.geometry],bar_mesh.matrix);
+    bars_geo.merge(bar);
   }
   // create torus geometry
-  let torus_geo = new THREE.TorusBufferGeometry(top_radius,torus_thickness,8,30);
+  let torus_geo = new THREE.TorusGeometry(top_radius,torus_thickness,8,30);
   torus_geo.rotateX(90*Math.PI/180);
-  let torus_mesh = new THREE.Mesh(torus_geo, material);
-  let torus_flat = new THREE.Object3D();
-  torus_flat.add(torus_mesh);
-  torus_flat.translateX(center[0]);
-  let Y = center[1]+height/2;
-  torus_flat.translateY(Y);
-  torus_flat.translateZ(center[2]);
-  // console.log("createCityMeshes: top_radius = "+top_radius+" Y = "+Y);
-  scene.add(torus_flat);
-  truss_objects.push(torus_flat);
-  // merge torus with bars
-  // truss_geo.merge(torus_mesh.geometry,torus_mesh.matrix);
-  // truss_geo.merge(torus_flat.geometry,torus_flat.matrix);
-  // let truss_mesh = new THREE.Mesh(truss_geo,material);
+  let torus_flat = new THREE.Geometry();
+  torus_flat.merge(torus_geo);
+  torus_flat.translate(center[0],center[1]+height/2,center[2]);
+  bars_geo.merge(torus_flat);
+  // convert truss geo to buffer geometry and add to scene
+  let truss_buffer_geo = new THREE.BufferGeometry().fromGeometry(bars_geo);
+  let bar_mesh = new THREE.Mesh(truss_buffer_geo,material);
+  bar_mesh.updateMatrix();
+  scene.add(bar_mesh);
+  truss_objects.push(bar_mesh);
+  // night version windows
+  let theta_start_1=[0.5,-1.5,2.6], theta_start_2=[1.6,-0.5,3.7];
+  let j;
+  let window;
+  let windows_geo = new THREE.Geometry();
+  if(h % 2===0){
+    for(j=0; j<3; j++){
+      window = new THREE.CylinderGeometry(top_in_radius+torus_thickness,btm_radius+torus_thickness,height,18,8,true,theta_start_1[j],2*Math.PI/6);
+      windows_geo.merge(window);
+    }
+  }else if(h % 2 !== 0){
+    for(j=0; j<3; j++){
+      window = new THREE.CylinderGeometry(top_in_radius+torus_thickness,btm_radius+torus_thickness,height,18,8,true,theta_start_2[j],2*Math.PI/6);
+      windows_geo.merge(window);
+    }
+  }
+  windows_geo.translate(center[0],center[1],center[2]);
+  let windows_buffer_geo = new THREE.BufferGeometry().fromGeometry(windows_geo);
+  let emissive_material = new THREE.MeshStandardMaterial({color:color,emissive:color});
+  let window_mesh = new THREE.Mesh(windows_buffer_geo, emissive_material);
+  window_objects.push(window_mesh);
+  scene.add(window_mesh);
+  window_objects.forEach(object => object.visible=false);
   return {scene:scene, truss: truss_objects, window: window_objects};
 }
 
@@ -387,11 +379,11 @@ function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects
               if(h<height-1) {
                   //create outer frustum as truss structure
                   let top_out_r = layer_shape[h].outer_radius;
-                  let btm_out_r = layer_shape[h-1].inner_radius;
+                  let btm_out_r = btm_in_r;
                   r = parseInt(city_all[layer].colors.outer[h-1].r*255);
                   g = parseInt(city_all[layer].colors.outer[h-1].g*255);
                   b = parseInt(city_all[layer].colors.outer[h-1].b*255);
-                  let result = addTruss(scene,truss_objects,window_objects,h,[X,Y,Z],top_out_r,btm_out_r,tall,r,g,b);
+                  let result = addTruss(scene,truss_objects,window_objects,h,[X,Y,Z],top_out_r,btm_out_r,top_in_r,tall,r,g,b);
                   truss_objects = result.truss;
                   window_objects = result.window;
                   scene = result.scene;
