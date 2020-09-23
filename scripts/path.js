@@ -143,7 +143,7 @@ function connectNeighbors(scene, building_1, building_2, path_objects, type='str
     }
     for (let i = 0; i < path.length-1; i++) {
         let height = getDistance(path[i],path[i+1]);
-        let geometry = new THREE.PlaneGeometry(4, height);
+        let geometry = new THREE.PlaneBufferGeometry(4, height);
         let material = new THREE.MeshBasicMaterial( {color: 0xffffff, side: THREE.DoubleSide} );
         let path_segment = new THREE.Mesh( geometry, material );
         let position = getMiddlePoint(path[i],path[i+1]);
@@ -154,7 +154,7 @@ function connectNeighbors(scene, building_1, building_2, path_objects, type='str
         path_segment_tmp_1.rotateY(rotation); 
         let path_segment_tmp_2 = new THREE.Object3D();
         path_segment_tmp_2.add(path_segment_tmp_1);
-        path_segment_tmp_2.position.set(position[0],2,position[1]);
+        path_segment_tmp_2.position.set(position[0],0,position[1]);
         // console.log("connectNeighbors: "+height+" "+position+" "+rotation);
         path_objects.push(path_segment_tmp_2);
         scene.add(path_segment_tmp_2);

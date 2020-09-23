@@ -1,7 +1,6 @@
 import * as THREE from '../node_modules/three/build/three.module.js';
 import { TrackballControls } from '../node_modules/three/examples/jsm/controls/TrackballControls.js';
 import { GUI } from '../node_modules/three/examples/jsm/libs/dat.gui.module.js';
-import { BufferGeometryUtils } from '../three.js/examples/jsm/utils/BufferGeometryUtils.js';
 import { OBJLoader } from '../three.js/examples/jsm/loaders/OBJLoader.js';
 import { loadBushData } from './bush.js';
 import * as BUILD from './building.js';
@@ -74,8 +73,10 @@ animate();
 
 function init() {
     perspectiveCamera = new THREE.PerspectiveCamera( 60, aspect, 1, 4000 );
-    perspectiveCamera.position.z = 850;
-    perspectiveCamera.position.y = 650;
+    // perspectiveCamera.position.z = 850;
+    // perspectiveCamera.position.y = 650;
+    perspectiveCamera.position.z = 600;
+    perspectiveCamera.position.y = 350;
 
     orthographicCamera = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 1, 1000 );
     orthographicCamera.position.z = 20;
@@ -213,7 +214,7 @@ function groundObjLoader(obj_url,obj_material) {
               }
           });
           object.position.x=-60;
-          object.position.y=-8;
+          object.position.y=-10;
           object.position.z=20;
           object.scale.set(0.4,0.1,0.3);
           

@@ -1,7 +1,6 @@
 import * as THREE from '../node_modules/three/build/three.module.js';
 import { TrackballControls } from '../node_modules/three/examples/jsm/controls/TrackballControls.js';
 import { GUI } from '../node_modules/three/examples/jsm/libs/dat.gui.module.js';
-import { BufferGeometryUtils } from '../three.js/examples/jsm/utils/BufferGeometryUtils.js';
 import { OBJLoader } from '../three.js/examples/jsm/loaders/OBJLoader.js';
 import { loadBushData } from './bush.js';
 import * as BUILD from './building.js';
@@ -29,7 +28,7 @@ let truss_objects = [];
 let window_objects = [];
 let addBuildings = false;
 let oneBuilding = true;
-let oneBuildingName = "wavemap_"+"1_10732131_247";
+let oneBuildingName = "wavemap_"+"1_201283_1031";
 let city_to_load = 0; // hard-coded
 if(addBuildings){
     city_to_load = 77;
@@ -37,10 +36,16 @@ if(addBuildings){
     city_to_load = 1;
 }
 let dropdown;
-let source_dir = "../data/";
-let spiral_file = "../data/SPIRAL.txt";
-let voronoi_file = "../python/voronoi.txt";
-let neighbors_file = "../python/neighbors.txt";
+// let DATASET = 'com-friendster_old';
+let DATASET = 'com-friendster';
+// let DATASET = 'movies';
+// let DATASET = 'cit-Patents';
+
+let source_dir = "../data/"+DATASET+"/";
+let spiral_file = "../data/"+DATASET+"/SPIRAL.txt";
+let voronoi_file = "../python/"+DATASET+"/voronoi.txt";
+let neighbors_file = "../python/"+DATASET+"/neighbors.txt";
+
 let land_obj = "../models/flat_island.obj";
 let ground_texture_file = "../textures/ground_2.jpg";
 let water_texture_file = "../textures/waternormals.jpg";
@@ -101,14 +106,13 @@ function init() {
     light_objects['dayLights'][0].position.set(1000,1000,1000);
     light_objects['dayLights'][1].position.set(-500,500,0);
     light_objects['dayLights'].forEach(object => scene.add(object));
-    scene.add(light_objects['daySideLight']);
 
     // load files
     manager.onStart = function(url,itemsLoaded,itemsTotal) {
         console.log('Started loading file: '+url+'.\nLoaded '+itemsLoaded+' of '+itemsTotal+' files.');
     };
 
-    loadBushData();
+    // loadBushData();
     loadFile(spiral_file,manager);
 
     // GUI folders

@@ -316,20 +316,45 @@ function addTruss(scene,truss_objects,window_objects,h,center,top_radius,btm_rad
   return {scene:scene, truss: truss_objects, window: window_objects};
 }
 
-function createFlags(scene, coord, base_Y, V, E, fixed_point_number, mast_scale) {
+function createFlags(scene, coord, base_Y, V, E, lcc, fixed, mast_scale) {
   // console.log("coord of flag", fixed_point_number, "is", coord, "height of flag is", base_Y);
   let X = coord[0], Z = coord[1];
-  let flag_width = Math.log(V), flag_height = Math.log(E);
+  let flag_width = Math.log(V), flag_height = Math.log(E), flag_thickness = 0.5;
   let mast_length = mast_scale*0.1 + mast_scale*2.0*E/(V*(V-1));
   
-  let flag = new THREE.Mesh( new THREE.BoxBufferGeometry(flag_width,flag_height,0.5), new THREE.MeshStandardMaterial( {color: 0xffffff}));
+  let flag = new THREE.Mesh( new THREE.BoxBufferGeometry(flag_width,flag_height,flag_thickness), new THREE.MeshStandardMaterial( {color: 0xffffff}));
   flag.translateX(X+flag_width/2);
   flag.translateY(base_Y+mast_length+flag_height/2);
   flag.translateZ(Z);
-  let rod = new THREE.Mesh( new THREE.CylinderBufferGeometry(0.5,0.5,mast_length,8), new THREE.MeshStandardMaterial( {color: 0x000000}));
+  let rod = new THREE.Mesh( new THREE.CylinderBufferGeometry(flag_thickness,flag_thickness,mast_length,8), new THREE.MeshStandardMaterial( {color: 0x000000}));
   rod.translateX(X);
   rod.translateY(base_Y+mast_length/2);
   rod.translateZ(Z);
+
+  // add text to flag
+  let loader = new THREE.FontLoader();
+  loader.load( '../textures/helvetiker_regular.typeface.json', function ( font ) {
+    // console.log("font loaded!");
+    let text_geo = new THREE.Geometry(); 
+    let fixed_geo = new THREE.TextGeometry( fixed.toString(), {
+      font: font,
+      size: flag_width/fixed.toString().length*0.5,
+      height: flag_thickness/2+0.15
+    } );
+    fixed_geo.translate(X+flag_height/16,base_Y+mast_length+flag_height/2,Z);
+    text_geo.merge(fixed_geo);
+    let lcc_geo = new THREE.TextGeometry( lcc.toString(), {
+      font: font,
+      size: flag_width/lcc.toString().length,
+      height: flag_thickness/2+0.15
+    } );
+    lcc_geo.translate(X+flag_height*0.06,base_Y+mast_length+flag_height*0.06,Z);
+    text_geo.merge(lcc_geo);
+    let text_buffer_geo = new THREE.BufferGeometry().fromGeometry(text_geo);
+    let text_mesh = new THREE.Mesh(text_buffer_geo,new THREE.MeshStandardMaterial( {color: 0x000000}));
+    scene.add(text_mesh);
+  } );
+
   scene.add(flag);
   scene.add(rod);
 }
@@ -391,10 +416,12 @@ function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects
               }
           }
           let flag_base_Y = y_scale * layer_shape[height-1].height;
-          let fixed_point_number =  parseInt(layer.slice(layer.lastIndexOf('_')+1));
+          let fixed =  parseInt(layer.slice(layer.lastIndexOf('_')+1));
+          let sliced = layer.slice(0,layer.lastIndexOf('_'));
+          let lcc = parseInt(sliced.slice(sliced.lastIndexOf('_')+1));
           let mast_scale = y_scale;
           // let mast_length = mast_scale * height;
-          createFlags(scene, [X,Z], flag_base_Y, city_all[layer].V, city_all[layer].E, fixed_point_number, mast_scale);
+          createFlags(scene, [X,Z], flag_base_Y, city_all[layer].V, city_all[layer].E, lcc, fixed, mast_scale);
           console.log("createCityMeshes: loaded "+layer+", city to load = "+city_to_load);
           delete city_tracking[layer];
           --city_to_load;
