@@ -343,13 +343,15 @@ function createFlags(scene, coord, base_Y, V, E, lcc, fixed, mast_scale) {
     } );
     fixed_geo.translate(X+flag_height/16,base_Y+mast_length+flag_height/2,Z);
     text_geo.merge(fixed_geo);
-    let lcc_geo = new THREE.TextGeometry( lcc.toString(), {
-      font: font,
-      size: flag_width/lcc.toString().length,
-      height: flag_thickness/2+0.15
-    } );
-    lcc_geo.translate(X+flag_height*0.06,base_Y+mast_length+flag_height*0.06,Z);
-    text_geo.merge(lcc_geo);
+    if (lcc > 1) {
+      let lcc_geo = new THREE.TextGeometry( lcc.toString(), {
+        font: font,
+        size: flag_width/lcc.toString().length,
+        height: flag_thickness/2+0.15
+      } );
+      lcc_geo.translate(X+flag_height*0.06,base_Y+mast_length+flag_height*0.06,Z);
+      text_geo.merge(lcc_geo);
+    }
     let text_buffer_geo = new THREE.BufferGeometry().fromGeometry(text_geo);
     let text_mesh = new THREE.Mesh(text_buffer_geo,new THREE.MeshStandardMaterial( {color: 0x000000}));
     scene.add(text_mesh);
@@ -416,9 +418,10 @@ function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects
               }
           }
           let flag_base_Y = y_scale * layer_shape[height-1].height;
-          let fixed =  parseInt(layer.slice(layer.lastIndexOf('_')+1));
+          let lcc =  parseInt(layer.slice(layer.lastIndexOf('_')+1)); // last
           let sliced = layer.slice(0,layer.lastIndexOf('_'));
-          let lcc = parseInt(sliced.slice(sliced.lastIndexOf('_')+1));
+          sliced = sliced.slice(0,sliced.lastIndexOf('_'));
+          let fixed = parseInt(sliced.slice(sliced.lastIndexOf('_')+1)); // third to last
           let mast_scale = y_scale;
           // let mast_length = mast_scale * height;
           createFlags(scene, [X,Z], flag_base_Y, city_all[layer].V, city_all[layer].E, lcc, fixed, mast_scale);

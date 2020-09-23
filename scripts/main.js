@@ -33,9 +33,9 @@ if(addBuildings){
 let dropdown;
 
 // let DATASET = 'com-friendster_old';
-let DATASET = 'com-friendster';
+// let DATASET = 'com-friendster';
 // let DATASET = 'movies';
-// let DATASET = 'cit-Patents';
+let DATASET = 'cit-Patents';
 
 let source_dir = "../data/"+DATASET+"/";
 let spiral_file = "../data/"+DATASET+"/SPIRAL.txt";
