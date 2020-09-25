@@ -17,31 +17,30 @@ scene.background = new THREE.Color('skyblue');
 
 let raycaster = new THREE.Raycaster();
 let mouse = new THREE.Vector2();
-let objects = [];
 let INTERSECTED;
 let city_tracking = {};
 let city_all = {};
 let city_list = [];
+let objects = [];
 let path_objects = [];
 let truss_objects = [];
 let window_objects = [];
+let flag_objects = [];
+let grass_objects = [];
+let bush_objects = [];
 let addBuildings = true;
-let city_to_load = 0; // hard-coded
+let metaLoaded = false, voronoiLoaded = false;
+let city_to_load = 0; 
 if(addBuildings){
-    city_to_load = 77;
+    city_to_load = 77;// hard-coded
 }
 let dropdown;
 
 // let DATASET = 'com-friendster_old';
-let DATASET = 'com-friendster';
+// let DATASET = 'com-friendster';
 // let DATASET = 'movies';
 // let DATASET = 'cit-Patents';
-
-let source_dir = "../data/"+DATASET+"/";
-let spiral_file = "../data/"+DATASET+"/SPIRAL.txt";
-let voronoi_file = "../python/"+DATASET+"/voronoi.txt";
-let neighbors_file = "../python/"+DATASET+"/neighbors.txt";
-let meta_file = "../python/"+DATASET+"/metagraph_normalized.txt";
+let data_list = ['com-friendster','movies','cit-Patents'];
 let land_obj = "../models/flat_island.obj";
 let ground_texture_file = "../textures/ground_2.jpg";
 let water_texture_file = "../textures/waternormals.jpg";
@@ -60,10 +59,16 @@ let params = {
     ground: "#CCA262",
     // colorMap: "jet",
     // hideBuilding: false
+    dataSet:data_list[0],
     root: 'any building',
     outer: true,
     isNight: false
 };
+let source_dir = "../data/"+params.dataSet+"/";
+let spiral_file = "../data/"+params.dataSet+"/SPIRAL.txt";
+let voronoi_file = "../python/"+params.dataSet+"/voronoi.txt";
+let neighbors_file = "../python/"+params.dataSet+"/neighbors.txt";
+let meta_file = "../python/"+params.dataSet+"/metagraph_normalized.txt";
 let building_params = {
     floor: '',
     layer: ''
@@ -113,6 +118,38 @@ function init() {
 
     // GUI folders
     let gui = new GUI({width:350});
+    
+    let f0 = gui.addFolder('Data Set');
+    let selectData = f0.add(params, 'dataSet', data_list).name('choose data set');
+    selectData.setValue(data_list[0]);
+    selectData.onChange(
+        function( dataSet ) {
+            objects.every(object => scene.remove(object));
+            path_objects.every(object => scene.remove(object));
+            window_objects.every(object => scene.remove(object));
+            flag_objects.every(object => scene.remove(object));
+            grass_objects.every(object => scene.remove(object));
+            truss_objects.every(object => scene.remove(object));
+            bush_objects.every(object => scene.remove(object));
+            animate();
+            source_dir = "../data/"+dataSet+"/";
+            spiral_file = "../data/"+dataSet+"/SPIRAL.txt";
+            voronoi_file = "../python/"+dataSet+"/voronoi.txt";
+            neighbors_file = "../python/"+dataSet+"/neighbors.txt";
+            meta_file = "../python/"+dataSet+"/metagraph_normalized.txt";
+            city_tracking = {};
+            city_all = {};
+            city_list = [];
+            objects = [], path_objects = [], truss_objects = [], window_objects = [], flag_objects = [];
+            metaLoaded = false, voronoiLoaded = false;
+            loadBushData(source_dir);
+            loadFile(spiral_file,manager);
+            animate();
+        }
+    );
+    
+    f0.open();
+
     let f1 = gui.addFolder('Building Info');
     f1.add(building_params, 'floor').name('floor number').listen();
     f1.add(building_params, 'layer').name('layer info').listen();
@@ -128,6 +165,7 @@ function init() {
         function( value ) {
             // controls.dispose();
         createControls( value ? orthographicCamera : perspectiveCamera );
+        animate();
     });
     f2.open();
 
@@ -348,9 +386,12 @@ function groundObjLoader(obj_url,obj_material) {
         else{
             result = PATH.loadNeighbors(city_all, lines, filename);
             city_all = result.all;
-            // let result_2 = PATH.pathPlanning(city_list[0],scene,city_all);
-            // scene = result_2.scene;
-            // path_objects = result_2.path;
+            voronoiLoaded = true;
+            if(metaLoaded && voronoiLoaded){
+                let result_2 = PATH.pathPlanning(city_list[0],scene,city_all);
+                scene = result_2.scene;
+                path_objects = result_2.path;
+            }
         }
         city_all = result.all;
     }
@@ -361,9 +402,12 @@ function groundObjLoader(obj_url,obj_material) {
         let filename = evt.target.url;
         let result = PATH.loadMeta(city_all, lines, filename);
         city_all = result.all;
-        let result_2 = PATH.pathPlanning(city_list[0],scene,city_all);
-        scene = result_2.scene;
-        path_objects = result_2.path;
+        metaLoaded = true;
+        if(metaLoaded && voronoiLoaded){
+            let result_2 = PATH.pathPlanning(city_list[0],scene,city_all);
+            scene = result_2.scene;
+            path_objects = result_2.path;
+        }
     }
 
     function fileToLayer(filename) {
@@ -381,9 +425,12 @@ function groundObjLoader(obj_url,obj_material) {
         // need to update when SPIRAL.txt updates
         if(element_count == 7) {
             // console.log("loaded: SPIRAL file");
-            let spiral = BUILD.loadSpiral(scene, lines, city_all, city_tracking, x_scale);
+            let spiral = BUILD.loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tracking, city_to_load, x_scale);
             city_all = spiral.all;
             city_tracking = spiral.tracking;
+            grass_objects = spiral.grass;
+            bush_objects = spiral.bush;
+            city_to_load = spiral.city_count;
             for (const [key, value] of Object.entries(city_all)){
                 let layer_name = key;
                 city_list.push(layer_name);
@@ -461,7 +508,7 @@ function groundObjLoader(obj_url,obj_material) {
         // stats.update();
         if(city_to_load>0) {
             console.log("animate: run createCityMeshes()");
-            let result = BUILD.createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, city_to_load, y_scale);
+            let result = BUILD.createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, city_to_load, y_scale);
             scene = result.scene;
             city_all = result.all;
             city_tracking = result.tracking;

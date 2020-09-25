@@ -16,7 +16,7 @@ function loadNeighbors(city_all, lines, filename='') {
         let neighbor_pair = [elements[0],elements[1]];
         neighbors.push(neighbor_pair);
     }
-    city_all['graph'] = makeGraph(neighbors);
+    city_all.graph = makeGraph(neighbors);
     return {all: city_all};
 }
 
@@ -34,7 +34,7 @@ function matchLayerName(layers,a) {
 function loadMeta(city_all, lines, filename='') {
     let connections = {};
     let layers = Object.keys(city_all);
-    console.log(layers);
+    // console.log(layers);
     for(let i=0; i<lines.length-1; i++) {
         let elements = lines[i].split(', ');
         let layer_1 = elements[0]+'_'+elements[1], layer_2 = elements[2]+'_'+elements[3], value = elements[4];
@@ -46,7 +46,7 @@ function loadMeta(city_all, lines, filename='') {
         connections[layer_1][layer_2] = value;
     }
     city_all.connections = connections;
-    console.log(connections);
+    // console.log(connections);
     return {all: city_all};
 }
 
@@ -84,7 +84,7 @@ function notIn(arr, target){
 
 function makeSpanningTree(scene, city_all, root){
     let path_objects = [];
-    let graph = city_all['graph'];
+    let graph = city_all.graph;
     let queue = [[root]];
     let visited = [];
     let visited_neighbors = [root];
@@ -171,7 +171,7 @@ function connectNeighbors(scene, building_1, building_2, building_name_1, buildi
     // console.log("connectNeighbors: width between "+building_name_1+" and "+building_name_2+" = "+width);
     for (let i = 0; i < path.length-1; i++) {
         let height = getDistance(path[i],path[i+1]);
-        let geometry = new THREE.PlaneBufferGeometry(width, height);
+        let geometry = new THREE.PlaneBufferGeometry(width+1, height);
         let material = new THREE.MeshBasicMaterial( {color: 0xffffff, side: THREE.DoubleSide} );
         let path_segment = new THREE.Mesh( geometry, material );
         let position = getMiddlePoint(path[i],path[i+1]);

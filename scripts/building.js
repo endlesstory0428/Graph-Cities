@@ -120,9 +120,10 @@ function loadColor(color_list,layer_name, city_all, city_tracking) {
   return {all: city_all, tracking: city_tracking};
 }
 
-function loadSpiral(scene, lines, city_all, city_tracking, x_scale) {
+function loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tracking, city_to_load, x_scale) {
   // console.log("loading spiral");
   // console.log(filename);
+  city_to_load = lines.length-1;
   for(let i=0; i<lines.length-1; i++) {
     let elements = lines[i].split(' ');
     let layer_name = elements[0];
@@ -145,11 +146,13 @@ function loadSpiral(scene, lines, city_all, city_tracking, x_scale) {
       let grassMat = new THREE.MeshStandardMaterial( {color: 0x7cfc00} );
       let grassMesh = new THREE.Mesh(grassGeo, grassMat);
       scene.add(grassMesh);
+      grass_objects.push(grassMesh);
 
       let x_z = [city_all[layer_name].coords[0],  city_all[layer_name].coords[1]];
       let layer_name_end = layer_name.lastIndexOf('_');
       let simplified_layer_name = layer_name.slice(8,layer_name_end);
-      BUSH.createBushMeshes(scene, simplified_layer_name, x_z, grassFace, grassRadius);
+      let result = BUSH.createBushMeshes(scene, bush_objects, simplified_layer_name, x_z, grassFace, grassRadius);
+      bush_objects = result.bush;
     }
     // flag
     city_all[layer_name].V = parseInt(elements[5]);
@@ -159,7 +162,7 @@ function loadSpiral(scene, lines, city_all, city_tracking, x_scale) {
       city_tracking[layer_name].ready_to_move = true;
     }
   }
-  return {all: city_all, tracking: city_tracking};
+  return {all: city_all, tracking: city_tracking, grass: grass_objects, bush: bush_objects, city_count: city_to_load};
 }
 
 function loadVoronoi(city_all, lines, filename){
@@ -316,7 +319,7 @@ function addTruss(scene,truss_objects,window_objects,h,center,top_radius,btm_rad
   return {scene:scene, truss: truss_objects, window: window_objects};
 }
 
-function createFlags(scene, coord, base_Y, V, E, lcc, fixed, mast_scale) {
+function createFlags(scene, coord, base_Y, V, E, flag_objects, lcc, fixed, mast_scale) {
   // console.log("coord of flag", fixed_point_number, "is", coord, "height of flag is", base_Y);
   let X = coord[0], Z = coord[1];
   let flag_width = Math.log(V), flag_height = Math.log(E), flag_thickness = 0.5;
@@ -355,15 +358,19 @@ function createFlags(scene, coord, base_Y, V, E, lcc, fixed, mast_scale) {
     let text_buffer_geo = new THREE.BufferGeometry().fromGeometry(text_geo);
     let text_mesh = new THREE.Mesh(text_buffer_geo,new THREE.MeshStandardMaterial( {color: 0x000000}));
     scene.add(text_mesh);
+    flag_objects.push(text_mesh);
   } );
 
   scene.add(flag);
   scene.add(rod);
+  flag_objects.push(flag);
+  flag_objects.push(rod);
+  return {scene: scene, flags: flag_objects};
 }
 
 // check city_tracking, create buildings that are ready to color & move
 // delete colored and moved building from city_tracking
-function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, city_to_load, y_scale, oneBuilding=false) {
+function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, city_to_load, y_scale, oneBuilding=false) {
   for (let layer in city_tracking) {
       if(city_tracking[layer].ready_to_move && city_tracking[layer].ready_to_color) {
           let layer_shape = city_all[layer].shapes;
@@ -424,7 +431,9 @@ function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects
           let fixed = parseInt(sliced.slice(sliced.lastIndexOf('_')+1)); // third to last
           let mast_scale = y_scale;
           // let mast_length = mast_scale * height;
-          createFlags(scene, [X,Z], flag_base_Y, city_all[layer].V, city_all[layer].E, lcc, fixed, mast_scale);
+          let result = createFlags(scene, [X,Z], flag_base_Y, city_all[layer].V, city_all[layer].E, flag_objects, lcc, fixed, mast_scale);
+          scene = result.scene;
+          flag_objects = result.flags;
           console.log("createCityMeshes: loaded "+layer+", city to load = "+city_to_load);
           delete city_tracking[layer];
           --city_to_load;

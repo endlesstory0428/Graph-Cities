@@ -20,7 +20,7 @@ export function loadBushData(source_dir) {
 }
 
 // layer name and coordinate of it on the ground, i.e [X,Z]
-export function createBushMeshes(scene, layer, coord, num_fp, grassRad) {
+export function createBushMeshes(scene, bush_objects, layer, coord, num_fp, grassRad) {
     //console.log(bushes);
     var stepSize = 0.1;
     var iterations = 2;
@@ -69,14 +69,17 @@ export function createBushMeshes(scene, layer, coord, num_fp, grassRad) {
           var mesh = new THREE.LineSegments( geo, meshes[j][1] );
           mesh.position.set( x, 1, z );
           scene.add( mesh );
+          bush_objects.push( mesh );
         } else {
           var mesh = new THREE.Mesh( geo, meshes[j][1] );
           mesh.position.set( x, 1, z );
           scene.add( mesh );
+          bush_objects.push( mesh );
         }
         // mesh.position.set( x, 1, z );
       }
     }  
+    return {bush: bush_objects};
 }
 
 function createBushMesh(lineVertices, leafVertices, petalVertices) {
