@@ -26,8 +26,8 @@ let city_list = [];
 let path_objects = [];
 let truss_objects = [];
 let window_objects = [];
-let addBuildings = false;
-let oneBuilding = true;
+let addBuildings = true;
+let oneBuilding = false;
 let oneBuildingName = "wavemap_"+"1_201283_1031";
 let city_to_load = 0; // hard-coded
 if(addBuildings){
@@ -45,6 +45,7 @@ let source_dir = "../data/"+DATASET+"/";
 let spiral_file = "../data/"+DATASET+"/SPIRAL.txt";
 let voronoi_file = "../python/"+DATASET+"/voronoi.txt";
 let neighbors_file = "../python/"+DATASET+"/neighbors.txt";
+let meta_file = "../python/"+DATASET+"/metagraph_normalized.txt";
 
 let land_obj = "../models/flat_island.obj";
 let ground_texture_file = "../textures/ground_2.jpg";
@@ -218,10 +219,9 @@ function groundObjLoader(obj_url,obj_material) {
               }
           });
           object.position.x=-60;
-          object.position.y=-8;
+          object.position.y=-10;
           object.position.z=20;
           object.scale.set(0.4,0.1,0.3);
-          
           scene.add( object );
       },
       function ( xhr ) {
@@ -281,6 +281,23 @@ function groundObjLoader(obj_url,obj_material) {
         );
     }
 
+    function loadMetaFile(file,manager) {
+        let loader = new THREE.FileLoader(manager);
+        let blob = null;
+        loader.responseType = "blob";
+        loader.load(file,
+        function(data) {
+            getAsTextMeta(data,file);
+        },
+        function(xhr) {
+            console.log((file+' '+xhr.loaded/xhr.total*100)+'% loaded');
+        },
+        function(err) {
+            console.error('An error happened when loading '+file);
+        }
+        );
+    }
+
     function getAsText(file,url) {
         let reader = new FileReader();
         reader.readAsText(file);
@@ -299,6 +316,16 @@ function groundObjLoader(obj_url,obj_material) {
         reader.onerror = errorHandler;
         reader.url = url;
         let text = reader.result;
+    }
+    
+    function getAsTextMeta(file,url) {
+        let reader = new FileReader();
+        reader.readAsText(file);
+        reader.onProgress = updateProgress;
+        reader.onload = loadedMeta;
+        reader.onerror = errorHandler;
+        reader.url = url;
+        let text = reader.result;        
     }
 
     function updateProgress(evt) {
@@ -325,12 +352,24 @@ function groundObjLoader(obj_url,obj_material) {
         }
         else if(!oneBuilding){
             result = PATH.loadNeighbors(city_all, lines, filename);
-            let result_2 = PATH.pathPlanning(city_list[0],scene,city_all);
-            scene = result_2.scene;
-            path_objects = result_2.path;
+            city_all = result.all;
+            // let result_2 = PATH.pathPlanning(city_list[0],scene,city_all);
+            // scene = result_2.scene;
+            // path_objects = result_2.path;
         }
     }
   
+    function loadedMeta(evt) {
+        let fileString = evt.target.result;
+        let lines = fileString.split('\n');
+        let filename = evt.target.url;
+        let result = PATH.loadMeta(city_all, lines, filename);
+        city_all = result.all;
+        let result_2 = PATH.pathPlanning(city_list[0],scene,city_all);
+        scene = result_2.scene;
+        path_objects = result_2.path;
+    }
+
     function fileToLayer(filename) {
         let start = filename.lastIndexOf('/');
         let end = filename.lastIndexOf('_');
@@ -368,6 +407,7 @@ function groundObjLoader(obj_url,obj_material) {
             PATH.updateDropdown(dropdown, city_list);
             loadVoronoiFile(voronoi_file,manager);
             loadVoronoiFile(neighbors_file,manager);
+            loadMetaFile(meta_file,manager);
         } else if(element_count == 6) {
             // console.log("loaded: color file");
             layer_name = fileToLayer(filename);

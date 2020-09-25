@@ -9,7 +9,7 @@ function updateDropdown(target, list){
     if (innerHTMLStr != "") target.domElement.children[0].innerHTML = innerHTMLStr;
 }
 
-function loadNeighbors(city_all, lines, filename=''){
+function loadNeighbors(city_all, lines, filename='') {
     let neighbors = [];
     for(let i=0; i<lines.length-1; i++){
         let elements = lines[i].split(' ');
@@ -17,6 +17,36 @@ function loadNeighbors(city_all, lines, filename=''){
         neighbors.push(neighbor_pair);
     }
     city_all['graph'] = makeGraph(neighbors);
+    return {all: city_all};
+}
+
+function matchLayerName(layers,a) {
+    let layer_name;
+    for(let i=0; i<layers.length; i++) {
+        layer_name = layers[i];
+        let sliced = layer_name.slice(layer_name.indexOf('_')+1,layer_name.lastIndexOf('_'));
+        if(sliced == a) {
+            return layer_name;
+        }
+    }
+}
+
+function loadMeta(city_all, lines, filename='') {
+    let connections = {};
+    let layers = Object.keys(city_all);
+    console.log(layers);
+    for(let i=0; i<lines.length-1; i++) {
+        let elements = lines[i].split(', ');
+        let layer_1 = elements[0]+'_'+elements[1], layer_2 = elements[2]+'_'+elements[3], value = elements[4];
+        layer_1 = matchLayerName(layers,layer_1);
+        layer_2 = matchLayerName(layers,layer_2);
+        if(!(layer_1 in connections)) {
+            connections[layer_1] = {};
+        }
+        connections[layer_1][layer_2] = value;
+    }
+    city_all.connections = connections;
+    console.log(connections);
     return {all: city_all};
 }
 
@@ -58,7 +88,7 @@ function makeSpanningTree(scene, city_all, root){
     let queue = [[root]];
     let visited = [];
     let visited_neighbors = [root];
-    console.log(graph);
+    // console.log(graph);
     let count = 0;
 
     while(queue.length > 0 && count < 500){
@@ -78,7 +108,7 @@ function makeSpanningTree(scene, city_all, root){
                 let start_point = node;
                 let end_point = neighbor;
                 if(notIn(visited_neighbors, neighbor)){
-                    let result = connectNeighbors(scene, city_all[start_point], city_all[end_point], path_objects);
+                    let result = connectNeighbors(scene, city_all[start_point], city_all[end_point], start_point, end_point, path_objects, city_all.connections);
                     // console.log("makeSpanningTree: There's an connection between");
                     // console.log(start_point);
                     // console.log(end_point);
@@ -121,7 +151,7 @@ function getRotation(A, B){
     return Math.atan((A[0]-B[0])/(A[1]-B[1]));
 }
 
-function connectNeighbors(scene, building_1, building_2, path_objects, type='straight',width=100){
+function connectNeighbors(scene, building_1, building_2, building_name_1, building_name_2, path_objects, connections){
     let start_coord = [building_1.coords[0], building_1.coords[1]];
     let end_coord = [building_2.coords[0], building_2.coords[1]];
     let start_vor = building_1.voronoi;
@@ -130,20 +160,18 @@ function connectNeighbors(scene, building_1, building_2, path_objects, type='str
     if(shared_edge === 0){
         return scene;
     }
-    let path = [start_coord];
-    if(type==='straight'){
-        path.push(end_coord);
-    }else{
-        if(getDistance(start_coord, shared_edge[0]) < getDistance(start_coord, shared_edge[1])){
-            path.push(shared_edge[0]);  
-        }else{
-            path.push(shared_edge[1]);
-        }
-        path.push(end_coord);
+    let path = [start_coord, end_coord];
+    let width;
+    if((building_name_1 in connections) && (building_name_2 in connections[building_name_1])){
+        width = parseFloat(connections[building_name_1][building_name_2]);
+    } else if((building_name_2 in connections) && (building_name_1 in connections[building_name_2])){
+        width = parseFloat(connections[building_name_2][building_name_1]);
     }
+    width *= 100; // scale up 100 times
+    // console.log("connectNeighbors: width between "+building_name_1+" and "+building_name_2+" = "+width);
     for (let i = 0; i < path.length-1; i++) {
         let height = getDistance(path[i],path[i+1]);
-        let geometry = new THREE.PlaneBufferGeometry(4, height);
+        let geometry = new THREE.PlaneBufferGeometry(width, height);
         let material = new THREE.MeshBasicMaterial( {color: 0xffffff, side: THREE.DoubleSide} );
         let path_segment = new THREE.Mesh( geometry, material );
         let position = getMiddlePoint(path[i],path[i+1]);
@@ -225,4 +253,4 @@ function makeSpanningTreeDebug(graph, root){
 // let root = 'A';
 // makeSpanningTreeDebug(graph, root);
 
-export {updateDropdown, loadNeighbors, pathPlanning};
+export {updateDropdown, loadNeighbors, loadMeta, pathPlanning};
