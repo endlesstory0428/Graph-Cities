@@ -22,6 +22,7 @@ let city_tracking = {};
 let city_all = {};
 let city_list = [];
 let objects = [];
+let ground_object;
 let path_objects = [];
 let truss_objects = [];
 let window_objects = [];
@@ -31,10 +32,10 @@ let bush_objects = [];
 let light_objects;
 let addBuildings = true;
 let metaLoaded = false, voronoiLoaded = false;
-let city_to_load = 0; 
-if(addBuildings){
-    city_to_load = 77;// hard-coded
-}
+let city_to_load; 
+// if(addBuildings){
+//     city_to_load = 77;// hard-coded
+// }
 let dropdown;
 
 // let DATASET = 'com-friendster_old';
@@ -60,7 +61,7 @@ let params = {
     ground: "#CCA262",
     // colorMap: "jet",
     // hideBuilding: false
-    dataSet:data_list[0],
+    dataSet:data_list[1],
     root: 'any building',
     outer: true,
     isNight: false
@@ -127,7 +128,7 @@ function init() {
     
     let f0 = gui.addFolder('Data Set');
     let selectData = f0.add(params, 'dataSet', data_list).name('choose data set');
-    selectData.setValue(data_list[0]);
+    selectData.setValue(data_list[1]);
     selectData.onChange(
         function( dataSet ) {
             objects.every(object => scene.remove(object));
@@ -138,6 +139,18 @@ function init() {
             truss_objects.every(object => scene.remove(object));
             bush_objects.every(object => scene.remove(object));
             light_objects.spotLight.visible = false;
+            if(dataSet === data_list[0]){
+                ground_object.scale.set(0.4,0.1,0.3);
+                ground_object.position.set(-60,-10,20);
+            }
+            else if(dataSet === data_list[1]){
+                ground_object.scale.set(0.22,0.08,0.2);
+                ground_object.position.set(-30,-9,0);
+            }
+            else if(dataSet === data_list[2]){
+                ground_object.scale.set(0.22,0.08,0.2);
+                ground_object.position.set(-30,-9,0);
+            }
             animate();
             source_dir = "../data/"+dataSet+"/";
             spiral_file = "../data/"+dataSet+"/SPIRAL.txt";
@@ -254,17 +267,26 @@ function groundObjLoader(obj_url,obj_material) {
   loader.load(
       obj_url,
       function ( object ) {
-          object.traverse(function(child){
-              console.log("child type: "+child.type);
-              if(child.type == "Mesh") {
-                  child.material = obj_material;
-              }
-          });
-          object.position.x=-60;
-          object.position.y=-10;
-          object.position.z=20;
-          object.scale.set(0.4,0.1,0.3);
-          scene.add( object );
+            object.traverse(function(child){
+                console.log("child type: "+child.type);
+                if(child.type == "Mesh") {
+                    child.material = obj_material;
+                }
+            }); 
+            if(params.dataSet === data_list[0]){
+                object.scale.set(0.4,0.1,0.3);
+                object.position.set(-60,-10,20);
+            }
+            else if(params.dataSet === data_list[1]){
+                object.scale.set(0.22,0.08,0.2);
+                object.position.set(-30,-9,0);
+            }
+            else if(params.dataSet === data_list[2]){
+                object.scale.set(0.22,0.08,0.2);
+                object.position.set(-30,-9,0);
+            }
+            ground_object = object;
+            scene.add( object );
       },
       function ( xhr ) {
           console.log( obj_url + ' ' + ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
