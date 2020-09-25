@@ -26,7 +26,7 @@ let city_list = [];
 let path_objects = [];
 let truss_objects = [];
 let window_objects = [];
-let addBuildings = true;
+let addBuildings = false;
 let oneBuilding = false;
 let oneBuildingName = "wavemap_"+"1_201283_1031";
 let city_to_load = 0; // hard-coded
@@ -101,13 +101,17 @@ function init() {
     let light_objects = {
         ambientLight: new THREE.AmbientLight( 0x404040 ),
         dayLights: [new THREE.DirectionalLight( 0xffffff, 0.8), new THREE.DirectionalLight( 0xffffff, 0.5)],
-        nightLight: new THREE.DirectionalLight( 0xffffff, 0.01)
+        nightLight: new THREE.DirectionalLight( 0xffffff, 0.01),
+        spotLight: new THREE.SpotLight( 0xffffff, 1, 0,1.5, 1, 1 )
     };
     scene.add(light_objects['ambientLight']);
     light_objects['dayLights'][0].position.set(1000,1000,1000);
     light_objects['dayLights'][1].position.set(-500,500,0);
     light_objects['dayLights'].forEach(object => scene.add(object));
-
+    light_objects.spotLight.position.set(40,40,40);
+    light_objects.spotLight.target.position.set(40,0,40);
+    scene.add(light_objects.spotLight);
+    scene.add(light_objects.spotLight.target);
     // load files
     manager.onStart = function(url,itemsLoaded,itemsTotal) {
         console.log('Started loading file: '+url+'.\nLoaded '+itemsLoaded+' of '+itemsTotal+' files.');
@@ -317,7 +321,7 @@ function groundObjLoader(obj_url,obj_material) {
         reader.url = url;
         let text = reader.result;
     }
-    
+
     function getAsTextMeta(file,url) {
         let reader = new FileReader();
         reader.readAsText(file);

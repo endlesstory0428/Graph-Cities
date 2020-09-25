@@ -70,12 +70,15 @@ function makeGraph(neighbors){
     return graph_dict;
 }
 
-function pathPlanning(root, scene, city_all){
+function pathPlanning(root, scene, city_all, spotLight){
     console.log("pathPlanning: root is "+root);
     let result = makeSpanningTree(scene, city_all, root);
+    spotLight.position.set(city_all[root].coords[0],35,city_all[root].coords[1]);
+    spotLight.target.position.set(city_all[root].coords[0],0,city_all[root].coords[1]);
+    spotLight.visible = true;
     scene = result.scene;
     let path_objects = result.path;
-    return { scene: scene, path: path_objects };
+    return { scene: scene, path: path_objects, spotLight: spotLight };
 }
 
 function notIn(arr, target){

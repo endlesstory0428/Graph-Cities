@@ -28,6 +28,7 @@ let window_objects = [];
 let flag_objects = [];
 let grass_objects = [];
 let bush_objects = [];
+let light_objects;
 let addBuildings = true;
 let metaLoaded = false, voronoiLoaded = false;
 let city_to_load = 0; 
@@ -98,15 +99,20 @@ function init() {
     createControls( perspectiveCamera );
 
     // environment lights
-    let light_objects = {
+    light_objects = {
         ambientLight: new THREE.AmbientLight( 0x404040 ),
         dayLights: [new THREE.DirectionalLight( 0xffffff, 0.8), new THREE.DirectionalLight( 0xffffff, 0.5)],
-        nightLight: new THREE.DirectionalLight( 0xffffff, 0.01)
+        nightLight: new THREE.DirectionalLight( 0xffffff, 0.01),
+        spotLight: new THREE.SpotLight( 0xffffff, 0.6, 0, Math.PI/2, 1, 1 )
     };
     scene.add(light_objects['ambientLight']);
-    light_objects['dayLights'][0].position.set(1000,1000,1000);
-    light_objects['dayLights'][1].position.set(-500,500,0);
-    light_objects['dayLights'].forEach(object => scene.add(object));
+    light_objects.dayLights[0].position.set(1000,1000,1000);
+    light_objects.dayLights[1].position.set(-500,500,0);
+    light_objects.dayLights.forEach(object => scene.add(object));
+    light_objects.spotLight.position.set(0,30,0);
+    scene.add(light_objects.spotLight);
+    scene.add(light_objects.spotLight.target);
+    light_objects.spotLight.visible = false;
 
     // load files
     manager.onStart = function(url,itemsLoaded,itemsTotal) {
@@ -131,6 +137,7 @@ function init() {
             grass_objects.every(object => scene.remove(object));
             truss_objects.every(object => scene.remove(object));
             bush_objects.every(object => scene.remove(object));
+            light_objects.spotLight.visible = false;
             animate();
             source_dir = "../data/"+dataSet+"/";
             spiral_file = "../data/"+dataSet+"/SPIRAL.txt";
@@ -193,9 +200,10 @@ function init() {
         function(value){
             path_objects.every(object => scene.remove(object));
             animate();
-            let result = PATH.pathPlanning(value, scene, city_all);
+            let result = PATH.pathPlanning(value, scene, city_all, light_objects.spotLight);
             scene = result.scene;
             path_objects = result.path;
+            light_objects.spotLight = result.spotLight;
         }  
     );
     f4.open();
@@ -388,9 +396,10 @@ function groundObjLoader(obj_url,obj_material) {
             city_all = result.all;
             voronoiLoaded = true;
             if(metaLoaded && voronoiLoaded){
-                let result_2 = PATH.pathPlanning(city_list[0],scene,city_all);
+                let result_2 = PATH.pathPlanning(city_list[0],scene,city_all,light_objects.spotLight);
                 scene = result_2.scene;
                 path_objects = result_2.path;
+                light_objects.spotLight = result_2.spotLight;
             }
         }
         city_all = result.all;
@@ -404,9 +413,10 @@ function groundObjLoader(obj_url,obj_material) {
         city_all = result.all;
         metaLoaded = true;
         if(metaLoaded && voronoiLoaded){
-            let result_2 = PATH.pathPlanning(city_list[0],scene,city_all);
+            let result_2 = PATH.pathPlanning(city_list[0],scene,city_all,light_objects.spotLight);
             scene = result_2.scene;
             path_objects = result_2.path;
+            light_objects.spotLight = result_2.spotLight;
         }
     }
 
@@ -463,15 +473,17 @@ function groundObjLoader(obj_url,obj_material) {
     function dayAndNight( isNight, light_objects, window_objects ){
         if(isNight){
             scene.background = new THREE.Color('midnightblue');
-            light_objects['dayLights'].forEach(object => object.visible = false);
-            light_objects['nightLight'].visible = true;
+            light_objects.dayLights.forEach(object => object.visible = false);
+            light_objects.nightLight.visible = true;
+            light_objects.spotLight.visible = false;
             window_objects.forEach(object => object.visible=true);
             animate();
         }
         else{
             scene.background = new THREE.Color('skyblue');
-            light_objects['dayLights'].forEach(object => object.visible = true);
-            light_objects['nightLight'].visible = false;
+            light_objects.dayLights.forEach(object => object.visible = true);
+            light_objects.nightLight.visible = false;
+            light_objects.spotLight.visible = true;
             window_objects.forEach(object => object.visible=false);
             animate();
         }
