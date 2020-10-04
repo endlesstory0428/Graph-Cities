@@ -23,24 +23,31 @@ let INTERSECTED;
 let city_tracking = {};
 let city_all = {};
 let city_list = [];
+let ground_object;
 let path_objects = [];
 let truss_objects = [];
 let window_objects = [];
+let flag_objects = [];
+let grass_objects = [];
+let bush_objects = [];
+let light_objects;
 let addBuildings = false;
 let oneBuilding = false;
-let oneBuildingName = "wavemap_"+"1_201283_1031";
+let addEnvironment = true;
 let city_to_load = 0; // hard-coded
 if(addBuildings){
     city_to_load = 77;
-}else if(oneBuilding){
+}else if(addBuildings && oneBuilding){
     city_to_load = 1;
 }
 let dropdown;
+let oneBuildingName = "wavemap_2_11398_1";
 // let DATASET = 'com-friendster_old';
-let DATASET = 'com-friendster';
+// let DATASET = 'com-friendster';
 // let DATASET = 'movies';
 // let DATASET = 'cit-Patents';
-
+let data_list = ['com-friendster','movies','cit-Patents'];
+let DATASET = data_list[1]
 let source_dir = "../data/"+DATASET+"/";
 let spiral_file = "../data/"+DATASET+"/SPIRAL.txt";
 let voronoi_file = "../python/"+DATASET+"/voronoi.txt";
@@ -57,15 +64,27 @@ let last = [-187.86920742571192,-69.84011743155536]
 let y_scale = Math.sqrt(last[0] ** 2 + last[1] ** 2) / 4.565727849181679;
 // let x_scale = 800000.0; // scale down the coordinates span
 let x_scale = 1;
+// camera movements
+let radius = 500, theta = 0, toPanCity = false, toPanBuilding = false, toZoomBuilding = false;
 // GUI parameters
 let params = {
     orthographicCamera: false,
     resetCamera: function() {
         controls.reset();
     },
+    panCity: function() {
+        panCity();
+    },
+    zoomBuilding: function(){
+        zoomBuilding();
+    },
+    panBuilding: function() {
+        panBuilding();
+    },
     ground: "#CCA262",
     // colorMap: "jet",
     // hideBuilding: false
+    dataSet:data_list[1],
     root: 'any building',
     outer: true,
     isNight: false
@@ -75,6 +94,7 @@ let building_params = {
     layer: ''
 };
 let water;
+
 init();
 animate();
 
@@ -112,6 +132,7 @@ function init() {
     light_objects.spotLight.target.position.set(40,0,40);
     scene.add(light_objects.spotLight);
     scene.add(light_objects.spotLight.target);
+    light_objects.spotLight.visible = false;
     // load files
     manager.onStart = function(url,itemsLoaded,itemsTotal) {
         console.log('Started loading file: '+url+'.\nLoaded '+itemsLoaded+' of '+itemsTotal+' files.');
@@ -119,6 +140,7 @@ function init() {
 
     // loadBushData();
     loadFile(spiral_file,manager);
+    BUILD.createHistogram(oneBuildingName,DATASET);
 
     // GUI folders
     let gui = new GUI({width:350});
@@ -137,6 +159,9 @@ function init() {
             // controls.dispose();
         createControls( value ? orthographicCamera : perspectiveCamera );
     });
+    f2.add(params, 'panCity').name('Pan around a city');
+    f2.add(params, 'zoomBuilding').name('Zoom in to "root"');
+    f2.add(params, 'panBuilding').name('Zoom in and pan around');
     f2.open();
 
     let f3 = gui.addFolder('Environment Control');
@@ -159,15 +184,6 @@ function init() {
     let f4 = gui.addFolder('Path Planning');
     dropdown = f4.add(params, 'root', ['default','example 1', 'example 2']);
     dropdown.setValue('default');
-    dropdown.onChange(
-        function(value){
-            path_objects.every(object => scene.remove(object));
-            animate();
-            let result = PATH.pathPlanning(value, scene, city_all);
-            scene = result.scene;
-            path_objects = result.path;
-        }  
-    );
     f4.open();
 
     // ground
@@ -186,28 +202,30 @@ function init() {
     let groundMat = new THREE.MeshStandardMaterial( {map:groundNormal} );
     // groundMat.normalMap = groundNormal;
     // groundMat.side = THREE.DoubleSide;
-    let groundMesh = groundObjLoader(land_obj, groundMat);
+    if(addEnvironment){
+        groundObjLoader(land_obj, groundMat);
     
-    // let size = 1200;
-    // let divisions = 24;
-    // let gridHelper = new THREE.GridHelper( size, divisions );
-    // scene.add( gridHelper );
-    
-    // water - 2
-    let waterGeo = new THREE.BoxBufferGeometry( 5000, 50, 5000 );
-    let waterNormal = new THREE.TextureLoader().load( water_texture_file, function ( texture ) {
-        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set( 4, 4 );
-    });        
-    let waterMat = new THREE.MeshPhongMaterial( {
-        color: 0x006994,
-        normalMap: waterNormal
-    } );
-    waterMat.transparent=true;
-    waterMat.opacity=0.7;
-    let waterMesh = new THREE.Mesh( waterGeo, waterMat );
-    waterMesh.position.y=-50;
-    scene.add( waterMesh );
+        // let size = 1200;
+        // let divisions = 24;
+        // let gridHelper = new THREE.GridHelper( size, divisions );
+        // scene.add( gridHelper );
+        
+        // water - 2
+        let waterGeo = new THREE.BoxBufferGeometry( 5000, 50, 5000 );
+        let waterNormal = new THREE.TextureLoader().load( water_texture_file, function ( texture ) {
+            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set( 4, 4 );
+        });        
+        let waterMat = new THREE.MeshPhongMaterial( {
+            color: 0x006994,
+            normalMap: waterNormal
+        } );
+        waterMat.transparent=true;
+        waterMat.opacity=0.7;
+        let waterMesh = new THREE.Mesh( waterGeo, waterMat );
+        waterMesh.position.y=-50;
+        scene.add( waterMesh );
+    }
 }
 
 //load ground OBJ file
@@ -350,11 +368,11 @@ function groundObjLoader(obj_url,obj_material) {
         let element_count = (lines[0].split(' ').length);
         let filename = evt.target.url;
         let result;
-        if(element_count > 2){
-            result = BUILD.loadVoronoi(city_all, lines, filename);
-            city_all = result.all;
-        }
-        else if(!oneBuilding){
+        if(!oneBuilding){
+            if(element_count > 2){
+                result = BUILD.loadVoronoi(city_all, lines, filename);
+                city_all = result.all;
+            }
             result = PATH.loadNeighbors(city_all, lines, filename);
             city_all = result.all;
             // let result_2 = PATH.pathPlanning(city_list[0],scene,city_all);
@@ -367,11 +385,13 @@ function groundObjLoader(obj_url,obj_material) {
         let fileString = evt.target.result;
         let lines = fileString.split('\n');
         let filename = evt.target.url;
-        let result = PATH.loadMeta(city_all, lines, filename);
-        city_all = result.all;
-        let result_2 = PATH.pathPlanning(city_list[0],scene,city_all);
-        scene = result_2.scene;
-        path_objects = result_2.path;
+        if(!oneBuilding){
+            let result = PATH.loadMeta(city_all, lines, filename);
+            city_all = result.all;
+            let result_2 = PATH.pathPlanning(city_list[0],scene,city_all);
+            scene = result_2.scene;
+            path_objects = result_2.path;
+        }
     }
 
     function fileToLayer(filename) {
@@ -389,29 +409,30 @@ function groundObjLoader(obj_url,obj_material) {
         // need to update when SPIRAL.txt updates
         if(element_count == 7) {
             // console.log("loaded: SPIRAL file");
-            let spiral = BUILD.loadSpiral(scene, lines, city_all, city_tracking, x_scale);
-            city_all = spiral.all;
-            city_tracking = spiral.tracking;
-            for (const [key, value] of Object.entries(city_all)){
-                let layer_name = key;
-                city_list.push(layer_name);
-                if(addBuildings){
-                    let color_file = source_dir + layer_name + "_color.txt";
-                    let floor_file = source_dir + layer_name + "_floor.txt";
-                    loadFile(color_file,manager);
-                    loadFile(floor_file,manager);
-                }
-            }
-            if(oneBuilding){
+            if(addBuildings && oneBuilding){
                 let color_file = source_dir + oneBuildingName + "_color.txt";
                 let floor_file = source_dir + oneBuildingName + "_floor.txt";
                 loadFile(color_file,manager);
                 loadFile(floor_file,manager);
+            } else if(addBuildings && !oneBuilding) {
+                let spiral = BUILD.loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tracking, city_to_load, x_scale);
+                city_all = spiral.all;
+                city_tracking = spiral.tracking;
+                for (const [key, value] of Object.entries(city_all)){
+                    let layer_name = key;
+                    city_list.push(layer_name);
+                    if(addBuildings){
+                        let color_file = source_dir + layer_name + "_color.txt";
+                        let floor_file = source_dir + layer_name + "_floor.txt";
+                        loadFile(color_file,manager);
+                        loadFile(floor_file,manager);
+                    }
+                }
+                PATH.updateDropdown(dropdown, city_list);
+                loadVoronoiFile(voronoi_file,manager);
+                loadVoronoiFile(neighbors_file,manager);
+                loadMetaFile(meta_file,manager);
             }
-            PATH.updateDropdown(dropdown, city_list);
-            loadVoronoiFile(voronoi_file,manager);
-            loadVoronoiFile(neighbors_file,manager);
-            loadMetaFile(meta_file,manager);
         } else if(element_count == 6) {
             // console.log("loaded: color file");
             layer_name = fileToLayer(filename);
@@ -475,7 +496,9 @@ function groundObjLoader(obj_url,obj_material) {
         // stats.update();
         if(city_to_load>0) {
             console.log("animate: run createCityMeshes()");
-            let result = BUILD.createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, city_to_load, y_scale, oneBuilding);
+            console.log(city_all);
+            console.log(city_tracking);
+            let result = BUILD.createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, city_to_load, y_scale, params.isNight);
             scene = result.scene;
             city_all = result.all;
             city_tracking = result.tracking;
@@ -492,6 +515,58 @@ function groundObjLoader(obj_url,obj_material) {
         renderer.render(scene, camera);
         // let time = performance.now() * 0.001;
         // water.material.uniforms[ 'time' ].value += 1.0 / 60.0;
+
+        if(toPanCity) {
+            console.log("pan city "+theta);
+            theta += 0.1;
+            camera.position.x = radius * Math.sin( THREE.MathUtils.degToRad( theta ) );
+            // camera.position.y = radius * Math.sin( THREE.MathUtils.degToRad( theta ) );
+            camera.position.z = radius * Math.cos( THREE.MathUtils.degToRad( theta ) );
+            camera.lookAt( scene.position );
+            if(theta>30) toPanCity = false;
+            console.log(camera.position.x);
+        }
+        else if(toPanBuilding) {
+            console.log("pan around building "+params.root);
+            theta += 0.1;
+            radius = 30;
+            let building_position = new THREE.Vector3(100,0,100);
+            controls.target = building_position;
+            camera.position.x = radius * Math.sin( THREE.MathUtils.degToRad( theta ) );
+            camera.position.y = 50;
+            // camera.position.y = radius * Math.sin( THREE.MathUtils.degToRad( theta ) );
+            camera.position.z = radius * Math.cos( THREE.MathUtils.degToRad( theta ) );
+            if(theta>30) toPanBuilding = false;
+            console.log(camera.position.x);
+        }
+        else if(toZoomBuilding) {
+            console.log("zoom in to "+params.root);
+            let building_position = new THREE.Vector3(100,0,100);
+            controls.target = building_position;
+            console.log(building_position.x);
+            camera.position.x += theta * (building_position.x-camera.position.x);
+            camera.position.y += theta * (building_position.y-camera.position.y);
+            camera.position.z += theta * (building_position.z-camera.position.z);         
+            if((building_position.x-camera.position.x) < 30){toZoomBuilding = false;}
+        }
+    }
+
+    function panCity() {
+        theta = 0;
+        toPanCity = true;
+        render();
+    }
+
+    function panBuilding() {
+        theta = 0;
+        toPanBuilding = true;
+        render();
+    }
+
+    function zoomBuilding() {
+        theta = 0.01;
+        toZoomBuilding = true;
+        render();
     }
 
     function onMouseMove( event ) {

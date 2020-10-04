@@ -7,8 +7,8 @@ import scipy.spatial
 from scipy.spatial import Voronoi
 from scipy.spatial import voronoi_plot_2d
 
-SPIRAL_FILE = '../data/com-friendster/SPIRAL.txt'
-# SPIRAL_FILE = '../data/cit-Patents/SPIRAL.txt'
+# SPIRAL_FILE = '../data/com-friendster/SPIRAL.txt'
+SPIRAL_FILE = '../data/cit-Patents/SPIRAL.txt'
 # SPIRAL_FILE = '../data/movies/SPIRAL.txt'
 
 def get_voronoi_vertices(vor, spiral_index):
@@ -147,45 +147,47 @@ def draw_between_adjacent(vor, graph, names, points, start_point, end_point, pat
     end_coord = [float(i) for i in end_coord]
     path_vertex = [start_coord]
     path_vertex_index = [] # list of voronoi vertex index, excluding start and end points
-    for i in range(len(ridge_list)):
-        # print(f'ridge_list[{i}] = {ridge_list[i]}')
-        vertex_pair = vor.ridge_vertices[ridge_list[i]]
-        O = path_vertex[-1]
-        A_index = vertex_pair[0]
-        B_index = vertex_pair[1]
-        A = vor.vertices[A_index]
-        B = vor.vertices[B_index]
-        # C = (A+B)/2 # midpoint of A and B
-        # path_vertex.append(C.tolist())
-        distance_A = math.hypot(A[0]-O[0],A[1]-O[1])
-        distance_B = math.hypot(B[0]-O[0],B[1]-O[1])
-        # print(distance_A, distance_B)
-        if(A_index < 0):
-            path_vertex.append(B.tolist())
-            path_vertex_index.append(B_index)
-            # print("B added")
-        elif(B_index < 0):
-            path_vertex.append(A.tolist())
-            path_vertex_index.append(A_index)
-            # print("A added")                
-        elif(distance_A <= distance_B):
-            path_vertex.append(A.tolist())
-            path_vertex_index.append(A_index)
-            # print("A added")
-        else:
-            path_vertex.append(B.tolist())
-            path_vertex_index.append(B_index)
-            # print("B added")
+    # for i in range(len(ridge_list)):
+    #     # print(f'ridge_list[{i}] = {ridge_list[i]}')
+    #     vertex_pair = vor.ridge_vertices[ridge_list[i]]
+    #     O = path_vertex[-1]
+    #     A_index = vertex_pair[0]
+    #     B_index = vertex_pair[1]
+    #     A = vor.vertices[A_index]
+    #     B = vor.vertices[B_index]
+    #     # C = (A+B)/2 # midpoint of A and B
+    #     # path_vertex.append(C.tolist())
+    #     distance_A = math.hypot(A[0]-O[0],A[1]-O[1])
+    #     distance_B = math.hypot(B[0]-O[0],B[1]-O[1])
+    #     # print(distance_A, distance_B)
+    #     if(A_index < 0):
+    #         path_vertex.append(B.tolist())
+    #         path_vertex_index.append(B_index)
+    #         # print("B added")
+    #     elif(B_index < 0):
+    #         path_vertex.append(A.tolist())
+    #         path_vertex_index.append(A_index)
+    #         # print("A added")                
+    #     elif(distance_A <= distance_B):
+    #         path_vertex.append(A.tolist())
+    #         path_vertex_index.append(A_index)
+    #         # print("A added")
+    #     else:
+    #         path_vertex.append(B.tolist())
+    #         path_vertex_index.append(B_index)
+    #         # print("B added")
     path_vertex.append(end_coord)
     
     # path_vertex_x = [x[0] for x in path_vertex]
     # path_vertex_y = [x[1] for x in path_vertex]
     # plt.plot(path_vertex_x, path_vertex_y, linewidth=2)
     
-    path_full = plan_full_path(vor, path_point_index, path_vertex_index)
-    path_full_x = [x[0] for x in path_full]
-    path_full_y = [x[1] for x in path_full]
-    plt.plot(path_full_x, path_full_y, linewidth=2,color=path_color)
+    # path_full = plan_full_path(vor, path_point_index, path_vertex_index)
+    # path_full_x = [x[0] for x in path_full]
+    # path_full_y = [x[1] for x in path_full]
+    print(start_coord)
+    print(end_coord)
+    plt.plot([start_coord[0],end_coord[0]], [-start_coord[1],-end_coord[1]], linewidth=4,color='red')
 
 def bfs(graph, start, goal):
     queue = [[start]]
@@ -255,11 +257,15 @@ def main():
         spiral_points[point_name] = point
     # print(names)
     vor = Voronoi(points)
-    voronoi_plot_2d(vor)
+    # voronoi_plot_2d(vor)
 
     # create a graph from spiral points
     graph = {}
     for ridge in vor.ridge_points:
+        point_A_coord = vor.points[ridge[0]]
+        point_B_coord = vor.points[ridge[1]]
+
+        plt.plot([point_A_coord[0],point_B_coord[0]], [-point_A_coord[1],-point_B_coord[1]], linewidth=1,color='green')
         point_A = names[ridge[0]]
         point_B = names[ridge[1]]
         if point_A in graph:
@@ -300,8 +306,9 @@ def main():
     # path_color = 'blue'
     # plan_path_between(vor, graph, names, points,start_point, end_point, path_color)
     
-    start_point = '22_6161'
+    # start_point = '22_6161'
     # end_point = '169_11459'
+    start_point = '3_42' # cit-patents
     path_color = 'green'
 
     # draw from start to every other buildings (create loops)

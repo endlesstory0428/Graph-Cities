@@ -174,21 +174,23 @@ function connectNeighbors(scene, building_1, building_2, building_name_1, buildi
     // console.log("connectNeighbors: width between "+building_name_1+" and "+building_name_2+" = "+width);
     for (let i = 0; i < path.length-1; i++) {
         let height = getDistance(path[i],path[i+1]);
-        let geometry = new THREE.PlaneBufferGeometry(width+1, height);
-        let material = new THREE.MeshBasicMaterial( {color: 0xffffff, side: THREE.DoubleSide} );
-        let path_segment = new THREE.Mesh( geometry, material );
-        let position = getMiddlePoint(path[i],path[i+1]);
-        let rotation = getRotation(path[i],path[i+1]);
-        path_segment.rotateX(90*Math.PI/180);
-        let path_segment_tmp_1 = new THREE.Object3D(); 
-        path_segment_tmp_1.add(path_segment);
-        path_segment_tmp_1.rotateY(rotation); 
-        let path_segment_tmp_2 = new THREE.Object3D();
-        path_segment_tmp_2.add(path_segment_tmp_1);
-        path_segment_tmp_2.position.set(position[0],0,position[1]);
-        // console.log("connectNeighbors: "+height+" "+position+" "+rotation);
-        path_objects.push(path_segment_tmp_2);
-        scene.add(path_segment_tmp_2);
+        if(width > 0){
+            let geometry = new THREE.PlaneBufferGeometry(width+1, height);
+            let material = new THREE.MeshStandardMaterial( {color: 0xffffff, side: THREE.DoubleSide} );
+            let path_segment = new THREE.Mesh( geometry, material );
+            let position = getMiddlePoint(path[i],path[i+1]);
+            let rotation = getRotation(path[i],path[i+1]);
+            path_segment.rotateX(90*Math.PI/180);
+            let path_segment_tmp_1 = new THREE.Object3D(); 
+            path_segment_tmp_1.add(path_segment);
+            path_segment_tmp_1.rotateY(rotation); 
+            let path_segment_tmp_2 = new THREE.Object3D();
+            path_segment_tmp_2.add(path_segment_tmp_1);
+            path_segment_tmp_2.position.set(position[0],0,position[1]);
+            // console.log("connectNeighbors: "+height+" "+position+" "+rotation);
+            path_objects.push(path_segment_tmp_2);
+            scene.add(path_segment_tmp_2);
+        }
     }
     return {scene: scene, path: path_objects};
 }

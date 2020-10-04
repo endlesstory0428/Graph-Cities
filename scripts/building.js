@@ -124,6 +124,7 @@ function loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tr
   // console.log("loading spiral");
   // console.log(filename);
   city_to_load = lines.length-1;
+  console.log("city_to_load = "+city_to_load);
   for(let i=0; i<lines.length-1; i++) {
     let elements = lines[i].split(' ');
     let layer_name = elements[0];
@@ -142,7 +143,7 @@ function loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tr
       let grassRadius = parseFloat(elements[4]);
       let grassFace = Math.log2(8 * (F - 1));
       let grassGeo = new THREE.CylinderBufferGeometry(grassRadius, grassRadius, 0.2, grassFace);
-      grassGeo.translate(city_all[layer_name].coords[0], 1, city_all[layer_name].coords[1]);
+      grassGeo.translate(city_all[layer_name].coords[0], 0, city_all[layer_name].coords[1]);
       let grassMat = new THREE.MeshStandardMaterial( {color: 0x7cfc00} );
       let grassMesh = new THREE.Mesh(grassGeo, grassMat);
       scene.add(grassMesh);
@@ -251,7 +252,7 @@ function normalize(v) {
   return normalized;
 }
 
-function addTruss(scene,truss_objects,window_objects,h,center,top_radius,btm_radius,top_in_radius,height,r,g,b) {
+function addTruss(scene,truss_objects,window_objects,h,center,top_radius,btm_radius,top_in_radius,height,r,g,b,isNight) {
   let torus_thickness = 0.1, bar_thickness = 0.1;
   let number = 6;
   let color = rgbToHex(r,g,b);
@@ -311,15 +312,16 @@ function addTruss(scene,truss_objects,window_objects,h,center,top_radius,btm_rad
   }
   windows_geo.translate(center[0],center[1],center[2]);
   let windows_buffer_geo = new THREE.BufferGeometry().fromGeometry(windows_geo);
-  let emissive_material = new THREE.MeshStandardMaterial({color:color,emissive:color});
+  let emissive_material = new THREE.MeshStandardMaterial({color:color,emissive:color,emissiveIntensity:1});
   let window_mesh = new THREE.Mesh(windows_buffer_geo, emissive_material);
   window_objects.push(window_mesh);
   scene.add(window_mesh);
-  window_objects.forEach(object => object.visible=false);
+  if(!isNight){window_objects.forEach(object => object.visible=false);}
   return {scene:scene, truss: truss_objects, window: window_objects};
 }
 
-function createFlags(scene, coord, base_Y, V, E, flag_objects, lcc, fixed, mast_scale) {
+function createFlags(scene, coord, base_Y, layer, V, E, flag_objects, lcc, fixed, mast_scale) {
+  let loadFlagTexture = false;
   // console.log("coord of flag", fixed_point_number, "is", coord, "height of flag is", base_Y);
   let X = coord[0], Z = coord[1];
   let flag_width = Math.log(V), flag_height = Math.log(E), flag_thickness = 0.5;
@@ -334,6 +336,7 @@ function createFlags(scene, coord, base_Y, V, E, flag_objects, lcc, fixed, mast_
   rod.translateY(base_Y+mast_length/2);
   rod.translateZ(Z);
 
+  if(loadFlagTexture){
   // add text to flag
   let loader = new THREE.FontLoader();
   loader.load( '../textures/helvetiker_regular.typeface.json', function ( font ) {
@@ -360,6 +363,8 @@ function createFlags(scene, coord, base_Y, V, E, flag_objects, lcc, fixed, mast_
     scene.add(text_mesh);
     flag_objects.push(text_mesh);
   } );
+  // let flagMaterial = createHistogram(layer);
+  }
 
   scene.add(flag);
   scene.add(rod);
@@ -368,9 +373,114 @@ function createFlags(scene, coord, base_Y, V, E, flag_objects, lcc, fixed, mast_
   return {scene: scene, flags: flag_objects};
 }
 
+function createHistogram(layer, data){
+  // data = 'cit-Patents';
+  console.log("layer = "+layer);
+  let start = layer.indexOf('_');
+  let last = layer.lastIndexOf('_');
+  let BUILDING = layer.slice(start+1,last);
+  let DATA = data;
+  console.log("building = "+BUILDING);
+  console.log("data = "+data);
+  let paths;
+  // set the dimensions and margins of the graph
+  let margin = {
+      top: 30,
+      right: 30,
+      bottom: 70,
+      left: 60
+    },
+    width = 460 - margin.left - margin.right,
+    height = 400 - margin.top - margin.bottom;
+
+  // append the svg object to the body of the page
+  let svg = d3.select("#my_dataviz")
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform",
+      "translate(" + margin.left + "," + margin.top + ")");
+
+  d3.json("./data_flags/" + DATA + ".json", function(jsondata) {
+    console.log(jsondata);
+    let freq = jsondata[BUILDING].freq;
+    console.log(freq);
+    let barNums = [];
+    let barESize = [];
+    //let barVSize = [];
+    for (let Peel in freq) {
+      let info = freq[Peel];
+      barNums.push({
+        Peel,
+        Value: info.num
+      });
+      barESize.push({Peel, Value: info.edges});
+      //barVSize.push({Peel, Value: info.verts});
+    }
+    console.log(barNums);
+    let data = barNums;
+    let data2 = barESize;
+
+    // X axis
+    let x = d3.scaleBand()
+      .range([0, width])
+      .domain(data.map(d => d.Peel))
+      .padding(0.2);
+    svg.append("g")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(x))
+      .selectAll("text")
+      .attr("transform", "translate(-10,0)rotate(-45)")
+      .style("text-anchor", "end");
+
+    // Add Y axis
+    let y = d3.scaleLinear()
+      .domain([0, d3.max(data.map(x => x.Value))])
+      .range([height, 0]);
+    svg.append("g")
+      .call(d3.axisLeft(y));
+
+    // Bars
+    svg.selectAll("mybar")
+      .data(data)
+      .enter()
+      .append("rect")
+      .attr("x", function(d) {
+        return x(d.Peel);
+      })
+      .attr("y", function(d) {
+        return y(d.Value);
+      })
+      .attr("width", x.bandwidth())
+      .attr("height", function(d) {
+        return height - y(d.Value);
+      })
+      .attr("+ll", "#69b3a2")
+    })
+
+  let group = new THREE.Group();
+  for ( let i = 0; i < paths.length; i ++ ) {
+    let path = paths[ i ];
+    let material = new THREE.MeshBasicMaterial( {
+      color: path.color,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    } );
+    let shapes = path.toShapes( true );
+    for ( let j = 0; j < shapes.length; j ++ ) {
+      let shape = shapes[ j ];
+      let geometry = new THREE.ShapeBufferGeometry( shape );
+      let mesh = new THREE.Mesh( geometry, material );
+      group.add( mesh );
+    }
+  }
+  return group;
+}
+
 // check city_tracking, create buildings that are ready to color & move
 // delete colored and moved building from city_tracking
-function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, city_to_load, y_scale, oneBuilding=false) {
+function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, city_to_load, y_scale, isNight, oneBuilding=false) {
   for (let layer in city_tracking) {
       if(city_tracking[layer].ready_to_move && city_tracking[layer].ready_to_color) {
           let layer_shape = city_all[layer].shapes;
@@ -418,7 +528,7 @@ function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects
                   r = parseInt(city_all[layer].colors.outer[h-1].r*255);
                   g = parseInt(city_all[layer].colors.outer[h-1].g*255);
                   b = parseInt(city_all[layer].colors.outer[h-1].b*255);
-                  let result = addTruss(scene,truss_objects,window_objects,h,[X,Y,Z],top_out_r,btm_out_r,top_in_r,tall,r,g,b);
+                  let result = addTruss(scene,truss_objects,window_objects,h,[X,Y,Z],top_out_r,btm_out_r,top_in_r,tall,r,g,b,isNight);
                   truss_objects = result.truss;
                   window_objects = result.window;
                   scene = result.scene;
@@ -431,7 +541,7 @@ function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects
           let fixed = parseInt(sliced.slice(sliced.lastIndexOf('_')+1)); // third to last
           let mast_scale = y_scale;
           // let mast_length = mast_scale * height;
-          let result = createFlags(scene, [X,Z], flag_base_Y, city_all[layer].V, city_all[layer].E, flag_objects, lcc, fixed, mast_scale);
+          let result = createFlags(scene, [X,Z], flag_base_Y, layer, city_all[layer].V, city_all[layer].E, flag_objects, lcc, fixed, mast_scale);
           scene = result.scene;
           flag_objects = result.flags;
           console.log("createCityMeshes: loaded "+layer+", city to load = "+city_to_load);
@@ -442,4 +552,4 @@ function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects
   return {scene: scene, objects: objects, remain: city_to_load, all: city_all, tracking: city_tracking, truss: truss_objects, window: window_objects};
 }
 
-export {loadColor, loadSpiral, loadFloor, loadVoronoi, createCityMeshes};
+export {loadColor, loadSpiral, loadFloor, loadVoronoi, createCityMeshes, createHistogram};

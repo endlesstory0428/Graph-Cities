@@ -52,11 +52,34 @@ let last = [-187.86920742571192,-69.84011743155536]
 let y_scale = Math.sqrt(last[0] ** 2 + last[1] ** 2) / 4.565727849181679;
 // let x_scale = 800000.0; // scale down the coordinates span
 let x_scale = 1;
+// camera movements
+let radius = 500, theta = 0, toPanCity = false, toPanBuilding = false, toZoomBuilding = false;
 // GUI parameters
 let params = {
     orthographicCamera: false,
     resetCamera: function() {
+        toPanBuilding = false;
+        toPanCity = false;
+        toZoomBuilding = false;
         controls.reset();
+        animate();
+    },
+    topView: function() {
+        toPanBuilding = false;
+        toPanCity = false;
+        toZoomBuilding = false;
+        perspectiveCamera.position.z = 200;    
+        perspectiveCamera.position.x = 0;   
+        perspectiveCamera.position.y = 400;   
+    },
+    panCity: function() {
+        panCity();
+    },
+    zoomBuilding: function(){
+        zoomBuilding();
+    },
+    panBuilding: function() {
+        panBuilding();
     },
     ground: "#CCA262",
     // colorMap: "jet",
@@ -173,20 +196,20 @@ function init() {
     let f1 = gui.addFolder('Building Info');
     f1.add(building_params, 'floor').name('floor number').listen();
     f1.add(building_params, 'layer').name('layer info').listen();
-    // f1.add(params, 'colorMap', ['jet','others']).name('color map').onChange(function () {
-    //     updateColorMap();
-    //     render();
-    // });
     f1.open();
 
     let f2 = gui.addFolder('Camera Control');
     f2.add(params, 'resetCamera').name('reset camera');
+    f2.add(params, 'topView').name('top view');
     f2.add(params, 'orthographicCamera').name('use orthographic').onChange(
         function( value ) {
             // controls.dispose();
         createControls( value ? orthographicCamera : perspectiveCamera );
         animate();
     });
+    f2.add(params, 'panCity').name('Pan around a city');
+    f2.add(params, 'zoomBuilding').name('Zoom in to "root"');
+    f2.add(params, 'panBuilding').name('Zoom in and pan around');
     f2.open();
 
     let f3 = gui.addFolder('Environment Control');
@@ -473,10 +496,11 @@ function groundObjLoader(obj_url,obj_material) {
                     loadFile(floor_file,manager);
                 }
             }
-            PATH.updateDropdown(dropdown, city_list);
             loadVoronoiFile(voronoi_file,manager);
             loadVoronoiFile(neighbors_file,manager);
             loadMetaFile(meta_file,manager);
+            PATH.updateDropdown(dropdown, city_list);
+            dropdown.setValue(city_list[0]);
         } else if(element_count == 6) {
             // console.log("loaded: color file");
             layer_name = fileToLayer(filename);
@@ -542,7 +566,7 @@ function groundObjLoader(obj_url,obj_material) {
         // stats.update();
         if(city_to_load>0) {
             console.log("animate: run createCityMeshes()");
-            let result = BUILD.createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, city_to_load, y_scale);
+            let result = BUILD.createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, city_to_load, y_scale, params.isNight);
             scene = result.scene;
             city_all = result.all;
             city_tracking = result.tracking;
@@ -559,35 +583,105 @@ function groundObjLoader(obj_url,obj_material) {
         renderer.render(scene, camera);
         // let time = performance.now() * 0.001;
         // water.material.uniforms[ 'time' ].value += 1.0 / 60.0;
+        if(toPanCity) {
+            // console.log("pan city "+theta);
+            theta += 0.1;
+            camera.position.x = radius * Math.sin( THREE.MathUtils.degToRad( theta ) );
+            // camera.position.y = radius/5+(radius/10) * Math.sin( THREE.MathUtils.degToRad( theta ) );
+            camera.position.z = radius * Math.cos( THREE.MathUtils.degToRad( theta ) );
+            camera.lookAt( scene.position );
+            if(theta>360) toPanCity = false;
+        }
+        else if(toPanBuilding) {
+            // console.log("pan around building "+params.root);
+            theta += 0.1;
+            // let building_position = new THREE.Vector3(100,0,100);
+            let root_building = dropdown.getValue();
+            let building_position = city_all[root_building].coords;
+            controls.target = new THREE.Vector3(building_position[0],30,building_position[1]);
+            camera.position.x = building_position[0] + radius * Math.sin( THREE.MathUtils.degToRad( theta ) );
+            camera.position.y = 100;
+            // camera.position.y = radius * Math.sin( THREE.MathUtils.degToRad( theta ) );
+            camera.position.z = building_position[1] + radius * Math.cos( THREE.MathUtils.degToRad( theta ) );
+            if(theta>360) toPanBuilding = false;
+        }
+        else if(toZoomBuilding) {
+            // console.log("zoom in to "+dropdown.getValue());
+            // let building_position = new THREE.Vector3(100,0,100);
+            let root_building = dropdown.getValue();
+            let building_position = city_all[root_building].coords;
+            controls.target = new THREE.Vector3(building_position[0],10,building_position[1]);
+            // console.log(building_position[0]);
+            if(Math.abs(building_position[0]-camera.position.x) >= 20) {
+                camera.position.x += theta * (building_position[0]-camera.position.x);
+                // console.log("x");
+            }
+            if(Math.abs(camera.position.y) >= 100) {
+                camera.position.y += theta * (0-camera.position.y);
+                // console.log("y");
+            }
+            if(Math.abs(building_position[1]-camera.position.z) >= 20) {
+                camera.position.z += theta * (building_position[1]-camera.position.z);   
+                // console.log("z");  
+            } 
+            else { toZoomBuilding = false; }
+        }
+    }
+
+
+    function panCity() {
+        theta = 0;
+        radius = 400;
+        toPanCity = true;
+        toPanBuilding = false;
+        toZoomBuilding = false;
+        render();
+    }
+
+    function panBuilding() {
+        theta = 0;
+        radius = 50;
+        toPanBuilding = true;
+        toPanCity = false;
+        toZoomBuilding = false;
+        render();
+    }
+
+    function zoomBuilding() {
+        theta = 0.003;
+        toZoomBuilding = true;
+        toPanBuilding = false;
+        toPanCity = false;
+        render();
     }
 
     function onMouseMove( event ) {
-    mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
-    mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
-    let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
-    raycaster.setFromCamera( mouse, camera );
+        mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
+        mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
+        let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
+        raycaster.setFromCamera( mouse, camera );
 
-    let intersects = raycaster.intersectObjects( objects );
-    // Toggle rotation bool for meshes that we clicked
-    if (intersects.length > 0) {
-        // if the closest object intersected is not the currently stored intersection object
-        if (intersects[0].object != INTERSECTED ) {
-        INTERSECTED = intersects[0].object;
-        if(intersects[0].object.floor_name) {
-            building_params.floor = intersects[0].object.floor_name;
-        } else {
-            building_params.floor = '';
+        let intersects = raycaster.intersectObjects( objects );
+        // Toggle rotation bool for meshes that we clicked
+        if (intersects.length > 0) {
+            // if the closest object intersected is not the currently stored intersection object
+            if (intersects[0].object != INTERSECTED ) {
+            INTERSECTED = intersects[0].object;
+            if(intersects[0].object.floor_name) {
+                building_params.floor = intersects[0].object.floor_name;
+            } else {
+                building_params.floor = '';
+            }
+            if(intersects[0].object.layer_name) {
+                building_params.layer = intersects[0].object.layer_name;
+            } else {
+                building_params.layer = '';
+            }
+            }
+        } else // there are no intersections
+        {
+            INTERSECTED = null;
+            building_params.floor='';
+            building_params.layer='';
         }
-        if(intersects[0].object.layer_name) {
-            building_params.layer = intersects[0].object.layer_name;
-        } else {
-            building_params.layer = '';
-        }
-        }
-    } else // there are no intersections
-    {
-        INTERSECTED = null;
-        building_params.floor='';
-        building_params.layer='';
     }
-}
