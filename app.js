@@ -118,14 +118,15 @@ function bindHandlers(datasetsList){
 				case "setdatadir":{
 					if ("file" in req.query){
 						//check to see if its a directory
-						let newDataDir = req.query.file;
+						let newDatadir = req.query.file;
+						console.log(newDatadir);
 						if (fs.existsSync(newDatadir) == false) {
-							res.send(`Could not update dataDir File: ${newDataDir} doesnt exist`);
+							res.send(`Could not update dataDir File: ${newDatadir} doesnt exist`);
 							break;
 						}
-						let stat = fs.statSync(newDataDir);
+						let stat = fs.statSync(newDatadir);
 						if (stat.isDirectory() == false) {
-							res.send(`Could not update dataDir File: ${newDataDir} is not a directory`);
+							res.send(`Could not update dataDir File: ${newDatadir} is not a directory`);
 							break;
 						}
 						//newDataDir is an existing directory
@@ -186,26 +187,34 @@ function bindHandlers(datasetsList){
 				}
 				//file must include an extension
 				case "add":{
+					//TODO: check to see if dataDir has been set else fail
+					if(fs.existsSync(dataDir) == false){
+						res.send("No dataDir has been set");
+						break;
+					}					
 					if ("file" in req.query){
 						//check to see if its a directory
 						let newDataset = req.query.file;
-						if (fs.existsSync(newDataset) == false) {
+						if (fs.existsSync(dataDir+"/"+newDataset) == false) {
 							res.send(`Could not add dataset File: ${newDataset} doesnt exist`);
 							break;
 						}
-						let stat = fs.statSync(newDataset);
+						let stat = fs.statSync(dataDir+"/"+newDataset);
 						if (stat.isDirectory()) {
 							res.send(`Could not add dataset File: ${newTempDir} is a directory`);
 							break;
 						}
 						//newDataset is a valid file
 						//check to see if it already exists as a dataset
-						if (!(newDataset in Datasets.datasets)){
+						//remove extension
+						let segments = newDataset.split(".");
+						let name = segments.slice(0, segments.length - 1).join(".");
+						if (!(name in Datasets.datasets)){
 							console.log("file not in datasets..adding");
 							Datasets.loadSingleDataset(dataDir,tempDir,bindHandlers,stopServer,cachesToRefresh,noDerived, newDataset);
-							res.send(`File: ${newDataset} added to the dataset list`);
+							res.send(`File: ${name} added to the dataset list`);
 						}else{
-							res.send(`File: ${newDataset} is already in the dataset list`);
+							res.send(`File: ${name} is already in the dataset list`);
 						}
 					}else{
 						res.send("Must include a filename to add to the dataset list");
