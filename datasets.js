@@ -43,7 +43,32 @@ function makeDatasetList() {//could this be dynamic?
     return result;
 }
 
+//used to import 1 file into Graph Strata
+//called by GET queries only
+function loadSingleDataset(d, c, callback, failure, cachesToRefresh, noDerived, filename){
+	dataDir = d, cacheDir = c;
+    if (!fileExists("")) {
+        mkdir("");
+    }
+	//adds filename to datasetFiles by trimming the extension
+	checkDatasetTopLevel(dataDir + "/" + filename, filename);
+	let segments = filename.split(".");
+	let name = segments.slice(0, segments.length - 1).join(".");
+    loadFile(name, cachesToRefresh, noDerived).then(async (v) => {
+        let result = {};
+		for (let id in datasets) {
+			result[id] = datasets[id].summary;
+		}
+		datasetList = result;
+        console.log("***loading all datasets finished*** " + (v || ""));
+    }).catch((e) => {
+        console.log(e);
+        console.log("***loading all datasets failed***");
+    });
+        
+}
 
+//
 function loadAllDatasets(d, c, callback, failure, cachesToRefresh, noDerived) {
     dataDir = d, cacheDir = c;
     if (!fileExists("")) {
@@ -1111,6 +1136,388 @@ for (let name in DataTemplates) {
         obj.files = () => temp;
     }
 }
+//load single file into datasetList
+//load single file
+async function loadFile(id, cachesToRefresh, noDerived) {
+    //use a stack not queue for graphs to be processed, because it makes accessing datasets more continuous and makes the log cleaner
+    //removing support for batch processing - it complicates everything, and there's no significant benefit from it now
+    console.log(cachesToRefresh);
+    let startTime = new Date().getTime();
+   
+        let originalFiles = datasetFiles[id];
+        let loadingMethod = getLoadingMethod(id, originalFiles);//when called, loadingMethod returns a promise. loadingMethod is falsy if it can't be loaded
+        if (!loadingMethod) {
+            return;
+        }//this "dataset" has no valid data files and can't be loaded, so ignore it
+
+        datasets[id] = {id: id, data: new Graph()};
+        let dataset = datasets[id];
+        let mainGraph = datasets[id].data;
+        mainGraph.name = toNormalText(id);
+        mainGraph.dataPath = id;//I think dataPath should not end in /
+        mainGraph.datasetID = id;
+        mainGraph.derivation = [];
+        //check temp directory
+        if (!fs.existsSync(cacheDir + "/" + mainGraph.dataPath)) {
+            fs.mkdirSync(cacheDir + "/" + mainGraph.dataPath);
+        }
+        //check main data files
+        //a file record has type,path,fileName,updateTime,size
+        let dataNewestTime = Math.max.apply(null, originalFiles.map((record) => record.updateTime));
+
+        let basicFiles = DataTemplates.graph.files(mainGraph);
+        let basicFilesExist = allFilesExist(basicFiles, mainGraph.dataPath);
+        let basicFilesUpdateTime = basicFilesExist ? newestTimeOfFiles(basicFiles, mainGraph.dataPath) : null;
+        let summaryFileExists = fileExists(mainGraph.dataPath, "summary.json.gz");
+        let summaryFileUpdateTime = summaryFileExists ? fileStat(mainGraph.dataPath, "summary.json.gz").mtimeMs : null;
+        let needLoading = true;
+		/*
+        if (!basicFilesExist) {
+			console.log("BASIC FILE EXISTS");
+            needLoading = true;
+        } else if (basicFilesUpdateTime < dataNewestTime) {
+            needLoading = true;
+        }
+        if (!summaryFileExists) {
+            needLoading = true;
+        } else if (summaryFileUpdateTime < dataNewestTime) {
+            needLoading = true;
+        }*/
+        // we shouldn't delete te summary if new templates are added since old lengths etc are correct and may be used. if the summary file is missing, we may either load every property or reload teh raw data?
+
+        if (needLoading == false) {//this should be based on the summary?
+            loadSummary(mainGraph);//loadSummary sets the graph as abstract
+        } else {
+            //load the raw data and save the original graph
+            console.log("loading raw data for " + id);
+            await Promise.resolve(loadingMethod());//loading should use the original main graph object
+            console.log("loaded raw data for " + id);
+            saveAllProperties(mainGraph);
+            saveSummary(mainGraph);//in case it crashes while making other data caches, we don't have to reload the raw data when debugging
+            //todo: mark the correct caches as loaded if there are optional data caches
+            mainGraph.savedData = {graph: {loaded: true, updateTime: dataNewestTime}};
+            mainGraph.updateTime = dataNewestTime;
+            mainGraph.updated = true;//keep the loaded data until it's out of the stack
+        }
+        if (noDerived) {//get top level summary only
+            dataset.summary = getDatasetSummary(dataset);
+            console.log("loaded dataset " + id + ", " + JSON.stringify(dataset.summary));
+            return;
+        }
+        let graphStack = [];//now process each dataset completely before loading others
+        graphStack.unshift(mainGraph);//add dataset main graphs to the stack in reverse order, so the first dataset comes out first
+        let stashedGraphs = [];
+        while (graphStack.length > 0) {
+            let savedDataChangedInStack = false;
+            while (graphStack.length > 0) {
+                let graph = graphStack.pop();
+                if (!graph.savedData) {
+                    graph.savedData = {};
+                }//note: only non-bucketed graphs can enter the stack, and at this point thye should ave their initial data saved already
+                //console.log("processing "+graph.dataPath);
+                delete graph.stashed;
+
+                //console.log("graph path: "+graph.dataPath);
+                //console.log("saved data: "+JSON.stringify(graph.savedData));
+                if (!graph.dataPath) throw Error();
+                //if we need to allow some properties to depend on properties of other graphs, then we may still need to stash graphs
+                //initial property existence should be known here
+                //calculate all available data caches (now, all subgraphs/metagraphs are also part of the caches)
+                let hasRemainingTemplate = true, nextTemplate = null, savedDataChanged = false;
+                while (hasRemainingTemplate) {
+                    nextTemplate = null;
+                    hasRemainingTemplate = false;
+                    templateLoop: for (let name in DataTemplates) {//every iteration should determine the existence of one property and make it if needed
+                        //console.log(graph.savedData);
+                        if (!graph.savedData[name]) {//means this property's existence is unknown; a property that's known to not exist is {exists:false}
+                            //console.log("testing if graph has "+name);
+                            let templateObj = DataTemplates[name];
+                            //test exclusion - if the template doesn't apply to the current graph
+                            let dataExists = true;
+                            //for convenience, exclude derived graphs by default if it doesn't say which graphs it applies to
+                            if ((!templateObj.condition) && (!templateObj.exclude) && (graph.datasetID != graph.dataPath)) {
+                                dataExists = false;
+                            }
+                            if (templateObj.condition && (templateObj.condition(graph) == false)) {
+                                dataExists = false;
+                            }
+                            if (templateObj.exclude && (templateObj.exclude(graph) == true)) {
+                                dataExists = false;
+                            }
+                            //if a data cache cannot be made and the files are not already there then it cannot exist. however if it can be made, this test says nothing.
+                            if ((!templateObj.make) && dataExists) {//it's an initial data that should exist
+                                let files = templateObj.files(graph);
+                                let tempfilesExist = allFilesExist(files, graph.dataPath);
+                                if (tempfilesExist) {
+                                    let updateTime = fileExists ? newestTimeOfFiles(files, graph.dataPath) : null;
+                                    if (updateTime < mainGraph.updateTime) {
+                                        dataExists = false;
+                                        if (graph.partitionInfo && graph.partitionInfo.length == 1 && graph.partitionInfo[0].type == "CC") {
+                                            console.log("doesn't have " + name + " because it's outdated and cannot make");
+                                        }
+                                        if (!templateObj.optional) {
+                                            throw Error("outdated required initial data " + name + " at " + graph.dataPath);
+                                        }
+                                        //else{console.log("skipping nonexistent optional data "+name+" at "+graph.dataPath);}
+                                    } else {//if it can't be made, dependencies don't affect it. mark it as existing and proceed with other templates.
+                                        graph.savedData[name] = {exists: true, updateTime: updateTime};
+                                        //console.log("graph has "+name+", update time is "+new Date(updateTime));
+                                        continue;
+                                    }
+                                } else {
+                                    dataExists = false;
+                                    if (graph.partitionInfo && graph.partitionInfo.length == 1 && graph.partitionInfo[0].type == "CC") {
+                                        console.log("doesn't have " + name + " because it's missing and cannot make");
+                                    }
+                                    if (!templateObj.optional) {
+                                        throw Error("missing required initial data " + name + " at " + graph.dataPath);
+                                    }
+                                }
+
+                                //this has a little issue where if one of the optional initial files is removed or replaced, it will not detect it and will mark it as not existing.
+
+                            }
+                            if (dataExists == false) {//these are all conditions that can be tested without loading dependencies. If something is only known to not exist when dependencies are loaded, just return failure or throw error in the make function. conditions are for filtering on basic info like derivation(can't do decomposition on a layer) and size.
+                                graph.savedData[name] = {exists: false};
+                                //console.log("graph doesn't have "+name+" because of the definition");
+                                continue;//such a template does not count as a remaining template
+                            }
+                            //test dependencies: if some dependencies are known to not exist, then this data cannot exist
+                            let depsReady = true;
+                            if (templateObj.deps) {
+                                for (let depName of templateObj.deps) {
+                                    //todo: if the dependency references othe rgraphs, stash this graph
+                                    //if(!graph.stashed){graph.stashed=true;stashList.push(graph);}
+                                    if (!(depName in graph.savedData)) {
+                                        //console.log("not sure if graph has "+name+" because "+depName+" isn't resolved yet");
+                                        depsReady = false;
+                                        continue;
+                                    }
+                                    if (graph.savedData[depName].exists == false) {
+                                        graph.savedData[name] = {exists: false};
+                                        //console.log("graph doesn't have "+name+" because "+depName+" doesn't exist");
+                                        continue templateLoop;
+                                    }
+                                }
+                            }
+                            hasRemainingTemplate = true;
+                            if (depsReady) {
+                                nextTemplate = name;
+                                break;
+                            } else {
+                            }
+                        }
+                    }
+                    if (!hasRemainingTemplate) break;
+                    if (nextTemplate == null) {//the remaining data's existence cannot be determined.
+                        let missingData = Object.keys(DataTemplates).filter((d) => (d in graph.savedData == false));
+                        console.log("graph " + graph.dataPath + ": some data's existence cannot be resolved: " + missingData.join(","));
+                        throw Error("property dependency error");
+                        break;
+                    }
+                    let templateObj = DataTemplates[nextTemplate];
+
+                    //detect if it needs creating
+
+                    let expectedFiles = templateObj.files(graph);
+                    let needGenerating = false;
+                    let currentDataUpdateTime, newestFileName;
+
+
+                    //now, since forced refresh may take time into account, all caches need to have its update time tested.
+                    if (!allFilesExist(expectedFiles, graph.dataPath)) {
+                        needGenerating = true;//currentDataUpdateTime is undefined here
+                        console.log("generating " + nextTemplate + " for " + graph.dataPath + " because files are missing");
+                    } else {
+                        currentDataUpdateTime = newestTimeOfFiles(expectedFiles, graph.dataPath);
+                        newestFileName = newestFileOfFiles(expectedFiles, graph.dataPath);
+                    }
+
+                    if ((!needGenerating) && (nextTemplate in cachesToRefresh)) {//cachesToRefresh[nextTemplate] is the number of minutes of age allowed
+                        if ((startTime - currentDataUpdateTime > cachesToRefresh[nextTemplate] * 60000 + timeTolerance)) {
+                            console.log("forcing refresh " + nextTemplate + " for " + graph.dataPath + ((cachesToRefresh[nextTemplate] == 0) ? "" : (" because its age is " + (startTime - currentDataUpdateTime) + "ms")));
+                            needGenerating = true;
+                        } else {
+                            console.log("not forcing refresh " + nextTemplate + " because its age is " + (startTime - currentDataUpdateTime) + "ms");
+                        }
+
+                    }//force refresh (often when a change needs to be made in some cache-producing code)
+
+                    if ((!needGenerating) && templateObj.deps.length > 0) {//some may have no dependencies
+                        for (let depID of templateObj.deps) {
+                            if (graph.savedData[depID].updateTime > currentDataUpdateTime + timeTolerance) {
+                                needGenerating = true;
+                                console.log("generating " + nextTemplate + " for " + graph.dataPath + " because it's " + (graph.savedData[depID].updateTime - currentDataUpdateTime) + "ms older than " + depID);//: dependency "+depID+"'s time is "+new Date(graph.savedData[depID].updateTime)+", current newest file is "+newestFileName+", its time is: "+new Date(currentDataUpdateTime));
+                                break;
+                            }
+                        }
+                    }
+                    if ((!needGenerating) && templateObj.alwaysMake) {
+                        needGenerating = true;
+                        //console.log("generating because it's set to always generate");
+                    }
+
+                    async function loadCache(name) {//loading something doesn't require loading its dependencies
+                        let currentCache = graph.savedData[name], currentCacheTemplate = DataTemplates[name];
+                        if (currentCache.loaded == true) return;
+                        if (!currentCacheTemplate) throw Error("no such template");
+                        if (currentCacheTemplate.load) {
+                            await Promise.resolve(currentCacheTemplate.load(graph));
+                        }//a cache file may have no separate loading method, and loading may or may not be async
+                        currentCache.loaded = true;//even if it needs no loading method
+                    }
+
+                    if (needGenerating) {
+                        //delete subgraphs(since new subgraphs might not overwrite old ones)
+                        if (templateObj.subgraphs) {//put these subgraphs on the stack
+                            deleteSubgraphs(graph, templateObj.subgraphs);//creates abstract graph objects for them
+                        }
+                        //load all dependencies
+                        if (templateObj.deps) {
+                            await Promise.all(templateObj.deps.map(loadCache));
+                        }
+                        if (templateObj.optionalDeps) {
+                            await Promise.all(templateObj.optionalDeps.filter((name) => graph.savedData[name] && graph.savedData[name].exists !== false).map(loadCache));
+                        }//these don't have to exist but if they do they will be loaded, eg. to add optional data only available at some places on the hierarchy
+                        if (!templateObj.make) {
+                            throw Error("no method to make required cache: " + nextTemplate);
+                        }
+                        let success = undefined;
+                        try {
+                            await Promise.resolve(templateObj.make(graph)).then(() => {
+                                success = true;
+                            }).catch((e) => {
+                                success = false;
+                            });
+                        } catch (e) {
+                            console.log(e.stack);
+                            success = false;
+                        }
+                        //it could be a Promise or not
+                        let obj = {};
+                        graph.savedData[nextTemplate] = obj;
+                        if (success && allFilesExist(expectedFiles, graph.dataPath)) {
+                            //check the time of updated files to see if they are new
+                            let isNew = true;
+                            currentDataUpdateTime = newestTimeOfFiles(expectedFiles, graph.dataPath);
+                            for (let depID of templateObj.deps) {
+                                if (graph.savedData[depID].updateTime > currentDataUpdateTime + timeTolerance) {
+                                    console.log("making cache " + nextTemplate + " failed for " + graph.dataPath + " because it's still " + (graph.savedData[depID].updateTime - currentDataUpdateTime) + "ms older than " + depID);
+                                    isNew = false;
+                                    throw Error("cache production sanity check failed");//this case should not be ignored
+                                    break;
+                                }
+                            }
+                            if (isNew) {
+                                obj.loaded = true;// if it's recreated, assume it's as if it's loaded, so no need to load it again
+                                if (!templateObj.alwaysMake) {
+                                    savedDataChanged = true;
+                                }//some data that is not temporary has changed, update the summary
+                                //console.log("successsfully generated  "+nextTemplate+" at "+new Date(currentDataUpdateTime));
+                                //don't update if the production fails
+                            } else {
+                                obj.exists = false;
+                            }
+                        } else {
+                            if (success) console.warn("expected files not found: " + JSON.stringify(expectedFiles) + ", in " + graph.dataPath);
+                            else console.warn("making cache " + nextTemplate + " failed in " + graph.dataPath + " (|V| " + graph.vertices.length + ", |E| " + graph.edges.length + ")");
+                            obj.exists = false;
+                        }
+
+                    } else {
+                        graph.savedData[nextTemplate] = {};
+                        if (templateObj.alwaysLoad) {
+                            await loadCache(nextTemplate);
+                        }
+                    }
+                    if (templateObj.subgraphs) {//put these subgraphs on the stack
+                        let list = loadSubgraphs(graph, templateObj.subgraphs, true);//creates abstract graph objects for them
+                        //including bucketed ones to check for data integrity
+                        for (let newGraph of list) {
+                            if (newGraph.wholeGraph != graph.dataPath) throw Error("wholeGraph is not the parent's path: expected " + graph.dataPath + ", found " + graph.dataPath);
+                            if ("bucketID" in newGraph) continue;//don't process bucketed graphs
+                            graphStack.push(newGraph);
+                        }
+                    }
+                    //it's either recreated or checked to be up to date
+                    graph.savedData[nextTemplate].files = expectedFiles;
+                    graph.savedData[nextTemplate].updateTime = currentDataUpdateTime;
+                    let now = new Date().getTime();
+                    if (currentDataUpdateTime > now + timeTolerance) {//sometimes it's a fraction of a ms later
+                        throw Error("cache production time in the future: " + (currentDataUpdateTime - now) + "ms");
+                    }
+                }
+                //check existing subgraph/metagraph files, in case they are missing
+
+                let derivedGraphsChanged = false;//if the summary format changes, assign the sub-summaries to the current graph summaries.
+                let subgraphTypes = getSubgraphFileTypes(graph);
+                if (!graph.subgraphs) {
+                    graph.subgraphs = {};
+                }
+                if (!graph.metagraphs) {
+                    graph.metagraphs = {};
+                }
+                for (let type in subgraphTypes) {
+                    if (type in graph.subgraphs == false) {
+                        //console.log("detected subgraphs "+type);
+                        derivedGraphsChanged = true;
+                    }
+                }
+                for (let type in graph.subgraphs) {
+                    if (type in subgraphTypes == false) {
+                        //console.log("detected missing subgraphs "+type);
+                        derivedGraphsChanged = true;
+                    }
+                }
+                let metagraphTypes = getMetagraphFileTypes(graph);
+                for (let type in metagraphTypes) {
+                    if (type in graph.metagraphs == false) {
+                        //console.log("detected metagraph "+type);
+                        derivedGraphsChanged = true;
+                    }
+                }
+                for (let type in graph.metagraphs) {
+                    if (type in metagraphTypes == false) {
+                        //console.log("detected missing metagraph "+type);
+                        derivedGraphsChanged = true;
+                    }
+                }
+                if (derivedGraphsChanged) {
+                    graph.subgraphs = subgraphTypes;
+                    graph.metagraphs = metagraphTypes;
+                    //console.log("detected derived graph changed");
+                    savedDataChanged = true;
+                }//now if the settings are changed so that some metagraph is no longer present, we also need to update the summary or the client could try to load a non-existent metagraph.
+
+                if (savedDataChanged) {
+                    savedDataChangedInStack = true;//detect cyclic dependency involving the stashed graphs
+                    saveSummary(graph);//save summary and unload graph if it's loaded to save memory
+                    //console.log("saved summary for "+graph.dataPath);
+                    graph.unloadAll();
+                }
+            }
+            if (stashedGraphs.length > 0) {//if no progress is made in this run through the stack, stop
+                if (!savedDataChangedInStack) {
+                    throw Error("cyclic dependency detected in stashed graphs");
+                } else {
+                    console.log("moving on to " + stashedGraphs.length + "stashed graphs");
+                }
+                graphStack = stashedGraphs;
+                stashedGraphs = [];
+            }
+            //really exit if nothing is being processed or stashed
+        }
+        //finished processing a dataset
+        dataset.summary = getDatasetSummary(dataset);
+        console.log("loaded dataset " + id + ", " + JSON.stringify(dataset.summary));
+    
+
+    //postprocessing
+    datasetList = getDatasetList();
+    console.log("finished loading " + Object.keys(datasets).length + " datasets");
+}
+
+
 
 
 async function loadAllFiles(datasetFiles, cachesToRefresh, noDerived) {
@@ -2591,11 +2998,9 @@ function deleteFolderRecursive(path) {
 
 
 module.exports = {
-    loadAllDatasets: loadAllDatasets,
-    datasets: datasets,//debug only
+    loadAllDatasets: loadAllDatasets,    
     datasetIDMaps: datasetIDMaps,
-    extraData: extraData,
-    getDatasetList: getDatasetList,
+    extraData: extraData,    
     startStreaming: startStreaming,
     stopStreaming: stopStreaming,
     pauseStreaming: pauseStreaming,
@@ -2606,7 +3011,14 @@ module.exports = {
     loadCustomData: loadCustomData,
     loadSummary: loadSummary,
     loadProperty: loadProperty,
-
+	
+	//used by single file import option
+	datasets: datasets,//debug only
+	datasetFiles: datasetFiles,
+	getDatasetList: getDatasetList,
+	loadSingleDataset : loadSingleDataset,
+	deleteFolderRecursive: deleteFolderRecursive,
+	
     //reloadAllDatasets:reloadAllDatasets,//to be able to refresh stuff without restarting the server - but it only makes sense if we can reload the cache-producing code,but they are all hard-coded.
     loadSubgraphSummary: loadSubgraphSummary,
     loadSubgraphFullSummary: loadSubgraphFullSummary,
