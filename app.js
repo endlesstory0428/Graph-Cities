@@ -115,6 +115,109 @@ function bindHandlers(datasetsList){
 			let type=req.query.type;
 			console.log("query:",req.query);
 			switch (type){
+				case "setdatadir":{
+					if ("file" in req.query){
+						//check to see if its a directory
+						let newDataDir = req.query.file;
+						if (fs.existsSync(newDatadir) == false) {
+							res.send(`Could not update dataDir File: ${newDataDir} doesnt exist`);
+							break;
+						}
+						let stat = fs.statSync(newDataDir);
+						if (stat.isDirectory() == false) {
+							res.send(`Could not update dataDir File: ${newDataDir} is not a directory`);
+							break;
+						}
+						//newDataDir is an existing directory
+						dataDir=newDatadir;
+						let result ={};
+						result['dataDir']=dataDir;
+						result['tempDir']=tempDir;
+						res.send(JSON.stringify(result));
+					}else{
+						res.send("Must include a file when setting dataDir");
+					}
+					break;
+				}
+				case "settempdir":{
+					if ("file" in req.query){
+						//check to see if its a directory
+						let newTempDir = req.query.file;
+						if (fs.existsSync(newTempDir) == false) {
+							res.send(`Could not update tempDir File: ${newTempDir} doesnt exist`);
+							break;
+						}
+						let stat = fs.statSync(newTempDir);
+						if (stat.isDirectory() == false) {
+							res.send(`Could not update tempDir File: ${newTempDir} is not a directory`);
+							break;
+						}
+						//newTempDir is an existing directory
+						tempDir=newTempDir;
+						let result ={};
+						result['dataDir']=dataDir;
+						result['tempDir']=tempDir;
+						res.send(JSON.stringify(result));
+					}else{
+						res.send("Must include a file when setting tempDir");
+					}
+					break;
+				}
+				//file to be deleted must not have an extension
+				//can make it so that I remove the extension
+				case "delete":{
+					if ("file" in req.query){
+						let fileToDelete=req.query.file;
+						//if file is not in the object skip
+						if (!(fileToDelete in Datasets.datasets)){
+							res.send(`Could not delete dataset File: ${fileToDelete} is not a current dataset`);
+						}else{
+							delete Datasets.datasets[fileToDelete];
+							delete Datasets.datasetFiles[fileToDelete];
+							let test = Datasets.getDatasetList();
+							delete test[fileToDelete];
+							Datasets.deleteFolderRecursive(tempDir+"/"+fileToDelete);
+							res.send(`File: ${fileToDelete} has been removed from the dataset list`);
+						}						
+					}else{
+						res.send("Must include a dataset name to delete");
+					}
+					break;
+				}
+				//file must include an extension
+				case "add":{
+					if ("file" in req.query){
+						//check to see if its a directory
+						let newDataset = req.query.file;
+						if (fs.existsSync(newDataset) == false) {
+							res.send(`Could not add dataset File: ${newDataset} doesnt exist`);
+							break;
+						}
+						let stat = fs.statSync(newDataset);
+						if (stat.isDirectory()) {
+							res.send(`Could not add dataset File: ${newTempDir} is a directory`);
+							break;
+						}
+						//newDataset is a valid file
+						//check to see if it already exists as a dataset
+						if (!(newDataset in Datasets.datasets)){
+							console.log("file not in datasets..adding");
+							Datasets.loadSingleDataset(dataDir,tempDir,bindHandlers,stopServer,cachesToRefresh,noDerived, newDataset);
+							res.send(`File: ${newDataset} added to the dataset list`);
+						}else{
+							res.send(`File: ${newDataset} is already in the dataset list`);
+						}
+					}else{
+						res.send("Must include a filename to add to the dataset list");
+					}
+					break;
+				}
+				case "get":{
+					res.header('Content-Type', 'application/json');
+					res.header('Access-Control-Allow-Origin','*');
+					res.send(JSON.stringify(Datasets.getDatasetList()));
+					break;
+				}				
 				case "subgraphID":{
 					let prefix=req.query.dataPath.trim();
 					let subgraphType=req.query.subgraphType;
