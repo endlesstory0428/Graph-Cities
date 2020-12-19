@@ -2,6 +2,7 @@
 # constructs a 3d mesh
 import json
 import math
+from matplotlib import cm
 
 def triangulate(lower,upper):
     faces = []
@@ -213,6 +214,111 @@ def draw_mesh_2():
     print(v_count)
     print(f_count)
 
+def ToRgb(h):
+    # h = 1 / (1 + exp(-5 * (h - 0.25)))  # logisitic curve to bias towards blue
+    # color = [int(round(255 * x)) for x in cm.rainbow(h)[:-1]]
+    h=1-math.log(h+0.0001,0.0001)
+    color=cm.jet(h)[:-1]
+    return color
+
+def draw_mesh_3():
+    """disk stacks to be cylinder, and scaled"""
+    # f = open('movies-layers-dists.json')
+    # f2 = open('movies-cylinder.off','w')
+    # f2.write('OFF\n20672 41312 0\n')
+
+    # f = open('cit-Patents-layers-dists.json')
+    # f2 = open('cit-Patents-cylinder.off','w')
+    # f2.write('OFF\n30400 60768 0\n')
+
+    f = open('com-friendster-layers-dists.json')
+    f2 = open('com-friendster-cylinder.off','w')
+    f2.write('OFF\n35712 71392 0\n')
+
+    # f = open('movies-excerpt.json')
+    # f2 = open('movies-excerpt.off','w')
+    # f2.write('OFF\n1760 3488 0\n')
+
+    data = json.load(f)
+    Y = 0 # base height
+    X = Z = 0
+    default_edges = 16
+    v_count = f_count = 0
+    start_pos = []
+    scale_up = 100
+    # print(data)
+    peel_values = [int(i) for i in list(data.keys())]
+    peel_value_range = max(peel_values) - min(peel_values)
+    peel_value_count = len(peel_values)
+    peel_value_ratio = peel_value_range/peel_value_count
+    print("peel_value_ratio",peel_value_ratio)
+    max_radius = 0
+    original_height_sum = len(data)
+    for i in data:
+        original_height_sum = original_height_sum + sum([int(j) for j in data[i]])
+        layer_max_radius = max([int(i) for i in list(data[i].keys())])
+        if max_radius < layer_max_radius:
+            max_radius = layer_max_radius
+    # print("max height", original_height_sum)
+    # print("max radius", max_radius)
+    original_height_radius_ratio = original_height_sum/max_radius
+    # print("original_height_radius_ratio", original_height_radius_ratio)
+    for i in data:
+        # print(i)
+        print(data[i].values())
+        # print(len(data[i]),'\n')
+        for k in (data[i]):
+            # log_k = math.log2(int(data[i][k])) 
+            start_pos.append(v_count)
+            Y_dis = (math.log2(int(k)))*0.5 # height = frequency
+            # Y_dis = int(k)*height_scale_1*height_scale_2
+            R = math.log2(int(data[i][k])+1)*50 # radius = second key
+            # R = int(data[i][k])*radius_scale_1
+            # print("k =",k)
+            for j in range(default_edges):
+                theta = j * 2 * math.pi / default_edges
+                X = R * math.cos(theta)
+                Z = R * math.sin(theta)
+                v_0 = "{:06f}".format(X)
+                v_1 = "{:06f}".format(Y)
+                v_2 = "{:06f}".format(Z)
+                f2.write(v_0+' '+v_1+' '+v_2+'\n')
+                v_count = v_count + 1
+            Y = Y + Y_dis
+            start_pos.append(v_count)
+            for j in range(default_edges):
+                theta = j * 2 * math.pi / default_edges
+                X = R * math.cos(theta)
+                Z = R * math.sin(theta)
+                v_0 = "{:06f}".format(X)
+                v_1 = "{:06f}".format(Y)
+                v_2 = "{:06f}".format(Z)
+                f2.write(v_0+' '+v_1+' '+v_2+'\n')
+                v_count = v_count + 1
+            # between layers
+            Y = Y + 0.5
+            # Y = Y + height_scale_1*height_scale_2
+    
+    start_pos.append(v_count) # last v_count
+    # print(start_pos)
+    color_str = "255 0 0"
+    for i in range(len(start_pos)-2):
+        lower = [*range(start_pos[i],start_pos[i+1])]
+        upper = [*range(start_pos[i+1],start_pos[i+2])]
+        # print('i',i,'lower')
+        # print(lower)
+        # print('upper')
+        # print(upper)
+        faces = triangulate(lower,upper)
+        if(len(faces)>0):
+            for f in faces:
+                f2.write('3 '+str(f[0])+' '+str(f[1])+' '+str(f[2])+' '+color_str+'\n')
+                f_count = f_count + 1
+    f2.close()
+    print(v_count)
+    print(f_count)
+
+
 def test_mesh():
     f2 = open('test.off','w')
     f2.write('OFF\n16 16 0\n')
@@ -280,6 +386,7 @@ def test_mesh_2():
 # 3 0 7 8
 if __name__ == "__main__":
     # draw_mesh_1()
-    draw_mesh_2()
+    # draw_mesh_2()
+    draw_mesh_3()
     # test_mesh()
     # test_mesh_2()
