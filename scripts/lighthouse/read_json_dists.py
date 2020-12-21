@@ -326,6 +326,120 @@ def draw_mesh_3():
     print(f_count)
 
 
+def cylinderRadius(vh_h):
+    # return math.sqrt(math.log2(vh_h + 0.1) / math.pi)
+    # return math.log2(math.sqrt(vh_h / math.pi))
+    return math.sqrt(vh_h / math.pi)
+
+
+def draw_mesh_3_5():
+    """disk stacks to be cylinder, and scaled"""
+    # f = open('movies-layers-dists.json')
+    # f2 = open('movies-cylinder.off', 'w')
+    # f2.write('OFF\n20672 41312 0\n')
+    # num_edges = 115050370
+
+    # f = open('cit-Patents-layers-dists.json')
+    # f2 = open('cit-Patents-cylinder.off', 'w')
+    # f2.write('OFF\n30400 60768 0\n')
+    # num_edges = 16518947
+
+    f = open('com-friendster-layers-dists.json')
+    f2 = open('com-friendster-cylinder.off', 'w')
+    f2.write('OFF\n35712 71392 0\n')
+    # num_edges = 1806067135
+
+    # f = open('movies-excerpt.json')
+    # f2 = open('movies-excerpt.off','w')
+    # f2.write('OFF\n1760 3488 0\n')
+
+    data = json.load(f)
+    # return data
+    Y = 0  # base height
+    X = Z = 0
+    default_edges = 16
+    v_count = f_count = 0
+    start_pos = []
+    # print(data)
+    peel_values = [int(i) for i in list(data.keys())]
+    peel_value_range = max(peel_values) - min(peel_values)
+    peel_value_count = len(peel_values)
+    peel_layer_ratio = peel_value_range / peel_value_count
+    print("peel_layer_ratio", peel_layer_ratio)
+    max_radius = 0
+    arg_max_radius = 0
+    original_height_sum = 0
+    # original_height_sum = len(data)
+    for i in data:
+        # original_height_sum = original_height_sum + sum([int(j) for j in data[i].keys()])
+        original_height_sum = original_height_sum + sum([math.log2(int(j) + 1) for j in data[i].keys()])
+        layer_max_radius = max([int(j) for j in data[i].values()])
+        rad = cylinderRadius(layer_max_radius)
+        # rad = cylinderRadius(math.log2(layer_max_radius + 1))
+        if max_radius < rad:
+            max_radius = rad
+    print("max height", original_height_sum)
+    print("max radius", max_radius)
+    print("height total", peel_layer_ratio * max_radius)
+    # original_height_radius_ratio = original_height_sum/max_radius
+    # print("original_height_radius_ratio", original_height_radius_ratio)
+    scale_factor = peel_layer_ratio * max_radius / original_height_sum
+    print("scale_factor", scale_factor)
+    for i in data:
+        # print(i)
+        # print(data[i].values())
+        # print(len(data[i]),'\n')
+        for k in (data[i]):
+            # log_k = math.log2(int(data[i][k]))
+            start_pos.append(v_count)
+            # Y_dis = int(k) * scale_factor  # height = second key
+            Y_dis = math.log2(int(k) + 1) * scale_factor  # height = second key
+            R = cylinderRadius(int(data[i][k]))  # radius = frequency
+            # R = cylinderRadius(math.log2(int(data[i][k]) + 1))  # radius = frequency
+            # print("k =",k)
+            for j in range(default_edges):
+                theta = j * 2 * math.pi / default_edges
+                X = R * math.cos(theta)
+                Z = R * math.sin(theta)
+                v_0 = "{:06f}".format(X)
+                v_1 = "{:06f}".format(Y)
+                v_2 = "{:06f}".format(Z)
+                f2.write(v_0 + ' ' + v_1 + ' ' + v_2 + '\n')
+                v_count = v_count + 1
+            Y = Y + Y_dis
+            start_pos.append(v_count)
+            for j in range(default_edges):
+                theta = j * 2 * math.pi / default_edges
+                X = R * math.cos(theta)
+                Z = R * math.sin(theta)
+                v_0 = "{:06f}".format(X)
+                v_1 = "{:06f}".format(Y)
+                v_2 = "{:06f}".format(Z)
+                f2.write(v_0 + ' ' + v_1 + ' ' + v_2 + '\n')
+                v_count = v_count + 1
+            # between layers
+            # Y = Y + 0.1
+
+    start_pos.append(v_count)  # last v_count
+    # print(start_pos)
+    color_str = "255 0 0"
+    for i in range(len(start_pos) - 2):
+        lower = [*range(start_pos[i], start_pos[i + 1])]
+        upper = [*range(start_pos[i + 1], start_pos[i + 2])]
+        # print('i',i,'lower')
+        # print(lower)
+        # print('upper')
+        # print(upper)
+        faces = triangulate(lower, upper)
+        if (len(faces) > 0):
+            for f in faces:
+                f2.write('3 ' + str(f[0]) + ' ' + str(f[1]) + ' ' + str(f[2]) + ' ' + color_str + '\n')
+                f_count = f_count + 1
+    f2.close()
+    print(v_count)
+    print(f_count)
+
+
 def draw_mesh_4():
     """disk stacks to be cylinder, and scaled"""
     # f = open('movies-layers-dists.json')
@@ -530,7 +644,8 @@ def test_mesh_2():
 if __name__ == "__main__":
     # draw_mesh_1()
     # draw_mesh_2()
-    draw_mesh_3()
+    # draw_mesh_3()
+    draw_mesh_3_5()
     # draw_mesh_4()
     # test_mesh()
     # test_mesh_2()
