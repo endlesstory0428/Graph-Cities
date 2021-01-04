@@ -1,5 +1,7 @@
 import * as THREE from '../../node_modules/three/build/three.module.js';
 import {TrackballControls} from '../../node_modules/three/examples/jsm/controls/TrackballControls.js';
+import {jet} from './jet_colormap.js';
+
 let scene = new THREE.Scene();
 let controls;
 let perspectiveCamera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
@@ -62,6 +64,60 @@ function sum_log(obj) {
     return sum;
 }
 
+function colorToHex(c) {
+    let hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+}
+
+// RGB in [0,255]
+function rgbToHex(r,g,b) {
+    return parseInt("0x"+colorToHex(r)+colorToHex(g)+colorToHex(b));
+}
+
+//https://github.com/timothygebhard/js-colormaps/blob/master/overview.html
+function enforceBounds(x) {
+    if (x < 0) {
+        return 0;
+    } else if (x > 1){
+        return 1;
+    } else {
+        return x;
+    }
+}
+
+//https://github.com/timothygebhard/js-colormaps/blob/master/overview.html
+function interpolateLinearly(x, values) {
+
+    // Split values into four lists
+    var x_values = [];
+    var r_values = [];
+    var g_values = [];
+    var b_values = [];
+    for (i in values) {
+        x_values.push(values[i][0]);
+        r_values.push(values[i][1][0]);
+        g_values.push(values[i][1][1]);
+        b_values.push(values[i][1][2]);
+    }
+
+    var i = 1;
+    while (x_values[i] < x) {
+        i = i+1;
+    }
+    i = i-1;
+
+    var width = Math.abs(x_values[i] - x_values[i+1]);
+    var scaling_factor = (x - x_values[i]) / width;
+
+    // Get the new color values though interpolation
+    var r = r_values[i] + scaling_factor * (r_values[i+1] - r_values[i])
+    var g = g_values[i] + scaling_factor * (g_values[i+1] - g_values[i])
+    var b = b_values[i] + scaling_factor * (b_values[i+1] - b_values[i])
+
+    return [enforceBounds(r), enforceBounds(g), enforceBounds(b)];
+
+}
+
 function loadCitySummaryFile(info, scene) {
     let max_radius = 0;
     let scale_factor = 1;
@@ -93,6 +149,7 @@ function loadCitySummaryFile(info, scene) {
     console.log("scale_factor", scale_factor);
 
     for(let key in info) {
+        const peel_value_color = 1-1/(Math.log2(key+1));
         if(info.hasOwnProperty(key)) {
             // console.log(key+' -> '+info[key]);
             for (let key2 in info[key]) {
@@ -101,7 +158,9 @@ function loadCitySummaryFile(info, scene) {
                 const R = cylinderRadius(info[key][key2]);
                 const geometry = new THREE.CylinderGeometry(R,R,Y_dis,8,8);
                 geometry.translate(0,Y,0);
-                const material = new THREE.MeshBasicMaterial({color:0x00ffff}); //black color
+                let color = interpolateLinearly(peel_value_color,jet); //jet colormap [0=blue, 1=red]
+                let color_string = rgbToHex(Math.round(color[0]*255),Math.round(color[1]*255),Math.round(color[2]*255));
+                const material = new THREE.MeshBasicMaterial({color:color_string}); //black color
                 const cylinder = new THREE.Mesh(geometry,material);
                 scene.add(cylinder);
                 Y += Y_dis;
