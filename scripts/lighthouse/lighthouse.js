@@ -13,8 +13,8 @@ scene.background = new THREE.Color( 0xffffff );
 // const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
 // const cube = new THREE.Mesh( geometry, material );
 // scene.add( cube );
-perspectiveCamera.position.z = 1000;
-perspectiveCamera.position.y = 200;
+perspectiveCamera.position.z = 10;
+// perspectiveCamera.position.y = 200;
 createControls( perspectiveCamera );
 
 const data_list = ['com-friendster','movies','cit-Patents'];
@@ -55,7 +55,8 @@ function sum_log(obj) {
     let sum = 0;
     for(let a in obj) {
         if(obj.hasOwnProperty(a)) {
-            sum += Math.log2(obj[a]+1);
+            sum += Math.log2(parseInt(a)+1);
+            // console.log("obj "+obj+" a "+a+" log_2(a) "+Math.log2(parseInt(a)+1));
         }
     }
     return sum;
@@ -76,7 +77,8 @@ function loadCitySummaryFile(info, scene) {
 
     for(let key in info) {
         original_height_sum += sum_log(info[key]);
-        console.log("original_height_sum "+original_height_sum);
+        console.log("sum_log "+sum_log(info[key]));
+        // console.log("original_height_sum "+original_height_sum);
         const layer_vals = Object.values(info[key]);
         const layer_max_radius = Math.max(...layer_vals);
         // console.log(key+'/'+layer_max_radius);
@@ -99,11 +101,11 @@ function loadCitySummaryFile(info, scene) {
                 const R = cylinderRadius(info[key][key2]);
                 const geometry = new THREE.CylinderGeometry(R,R,Y_dis,8,8);
                 geometry.translate(0,Y,0);
-                const material = new THREE.MeshBasicMaterial({color:0x000000}); //black color
+                const material = new THREE.MeshBasicMaterial({color:0x00ffff}); //black color
                 const cylinder = new THREE.Mesh(geometry,material);
                 scene.add(cylinder);
                 Y += Y_dis;
-                console.log("Y "+Y+" Y_dis "+Y_dis+" R "+R);
+                // console.log("Y "+Y+" Y_dis "+Y_dis+" R "+R);
             }
         }
     }
