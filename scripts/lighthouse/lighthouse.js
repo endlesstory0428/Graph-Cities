@@ -149,7 +149,8 @@ function loadCitySummaryFile(info, scene) {
     console.log("scale_factor", scale_factor);
 
     for(let key in info) {
-        const peel_value_color = 1-1/(Math.log2(key+1));
+        const peel_value_color = 1.0-(1.0/(Math.log2(parseInt(key)+1.0)));
+        // console.log("key "+key+"peel_value_color "+peel_value_color);
         if(info.hasOwnProperty(key)) {
             // console.log(key+' -> '+info[key]);
             for (let key2 in info[key]) {
