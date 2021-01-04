@@ -3,8 +3,8 @@
 import json
 import math
 import numpy as np
-from matplotlib import cm
-
+# from matplotlib import cm
+import matplotlib.cm as cm
 
 def triangulate(lower, upper):
     faces = []
@@ -219,14 +219,6 @@ def draw_mesh_2():
     print(f_count)
 
 
-def ToRgb(h):
-    # h = 1 / (1 + exp(-5 * (h - 0.25)))  # logisitic curve to bias towards blue
-    # color = [int(round(255 * x)) for x in cm.rainbow(h)[:-1]]
-    h = 1 - math.log(h + 0.0001, 0.0001)
-    color = cm.jet(h)[:-1]
-    return color
-
-
 def draw_mesh_3():
     """disk stacks to be cylinder, and scaled"""
     # f = open('movies-layers-dists.json')
@@ -327,9 +319,9 @@ def draw_mesh_3():
 
 
 def cylinderRadius(vh_h):
-    # return math.sqrt(math.log2(vh_h + 0.1) / math.pi)
+    return math.sqrt(math.log2(vh_h + 0.1) / math.pi)
     # return math.log2(math.sqrt(vh_h / math.pi))
-    return math.sqrt(vh_h / math.pi)
+    # return math.sqrt(vh_h / math.pi)
 
 
 def draw_mesh_3_5():
@@ -339,14 +331,15 @@ def draw_mesh_3_5():
     # f2.write('OFF\n20672 41312 0\n')
     # num_edges = 115050370
 
-    # f = open('cit-Patents-layers-dists.json')
-    # f2 = open('cit-Patents-cylinder.off', 'w')
-    # f2.write('OFF\n30400 60768 0\n')
+    f = open('cit-Patents-layers-dists.json')
+    f2 = open('cit-Patents-cylinder.off', 'w')
+    f2.write('OFF\n30400 60768 0\n')
     # num_edges = 16518947
 
-    f = open('com-friendster-layers-dists.json')
-    f2 = open('com-friendster-cylinder.off', 'w')
-    f2.write('OFF\n35712 71392 0\n')
+    # f = open('com-friendster-layers-dists.json')
+    # f2 = open('com-friendster-cylinder.off', 'w')
+    # f2.write('OFF\n29280 58528 0\n') # without layer 1 
+    # f2.write('OFF\n35712 71392 0\n')
     # num_edges = 1806067135
 
     # f = open('movies-excerpt.json')
@@ -362,17 +355,30 @@ def draw_mesh_3_5():
     start_pos = []
     # print(data)
     peel_values = [int(i) for i in list(data.keys())]
-    peel_value_range = max(peel_values) - min(peel_values)
+    peel_value_max = max(peel_values)    
+    peel_value_range = peel_value_max - min(peel_values)
     peel_value_count = len(peel_values)
     peel_layer_ratio = peel_value_range / peel_value_count
+    print("peel_value_range",peel_value_range)
+    print("peel_value_count",peel_value_count)
     print("peel_layer_ratio", peel_layer_ratio)
     max_radius = 0
     arg_max_radius = 0
     original_height_sum = 0
     # original_height_sum = len(data)
+
+    # add color to different peel values
+    peel_value_color = [1-1/(math.log2(1+i)) for i in peel_values]
+    print("peel_value_color", peel_value_color)
+    
     for i in data:
+        # if i == '1':
+        #     continue
+
         # original_height_sum = original_height_sum + sum([int(j) for j in data[i].keys()])
         original_height_sum = original_height_sum + sum([math.log2(int(j) + 1) for j in data[i].keys()])
+        print("list ",[data[i].keys()],[math.log2(int(j) + 1) for j in data[i].keys()])
+        # print("max height", original_height_sum)
         layer_max_radius = max([int(j) for j in data[i].values()])
         rad = cylinderRadius(layer_max_radius)
         # rad = cylinderRadius(math.log2(layer_max_radius + 1))
@@ -385,10 +391,19 @@ def draw_mesh_3_5():
     # print("original_height_radius_ratio", original_height_radius_ratio)
     scale_factor = peel_layer_ratio * max_radius / original_height_sum
     print("scale_factor", scale_factor)
+    
+    # to use color to differentiate peel values, store index of first vertex for a new peel value
+    first_index = []
+    
     for i in data:
+        # if i == '1':
+        #     continue
         # print(i)
         # print(data[i].values())
         # print(len(data[i]),'\n')
+        
+        # index of first vertex of a new peel value
+        first_index.append(v_count)
         for k in (data[i]):
             # log_k = math.log2(int(data[i][k]))
             start_pos.append(v_count)
@@ -419,10 +434,10 @@ def draw_mesh_3_5():
                 v_count = v_count + 1
             # between layers
             # Y = Y + 0.1
-
+    
     start_pos.append(v_count)  # last v_count
     # print(start_pos)
-    color_str = "255 0 0"
+    print("first_index",first_index)
     for i in range(len(start_pos) - 2):
         lower = [*range(start_pos[i], start_pos[i + 1])]
         upper = [*range(start_pos[i + 1], start_pos[i + 2])]
@@ -430,15 +445,18 @@ def draw_mesh_3_5():
         # print(lower)
         # print('upper')
         # print(upper)
+        
+        # obtain color of current peel value
+        face_color_int = faceColor(peel_value_color,start_pos[i],first_index)
+        face_color = [str(i) for i in face_color_int]
         faces = triangulate(lower, upper)
         if (len(faces) > 0):
             for f in faces:
-                f2.write('3 ' + str(f[0]) + ' ' + str(f[1]) + ' ' + str(f[2]) + ' ' + color_str + '\n')
+                f2.write('3 ' + str(f[0]) + ' ' + str(f[1]) + ' ' + str(f[2]) + ' ' + face_color[0] + ' ' + face_color[1] + ' ' + face_color[2] + '\n')
                 f_count = f_count + 1
     f2.close()
     print(v_count)
     print(f_count)
-
 
 def draw_mesh_4():
     """disk stacks to be cylinder, and scaled"""
@@ -625,22 +643,30 @@ def test_mesh_2():
         f2.write('3 ' + str(f[0]) + ' ' + str(f[1]) + ' ' + str(f[2]) + '\n')
 
 
-# 3 0 8 9
-# 3 1 0 9
-# 3 1 9 10
-# 3 2 1 10
-# 3 2 10 11
-# 3 3 2 11
-# 3 3 11 12
-# 3 4 3 12
-# 3 4 12 13
-# 3 5 4 13
-# 3 5 13 14
-# 3 6 5 14
-# 3 6 14 15
-# 3 7 6 15
-# 3 7 15 8
-# 3 0 7 8
+
+def ToRgb(h):
+
+    # h = 1 - math.log(h + 0.0001, 0.0001)
+    # color = cm.jet(h)[:-1]
+
+    # color = [int(round(255 * x)) for x in cm.jet(h)[:-1]]
+    
+    # h = 1 / (1 + exp(-5 * (h - 0.25)))  # logisitic curve to bias towards blue
+    # h = math.log2(h)
+    color = [int(round(255 * x)) for x in cm.jet(h)[:-1]]
+    return color
+
+def faceColor(colormap_input_list,vertex,first_index_list):
+    i = 0
+    # print("vertex", vertex)
+    while (vertex > first_index_list[i]):
+        i = i + 1
+    #     print(i)
+    # print(i)
+    color_input = colormap_input_list[i]
+    color = ToRgb(color_input)
+    return color
+
 if __name__ == "__main__":
     # draw_mesh_1()
     # draw_mesh_2()
