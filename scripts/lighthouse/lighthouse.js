@@ -1,5 +1,6 @@
 import * as THREE from '../../node_modules/three/build/three.module.js';
 import {TrackballControls} from '../../node_modules/three/examples/jsm/controls/TrackballControls.js';
+import {GUI} from '../../node_modules/three/examples/jsm/libs/dat.gui.module.js';
 import {jet} from './jet_colormap.js';
 
 let scene = new THREE.Scene();
@@ -20,12 +21,35 @@ perspectiveCamera.position.z = 10;
 createControls( perspectiveCamera );
 
 const data_list = ['com-friendster','movies','cit-Patents'];
+let first_key_list = [1];
+let first_key_color_dict = {0:"#000000"};
 let manager = new THREE.LoadingManager();
 manager.onStart = function(url,itemsLoaded,itemsTotal) {
     console.log('Started loading file: '+url+'.\nLoaded '+itemsLoaded+' of '+itemsTotal+' files.');
 };
 
+let lighthouse_objects = [];
 
+// GUI
+let params = {
+    dataSet:data_list[2],
+    fixedPoint:first_key_list[0],
+    color:first_key_color_dict[0]
+}
+
+let gui = new GUI({width:350});
+
+let select_data = gui.add(params, 'dataSet', data_list).name('choose data set');
+select_data.setValue(data_list[2]);
+select_data.onChange(
+    function (dataSet) {
+        lighthouse_objects.every(object => scene.remove(object));
+        createCitySummaryMesh(dataSet, scene);
+    }
+);
+let select_fixed_point = gui.add(params, 'fixedPoint',first_key_list).name('choose fixed point');
+let color_display = gui.addColor(params, 'color').name('display color');
+    
 const animate = function () {
     requestAnimationFrame( animate );
     controls.update();
@@ -118,22 +142,39 @@ function interpolateLinearly(x, values) {
 
 }
 
+function updateDropdown(target, list){   
+    let innerHTMLStr = "";
+    for(var i=0; i<list.length; i++){
+        var str = "<option value='" + list[i] + "'>" + list[i] + "</option>";
+        innerHTMLStr += str;        
+    }
+    if (innerHTMLStr != "") target.domElement.children[0].innerHTML = innerHTMLStr;
+}
+
 function loadCitySummaryFile(info, scene) {
     let max_radius = 0;
     let scale_factor = 1;
     let original_height_sum = 0;
     let Y = 0;
+    first_key_color_dict = {};
 
     const peel_vals = Object.keys(info);
     const peel_value_range = Math.max(...peel_vals) - Math.min(...peel_vals);
     const peel_value_count = peel_vals.length;
+    console.log("peel_value_min",Math.min(...peel_vals));
+    console.log("peel_value_max",Math.max(...peel_vals));
     console.log("peel_value_range",peel_value_range);
     console.log("peel_value_count",peel_value_count);
     const peel_ratio = peel_value_range / peel_value_count;
 
+    first_key_list = Object.keys(info);
+    select_fixed_point.setValue(first_key_list[0]);
+
+    updateDropdown(select_fixed_point, first_key_list);
+
     for(let key in info) {
         original_height_sum += sum_log(info[key]);
-        console.log("sum_log "+sum_log(info[key]));
+        // console.log("sum_log "+sum_log(info[key]));
         // console.log("original_height_sum "+original_height_sum);
         const layer_vals = Object.values(info[key]);
         const layer_max_radius = Math.max(...layer_vals);
@@ -153,22 +194,34 @@ function loadCitySummaryFile(info, scene) {
         // console.log("key "+key+"peel_value_color "+peel_value_color);
         if(info.hasOwnProperty(key)) {
             // console.log(key+' -> '+info[key]);
+            let color = interpolateLinearly(peel_value_color,jet); //jet colormap [0=blue, 1=red]
+            let color_string = rgbToHex(Math.round(color[0]*255),Math.round(color[1]*255),Math.round(color[2]*255));
+            first_key_color_dict[parseInt(key)] = color_string;    
             for (let key2 in info[key]) {
                 // console.log(key+'/'+key2+' -> '+info[key][key2]);
                 const Y_dis = Math.log2(key2 + 1)*scale_factor;
                 const R = cylinderRadius(info[key][key2]);
-                const geometry = new THREE.CylinderGeometry(R,R,Y_dis,8,8);
+                const geometry = new THREE.CylinderGeometry(R,R,Y_dis,16,8);
                 geometry.translate(0,Y,0);
-                let color = interpolateLinearly(peel_value_color,jet); //jet colormap [0=blue, 1=red]
-                let color_string = rgbToHex(Math.round(color[0]*255),Math.round(color[1]*255),Math.round(color[2]*255));
                 const material = new THREE.MeshBasicMaterial({color:color_string}); //black color
                 const cylinder = new THREE.Mesh(geometry,material);
                 scene.add(cylinder);
+                lighthouse_objects.push(cylinder);
                 Y += Y_dis;
                 // console.log("Y "+Y+" Y_dis "+Y_dis+" R "+R);
             }
         }
     }
+    color_display.setValue(first_key_color_dict[first_key_list[0]]);
+    console.log(first_key_list);    
+    select_fixed_point.onChange (
+        function (key) {
+            color_display.setValue(first_key_color_dict[parseInt(key)]);
+            // console.log("key "+key);
+            // console.log("first_key_list[key] "+first_key_list[parseInt(key)]);
+        }
+    );
+    
     return {scene: scene};
 }
 
