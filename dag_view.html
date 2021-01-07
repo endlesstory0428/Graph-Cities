@@ -431,7 +431,7 @@
       .nodeRelSize(NODE_REL_SIZE)
       .nodeId('id')
       .nodeVal(node => (node.esize + 1) * (MAX_VSIZE.node_size / MAX_MAXSIZE))
-      .nodeLabel(node => '<p style="color:black">V:' + node['size'] + ' E:' + node['name'] + ((2*node.esize==(node.size*(node.size-1))) ? '(complete)' : '') + '</p>')
+      .nodeLabel(node => '<p style="color:black">V:' + node['size'] + ' E:' + node['name'] + ((2 * node.esize == (node.size * (node.size - 1))) ? '(complete)' : '') + '</p>')
       //.nodeAutoColorBy('density')
       .nodeColor('color')
       .nodeOpacity(0.8)
@@ -455,22 +455,29 @@
           if (node === clicked) {
             let rad = Math.cbrt((node.esize + 1) * (MAX_VSIZE.node_size / MAX_MAXSIZE)) * NODE_REL_SIZE;
             let geo1 = new THREE.SphereGeometry(rad);
-            //let geo2 = new THREE.BoxGeometry(Math.random() * 20, Math.random() * 20, Math.random() * 20);
-            //let geo2 = new THREE.DodecahedronGeometry(Math.random() * 10);
-            let geo2 = new THREE.SphereGeometry(rad * 1.2);
-            let geo3 = new THREE.SphereGeometry(rad * 1.4);
-            let geo4 = new THREE.SphereGeometry(rad * 1.6);
-            //let geo2 = new THREE.TorusGeometry(Math.random() * 10, Math.random() * 2);
-            geo1.merge(geo2);
-            geo1.merge(geo3);
-            geo1.merge(geo4);
-            return new THREE.Mesh(geo1,
+            //let geo2 = new THREE.SphereGeometry(rad * 1.2);
+            //let geo3 = new THREE.SphereGeometry(rad * 1.4);
+            //let geo4 = new THREE.SphereGeometry(rad * 1.6);
+            let geo2 = new THREE.TorusGeometry(rad, 1, 8, 100);
+            let geo3 = new THREE.TorusGeometry(rad, 1, 8, 100);
+            let geo4 = new THREE.TorusGeometry(rad, 1, 8, 100);
+            geo3.rotateX(Math.PI / 2);
+            geo4.rotateY(Math.PI / 2);
+            geo4.rotateX(Math.PI / 2);
+            geo1.merge(geo2, new THREE.Matrix4(), 1);
+            geo1.merge(geo3, new THREE.Matrix4(), 1);
+            geo1.merge(geo4, new THREE.Matrix4(), 1);
+            return new THREE.Mesh(geo1, [
               new THREE.MeshLambertMaterial({
                 color: node['color'],
                 transparent: true,
-                opacity: 0.4
+                opacity: 0.8
+              }),
+              new THREE.MeshLambertMaterial({
+                color: 'black',
+                transparent: false
               })
-            );
+            ]);
           } else {
             return false;
           }
