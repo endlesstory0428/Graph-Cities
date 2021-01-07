@@ -29,12 +29,14 @@ manager.onStart = function(url,itemsLoaded,itemsTotal) {
 };
 
 let lighthouse_objects = [];
+let entropy;
 
 // GUI
 let params = {
     dataSet:data_list[2],
     fixedPoint:first_key_list[0],
-    color:first_key_color_dict[0]
+    color:first_key_color_dict[0],
+    lightIntensity:0.1
 }
 
 let gui = new GUI({width:350});
@@ -49,7 +51,8 @@ select_data.onChange(
 );
 let select_fixed_point = gui.add(params, 'fixedPoint',first_key_list).name('choose fixed point');
 let color_display = gui.addColor(params, 'color').name('display color');
-    
+let light_intensity = gui.add(params, 'lightIntensity').name('entropy');
+
 const animate = function () {
     requestAnimationFrame( animate );
     controls.update();
@@ -63,11 +66,15 @@ scene = result.scene;
 
 // create "lighthouse" mesh that summarize whole city information
 function createCitySummaryMesh(dataSet, scene) {
-    let input_file = './'+dataSet+'-layers-dists.json';
+    const input_file = './'+dataSet+'-layers-dists.json';
+    const entropy_file = './'+dataSet+'_entropy.json';
+    $.getJSON(entropy_file, function(data){
+        entropy = data;
+    });
     $.getJSON(input_file, function(data) {
         let result = loadCitySummaryFile(data, scene);
         scene = result.scene;
-    })
+    });
     return {scene: scene};
 }
 
@@ -169,7 +176,8 @@ function loadCitySummaryFile(info, scene) {
 
     first_key_list = Object.keys(info);
     select_fixed_point.setValue(first_key_list[0]);
-
+    light_intensity.setValue(parseFloat(entropy[first_key_list[0]]));
+    console.log("light_intensity "+parseFloat(entropy[parseInt(first_key_list[0])]));
     updateDropdown(select_fixed_point, first_key_list);
 
     for(let key in info) {
@@ -197,14 +205,16 @@ function loadCitySummaryFile(info, scene) {
             let color = interpolateLinearly(peel_value_color,jet); //jet colormap [0=blue, 1=red]
             let color_string = rgbToHex(Math.round(color[0]*255),Math.round(color[1]*255),Math.round(color[2]*255));
             first_key_color_dict[parseInt(key)] = color_string;    
+            // const material = new THREE.MeshBasicMaterial({color:color_string}); //black color
+            const entropy_intensity = entropy[parseInt(key)];
+            const emissive_material = new THREE.MeshStandardMaterial({color:color_string,emissive:color_string,emissiveIntensity:entropy_intensity});
             for (let key2 in info[key]) {
                 // console.log(key+'/'+key2+' -> '+info[key][key2]);
                 const Y_dis = Math.log2(key2 + 1)*scale_factor;
                 const R = cylinderRadius(info[key][key2]);
                 const geometry = new THREE.CylinderGeometry(R,R,Y_dis,16,8);
                 geometry.translate(0,Y,0);
-                const material = new THREE.MeshBasicMaterial({color:color_string}); //black color
-                const cylinder = new THREE.Mesh(geometry,material);
+                const cylinder = new THREE.Mesh(geometry,emissive_material);
                 scene.add(cylinder);
                 lighthouse_objects.push(cylinder);
                 Y += Y_dis;
@@ -217,6 +227,8 @@ function loadCitySummaryFile(info, scene) {
     select_fixed_point.onChange (
         function (key) {
             color_display.setValue(first_key_color_dict[parseInt(key)]);
+            light_intensity.setValue(entropy[parseInt(key)]);
+            console.log("light_intensity2 "+entropy[parseInt(key)]);
             // console.log("key "+key);
             // console.log("first_key_list[key] "+first_key_list[parseInt(key)]);
         }
