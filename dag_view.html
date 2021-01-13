@@ -85,7 +85,11 @@
       document.getElementById('strata').src = PREFIX + request;
     }
 
-    const gui = new dat.GUI();
+    var gui = new dat.GUI({
+      autoPlace: true
+    });
+    gui.width = 320;
+    gui.domElement.style = "position: absolute;";
 
     var data_info = {
       vertices: '',
@@ -114,10 +118,19 @@
 
     const MAX_MAXSIZE = 500
     var MAX_VSIZE = {
-      node_size: MAX_MAXSIZE
+      node_scale: MAX_MAXSIZE
     }
-    gui.add(MAX_VSIZE, 'node_size')
-      .onChange(size => graph && graph.nodeVal(node => (node.esize + 1) * (MAX_VSIZE.node_size / MAX_MAXSIZE)));
+    gui.add(MAX_VSIZE, 'node_scale', 1, 1000)
+      .onChange(size => graph && graph.nodeVal(node => nodeSize(node)));
+
+    var NODE_THRESH = {
+      node_threshold_top: 1000,
+      node_threshold_bottom: 0
+    }
+    guiContThreshTop = gui.add(NODE_THRESH, 'node_threshold_top', 0, 1000)
+      .onChange(size => graph && graph.nodeVal(node => nodeSize(node)));
+    guiContThreshBottom = gui.add(NODE_THRESH, 'node_threshold_bottom', 0, 1000)
+      .onChange(size => graph && graph.nodeVal(node => nodeSize(node)));
 
     //fixed point
 
@@ -430,8 +443,20 @@
       .linkColor(() => 'rgba(0,0,0,1.0)')
       .nodeRelSize(NODE_REL_SIZE)
       .nodeId('id')
-      .nodeVal(node => (node.esize + 1) * (MAX_VSIZE.node_size / MAX_MAXSIZE))
-      .nodeLabel(node => '<p style="color:black">V:' + node['size'] + ' E:' + node['name'] + ((2 * node.esize == (node.size * (node.size - 1))) ? '(complete)' : '') + '</p>')
+      .nodeVal(node => nodeSize(node))
+      .nodeLabel(function(node) {
+        if (node.size == 1) {
+          return '<p style="color:black">one node</p>'
+        }
+        if (node.esize == 1) {
+          return '<p style="color:black">one edge</p>'
+        }
+        var label = '';
+        if (2 * node.esize == (node.size * (node.size - 1))) {
+          label = ' (complete)';
+        }
+        return '<p style="color:black">V:' + node['size'] + ' E:' + node['name'] + label + '</p>'
+      })
       //.nodeAutoColorBy('density')
       .nodeColor('color')
       .nodeOpacity(0.8)
@@ -443,6 +468,9 @@
       //.linkDirectionalParticleSpeed(0.006)
       .d3Force('collision', d3.forceCollide(node => Math.cbrt(node.esize) * NODE_REL_SIZE))
       .d3VelocityDecay(0.3)
+      .nodeThreeObject(function(node) {
+        return nodeGeom(node)
+      })
 
     graph
       .enableNodeDrag(false)
@@ -452,35 +480,7 @@
         console.log(node['color']);
         //graph.nodeColor(node => node === clicked ? 'rgba(0,0,0,1)' : node['color']);
         graph.nodeThreeObject(function(node) {
-          if (node === clicked) {
-            let rad = Math.cbrt((node.esize + 1) * (MAX_VSIZE.node_size / MAX_MAXSIZE)) * NODE_REL_SIZE;
-            let geo1 = new THREE.SphereGeometry(rad);
-            //let geo2 = new THREE.SphereGeometry(rad * 1.2);
-            //let geo3 = new THREE.SphereGeometry(rad * 1.4);
-            //let geo4 = new THREE.SphereGeometry(rad * 1.6);
-            let geo2 = new THREE.TorusGeometry(rad, 1, 8, 100);
-            let geo3 = new THREE.TorusGeometry(rad, 1, 8, 100);
-            let geo4 = new THREE.TorusGeometry(rad, 1, 8, 100);
-            geo3.rotateX(Math.PI / 2);
-            geo4.rotateY(Math.PI / 2);
-            geo4.rotateX(Math.PI / 2);
-            geo1.merge(geo2, new THREE.Matrix4(), 1);
-            geo1.merge(geo3, new THREE.Matrix4(), 1);
-            geo1.merge(geo4, new THREE.Matrix4(), 1);
-            return new THREE.Mesh(geo1, [
-              new THREE.MeshLambertMaterial({
-                color: node['color'],
-                transparent: true,
-                opacity: 0.8
-              }),
-              new THREE.MeshLambertMaterial({
-                color: 'black',
-                transparent: false
-              })
-            ]);
-          } else {
-            return false;
-          }
+          return nodeGeom(node)
         });
         //console.log("Node: ", node);
         //console.log(DATA,nodeDS,nodeMAP);
@@ -500,6 +500,64 @@
         loadEdges(node, nodefilter);
         //Graph.zoomToFit();
       });
+
+    function nodeSize(node) {
+      if (node.esize > NODE_THRESH.node_threshold_top || node.esize < NODE_THRESH.node_threshold_bottom) {
+        return 0.0001;
+      }
+      if (node.esize == 0) {
+        return 0.01;
+      }
+      return (node.esize + 1) * (MAX_VSIZE.node_scale / MAX_MAXSIZE);
+    }
+
+    function nodeGeom(node) {
+      if (node === clicked) {
+        let rad = Math.cbrt((node.esize + 1) * (MAX_VSIZE.node_scale / MAX_MAXSIZE)) * NODE_REL_SIZE;
+        let geo1 = new THREE.SphereGeometry(rad);
+        //let geo2 = new THREE.SphereGeometry(rad * 1.2);
+        //let geo3 = new THREE.SphereGeometry(rad * 1.4);
+        //let geo4 = new THREE.SphereGeometry(rad * 1.6);
+        let geo2 = new THREE.TorusGeometry(rad, 1, 8, 100);
+        let geo3 = new THREE.TorusGeometry(rad, 1, 8, 100);
+        let geo4 = new THREE.TorusGeometry(rad, 1, 8, 100);
+        geo3.rotateX(Math.PI / 2);
+        geo4.rotateY(Math.PI / 2);
+        geo4.rotateX(Math.PI / 2);
+        geo1.merge(geo2, new THREE.Matrix4(), 1);
+        geo1.merge(geo3, new THREE.Matrix4(), 1);
+        geo1.merge(geo4, new THREE.Matrix4(), 1);
+        return new THREE.Mesh(geo1, [
+          new THREE.MeshLambertMaterial({
+            color: node['color'],
+            transparent: true,
+            opacity: 0.8
+          }),
+          new THREE.MeshLambertMaterial({
+            color: 'black',
+            transparent: false
+          })
+        ]);
+      } else {
+        if (node.esize > NODE_THRESH.node_threshold_top || node.esize < NODE_THRESH.node_threshold_bottom) {
+          return false;
+        }
+        if (node.esize == 1) {
+          return new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.5, 32), [
+            new THREE.MeshLambertMaterial({
+              color: node['color'],
+              transparent: true,
+              opacity: 0.8
+            }),
+            new THREE.MeshLambertMaterial({
+              color: 'black',
+              transparent: false
+            })
+          ]);
+        }
+        return false;
+      }
+    }
 
     //var layer_nodes = [];
     var layer_links = [];
@@ -858,6 +916,8 @@
         //let nodeArr = Object.values(nodes);
         const nodesExt = nodeset.extract();
         const nodeArr = []
+        var maxNodeEdges = 0;
+        var minNodeEdges = Infinity;
         for (let vert in nodesExt) {
           let maxset = 0;
           let num_vertices = 0;
@@ -883,6 +943,8 @@
             esize: num_edges, // double counted undirected
             level: maxset
           };
+          if (maxNodeEdges < num_edges) maxNodeEdges = num_edges;
+          if (minNodeEdges > num_edges) minNodeEdges = num_edges;
           nodeArr.push(node);
         }
         //console.log(nodeArr);
@@ -890,15 +952,25 @@
           nodes: nodeArr,
           links: links
         });
-        graph.zoomToFit();
-        console.log("Total:", verts, edges, fpedges);
+
+        // update gui
+        console.log("Total:", verts, edges, fpedges / 2);
         console.log("Shown:", nodeArr.length, links.length);
+        graph.zoomToFit();
         data_info.vertices = verts;
-        data_info.edges = fpedges;
+        data_info.edges = fpedges / 2;
         data_info.dag_edges = edges;
         data_info.displayed_vertices = links.length;
         data_info.displayed_edges = nodeArr.length;
+        NODE_THRESH.node_threshold_top = maxNodeEdges;
+        guiContThreshTop.min(minNodeEdges);
+        guiContThreshTop.max(maxNodeEdges);
+        NODE_THRESH.node_threshold_bottom = minNodeEdges;
+        guiContThreshBottom.min(minNodeEdges);
+        guiContThreshBottom.max(maxNodeEdges);
+        gui.updateDisplay();
 
+        // update globals
         DATA = data;
         nodeDS = nodeset;
         //nodeMAP = nodemap;
