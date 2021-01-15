@@ -587,6 +587,7 @@
       }
       console.log(links);
       let filename = fixedpoint["Fixed Point"].replace("/", "_") + node.id;
+      console.log(filename);
       let content = JSON.stringify({
         filename: filename + ".csv",
         edges: links
