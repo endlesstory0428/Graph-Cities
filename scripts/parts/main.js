@@ -325,7 +325,19 @@ function init() {
     select_data.onChange(
         function (dataSet) {
             lighthouse_objects.every(object => scene_lighthouse.remove(object));
-            LH.createCitySummaryMesh(scene_lighthouse, dataSet, entropy, first_key_color_dict);
+            LH.createCitySummaryMesh(scene_lighthouse, dataSet, lighthouse_objects, entropy, first_key_color_dict, 
+                first_key_list, select_fixed_point, color_display, light_intensity);
+            if(dataSet == data_list[0]){ // friendster
+                perspectiveCameraL.position.y = 10;
+                perspectiveCameraL.position.z = 20;
+            }else if(dataSet == data_list[1]){ // movies
+                perspectiveCameraL.position.y = 60;
+                perspectiveCameraL.position.z = 80;
+            }else if(dataSet == data_list[2]){
+                perspectiveCameraL.position.y = 2;
+                perspectiveCameraL.position.z = 10;
+            }
+               
         }
     );
     let select_fixed_point = guiL.add(paramsL, 'fixedPoint',first_key_list).name('choose fixed point');
