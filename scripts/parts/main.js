@@ -14,7 +14,7 @@ let scene_city = new THREE.Scene();
 scene_city.background = new THREE.Color('skyblue');
 let scene_lighthouse = new THREE.Scene();
 scene_lighthouse.background = new THREE.Color(0xBCD48F);
-let sliderPos = window.innerWidth/2;
+let sliderPos = 352;
 // let camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
 
 let raycaster = new THREE.Raycaster();
@@ -124,12 +124,11 @@ animate();
 function init() {
     container = document.querySelector('.container');
     
-    perspectiveCamera = new THREE.PerspectiveCamera( 60, aspect, 1, 4000 );
-    // perspectiveCamera.position.z = 850;
-    // perspectiveCamera.position.y = 650;
+    perspectiveCamera = new THREE.PerspectiveCamera( 60, (window.innerWidth-sliderPos)/window.innerHeight, 1, 4000 );
     perspectiveCamera.position.z = 600;
     perspectiveCamera.position.y = 350;
-
+    perspectiveCamera.position.x = 0;
+    
     orthographicCamera = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 1, 1000 );
     orthographicCamera.position.z = 20;
 
@@ -313,8 +312,10 @@ function init() {
 
 
     // scene 2
-    perspectiveCameraL = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+    perspectiveCameraL = new THREE.PerspectiveCamera( 75, sliderPos / window.innerHeight, 0.1, 1000 );
     perspectiveCameraL.position.z = 10;
+    perspectiveCameraL.position.y = 2;
+    // perspectiveCameraL.setViewOffset(1920*2,1080*2,0,0,1920,1080);
     // createControls( perspectiveCameraL );
 
     let guiL = new GUI({width:350, autoPlace: false});
@@ -323,8 +324,8 @@ function init() {
     select_data.setValue(data_list[2]);
     select_data.onChange(
         function (dataSet) {
-            lighthouse_objects.every(object => scene.remove(object));
-            LH.createCitySummaryMesh(scene, dataSet, entropy, first_key_color_dict);
+            lighthouse_objects.every(object => scene_lighthouse.remove(object));
+            LH.createCitySummaryMesh(scene_lighthouse, dataSet, entropy, first_key_color_dict);
         }
     );
     let select_fixed_point = guiL.add(paramsL, 'fixedPoint',first_key_list).name('choose fixed point');
@@ -335,6 +336,10 @@ function init() {
     let result = LH.createCitySummaryMesh(scene_lighthouse, data_list[2],lighthouse_objects, entropy, first_key_color_dict, 
         first_key_list, select_fixed_point, color_display, light_intensity);
     scene_lighthouse = result.scene;
+    first_key_list = result.first_key_list;
+    select_fixed_point = result.select_fixed_point;
+    light_intensity = result.light_intensity;
+
     // scenes.push( scene_lighthouse );
 }
 
@@ -681,9 +686,11 @@ function animate() {
 function render() {
     let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
     renderer.setScissor( 0, 0, sliderPos, window.innerHeight );
+    renderer.setViewport(0, 0, sliderPos, window.innerHeight)
     renderer.render( scene_lighthouse, perspectiveCameraL );
 
     renderer.setScissor( sliderPos, 0, window.innerWidth, window.innerHeight );
+    renderer.setViewport(sliderPos, 0, window.innerWidth, window.innerHeight);
     renderer.render( scene_city, camera );
     // let time = performance.now() * 0.001;
     // water.material.uniforms[ 'time' ].value += 1.0 / 60.0;
@@ -820,7 +827,7 @@ function onMouseDown(event)
 function initSlider() {
 
     const slider = document.querySelector( '.slider' );
-
+    slider.style.left = "331px";
     function onPointerDown() {
 
         if ( event.isPrimary === false ) return;
@@ -842,16 +849,11 @@ function initSlider() {
     }
 
     function onPointerMove( e ) {
-
         if ( event.isPrimary === false ) return;
-
         sliderPos = Math.max( 0, Math.min( window.innerWidth, e.pageX ) );
-
         slider.style.left = sliderPos - ( slider.offsetWidth / 2 ) + "px";
-
     }
 
     slider.style.touchAction = 'none'; // disable touch scroll
     slider.addEventListener( 'pointerdown', onPointerDown );
-
 }
