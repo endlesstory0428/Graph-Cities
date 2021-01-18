@@ -175,6 +175,7 @@ function init() {
   selectData.setValue(data_list[1]);
   selectData.onChange(
     function(dataSet) {
+      setStrataUrl("?dataPath=simplegraph");
       objects.every(object => scene.remove(object));
       path_objects.every(object => scene.remove(object));
       window_objects.every(object => scene.remove(object));
@@ -253,6 +254,7 @@ function init() {
   dropdown.setValue('default');
   dropdown.onChange(
     function(value) {
+      setStrataUrl("?dataPath=simplegraph");
       path_objects.every(object => scene.remove(object));
       animate();
       let result = PATH.pathPlanning(value, scene, city_all, light_objects.spotLight);

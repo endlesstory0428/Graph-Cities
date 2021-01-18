@@ -48,10 +48,10 @@ function setStrataUrl(request) {
 }
 
 var gui2 = new dat.GUI({
-  autoPlace: true
+  autoPlace: true,
+  width: 350
 });
-gui2.width = 320;
-gui2.domElement.style = "position: absolute;";
+gui2.domElement.style = "position: absolute; top: 0px; left: 10px;";
 
 var data_info = {
   vertices: '',
@@ -925,8 +925,8 @@ function loadFile2(filename) {
     data_info.vertices = verts;
     data_info.edges = fpedges;
     data_info.dag_edges = edges;
-    data_info.displayed_vertices = links.length;
-    data_info.displayed_edges = nodeArr.length;
+    data_info.displayed_vertices = nodeArr.length;
+    data_info.displayed_edges = links.length;
     NODE_THRESH.node_threshold_top = maxNodeEdges;
     gui2ContThreshTop.min(minNodeEdges);
     gui2ContThreshTop.max(maxNodeEdges);
