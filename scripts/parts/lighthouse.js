@@ -70,10 +70,24 @@ import {jet} from '../lighthouse/jet_colormap.js';
 function createCitySummaryMesh(scene, dataSet, lighthouse_objects, entropy, first_key_color_dict, first_key_list, select_fixed_point, color_display, light_intensity) {
     const input_file = '../lighthouse/'+dataSet+'-layers-dists.json';
     const entropy_file = '../lighthouse/'+dataSet+'_entropy.json';
-    $.getJSON(entropy_file, function(data){
+    // $.getJSON(entropy_file, function(data){
+    //     entropy = data;
+    // });
+    // $.getJSON(input_file, function(data) {
+    //     let result = loadCitySummaryFile(data, scene, lighthouse_objects, entropy, first_key_color_dict, first_key_list, select_fixed_point, color_display, light_intensity);
+    //     scene = result.scene;
+    //     entropy = result.entropy;
+    //     lighthouse_objects = result.lighthouse_objects;
+    //     first_key_color_dict = result.first_key_color_dict;
+    //     first_key_list = result.first_key_list;
+    //     select_fixed_point = result.select_fixed_point;
+    //     color_display = result.color_display;
+    //     light_intensity = result.light_intensity;
+    // });
+    $.getJSON(entropy_file).done( function(data){
         entropy = data;
     });
-    $.getJSON(input_file, function(data) {
+    $.getJSON(input_file).done( function(data) {
         let result = loadCitySummaryFile(data, scene, lighthouse_objects, entropy, first_key_color_dict, first_key_list, select_fixed_point, color_display, light_intensity);
         scene = result.scene;
         entropy = result.entropy;

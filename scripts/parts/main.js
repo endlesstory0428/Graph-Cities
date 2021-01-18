@@ -3,6 +3,8 @@ import { TrackballControls } from '../../node_modules/three/examples/jsm/control
 import { GUI } from '../../node_modules/three/examples/jsm/libs/dat.gui.module.js';
 import { OBJLoader } from '../../three.js/examples/jsm/loaders/OBJLoader.js';
 import * as LH from './lighthouse.js'
+import * as BUILD from './building.js';
+import * as PATH from './path.js';
 
 const scenes = [];
 let container, controls, renderer;
@@ -13,7 +15,8 @@ let aspect = window.innerWidth/window.innerHeight;
 let scene_city = new THREE.Scene();
 scene_city.background = new THREE.Color('skyblue');
 let scene_lighthouse = new THREE.Scene();
-scene_lighthouse.background = new THREE.Color(0xBCD48F);
+// scene_lighthouse.background = new THREE.Color(0xBCD48F);
+scene_lighthouse.background = new THREE.Color('white');
 let sliderPos = 352;
 // let camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
 
@@ -43,6 +46,7 @@ let start_time_string = time.getMinutes()+':'+time.getSeconds()+'.'+time.getMill
 //     city_to_load = 77;// hard-coded
 // }
 let dropdown;
+let gui, guiL;
 
 // let DATASET = 'com-friendster_old';
 // let DATASET = 'com-friendster';
@@ -107,12 +111,13 @@ let paramsL = {
 let lighthouse_objects = [];
 let entropy;
 
-
-let source_dir = "../data/"+params.dataSet+"/";
-let spiral_file = "../data/"+params.dataSet+"/SPIRAL.txt";
-let voronoi_file = "../python/"+params.dataSet+"/voronoi.txt";
-let neighbors_file = "../python/"+params.dataSet+"/neighbors.txt";
-let meta_file = "../python/"+params.dataSet+"/metagraph_normalized.txt";
+const data_dir = "../../data/";
+const python_dir = "../../python/";
+let source_dir = data_dir+paramsL.dataSet+"/";
+let spiral_file = data_dir+paramsL.dataSet+"/SPIRAL.txt";
+let voronoi_file = python_dir+paramsL.dataSet+"/voronoi.txt";
+let neighbors_file = python_dir+paramsL.dataSet+"/neighbors.txt";
+let meta_file = python_dir+paramsL.dataSet+"/metagraph_normalized.txt";
 let building_params = {
     floor: '',
     layer: ''
@@ -166,57 +171,76 @@ function init() {
     };
 
     // loadBushData(source_dir);
-    // loadFile(spiral_file,manager);
+    loadFile(spiral_file,manager);
 
     // GUI folders
-    let gui = new GUI({width:350});
-    
-    let f0 = gui.addFolder('Data Set');
-    let selectData = f0.add(params, 'dataSet', data_list).name('choose data set');
-    selectData.setValue(data_list[1]);
-    selectData.onChange(
-        function( dataSet ) {
-            objects.every(object => scene_city.remove(object));
-            path_objects.every(object => scene_city.remove(object));
-            window_objects.every(object => scene_city.remove(object));
-            flag_objects.every(object => scene_city.remove(object));
-            grass_objects.every(object => scene_city.remove(object));
-            truss_objects.every(object => scene_city.remove(object));
-            bush_objects.every(object => scene_city.remove(object));
-            light_objects.spotLight.visible = false;
-            if(dataSet === data_list[0]){
-                ground_object.scale.set(0.4,0.1,0.3);
-                ground_object.position.set(-60,-10,20);
-            }
-            else if(dataSet === data_list[1]){
-                ground_object.scale.set(0.22,0.08,0.2);
-                ground_object.position.set(-30,-9,0);
-            }
-            else if(dataSet === data_list[2]){
-                ground_object.scale.set(0.22,0.08,0.2);
-                ground_object.position.set(-30,-9,0);
-            }
+    gui = new GUI({width:350});
+    guiL = new GUI({width:350, autoPlace: false});
 
-            animate();
-            source_dir = "../data/"+dataSet+"/";
-            spiral_file = "../data/"+dataSet+"/SPIRAL.txt";
-            voronoi_file = "../python/"+dataSet+"/voronoi.txt";
-            neighbors_file = "../python/"+dataSet+"/neighbors.txt";
-            meta_file = "../python/"+dataSet+"/metagraph_normalized.txt";
-            time = new Date();
-            start_time_string = time.getMinutes()+':'+time.getSeconds()+'.'+time.getMilliseconds();
-            city_tracking = {};
-            city_all = {};
-            city_list = [];
-            objects = [], path_objects = [], truss_objects = [], window_objects = [], flag_objects = [];
-            metaLoaded = false, voronoiLoaded = false;
-            loadBushData(source_dir);
-            loadFile(spiral_file,manager);
-            animate();
-        }
-    );
+    // let select_data = guiL.add(params, 'dataSet', data_list).name('choose data set');
+    // select_data.setValue(paramsL.dataSet);
+
+    // let f0 = gui.addFolder('Data Set');
+    // let selectData = f0.add(params, 'dataSet', data_list).name('choose data set');
+    // selectData.setValue(paramsL.dataSet);
+    // selectData.onChange(
+    //     function( dataSet ) {
+    //         objects.every(object => scene_city.remove(object));
+    //         path_objects.every(object => scene_city.remove(object));
+    //         window_objects.every(object => scene_city.remove(object));
+    //         flag_objects.every(object => scene_city.remove(object));
+    //         grass_objects.every(object => scene_city.remove(object));
+    //         truss_objects.every(object => scene_city.remove(object));
+    //         bush_objects.every(object => scene_city.remove(object));
+    //         light_objects.spotLight.visible = false;
+    //         if(dataSet === data_list[0]){
+    //             ground_object.scale.set(0.4,0.1,0.3);
+    //             ground_object.position.set(-60,-10,20);
+    //         }
+    //         else if(dataSet === data_list[1]){
+    //             ground_object.scale.set(0.22,0.08,0.2);
+    //             ground_object.position.set(-30,-9,0);
+    //         }
+    //         else if(dataSet === data_list[2]){
+    //             ground_object.scale.set(0.22,0.08,0.2);
+    //             ground_object.position.set(-30,-9,0);
+    //         }
+
+    //         animate();
+    //         source_dir = "../data/"+dataSet+"/";
+    //         spiral_file = "../data/"+dataSet+"/SPIRAL.txt";
+    //         voronoi_file = "../python/"+dataSet+"/voronoi.txt";
+    //         neighbors_file = "../python/"+dataSet+"/neighbors.txt";
+    //         meta_file = "../python/"+dataSet+"/metagraph_normalized.txt";
+    //         time = new Date();
+    //         start_time_string = time.getMinutes()+':'+time.getSeconds()+'.'+time.getMilliseconds();
+    //         city_tracking = {};
+    //         city_all = {};
+    //         city_list = [];
+    //         objects = [], path_objects = [], truss_objects = [], window_objects = [], flag_objects = [];
+    //         metaLoaded = false, voronoiLoaded = false;
+    //         loadBushData(source_dir);
+    //         loadFile(spiral_file,manager);
+
+    //         lighthouse_objects.every(object => scene_lighthouse.remove(object));
+    //         LH.createCitySummaryMesh(scene_lighthouse, dataSet, lighthouse_objects, entropy, first_key_color_dict, 
+    //             first_key_list, select_fixed_point, color_display, light_intensity);
+    //         if(dataSet == data_list[0]){ // friendster
+    //             perspectiveCameraL.position.y = 10;
+    //             perspectiveCameraL.position.z = 20;
+    //         }else if(dataSet == data_list[1]){ // movies
+    //             perspectiveCameraL.position.y = 60;
+    //             perspectiveCameraL.position.z = 80;
+    //         }else if(dataSet == data_list[2]){
+    //             perspectiveCameraL.position.y = 2;
+    //             perspectiveCameraL.position.z = 10;
+    //         }
+
+    //         animate();
+    //     }
+    // );
     
-    f0.open();
+    // f0.open();
 
     let f1 = gui.addFolder('Building Info');
     f1.add(building_params, 'floor').name('floor number').listen();
@@ -261,8 +285,8 @@ function init() {
         function(value){
             path_objects.every(object => scene_city.remove(object));
             animate();
-            let result = PATH.pathPlanning(value, scene, city_all, light_objects.spotLight);
-            scene = result.scene;
+            let result = PATH.pathPlanning(value, scene_city, city_all, light_objects.spotLight);
+            scene_city = result.scene;
             path_objects = result.path;
             light_objects.spotLight = result.spotLight;
         }  
@@ -318,28 +342,92 @@ function init() {
     // perspectiveCameraL.setViewOffset(1920*2,1080*2,0,0,1920,1080);
     // createControls( perspectiveCameraL );
 
-    let guiL = new GUI({width:350, autoPlace: false});
-
-    let select_data = guiL.add(params, 'dataSet', data_list).name('choose data set');
+    // guiL - left GUI
+    guiL = new GUI({width:350, autoPlace: false});
+    let select_data = guiL.add(paramsL, 'dataSet', data_list).name('choose data set');
     select_data.setValue(data_list[2]);
     select_data.onChange(
-        function (dataSet) {
+        function( dataSet ) {
+            objects.every(object => scene_city.remove(object));
+            path_objects.every(object => scene_city.remove(object));
+            window_objects.every(object => scene_city.remove(object));
+            flag_objects.every(object => scene_city.remove(object));
+            grass_objects.every(object => scene_city.remove(object));
+            truss_objects.every(object => scene_city.remove(object));
+            bush_objects.every(object => scene_city.remove(object));
+            light_objects.spotLight.visible = false;
             lighthouse_objects.every(object => scene_lighthouse.remove(object));
-            LH.createCitySummaryMesh(scene_lighthouse, dataSet, lighthouse_objects, entropy, first_key_color_dict, 
-                first_key_list, select_fixed_point, color_display, light_intensity);
-            if(dataSet == data_list[0]){ // friendster
+            if(dataSet === data_list[0]){
+                // friendster
+                ground_object.scale.set(0.4,0.1,0.3);
+                ground_object.position.set(-60,-10,20);
                 perspectiveCameraL.position.y = 10;
                 perspectiveCameraL.position.z = 20;
-            }else if(dataSet == data_list[1]){ // movies
+            }
+            else if(dataSet === data_list[1]){
+                // movies
+                ground_object.scale.set(0.22,0.08,0.2);
+                ground_object.position.set(-30,-9,0);
                 perspectiveCameraL.position.y = 60;
-                perspectiveCameraL.position.z = 80;
-            }else if(dataSet == data_list[2]){
+                perspectiveCameraL.position.z = 85;
+            }
+            else if(dataSet === data_list[2]){
+                // patents
+                ground_object.scale.set(0.22,0.08,0.2);
+                ground_object.position.set(-30,-9,0);
                 perspectiveCameraL.position.y = 2;
                 perspectiveCameraL.position.z = 10;
             }
-               
+
+            animate();
+            source_dir = data_dir+dataSet+"/";
+            spiral_file = data_dir+dataSet+"/SPIRAL.txt";
+            voronoi_file = python_dir+dataSet+"/voronoi.txt";
+            neighbors_file = python_dir+dataSet+"/neighbors.txt";
+            meta_file = python_dir+dataSet+"/metagraph_normalized.txt";
+            time = new Date();
+            start_time_string = time.getMinutes()+':'+time.getSeconds()+'.'+time.getMilliseconds();
+            city_tracking = {};
+            city_all = {};
+            city_list = [];
+            objects = [], path_objects = [], truss_objects = [], window_objects = [], flag_objects = [];
+            metaLoaded = false, voronoiLoaded = false;
+            // loadBushData(source_dir);
+            let result = LH.createCitySummaryMesh(scene_lighthouse, dataSet,lighthouse_objects, entropy, first_key_color_dict, 
+                first_key_list, select_fixed_point, color_display, light_intensity);
+            scene_lighthouse = result.scene;
+            first_key_list = result.first_key_list;
+            select_fixed_point = result.select_fixed_point;
+            light_intensity = result.light_intensity;
+
+            loadFile(spiral_file,manager);
+            
+        
+            animate();
         }
     );
+
+    // select_data.onChange(
+        // function (dataSet) {
+        //     lighthouse_objects.every(object => scene_lighthouse.remove(object));
+        //     LH.createCitySummaryMesh(scene_lighthouse, dataSet, lighthouse_objects, entropy, first_key_color_dict, 
+        //         first_key_list, select_fixed_point, color_display, light_intensity);
+        //     if(dataSet == data_list[0]){ // friendster
+        //         perspectiveCameraL.position.y = 10;
+        //         perspectiveCameraL.position.z = 20;
+        //     }else if(dataSet == data_list[1]){ // movies
+        //         perspectiveCameraL.position.y = 60;
+        //         perspectiveCameraL.position.z = 80;
+        //     }else if(dataSet == data_list[2]){
+        //         perspectiveCameraL.position.y = 2;
+        //         perspectiveCameraL.position.z = 10;
+        //     }
+               
+        // }
+    //     function(dataSet) {
+    //         selectData.setValue(dataSet);
+    //     }
+    // );
     let select_fixed_point = guiL.add(paramsL, 'fixedPoint',first_key_list).name('choose fixed point');
     let color_display = guiL.addColor(paramsL, 'color').name('display color');
     let light_intensity = guiL.add(paramsL, 'lightIntensity').name('diversity');
@@ -552,8 +640,8 @@ function loadedVoronoi(evt) {
         city_all = result.all;
         voronoiLoaded = true;
         if(metaLoaded && voronoiLoaded){
-            let result_2 = PATH.pathPlanning(city_list[0],scene,city_all,light_objects.spotLight);
-            scene = result_2.scene;
+            let result_2 = PATH.pathPlanning(city_list[0],scene_city,city_all,light_objects.spotLight);
+            scene_city = result_2.scene;
             path_objects = result_2.path;
             light_objects.spotLight = result_2.spotLight;
         }
@@ -569,8 +657,8 @@ function loadedMeta(evt) {
     city_all = result.all;
     metaLoaded = true;
     if(metaLoaded && voronoiLoaded){
-        let result_2 = PATH.pathPlanning(city_list[0],scene,city_all,light_objects.spotLight);
-        scene = result_2.scene;
+        let result_2 = PATH.pathPlanning(city_list[0],scene_city,city_all,light_objects.spotLight);
+        scene_city = result_2.scene;
         path_objects = result_2.path;
         light_objects.spotLight = result_2.spotLight;
     }
@@ -591,7 +679,7 @@ function loaded(evt) {
     // need to update when SPIRAL.txt updates
     if(element_count == 7) {
         // console.log("loaded: SPIRAL file");
-        let spiral = BUILD.loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tracking, city_to_load, x_scale);
+        let spiral = BUILD.loadSpiral(scene_city, lines, city_all, grass_objects, bush_objects, city_tracking, city_to_load, x_scale);
         city_all = spiral.all;
         city_tracking = spiral.tracking;
         grass_objects = spiral.grass;
@@ -677,8 +765,8 @@ function animate() {
     // stats.update();
     if(city_to_load>0) {
         console.log("animate: run createCityMeshes()");
-        let result = BUILD.createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, city_to_load, y_scale, params.dataSet, params.isNight);
-        scene = result.scene;
+        let result = BUILD.createCityMeshes(scene_city, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, city_to_load, y_scale, params.dataSet, params.isNight);
+        scene_city = result.scene;
         city_all = result.all;
         city_tracking = result.tracking;
         objects = result.objects;
@@ -844,7 +932,7 @@ function initSlider() {
 
         if ( event.isPrimary === false ) return;
 
-        controls.enabled = false;
+        controls.enabled = true;
 
         window.addEventListener( 'pointermove', onPointerMove, false );
         window.addEventListener( 'pointerup', onPointerUp, false );
@@ -857,13 +945,18 @@ function initSlider() {
 
         window.removeEventListener( 'pointermove', onPointerMove, false );
         window.removeEventListener( 'pointerup', onPointerUp, false );
-
+        slider.style.left = "-40px";
+        guiL.close();
+        sliderPos = 0;
     }
 
     function onPointerMove( e ) {
         if ( event.isPrimary === false ) return;
         sliderPos = Math.max( 0, Math.min( window.innerWidth, e.pageX ) );
         slider.style.left = sliderPos - ( slider.offsetWidth / 2 ) + "px";
+        slider.style.left = "-40px";
+        guiL.close();
+        sliderPos = 0;
     }
 
     slider.style.touchAction = 'none'; // disable touch scroll
