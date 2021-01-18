@@ -531,7 +531,7 @@ function loadEdges(node, nodefilter) {
     return
   }
   const [layer, lcc] = layer_lcc.split('/');
-  console.log(layer,lcc);
+  console.log(layer, lcc);
   const nodes = [];
   nodefilter.forEach(v => nodes.push({
     id: v
@@ -680,7 +680,7 @@ graph.d3Force('charge').strength(-15);
 //       for (const vert in data["nodes"]) {
 //         const vals = data["nodes"][vert]
 //         verts += vals["num_vertices"];
-//         fpedges += vals["num_edges"];
+//         fpedges += vals["num_edges"]/2;
 //       }
 
 //       for (const sedge in data["edges"]) {
@@ -751,7 +751,7 @@ function loadFile2(filename) {
       //nodemap[nodeset.find(node)] = node;
 
       verts += vals["num_vertices"];
-      fpedges += vals["num_edges"];
+      fpedges += vals["num_edges"] / 2;
     }
 
     let links = [];
@@ -919,11 +919,11 @@ function loadFile2(filename) {
     });
 
     // update gui2
-    console.log("Total:", verts, edges, fpedges / 2);
+    console.log("Total:", verts, edges, fpedges);
     console.log("Shown:", nodeArr.length, links.length);
     graph.zoomToFit();
     data_info.vertices = verts;
-    data_info.edges = fpedges / 2;
+    data_info.edges = fpedges;
     data_info.dag_edges = edges;
     data_info.displayed_vertices = links.length;
     data_info.displayed_edges = nodeArr.length;

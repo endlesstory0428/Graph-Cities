@@ -718,7 +718,7 @@
           for (const vert in data["nodes"]) {
             const vals = data["nodes"][vert]
             verts += vals["num_vertices"];
-            fpedges += vals["num_edges"];
+            fpedges += vals["num_edges"] / 2;
           }
 
           for (const sedge in data["edges"]) {
@@ -787,7 +787,7 @@
           //nodemap[nodeset.find(node)] = node;
 
           verts += vals["num_vertices"];
-          fpedges += vals["num_edges"];
+          fpedges += vals["num_edges"] / 2;
         }
 
         let links = [];
@@ -955,11 +955,11 @@
         });
 
         // update gui
-        console.log("Total:", verts, edges, fpedges / 2);
+        console.log("Total:", verts, edges, fpedges);
         console.log("Shown:", nodeArr.length, links.length);
         graph.zoomToFit();
         data_info.vertices = verts;
-        data_info.edges = fpedges / 2;
+        data_info.edges = fpedges;
         data_info.dag_edges = edges;
         data_info.displayed_vertices = links.length;
         data_info.displayed_edges = nodeArr.length;
