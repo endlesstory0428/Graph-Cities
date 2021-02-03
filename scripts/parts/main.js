@@ -765,7 +765,7 @@ function animate() {
     // stats.update();
     if(city_to_load>0) {
         console.log("animate: run createCityMeshes()");
-        let result = BUILD.createCityMeshes(scene_city, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, city_to_load, y_scale, params.dataSet, params.isNight);
+        let result = BUILD.createCityMeshes(scene_city, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, city_to_load, y_scale, paramsL.dataSet, params.isNight);
         scene_city = result.scene;
         city_all = result.all;
         city_tracking = result.tracking;

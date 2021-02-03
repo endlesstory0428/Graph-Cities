@@ -68,8 +68,8 @@ import {jet} from '../lighthouse/jet_colormap.js';
 
 // create "lighthouse" mesh that summarize whole city information
 function createCitySummaryMesh(scene, dataSet, lighthouse_objects, entropy, first_key_color_dict, first_key_list, select_fixed_point, color_display, light_intensity) {
-    const input_file = '../lighthouse/'+dataSet+'-layers-dists.json';
-    const entropy_file = '../lighthouse/'+dataSet+'_entropy.json';
+    const input_file = '../scripts/lighthouse/'+dataSet+'-layers-dists.json';
+    const entropy_file = '../scripts/lighthouse/'+dataSet+'_entropy.json';
     // $.getJSON(entropy_file, function(data){
     //     entropy = data;
     // });

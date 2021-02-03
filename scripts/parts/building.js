@@ -347,8 +347,8 @@ function createFlags(scene, coord, base_Y, layer, V, E, flag_objects, lcc, peel,
             size: flag_width/peel.toString().length,
             height: flag_thickness/2+0.15
           } );
-          console.log("text size: "+flag_width/peel.toString().length);
-          console.log("text height: "+flag_thickness/2+0.15);
+          // console.log("text size: "+flag_width/peel.toString().length);
+          // console.log("text height: "+flag_thickness/2+0.15);
           if(peel.toString().length > 1){
             peel_geo.translate(X+flag_height/16,base_Y+mast_length+flag_height/2,Z);
             console.log(peel);
@@ -364,11 +364,16 @@ function createFlags(scene, coord, base_Y, layer, V, E, flag_objects, lcc, peel,
       });
     }
     else if(lcc > 1){
-      let texture_url = "../textures/plots/"+dataSet+'_'+layer.slice(layer.indexOf('_')+1,layer.lastIndexOf('_'))+'.png';
+      let texture_url = "../../textures/plots/"+dataSet+'_'+layer.slice(layer.indexOf('_')+1,layer.lastIndexOf('_'))+'.png';
       // console.log(texture_url);
-      // let flag_texture = new THREE.TextureLoader().load(texture_url);
-      // let flag_material = new THREE.MeshStandardMaterial( {map:flag_texture} );
-      let flag_material = new THREE.MeshBasicMaterial({color:"white"});
+      let url_exists = ifUrlExists(texture_url);
+      let flag_material;
+      if(url_exists){
+        let flag_texture = new THREE.TextureLoader().load(texture_url);
+        flag_material = new THREE.MeshStandardMaterial( {map:flag_texture} );
+      }else{
+        flag_material = new THREE.MeshBasicMaterial({color:"white"});
+      } 
       flag_mesh = new THREE.Mesh( new THREE.BoxBufferGeometry(flag_width,flag_height,flag_thickness), flag_material);
     }
   }
@@ -386,6 +391,23 @@ function createFlags(scene, coord, base_Y, layer, V, E, flag_objects, lcc, peel,
   flag_objects.push(flag_mesh);
   flag_objects.push(rod);
   return {scene: scene, flags: flag_objects};
+}
+
+//check if url exists
+function ifUrlExists(url) {
+  var request;
+  if(window.XMLHttpRequest)
+      request = new XMLHttpRequest();
+  else
+      request = new ActiveXObject("Microsoft.XMLHTTP");
+  request.open('GET', url, false);
+  request.send(); // there will be a 'pause' here until the response to come.
+  // the object request will be actually modified
+  if (request.status === 404) {
+      console.log("404 - Url Does Not Exist - "+url)
+      return false;
+  }
+  return true;
 }
 
 // check city_tracking, create buildings that are ready to color & move
