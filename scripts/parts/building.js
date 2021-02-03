@@ -360,11 +360,11 @@ function createFlags(scene, height, coord, base_Y, layer, V, E, flag_objects, lc
           let text_size = flag_height/4;
           let text_height = flag_thickness/2+0.15;
           let height_offset = flag_height/32;
-          let peel_geo = new THREE.TextGeometry( peel.toString(), { font: font, size: text_size*0.66, height: text_height } );
+          let peel_geo = new THREE.TextGeometry( "k="+peel.toString(), { font: font, size: text_size*0.66, height: text_height } );
           peel_geo.translate(X+height_offset,base_Y+mast_length+height_offset,Z);
-          let V_geo = new THREE.TextGeometry( V.toString(), { font: font, size: text_size/3, height: text_height } );
+          let V_geo = new THREE.TextGeometry( "V: "+V.toString(), { font: font, size: text_size/3, height: text_height } );
           V_geo.translate(X,base_Y+mast_length+flag_height/4+2*height_offset,Z);
-          let E_geo = new THREE.TextGeometry( E.toString(), { font: font, size: text_size/3, height: text_height } );
+          let E_geo = new THREE.TextGeometry( "E: "+E.toString(), { font: font, size: text_size/3, height: text_height } );
           E_geo.translate(X,base_Y+mast_length+2*flag_height/4+height_offset,Z);
           let height_geo = new THREE.TextGeometry( height.toString(), { font: font, size: text_size, height: text_height } );
           height_geo.translate(X+height_offset,base_Y+mast_length+3*flag_height/4,Z);

@@ -819,7 +819,7 @@ function onMouseDown(event) {
 
 function initSlider() {
 
-  const slider = document.querySelector('.slider');
+  const slider = document.querySelector('.custom_slider');
   slider.style.left = "341px";
 
   function onPointerDown() {
