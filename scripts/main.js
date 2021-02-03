@@ -11,9 +11,11 @@ import {
 import {
   loadBushData
 } from './bush.js';
-import * as BUILD from './building.js';
-import * as PATH from './path.js';
+import * as LH from './parts/lighthouse.js'
+import * as BUILD from './parts/building.js';
+import * as PATH from './parts/path.js';
 
+const scenes = [];
 let controls, renderer, container;
 let perspectiveCamera, orthographicCamera, perspectiveCameraL;
 // let spiral = []; 
@@ -22,8 +24,9 @@ let aspect = window.innerWidth / window.innerHeight;
 let scene_city = new THREE.Scene();
 scene_city.background = new THREE.Color('skyblue');
 let scene_lighthouse = new THREE.Scene();
-scene_lighthouse.background = new THREE.Color(0xBCD48F);
-let sliderPos = 352;
+// scene_lighthouse.background = new THREE.Color(0xBCD48F);
+scene_lighthouse.background = new THREE.Color('white');
+let sliderPos = 362;
 
 let raycaster = new THREE.Raycaster();
 let mouse = new THREE.Vector2();
@@ -52,12 +55,13 @@ let start_time_string = time.getMinutes()+':'+time.getSeconds()+'.'+time.getMill
 //     city_to_load = 77;// hard-coded
 // }
 let dropdown;
+let gui, guiL;
 
 // let DATASET = 'com-friendster_old';
 // let DATASET = 'com-friendster';
 // let DATASET = 'movies';
 // let DATASET = 'cit-Patents';
-let data_list = ['com-friendster', 'movies', 'cit-Patents'];
+const data_list = ['com-friendster', 'movies', 'cit-Patents'];
 let land_obj = "../models/flat_island.obj";
 let ground_texture_file = "../textures/ground_2.jpg";
 let water_texture_file = "../textures/waternormals.jpg";
@@ -74,7 +78,7 @@ let radius = 500,
   toPanBuilding = false,
   toZoomBuilding = false;
 // GUI parameters
-var params = {
+let params = {
   orthographicCamera: false,
   resetCamera: function() {
     toPanBuilding = false;
@@ -112,19 +116,21 @@ var params = {
 let first_key_list = [1];
 let first_key_color_dict = {0:"#000000"};
 let paramsL = {
-    dataSet:data_list[2],
-    fixedPoint:first_key_list[0],
-    color:first_key_color_dict[0],
-    lightIntensity:0.1
+    dataSet: data_list[2],
+    fixedPoint: first_key_list[0],
+    color: first_key_color_dict[0],
+    lightIntensity: 0.1
 }
 let lighthouse_objects = [];
 let entropy;
 
-let source_dir = "../data/" + paramsL.dataSet + "/";
-let spiral_file = "../data/" + paramsL.dataSet + "/SPIRAL.txt";
-let voronoi_file = "../python/" + paramsL.dataSet + "/voronoi.txt";
-let neighbors_file = "../python/" + paramsL.dataSet + "/neighbors.txt";
-let meta_file = "../python/" + paramsL.dataSet + "/metagraph_normalized.txt";
+const data_dir = "../data/";
+const python_dir = "../python/";
+let source_dir = data_dir + paramsL.dataSet + "/";
+let spiral_file = data_dir + paramsL.dataSet + "/SPIRAL.txt";
+let voronoi_file = python_dir + paramsL.dataSet + "/voronoi.txt";
+let neighbors_file = python_dir + paramsL.dataSet + "/neighbors.txt";
+let meta_file = python_dir + paramsL.dataSet + "/metagraph_normalized.txt";
 let building_params = {
   floor: '',
   layer: ''
@@ -138,6 +144,7 @@ export function getParams() {
 }
 
 function init() {
+  // container = document.querySelector('.container');
   perspectiveCamera = new THREE.PerspectiveCamera(60, (window.innerWidth-sliderPos)/window.innerHeight, 1, 4000);
   perspectiveCamera.position.z = 600;
   perspectiveCamera.position.y = 350;
@@ -150,7 +157,8 @@ function init() {
   });
   renderer.setPixelRatio(window.devicePixelRatio * 2.0);
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setScissorTest( true );
+  renderer.setScissorTest(true);
+  // container.appendChild(renderer.domElement);
   document.getElementById('city').appendChild(renderer.domElement);
   document.addEventListener('mousemove', onMouseMove, false);
   window.addEventListener('resize', onWindowResize, false);
@@ -164,15 +172,15 @@ function init() {
     nightLight: new THREE.DirectionalLight(0xffffff, 0.01),
     spotLight: new THREE.SpotLight(0xffffff, 0.6, 0, Math.PI / 2, 1, 1)
   };
-  scene.add(light_objects['ambientLight']);
+  scene_city.add(light_objects['ambientLight']);
   light_objects.dayLights[0].position.set(1000, 1000, 1000);
   light_objects.dayLights[1].position.set(-500, 500, 0);
-  light_objects.dayLights.forEach(object => scene.add(object));
+  light_objects.dayLights.forEach(object => scene_city.add(object));
   light_objects.spotLight.position.set(0, 30, 0);
-  scene.add(light_objects.spotLight);
-  scene.add(light_objects.spotLight.target);
+  scene_city.add(light_objects.spotLight);
+  scene_city.add(light_objects.spotLight.target);
   light_objects.spotLight.visible = false;
-//   initSlider();
+  initSlider();
   // load files
   manager.onStart = function(url, itemsLoaded, itemsTotal) {
     console.log('Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.');
@@ -182,45 +190,65 @@ function init() {
   loadFile(spiral_file, manager);
 
   // GUI folders
-  let gui = new GUI({
+  gui = new GUI({
     width: 350
   });
 
   let f0 = gui.addFolder('Data Set');
-  var selectData = f0.add(params, 'dataSet', data_list).name('choose data set');
-  selectData.setValue(data_list[1]);
+  let selectData = gui.add(paramsL, 'dataSet', data_list).name('choose data set');
+  selectData.setValue(paramsL.dataSet);
   selectData.onChange(
     function(dataSet) {
-      objects.every(object => scene.remove(object));
-      path_objects.every(object => scene.remove(object));
-      window_objects.every(object => scene.remove(object));
-      flag_objects.every(object => scene.remove(object));
-      grass_objects.every(object => scene.remove(object));
-      truss_objects.every(object => scene.remove(object));
-      bush_objects.every(object => scene.remove(object));
+      setStrataUrl("?dataPath=simplegraph");
+      objects.every(object => scene_city.remove(object));
+      path_objects.every(object => scene_city.remove(object));
+      window_objects.every(object => scene_city.remove(object));
+      flag_objects.every(object => scene_city.remove(object));
+      grass_objects.every(object => scene_city.remove(object));
+      truss_objects.every(object => scene_city.remove(object));
+      bush_objects.every(object => scene_city.remove(object));
       light_objects.spotLight.visible = false;
+      lighthouse_objects.every(object => scene_lighthouse.remove(object));
       if (dataSet === data_list[0]) {
+        // friendster
         ground_object.scale.set(0.4, 0.1, 0.3);
         ground_object.position.set(-60, -10, 20);
+        perspectiveCameraL.position.y = 10;
+        perspectiveCameraL.position.z = 20;
       } else if (dataSet === data_list[1]) {
+        // movies
         ground_object.scale.set(0.22, 0.08, 0.2);
         ground_object.position.set(-30, -9, 0);
+        perspectiveCameraL.position.y = 60;
+        perspectiveCameraL.position.z = 85;
       } else if (dataSet === data_list[2]) {
+        // patents
         ground_object.scale.set(0.22, 0.08, 0.2);
         ground_object.position.set(-30, -9, 0);
+        perspectiveCameraL.position.y = 2;
+        perspectiveCameraL.position.z = 10;
       }
+      
       animate();
-      source_dir = "../data/" + dataSet + "/";
-      spiral_file = "../data/" + dataSet + "/SPIRAL.txt";
-      voronoi_file = "../python/" + dataSet + "/voronoi.txt";
-      neighbors_file = "../python/" + dataSet + "/neighbors.txt";
-      meta_file = "../python/" + dataSet + "/metagraph_normalized.txt";
+      source_dir = data_dir + dataSet + "/";
+      spiral_file = data_dir + dataSet + "/SPIRAL.txt";
+      voronoi_file = python_dir + dataSet + "/voronoi.txt";
+      neighbors_file = python_dir + dataSet + "/neighbors.txt";
+      meta_file = python_dir + dataSet + "/metagraph_normalized.txt";
+      time = new Date();
+      start_time_string = time.getMinutes() + ':' + time.getSeconds() + '.' + time.getMilliseconds();
       city_tracking = {};
       city_all = {};
       city_list = [];
       objects = [], path_objects = [], truss_objects = [], window_objects = [], flag_objects = [];
       metaLoaded = false, voronoiLoaded = false;
       loadBushData(source_dir);
+      let result = LH.createCitySummaryMesh(scene_lighthouse, dataSet, lighthouse_objects, entropy, first_key_color_dict,
+        first_key_list, select_fixed_point, color_display, light_intensity);
+      scene_lighthouse = result.scene;
+      first_key_list = result.first_key_list;
+      select_fixed_point = result.select_fixed_point;
+      light_intensity = result.light_intensity;
       loadFile(spiral_file, manager);
       animate();
     }
@@ -245,7 +273,7 @@ function init() {
   f2.add(params, 'panCity').name('Pan around a city');
   f2.add(params, 'zoomBuilding').name('Zoom in to "root"');
   f2.add(params, 'panBuilding').name('Zoom in and pan around');
-  f2.open();
+  // f2.open();
 
   let f3 = gui.addFolder('Environment Control');
   f3.add(params, 'outer').name('outer frustums').onChange(function(value) {
@@ -262,17 +290,18 @@ function init() {
   //     groundMesh.material.color = colorObject;
   //     animate();
   // });
-  f3.open();
+  // f3.open();
 
   let f4 = gui.addFolder('Path Planning');
   dropdown = f4.add(params, 'root', ['default', 'example 1', 'example 2']);
   dropdown.setValue('default');
   dropdown.onChange(
     function(value) {
-      path_objects.every(object => scene.remove(object));
+      setStrataUrl("?dataPath=simplegraph");
+      path_objects.every(object => scene_city.remove(object));
       animate();
-      let result = PATH.pathPlanning(value, scene, city_all, light_objects.spotLight);
-      scene = result.scene;
+      let result = PATH.pathPlanning(value, scene_city, city_all, light_objects.spotLight);
+      scene_city = result.scene;
       path_objects = result.path;
       light_objects.spotLight = result.spotLight;
       console.log("******** " + value + " *********");
@@ -310,7 +339,7 @@ function init() {
   // let size = 1200;
   // let divisions = 24;
   // let gridHelper = new THREE.GridHelper( size, divisions );
-  // scene.add( gridHelper );
+  // scene_city.add( gridHelper );
 
   // water - 2
   let waterGeo = new THREE.BoxBufferGeometry(5000, 50, 5000);
@@ -326,7 +355,30 @@ function init() {
   waterMat.opacity = 0.7;
   let waterMesh = new THREE.Mesh(waterGeo, waterMat);
   waterMesh.position.y = -50;
-  scene.add(waterMesh);
+  scene_city.add(waterMesh);
+  scenes.push(scene_city);
+
+  // scene 2
+  perspectiveCameraL = new THREE.PerspectiveCamera(75, sliderPos / window.innerHeight, 0.1, 1000);
+  perspectiveCameraL.position.z = 10;
+  perspectiveCameraL.position.y = 2;
+  
+  // guiL - left GUI
+  guiL = new GUI({
+    width: 362,
+    autoPlace: false
+  });
+  let select_fixed_point = guiL.add(paramsL, 'fixedPoint', first_key_list).name('choose fixed point');
+  let color_display = guiL.addColor(paramsL, 'color').name('display color');
+  let light_intensity = guiL.add(paramsL, 'lightIntensity').name('diversity');
+  let customContainer = document.getElementById('first-gui-container');
+  customContainer.appendChild(guiL.domElement);
+  let result = LH.createCitySummaryMesh(scene_lighthouse, data_list[2], lighthouse_objects, entropy, first_key_color_dict,
+    first_key_list, select_fixed_point, color_display, light_intensity);
+  scene_lighthouse = result.scene;
+  first_key_list = result.first_key_list;
+  select_fixed_point = result.select_fixed_point;
+  light_intensity = result.light_intensity;
 }
 
 //load ground OBJ file
@@ -352,7 +404,7 @@ function groundObjLoader(obj_url, obj_material) {
         object.position.set(-30, -9, 0);
       }
       ground_object = object;
-      scene.add(object);
+      scene_city.add(object);
     },
     function(xhr) {
       console.log(obj_url + ' ' + (xhr.loaded / xhr.total * 100) + '% loaded');
@@ -483,8 +535,8 @@ function loadedVoronoi(evt) {
     city_all = result.all;
     voronoiLoaded = true;
     if (metaLoaded && voronoiLoaded) {
-      let result_2 = PATH.pathPlanning(city_list[0], scene, city_all, light_objects.spotLight);
-      scene = result_2.scene;
+      let result_2 = PATH.pathPlanning(city_list[0], scene_city, city_all, light_objects.spotLight);
+      scene_city = result_2.scene;
       path_objects = result_2.path;
       light_objects.spotLight = result_2.spotLight;
     }
@@ -500,8 +552,8 @@ function loadedMeta(evt) {
   city_all = result.all;
   metaLoaded = true;
   if (metaLoaded && voronoiLoaded) {
-    let result_2 = PATH.pathPlanning(city_list[0], scene, city_all, light_objects.spotLight);
-    scene = result_2.scene;
+    let result_2 = PATH.pathPlanning(city_list[0], scene_city, city_all, light_objects.spotLight);
+    scene_city = result_2.scene;
     path_objects = result_2.path;
     light_objects.spotLight = result_2.spotLight;
   }
@@ -522,7 +574,7 @@ function loaded(evt) {
   // need to update when SPIRAL.txt updates
   if (element_count == 7) {
     // console.log("loaded: SPIRAL file");
-    let spiral = BUILD.loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tracking, city_to_load, x_scale);
+    let spiral = BUILD.loadSpiral(scene_city, lines, city_all, grass_objects, bush_objects, city_tracking, city_to_load, x_scale);
     city_all = spiral.all;
     city_tracking = spiral.tracking;
     grass_objects = spiral.grass;
@@ -560,14 +612,14 @@ function loaded(evt) {
 
 function dayAndNight(isNight, light_objects, window_objects) {
   if (isNight) {
-    scene.background = new THREE.Color('midnightblue');
+    scene_city.background = new THREE.Color('midnightblue');
     light_objects.dayLights.forEach(object => object.visible = false);
     light_objects.nightLight.visible = true;
     light_objects.spotLight.visible = false;
     window_objects.forEach(object => object.visible = true);
     animate();
   } else {
-    scene.background = new THREE.Color('skyblue');
+    scene_city.background = new THREE.Color('skyblue');
     light_objects.dayLights.forEach(object => object.visible = true);
     light_objects.nightLight.visible = false;
     light_objects.spotLight.visible = true;
@@ -607,21 +659,33 @@ function animate() {
   // stats.update();
   if (city_to_load > 0) {
     console.log("animate: run createCityMeshes()");
-    let result = BUILD.createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, city_to_load, y_scale, paramsL.dataSet, params.isNight);
-    scene = result.scene;
+    let result = BUILD.createCityMeshes(scene_city, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, city_to_load, y_scale, paramsL.dataSet, params.isNight);
+    scene_city = result.scene;
     city_all = result.all;
     city_tracking = result.tracking;
     objects = result.objects;
     city_to_load = result.remain;
     truss_objects = result.truss;
     window_objects = result.window;
-  }
+  }else if(city_to_load==0 && printTime){
+    let end_time = new Date();
+    let end_time_string = end_time.getMinutes()+':'+end_time.getSeconds()+'.'+end_time.getMilliseconds();
+    console.log("start time is "+start_time_string);
+    console.log("end time is "+end_time_string);
+    printTime = false;
+}
   render();
 }
 
 function render() {
   let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
-  renderer.render(scene, camera);
+  renderer.setScissor(0, 0, sliderPos, window.innerHeight);
+  renderer.setViewport(0, 0, sliderPos, window.innerHeight)
+  renderer.render(scene_lighthouse, perspectiveCameraL);
+
+  renderer.setScissor(sliderPos, 0, window.innerWidth, window.innerHeight);
+  renderer.setViewport(sliderPos, 0, window.innerWidth, window.innerHeight);
+  renderer.render(scene_city, camera);
   // let time = performance.now() * 0.001;
   // water.material.uniforms[ 'time' ].value += 1.0 / 60.0;
   if (toPanCity) {
@@ -724,4 +788,71 @@ function onMouseMove(event) {
     building_params.floor = '';
     building_params.layer = '';
   }
+}
+
+function onMouseDown(event) {
+  mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
+  mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
+  let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
+  raycaster.setFromCamera(mouse, camera);
+
+  let intersects = raycaster.intersectObjects(objects);
+  let modal = document.getElementById("infoModal");
+  let span = document.getElementsByClassName("close")[0];
+  console.log(intersects);
+  if (intersects.length > 0) {
+    console.log("clicked on " + intersects[0].object.name);
+    // if the closest object intersected is not the currently stored intersection object
+    if (intersects[0].object.name == "buoy") {
+      modal.style.display = "block";
+    }
+  }
+  span.onclick = function() {
+    modal.style.display = "none";
+  }
+  window.onclick = function(event) {
+    if (event.target == model) {
+      model.style.display = "none";
+    }
+  }
+}
+
+function initSlider() {
+
+  const slider = document.querySelector('.slider');
+  slider.style.left = "341px";
+
+  function onPointerDown() {
+
+    if (event.isPrimary === false) return;
+
+    controls.enabled = true;
+
+    window.addEventListener('pointermove', onPointerMove, false);
+    window.addEventListener('pointerup', onPointerUp, false);
+
+  }
+
+  function onPointerUp() {
+
+    controls.enabled = true;
+
+    window.removeEventListener('pointermove', onPointerMove, false);
+    window.removeEventListener('pointerup', onPointerUp, false);
+    slider.style.left = "-40px";
+    guiL.close();
+    sliderPos = 0;
+  }
+
+  function onPointerMove(e) {
+    if (event.isPrimary === false) return;
+    sliderPos = Math.max(0, Math.min(window.innerWidth, e.pageX));
+    slider.style.left = sliderPos - (slider.offsetWidth / 2) + "px";
+    slider.style.left = "-40px";
+    guiL.close();
+    sliderPos = 0;
+  }
+
+  slider.style.touchAction = 'none'; // disable touch scroll
+  slider.addEventListener('pointerdown', onPointerDown);
 }
