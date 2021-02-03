@@ -125,6 +125,7 @@ function loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tr
   // console.log(filename);
   city_to_load = lines.length-1;
   console.log("city_to_load = "+city_to_load);
+  let building_with_grass = [];
   for(let i=0; i<lines.length-1; i++) {
     let elements = lines[i].split(' ');
     let layer_name = elements[0];
@@ -140,6 +141,7 @@ function loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tr
     //grass
     let F = parseInt(layer_name.split('_').pop()); /* # of fixed points represented by selected building */
     if(F > 1) {
+      building_with_grass.push(layer_name.slice(layer_name.indexOf('_')+1,layer_name.length));
       let grassRadius = parseFloat(elements[4]);
       let grassFace = Math.log2(8 * (F - 1));
       let grassGeo = new THREE.CylinderBufferGeometry(grassRadius, grassRadius, 0.2, grassFace);
@@ -155,6 +157,7 @@ function loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tr
       let result = BUSH.createBushMeshes(scene, bush_objects, simplified_layer_name, x_z, grassFace, grassRadius);
       bush_objects = result.bush;
     }
+    
     // flag
     city_all[layer_name].V = parseInt(elements[5]);
     city_all[layer_name].E = parseInt(elements[6]);
@@ -163,6 +166,7 @@ function loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tr
       city_tracking[layer_name].ready_to_move = true;
     }
   }
+  console.log(building_with_grass);
   return {all: city_all, tracking: city_tracking, grass: grass_objects, bush: bush_objects, city_count: city_to_load};
 }
 
@@ -320,167 +324,73 @@ function addTruss(scene,truss_objects,window_objects,h,center,top_radius,btm_rad
   return {scene:scene, truss: truss_objects, window: window_objects};
 }
 
-function createFlags(scene, coord, base_Y, layer, V, E, flag_objects, lcc, fixed, mast_scale) {
-  let loadFlagTexture = false;
+function createFlags(scene, coord, base_Y, layer, V, E, flag_objects, lcc, peel, mast_scale, dataSet) {
+  let loadFlagTexture = true;
   // console.log("coord of flag", fixed_point_number, "is", coord, "height of flag is", base_Y);
   let X = coord[0], Z = coord[1];
   let flag_width = Math.log(V), flag_height = Math.log(E), flag_thickness = 0.5;
   let mast_length = mast_scale*0.1 + mast_scale*2.0*E/(V*(V-1));
   
-  let flag = new THREE.Mesh( new THREE.BoxBufferGeometry(flag_width,flag_height,flag_thickness), new THREE.MeshStandardMaterial( {color: 0xffffff}));
-  flag.translateX(X+flag_width/2);
-  flag.translateY(base_Y+mast_length+flag_height/2);
-  flag.translateZ(Z);
+  let flag_mesh;
+
+  if(loadFlagTexture){
+    // add text to flag
+    if(lcc == 1) {
+      flag_mesh = new THREE.Mesh( new THREE.BoxBufferGeometry(flag_width,flag_height,flag_thickness), new THREE.MeshStandardMaterial( {color: 0xffffff}));
+      let loader = new THREE.FontLoader();
+      loader.load( '../textures/helvetiker_regular.typeface.json', function ( font ) {
+        // console.log("font loaded!");
+
+          let text_geo = new THREE.Geometry(); 
+          let peel_geo = new THREE.TextGeometry( peel.toString(), {
+            font: font,
+            size: flag_width/peel.toString().length,
+            height: flag_thickness/2+0.15
+          } );
+          console.log("text size: "+flag_width/peel.toString().length);
+          console.log("text height: "+flag_thickness/2+0.15);
+          if(peel.toString().length > 1){
+            peel_geo.translate(X+flag_height/16,base_Y+mast_length+flag_height/2,Z);
+            console.log(peel);
+          }else{
+            peel_geo.translate(X+flag_height/16,base_Y+mast_length,Z);
+          }
+          text_geo.merge(peel_geo);
+          let text_buffer_geo = new THREE.BufferGeometry().fromGeometry(text_geo);
+          let text_mesh = new THREE.Mesh(text_buffer_geo,new THREE.MeshStandardMaterial( {color: 0x000000}));
+        
+          scene.add(text_mesh);
+          flag_objects.push(text_mesh);
+      });
+    }
+    else if(lcc > 1){
+      let texture_url = "../textures/plots/"+dataSet+'_'+layer.slice(layer.indexOf('_')+1,layer.lastIndexOf('_'))+'.png';
+      // console.log(texture_url);
+      // let flag_texture = new THREE.TextureLoader().load(texture_url);
+      // let flag_material = new THREE.MeshStandardMaterial( {map:flag_texture} );
+      let flag_material = new THREE.MeshBasicMaterial({color:"white"});
+      flag_mesh = new THREE.Mesh( new THREE.BoxBufferGeometry(flag_width,flag_height,flag_thickness), flag_material);
+    }
+  }
+
+  flag_mesh.translateX(X+flag_width/2);
+  flag_mesh.translateY(base_Y+mast_length+flag_height/2);
+  flag_mesh.translateZ(Z);
   let rod = new THREE.Mesh( new THREE.CylinderBufferGeometry(flag_thickness,flag_thickness,mast_length,8), new THREE.MeshStandardMaterial( {color: 0x000000}));
   rod.translateX(X);
   rod.translateY(base_Y+mast_length/2);
   rod.translateZ(Z);
-
-  if(loadFlagTexture){
-  // add text to flag
-  let loader = new THREE.FontLoader();
-  loader.load( '../textures/helvetiker_regular.typeface.json', function ( font ) {
-    // console.log("font loaded!");
-    let text_geo = new THREE.Geometry(); 
-    let fixed_geo = new THREE.TextGeometry( fixed.toString(), {
-      font: font,
-      size: flag_width/fixed.toString().length*0.5,
-      height: flag_thickness/2+0.15
-    } );
-    fixed_geo.translate(X+flag_height/16,base_Y+mast_length+flag_height/2,Z);
-    text_geo.merge(fixed_geo);
-    if (lcc > 1) {
-      let lcc_geo = new THREE.TextGeometry( lcc.toString(), {
-        font: font,
-        size: flag_width/lcc.toString().length,
-        height: flag_thickness/2+0.15
-      } );
-      lcc_geo.translate(X+flag_height*0.06,base_Y+mast_length+flag_height*0.06,Z);
-      text_geo.merge(lcc_geo);
-    }
-    let text_buffer_geo = new THREE.BufferGeometry().fromGeometry(text_geo);
-    let text_mesh = new THREE.Mesh(text_buffer_geo,new THREE.MeshStandardMaterial( {color: 0x000000}));
-    scene.add(text_mesh);
-    flag_objects.push(text_mesh);
-  } );
-  // let flagMaterial = createHistogram(layer);
-  }
-
-  scene.add(flag);
+  
+  scene.add(flag_mesh);
   scene.add(rod);
-  flag_objects.push(flag);
+  flag_objects.push(flag_mesh);
   flag_objects.push(rod);
   return {scene: scene, flags: flag_objects};
 }
 
-function createHistogram(layer, data){
-  // data = 'cit-Patents';
-  console.log("layer = "+layer);
-  let start = layer.indexOf('_');
-  let last = layer.lastIndexOf('_');
-  let BUILDING = layer.slice(start+1,last);
-  let DATA = data;
-  console.log("building = "+BUILDING);
-  console.log("data = "+data);
-  let paths;
-  // set the dimensions and margins of the graph
-  let margin = {
-      top: 30,
-      right: 30,
-      bottom: 70,
-      left: 60
-    },
-    width = 460 - margin.left - margin.right,
-    height = 400 - margin.top - margin.bottom;
-
-  // append the svg object to the body of the page
-  let svg = d3.select("#my_dataviz")
-    .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-    .append("g")
-    .attr("transform",
-      "translate(" + margin.left + "," + margin.top + ")");
-
-  d3.json("./data_flags/" + DATA + ".json", function(jsondata) {
-    console.log(jsondata);
-    let freq = jsondata[BUILDING].freq;
-    console.log(freq);
-    let barNums = [];
-    let barESize = [];
-    //let barVSize = [];
-    for (let Peel in freq) {
-      let info = freq[Peel];
-      barNums.push({
-        Peel,
-        Value: info.num
-      });
-      barESize.push({Peel, Value: info.edges});
-      //barVSize.push({Peel, Value: info.verts});
-    }
-    console.log(barNums);
-    let data = barNums;
-    let data2 = barESize;
-
-    // X axis
-    let x = d3.scaleBand()
-      .range([0, width])
-      .domain(data.map(d => d.Peel))
-      .padding(0.2);
-    svg.append("g")
-      .attr("transform", "translate(0," + height + ")")
-      .call(d3.axisBottom(x))
-      .selectAll("text")
-      .attr("transform", "translate(-10,0)rotate(-45)")
-      .style("text-anchor", "end");
-
-    // Add Y axis
-    let y = d3.scaleLinear()
-      .domain([0, d3.max(data.map(x => x.Value))])
-      .range([height, 0]);
-    svg.append("g")
-      .call(d3.axisLeft(y));
-
-    // Bars
-    svg.selectAll("mybar")
-      .data(data)
-      .enter()
-      .append("rect")
-      .attr("x", function(d) {
-        return x(d.Peel);
-      })
-      .attr("y", function(d) {
-        return y(d.Value);
-      })
-      .attr("width", x.bandwidth())
-      .attr("height", function(d) {
-        return height - y(d.Value);
-      })
-      .attr("+ll", "#69b3a2")
-    })
-
-  let group = new THREE.Group();
-  for ( let i = 0; i < paths.length; i ++ ) {
-    let path = paths[ i ];
-    let material = new THREE.MeshBasicMaterial( {
-      color: path.color,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    } );
-    let shapes = path.toShapes( true );
-    for ( let j = 0; j < shapes.length; j ++ ) {
-      let shape = shapes[ j ];
-      let geometry = new THREE.ShapeBufferGeometry( shape );
-      let mesh = new THREE.Mesh( geometry, material );
-      group.add( mesh );
-    }
-  }
-  return group;
-}
-
 // check city_tracking, create buildings that are ready to color & move
 // delete colored and moved building from city_tracking
-function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, city_to_load, y_scale, isNight, oneBuilding=false) {
+function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, city_to_load, y_scale, dataSet, isNight, oneBuilding=false) {
   for (let layer in city_tracking) {
       if(city_tracking[layer].ready_to_move && city_tracking[layer].ready_to_color) {
           let layer_shape = city_all[layer].shapes;
@@ -541,10 +451,10 @@ function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects
           let fixed = parseInt(sliced.slice(sliced.lastIndexOf('_')+1)); // third to last
           let mast_scale = y_scale;
           // let mast_length = mast_scale * height;
-          let result = createFlags(scene, [X,Z], flag_base_Y, layer, city_all[layer].V, city_all[layer].E, flag_objects, lcc, fixed, mast_scale);
+          let result = createFlags(scene, [X,Z], flag_base_Y, layer, city_all[layer].V, city_all[layer].E, flag_objects, lcc, fixed, mast_scale, dataSet);
           scene = result.scene;
           flag_objects = result.flags;
-          console.log("createCityMeshes: loaded "+layer+", city to load = "+city_to_load);
+          // console.log("createCityMeshes: loaded "+layer+", city to load = "+city_to_load);
           delete city_tracking[layer];
           --city_to_load;
       }
@@ -552,4 +462,4 @@ function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects
   return {scene: scene, objects: objects, remain: city_to_load, all: city_all, tracking: city_tracking, truss: truss_objects, window: window_objects};
 }
 
-export {loadColor, loadSpiral, loadFloor, loadVoronoi, createCityMeshes, createHistogram};
+export {loadColor, loadSpiral, loadFloor, loadVoronoi, createCityMeshes};

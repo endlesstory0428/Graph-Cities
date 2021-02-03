@@ -14,14 +14,16 @@ import {
 import * as BUILD from './building.js';
 import * as PATH from './path.js';
 
-let perspectiveCamera, orthographicCamera, controls, scene, renderer;
-
+let controls, renderer, container;
+let perspectiveCamera, orthographicCamera, perspectiveCameraL;
 // let spiral = []; 
 let frustumSize = 400;
 let aspect = window.innerWidth / window.innerHeight;
-scene = new THREE.Scene();
-scene.background = new THREE.Color('skyblue');
-// let camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+let scene_city = new THREE.Scene();
+scene_city.background = new THREE.Color('skyblue');
+let scene_lighthouse = new THREE.Scene();
+scene_lighthouse.background = new THREE.Color(0xBCD48F);
+let sliderPos = 352;
 
 let raycaster = new THREE.Raycaster();
 let mouse = new THREE.Vector2();
@@ -42,6 +44,10 @@ let addBuildings = true;
 let metaLoaded = false,
   voronoiLoaded = false;
 let city_to_load;
+let time = new Date();
+let printTime = true;
+let start_time_string = time.getMinutes()+':'+time.getSeconds()+'.'+time.getMilliseconds();
+
 // if(addBuildings){
 //     city_to_load = 77;// hard-coded
 // }
@@ -102,6 +108,18 @@ var params = {
   outer: true,
   isNight: false
 };
+// lighthouse
+let first_key_list = [1];
+let first_key_color_dict = {0:"#000000"};
+let paramsL = {
+    dataSet:data_list[2],
+    fixedPoint:first_key_list[0],
+    color:first_key_color_dict[0],
+    lightIntensity:0.1
+}
+let lighthouse_objects = [];
+let entropy;
+
 let source_dir = "../data/" + params.dataSet + "/";
 let spiral_file = "../data/" + params.dataSet + "/SPIRAL.txt";
 let voronoi_file = "../python/" + params.dataSet + "/voronoi.txt";
@@ -120,9 +138,7 @@ export function getParams() {
 }
 
 function init() {
-  perspectiveCamera = new THREE.PerspectiveCamera(60, aspect, 1, 4000);
-  // perspectiveCamera.position.z = 850;
-  // perspectiveCamera.position.y = 650;
+  perspectiveCamera = new THREE.PerspectiveCamera(60, (window.innerWidth-sliderPos)/window.innerHeight, 1, 4000);
   perspectiveCamera.position.z = 600;
   perspectiveCamera.position.y = 350;
 
@@ -133,8 +149,8 @@ function init() {
     antialiasing: true
   });
   renderer.setPixelRatio(window.devicePixelRatio * 2.0);
-
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setScissorTest( true );
   document.getElementById('city').appendChild(renderer.domElement);
   document.addEventListener('mousemove', onMouseMove, false);
   window.addEventListener('resize', onWindowResize, false);
@@ -156,7 +172,7 @@ function init() {
   scene.add(light_objects.spotLight);
   scene.add(light_objects.spotLight.target);
   light_objects.spotLight.visible = false;
-
+//   initSlider();
   // load files
   manager.onStart = function(url, itemsLoaded, itemsTotal) {
     console.log('Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.');

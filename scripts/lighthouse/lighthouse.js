@@ -3,19 +3,30 @@ import {TrackballControls} from '../../node_modules/three/examples/jsm/controls/
 import {GUI} from '../../node_modules/three/examples/jsm/libs/dat.gui.module.js';
 import {jet} from './jet_colormap.js';
 
-let scene = new THREE.Scene();
+let scene = new THREE.Scene(), scene2 = new THREE.Scene();
+let renderer, renderer2;
 let controls;
 let perspectiveCamera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 
-const renderer = new THREE.WebGLRenderer();
+renderer = new THREE.WebGLRenderer();
 renderer.setSize( window.innerWidth, window.innerHeight );
+// renderer.setSize( window.innerWidth/2, window.innerHeight/2 );
 document.body.appendChild( renderer.domElement );
-scene.background = new THREE.Color( 0xffffff );
 
-// const geometry = new THREE.BoxGeometry();
-// const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
-// const cube = new THREE.Mesh( geometry, material );
-// scene.add( cube );
+renderer2 = new THREE.WebGLRenderer();
+renderer2.setPixelRatio( window.devicePixelRatio );
+renderer2.setSize( window.innerWidth, window.innerHeight);
+// renderer2.setSize( window.innerWidth/2, window.innerHeight/2);
+document.body.appendChild( renderer2.domElement );
+
+scene.background = new THREE.Color( 0xffffff );
+window.addEventListener( 'resize', onWindowResize, false );
+
+const geometry = new THREE.BoxGeometry();
+const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+const cube = new THREE.Mesh( geometry, material );
+scene2.add( cube );
+
 perspectiveCamera.position.z = 10;
 // perspectiveCamera.position.y = 200;
 createControls( perspectiveCamera );
@@ -39,7 +50,7 @@ let params = {
     lightIntensity:0.1
 }
 
-let gui = new GUI({width:350});
+let gui = new GUI({width:350, autoPlace: false});
 
 let select_data = gui.add(params, 'dataSet', data_list).name('choose data set');
 select_data.setValue(data_list[2]);
@@ -51,12 +62,15 @@ select_data.onChange(
 );
 let select_fixed_point = gui.add(params, 'fixedPoint',first_key_list).name('choose fixed point');
 let color_display = gui.addColor(params, 'color').name('display color');
-let light_intensity = gui.add(params, 'lightIntensity').name('entropy');
+let light_intensity = gui.add(params, 'lightIntensity').name('diversity');
+let customContainer = document.getElementById('first-gui-container');
+customContainer.appendChild(gui.domElement);
 
 const animate = function () {
     requestAnimationFrame( animate );
     controls.update();
     renderer.render( scene, perspectiveCamera );
+    renderer2.render(scene2,perspectiveCamera);
 };
 
 animate();
@@ -218,7 +232,7 @@ function loadCitySummaryFile(info, scene) {
                 scene.add(cylinder);
                 lighthouse_objects.push(cylinder);
                 Y += Y_dis;
-                // console.log("Y "+Y+" Y_dis "+Y_dis+" R "+R);
+                console.log("Y "+Y+" Y_dis "+Y_dis+" R "+R);
             }
         }
     }
@@ -252,7 +266,9 @@ function onWindowResize() {
     perspectiveCamera.updateProjectionMatrix();
 
     renderer.setSize( window.innerWidth, window.innerHeight );
-
+    // renderer.setSize( window.innerWidth/2, window.innerHeight/2 );
+    renderer2.setSize( window.innerWidth, window.innerHeight );
+    // renderer2.setSize( window.innerWidth/2, window.innerHeight/2 );
     controls.handleResize();
 }
 
