@@ -259,7 +259,7 @@ function init() {
     f2.add(params, 'panCity').name('Pan around a city');
     f2.add(params, 'zoomBuilding').name('Zoom in to "root"');
     f2.add(params, 'panBuilding').name('Zoom in and pan around');
-    f2.open();
+    // f2.open();
 
     let f3 = gui.addFolder('Environment Control');
     f3.add(params, 'outer').name('outer frustums').onChange(function(value){
@@ -276,7 +276,7 @@ function init() {
     //     groundMesh.material.color = colorObject;
     //     animate();
     // });
-    f3.open();
+    // f3.open();
     
     let f4 = gui.addFolder('Path Planning');
     dropdown = f4.add(params, 'root', ['default','example 1', 'example 2']);

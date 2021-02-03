@@ -324,7 +324,7 @@ function addTruss(scene,truss_objects,window_objects,h,center,top_radius,btm_rad
   return {scene:scene, truss: truss_objects, window: window_objects};
 }
 
-function createFlags(scene, coord, base_Y, layer, V, E, flag_objects, lcc, peel, mast_scale, dataSet) {
+function createFlags(scene, height, coord, base_Y, layer, V, E, flag_objects, lcc, peel, mast_scale, dataSet) {
   let loadFlagTexture = true;
   // console.log("coord of flag", fixed_point_number, "is", coord, "height of flag is", base_Y);
   let X = coord[0], Z = coord[1];
@@ -342,20 +342,36 @@ function createFlags(scene, coord, base_Y, layer, V, E, flag_objects, lcc, peel,
         // console.log("font loaded!");
 
           let text_geo = new THREE.Geometry(); 
-          let peel_geo = new THREE.TextGeometry( peel.toString(), {
-            font: font,
-            size: flag_width/peel.toString().length,
-            height: flag_thickness/2+0.15
-          } );
+          // let peel_geo = new THREE.TextGeometry( peel.toString(), {
+          //   font: font,
+          //   size: flag_width/peel.toString().length,
+          //   height: flag_thickness/2+0.15
+          // } );
+          // if(peel.toString().length > 1){
+          //   peel_geo.translate(X+flag_height/16,base_Y+mast_length+flag_height/2,Z);
+          //   console.log(peel);
+          // }else{
+          //   peel_geo.translate(X+flag_height/16,base_Y+mast_length,Z);
+          // }
           // console.log("text size: "+flag_width/peel.toString().length);
           // console.log("text height: "+flag_thickness/2+0.15);
-          if(peel.toString().length > 1){
-            peel_geo.translate(X+flag_height/16,base_Y+mast_length+flag_height/2,Z);
-            console.log(peel);
-          }else{
-            peel_geo.translate(X+flag_height/16,base_Y+mast_length,Z);
-          }
+
+          console.log("building.js::createFlags - V = "+V.toString()+", E = "+E.toString()+", # of floors = "+height.toString());
+          let text_size = flag_height/4;
+          let text_height = flag_thickness/2+0.15;
+          let height_offset = flag_height/32;
+          let peel_geo = new THREE.TextGeometry( peel.toString(), { font: font, size: text_size*0.66, height: text_height } );
+          peel_geo.translate(X+height_offset,base_Y+mast_length+height_offset,Z);
+          let V_geo = new THREE.TextGeometry( V.toString(), { font: font, size: text_size/3, height: text_height } );
+          V_geo.translate(X,base_Y+mast_length+flag_height/4+2*height_offset,Z);
+          let E_geo = new THREE.TextGeometry( E.toString(), { font: font, size: text_size/3, height: text_height } );
+          E_geo.translate(X,base_Y+mast_length+2*flag_height/4+height_offset,Z);
+          let height_geo = new THREE.TextGeometry( height.toString(), { font: font, size: text_size, height: text_height } );
+          height_geo.translate(X+height_offset,base_Y+mast_length+3*flag_height/4,Z);
           text_geo.merge(peel_geo);
+          text_geo.merge(V_geo);
+          text_geo.merge(E_geo);
+          text_geo.merge(height_geo);
           let text_buffer_geo = new THREE.BufferGeometry().fromGeometry(text_geo);
           let text_mesh = new THREE.Mesh(text_buffer_geo,new THREE.MeshStandardMaterial( {color: 0x000000}));
         
@@ -473,7 +489,7 @@ function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects
           let fixed = parseInt(sliced.slice(sliced.lastIndexOf('_')+1)); // third to last
           let mast_scale = y_scale;
           // let mast_length = mast_scale * height;
-          let result = createFlags(scene, [X,Z], flag_base_Y, layer, city_all[layer].V, city_all[layer].E, flag_objects, lcc, fixed, mast_scale, dataSet);
+          let result = createFlags(scene, height, [X,Z], flag_base_Y, layer, city_all[layer].V, city_all[layer].E, flag_objects, lcc, fixed, mast_scale, dataSet);
           scene = result.scene;
           flag_objects = result.flags;
           // console.log("createCityMeshes: loaded "+layer+", city to load = "+city_to_load);
