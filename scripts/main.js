@@ -49,7 +49,7 @@ let metaLoaded = false,
 let city_to_load;
 let time = new Date();
 let printTime = true;
-let start_time_string = time.getMinutes()+':'+time.getSeconds()+'.'+time.getMilliseconds();
+let start_time_string = time.getMinutes() + ':' + time.getSeconds() + '.' + time.getMilliseconds();
 
 // if(addBuildings){
 //     city_to_load = 77;// hard-coded
@@ -114,12 +114,14 @@ let params = {
 };
 // lighthouse
 let first_key_list = [1];
-let first_key_color_dict = {0:"#000000"};
+let first_key_color_dict = {
+  0: "#000000"
+};
 let paramsL = {
-    dataSet: data_list[2],
-    fixedPoint: first_key_list[0],
-    color: first_key_color_dict[0],
-    lightIntensity: 0.1
+  dataSet: data_list[2],
+  fixedPoint: first_key_list[0],
+  color: first_key_color_dict[0],
+  lightIntensity: 0.1
 }
 let lighthouse_objects = [];
 let entropy;
@@ -145,7 +147,7 @@ export function getParams() {
 
 function init() {
   // container = document.querySelector('.container');
-  perspectiveCamera = new THREE.PerspectiveCamera(60, (window.innerWidth-sliderPos)/window.innerHeight, 1, 4000);
+  perspectiveCamera = new THREE.PerspectiveCamera(60, (window.innerWidth - sliderPos) / window.innerHeight, 1, 4000);
   perspectiveCamera.position.z = 600;
   perspectiveCamera.position.y = 350;
 
@@ -228,7 +230,7 @@ function init() {
         perspectiveCameraL.position.y = 2;
         perspectiveCameraL.position.z = 10;
       }
-      
+
       animate();
       source_dir = data_dir + dataSet + "/";
       spiral_file = data_dir + dataSet + "/SPIRAL.txt";
@@ -362,12 +364,14 @@ function init() {
   perspectiveCameraL = new THREE.PerspectiveCamera(75, sliderPos / window.innerHeight, 0.1, 1000);
   perspectiveCameraL.position.z = 10;
   perspectiveCameraL.position.y = 2;
-  
+
   // guiL - left GUI
   guiL = new GUI({
-    width: 362,
+    width: 320,
     autoPlace: false
   });
+  var guiLcontainer = document.getElementById('first-gui-container');
+  guiLcontainer.style = "position: absolute; top: 0px; left: 10px; z-index: 1";
   let select_fixed_point = guiL.add(paramsL, 'fixedPoint', first_key_list).name('choose fixed point');
   let color_display = guiL.addColor(paramsL, 'color').name('display color');
   let light_intensity = guiL.add(paramsL, 'lightIntensity').name('diversity');
@@ -667,13 +671,13 @@ function animate() {
     city_to_load = result.remain;
     truss_objects = result.truss;
     window_objects = result.window;
-  }else if(city_to_load==0 && printTime){
+  } else if (city_to_load == 0 && printTime) {
     let end_time = new Date();
-    let end_time_string = end_time.getMinutes()+':'+end_time.getSeconds()+'.'+end_time.getMilliseconds();
-    console.log("start time is "+start_time_string);
-    console.log("end time is "+end_time_string);
+    let end_time_string = end_time.getMinutes() + ':' + end_time.getSeconds() + '.' + end_time.getMilliseconds();
+    console.log("start time is " + start_time_string);
+    console.log("end time is " + end_time_string);
     printTime = false;
-}
+  }
   render();
 }
 
