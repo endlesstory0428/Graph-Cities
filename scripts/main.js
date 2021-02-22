@@ -42,11 +42,18 @@ let window_objects = [];
 let flag_objects = [];
 let grass_objects = [];
 let bush_objects = [];
-let light_objects;
+let light_objects = {};
+let key_to_buckets = {};
 let addBuildings = true;
 let metaLoaded = false,
-  voronoiLoaded = false;
+  voronoiLoaded = false,
+  lighthouseLoaded = false,
+  entropyLoaded = false,
+  bucketLoaded = false,
+  pathPlanningDone = false,
+  lighthouseDone = false;
 let city_to_load;
+let color_display, light_intensity;
 let time = new Date();
 let printTime = true;
 let start_time_string = time.getMinutes()+':'+time.getSeconds()+'.'+time.getMilliseconds();
@@ -55,7 +62,7 @@ let start_time_string = time.getMinutes()+':'+time.getSeconds()+'.'+time.getMill
 //     city_to_load = 77;// hard-coded
 // }
 let dropdown;
-let gui, guiL;
+let gui, guiL, select_fixed_point;
 
 // let DATASET = 'com-friendster_old';
 // let DATASET = 'com-friendster';
@@ -122,15 +129,20 @@ let paramsL = {
     lightIntensity: 0.1
 }
 let lighthouse_objects = [];
-let entropy;
-
+let entropy, bucketData, lighthouseData, metaData, voronoiData;
+// let selected_buildings = ["1_405063", "1_62999", "8_4342010", "1_250725", "1_140109", "3_3191982", "11_2983724"];
+let selected_buildings = [];
 const data_dir = "../data/";
 const python_dir = "../python/";
+const lighthouse_dir = "../scripts/lighthouse/";
 let source_dir = data_dir + paramsL.dataSet + "/";
 let spiral_file = data_dir + paramsL.dataSet + "/SPIRAL.txt";
 let voronoi_file = python_dir + paramsL.dataSet + "/voronoi.txt";
 let neighbors_file = python_dir + paramsL.dataSet + "/neighbors.txt";
 let meta_file = python_dir + paramsL.dataSet + "/metagraph_normalized.txt";
+let lighthouse_file = lighthouse_dir+paramsL.dataSet+'-layers-dists.json';
+let entropy_file = lighthouse_dir+paramsL.dataSet+'_entropy.json';
+let bucket_file = lighthouse_dir+paramsL.dataSet+'-bucket2peels.json';
 let building_params = {
   floor: '',
   layer: ''
@@ -170,7 +182,8 @@ function init() {
     ambientLight: new THREE.AmbientLight(0x404040),
     dayLights: [new THREE.DirectionalLight(0xffffff, 0.8), new THREE.DirectionalLight(0xffffff, 0.5)],
     nightLight: new THREE.DirectionalLight(0xffffff, 0.01),
-    spotLight: new THREE.SpotLight(0xffffff, 0.6, 0, Math.PI / 2, 1, 1)
+    spotLight: new THREE.SpotLight(0xffffff, 0.6, 0, Math.PI / 2, 1, 1),
+    selectionLights:[]
   };
   scene_city.add(light_objects['ambientLight']);
   light_objects.dayLights[0].position.set(1000, 1000, 1000);
@@ -180,6 +193,15 @@ function init() {
   scene_city.add(light_objects.spotLight);
   scene_city.add(light_objects.spotLight.target);
   light_objects.spotLight.visible = false;
+  let selectionLightsLength=10;
+  for(let i=0;i<selectionLightsLength;i++){
+    light_objects.selectionLights.push(new THREE.SpotLight(0xffffff, 0.4, 0, Math.PI / 3, 1, 1));
+    light_objects.selectionLights[i].visible=false;
+    light_objects.selectionLights[i].position.set(0,30,0);
+    scene_city.add(light_objects.selectionLights[i]);
+    scene_city.add(light_objects.selectionLights[i].target);
+  }
+
   initSlider();
   // load files
   manager.onStart = function(url, itemsLoaded, itemsTotal) {
@@ -188,6 +210,9 @@ function init() {
 
   loadBushData(source_dir);
   loadFile(spiral_file, manager);
+  loadJSONFile(lighthouse_file, manager);
+  loadJSONFile(entropy_file, manager);
+  loadJSONFile(bucket_file, manager);
 
   // GUI folders
   gui = new GUI({
@@ -199,7 +224,7 @@ function init() {
   selectData.setValue(paramsL.dataSet);
   selectData.onChange(
     function(dataSet) {
-      setStrataUrl("?dataPath=simplegraph");
+      // setStrataUrl("?dataPath=simplegraph");
       objects.every(object => scene_city.remove(object));
       path_objects.every(object => scene_city.remove(object));
       window_objects.every(object => scene_city.remove(object));
@@ -241,15 +266,21 @@ function init() {
       city_all = {};
       city_list = [];
       objects = [], path_objects = [], truss_objects = [], window_objects = [], flag_objects = [];
-      metaLoaded = false, voronoiLoaded = false;
+      metaLoaded = false, voronoiLoaded = false, entropyLoaded = false, lighthouseLoaded = false, bucketLoaded = false;
+      pathPlanningDone = false, lighthouseDone = false;
+      light_objects.selectionLights.forEach(object => object.visible = false);
       loadBushData(source_dir);
-      let result = LH.createCitySummaryMesh(scene_lighthouse, dataSet, lighthouse_objects, entropy, first_key_color_dict,
-        first_key_list, select_fixed_point, color_display, light_intensity);
-      scene_lighthouse = result.scene;
-      first_key_list = result.first_key_list;
-      select_fixed_point = result.select_fixed_point;
-      light_intensity = result.light_intensity;
       loadFile(spiral_file, manager);
+      key_to_buckets = {};
+      selected_buildings = [];
+      lighthouseData = {}, entropy = {}, bucketData = {};
+      select_fixed_point.onChange(function(key) {});
+      lighthouse_file = '../scripts/lighthouse/'+dataSet+'-layers-dists.json';
+      entropy_file = '../scripts/lighthouse/'+dataSet+'_entropy.json';
+      bucket_file = '../scripts/lighthouse/'+dataSet+'-bucket2peels.json';
+      loadJSONFile(lighthouse_file, manager);
+      loadJSONFile(entropy_file, manager);
+      loadJSONFile(bucket_file, manager);
       animate();
     }
   );
@@ -297,21 +328,21 @@ function init() {
   dropdown.setValue('default');
   dropdown.onChange(
     function(value) {
-      setStrataUrl("?dataPath=simplegraph");
+//       setStrataUrl("?dataPath=simplegraph");
       path_objects.every(object => scene_city.remove(object));
       animate();
-      let result = PATH.pathPlanning(value, scene_city, city_all, light_objects.spotLight);
+      let result = PATH.pathPlanning(value, scene_city, city_all, light_objects, selected_buildings);
       scene_city = result.scene;
       path_objects = result.path;
-      light_objects.spotLight = result.spotLight;
+      light_objects = result.light_objects;
       console.log("******** " + value + " *********");
       console.log("******** " + paramsL.dataSet + " *********");
 
       let wavemap_ID_ID_freq = value.split('_');
       let file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '-' + wavemap_ID_ID_freq[2] + '.json';
       console.log("Loading: ", file);
-      loadFile2(file);
-      loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
+//       loadFile2(file);
+      // loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
     }
   );
   f4.open();
@@ -368,17 +399,17 @@ function init() {
     width: 362,
     autoPlace: false
   });
-  let select_fixed_point = guiL.add(paramsL, 'fixedPoint', first_key_list).name('choose fixed point');
-  let color_display = guiL.addColor(paramsL, 'color').name('display color');
-  let light_intensity = guiL.add(paramsL, 'lightIntensity').name('diversity');
+  select_fixed_point = guiL.add(paramsL, 'fixedPoint', first_key_list).name('choose fixed point');
+  color_display = guiL.addColor(paramsL, 'color').name('display color');
+  light_intensity = guiL.add(paramsL, 'lightIntensity').name('diversity');
   let customContainer = document.getElementById('first-gui-container');
   customContainer.appendChild(guiL.domElement);
-  let result = LH.createCitySummaryMesh(scene_lighthouse, data_list[2], lighthouse_objects, entropy, first_key_color_dict,
-    first_key_list, select_fixed_point, color_display, light_intensity);
-  scene_lighthouse = result.scene;
-  first_key_list = result.first_key_list;
-  select_fixed_point = result.select_fixed_point;
-  light_intensity = result.light_intensity;
+  lighthouse_file = '../scripts/lighthouse/'+paramsL.dataSet+'-layers-dists.json';
+  entropy_file = '../scripts/lighthouse/'+paramsL.dataSet+'_entropy.json';
+  bucket_file = '../scripts/lighthouse/'+paramsL.dataSet+'-bucket2peels.json';
+  loadJSONFile(lighthouse_file, manager);
+  loadJSONFile(entropy_file, manager);
+  loadJSONFile(bucket_file, manager);
 }
 
 //load ground OBJ file
@@ -415,20 +446,6 @@ function groundObjLoader(obj_url, obj_material) {
   );
 }
 
-// function updateDropdown(target, list){   
-//   innerHTMLStr = "";
-//   for(var i=0; i<list.length; i++){
-//       var str = "<option value='" + list[i] + "'>" + list[i] + "</option>";
-//       innerHTMLStr += str;        
-//   }
-//   if (innerHTMLStr != "") target.domElement.children[0].innerHTML = innerHTMLStr;
-// }
-
-// dropdown = gui.add(MyObject, 'Values', ['A', 'B']);
-
-// updateDropdown(dropdown, ['A', 'B', 'C', 'D']);
-
-
 function loadFile(file, manager) {
   let loader = new THREE.FileLoader(manager);
   let blob = null;
@@ -438,7 +455,8 @@ function loadFile(file, manager) {
       getAsText(data, file);
     },
     function(xhr) {
-      console.log((file + ' ' + xhr.loaded / xhr.total * 100) + '% loaded');
+
+      // console.log((file + ' ' + xhr.loaded / xhr.total * 100) + '% loaded');
     },
     function(err) {
       console.error('An error happened when loading ' + file);
@@ -480,6 +498,23 @@ function loadMetaFile(file, manager) {
   );
 }
 
+function loadJSONFile(file, manager) {
+  let loader = new THREE.FileLoader(manager);
+  let blob = null;
+  loader.responseType = "blob";
+  loader.load(file,
+    function(data) {
+      getAsTextJSON(data, file);
+    },
+    function(xhr) {
+      console.log((file + ' ' + xhr.loaded / xhr.total * 100) + '% loaded');
+    },
+    function(err) {
+      console.error('An error happened when loading ' + file);
+    }
+  );
+}
+
 function getAsText(file, url) {
   let reader = new FileReader();
   reader.readAsText(file);
@@ -510,6 +545,16 @@ function getAsTextMeta(file, url) {
   let text = reader.result;
 }
 
+function getAsTextJSON(file, url) {
+  let reader = new FileReader();
+  reader.readAsText(file);
+  reader.onProgress = updateProgress;
+  reader.onload = loadedJSON;
+  reader.onerror = errorHandler;
+  reader.url = url;
+  let text = reader.result;
+}
+
 function updateProgress(evt) {
   if (evt.lengthComputable) {
     let loaded = (evt.loaded / evt.total);
@@ -534,12 +579,6 @@ function loadedVoronoi(evt) {
     result = PATH.loadNeighbors(city_all, lines, filename);
     city_all = result.all;
     voronoiLoaded = true;
-    if (metaLoaded && voronoiLoaded) {
-      let result_2 = PATH.pathPlanning(city_list[0], scene_city, city_all, light_objects.spotLight);
-      scene_city = result_2.scene;
-      path_objects = result_2.path;
-      light_objects.spotLight = result_2.spotLight;
-    }
   }
   city_all = result.all;
 }
@@ -551,18 +590,28 @@ function loadedMeta(evt) {
   let result = PATH.loadMeta(city_all, lines, filename);
   city_all = result.all;
   metaLoaded = true;
-  if (metaLoaded && voronoiLoaded) {
-    let result_2 = PATH.pathPlanning(city_list[0], scene_city, city_all, light_objects.spotLight);
-    scene_city = result_2.scene;
-    path_objects = result_2.path;
-    light_objects.spotLight = result_2.spotLight;
-  }
 }
 
 function fileToLayer(filename) {
   let start = filename.lastIndexOf('/');
   let end = filename.lastIndexOf('_');
   return filename.substring(start + 1, end);
+}
+
+function loadedJSON(evt) {
+  let fileString = evt.target.result;
+  let lines = fileString.split('\n');
+  let filename = evt.target.url;
+  if(filename.includes("bucket2peel")) {
+    bucketLoaded = true;
+    bucketData = JSON.parse(fileString);
+  }else if(filename.includes("entropy")) {
+    entropyLoaded = true;
+    entropy = JSON.parse(fileString);
+  }else if(filename.includes("layers-dists")) {
+    lighthouseLoaded = true;
+    lighthouseData = JSON.parse(fileString);
+  }
 }
 
 function loaded(evt) {
@@ -593,8 +642,7 @@ function loaded(evt) {
     loadVoronoiFile(voronoi_file, manager);
     loadVoronoiFile(neighbors_file, manager);
     loadMetaFile(meta_file, manager);
-    PATH.updateDropdown(dropdown, city_list);
-    dropdown.setValue(city_list[0]);
+
   } else if (element_count == 6) {
     // console.log("loaded: color file");
     layer_name = fileToLayer(filename);
@@ -616,11 +664,13 @@ function dayAndNight(isNight, light_objects, window_objects) {
     light_objects.dayLights.forEach(object => object.visible = false);
     light_objects.nightLight.visible = true;
     light_objects.spotLight.visible = false;
+    light_objects.selectionLights.forEach(object => object.visible = false);
     window_objects.forEach(object => object.visible = true);
     animate();
   } else {
     scene_city.background = new THREE.Color('skyblue');
     light_objects.dayLights.forEach(object => object.visible = true);
+    light_objects.selectionLights.forEach(object => object.visible = true);
     light_objects.nightLight.visible = false;
     light_objects.spotLight.visible = true;
     window_objects.forEach(object => object.visible = false);
@@ -680,9 +730,8 @@ function animate() {
 function render() {
   let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
   renderer.setScissor(0, 0, sliderPos, window.innerHeight);
-  renderer.setViewport(0, 0, sliderPos, window.innerHeight)
+  renderer.setViewport(0, 0, sliderPos, window.innerHeight);
   renderer.render(scene_lighthouse, perspectiveCameraL);
-
   renderer.setScissor(sliderPos, 0, window.innerWidth, window.innerHeight);
   renderer.setViewport(sliderPos, 0, window.innerWidth, window.innerHeight);
   renderer.render(scene_city, camera);
@@ -730,8 +779,50 @@ function render() {
       toZoomBuilding = false;
     }
   }
+  if(!lighthouseDone) {
+    if(lighthouseLoaded && entropyLoaded && bucketData) {
+      let result = LH.loadCitySummaryFile(lighthouseData, scene_lighthouse, lighthouse_objects, entropy, first_key_color_dict, first_key_list, select_fixed_point, color_display, light_intensity, bucketData, key_to_buckets);
+      scene_lighthouse = result.scene;
+      lighthouse_objects = result.lighthouse_objects;
+      first_key_color_dict = result.first_key_color_dict;
+      first_key_list = result.first_key_list;
+      select_fixed_point = result.select_fixed_point;
+      color_display = result.color_display;
+      light_intensity = result.light_intensity;
+      key_to_buckets = result.key_to_buckets;
+      selected_buildings = key_to_buckets[first_key_list[0]];
+      console.log("!lighthouseDone: selected_buildings "+selected_buildings);
+      lighthouseDone = true;
+    }
+  }
+  if(lighthouseDone && (!pathPlanningDone)) {
+    if (metaLoaded && voronoiLoaded && lighthouseLoaded && bucketLoaded ) {
+      pathPlanningDone = true;
+      console.log("pathPlanningDone "+pathPlanningDone+", metaLoaded && voronoiLoaded && lighthouseLoaded && bucketLoaded");
+      select_fixed_point.onChange (
+        function (key) {
+          color_display.setValue(first_key_color_dict[parseInt(key)]);
+          light_intensity.setValue(entropy[parseInt(key)]);
+          console.log("light_intensity2 "+entropy[parseInt(key)]);
+          // console.log("key "+key);
+          // console.log("first_key_list[key] "+first_key_list[parseInt(key)]);
+          selected_buildings = key_to_buckets[key];
+          light_objects.selectionLights.forEach(object => object.visible=false);
+          let result = LH.updateSelectionLights(city_all, light_objects, selected_buildings);
+          light_objects = result.light_objects;
+        }
+      );
+      let result_2 = PATH.pathPlanning(city_list[0], scene_city, city_all, light_objects, selected_buildings);
+      scene_city = result_2.scene;
+      path_objects = result_2.path;
+      light_objects = result_2.light_objects;
+      let result = LH.updateSelectionLights(city_all, light_objects, selected_buildings);
+      light_objects = result.light_objects;
+      PATH.updateDropdown(dropdown, city_list);
+      dropdown.setValue(city_list[0]);
+    }
+  }
 }
-
 
 function panCity() {
   theta = 0;

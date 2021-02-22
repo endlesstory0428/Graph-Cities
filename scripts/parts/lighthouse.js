@@ -3,107 +3,7 @@ import * as THREE from '../../node_modules/three/build/three.module.js';
 // import {GUI} from '../../node_modules/three/examples/jsm/libs/dat.gui.module.js';
 import {jet} from '../lighthouse/jet_colormap.js';
 
-// let scene = new THREE.Scene();
-// let renderer, renderer2;
-// let controls;
-// let perspectiveCamera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-
-// renderer = new THREE.WebGLRenderer();
-// // renderer.setSize( window.innerWidth, window.innerHeight );
-// renderer.setSize( window.innerWidth/2, window.innerHeight );
-// document.body.appendChild( renderer.domElement );
-// scene.background = new THREE.Color( 0xffffff );
-// window.addEventListener( 'resize', onWindowResize, false );
-
-
-// perspectiveCamera.position.z = 10;
-// // perspectiveCamera.position.y = 200;
-// createControls( perspectiveCamera );
-
-// const data_list = ['com-friendster','movies','cit-Patents'];
-// let first_key_list = [1];
-// let first_key_color_dict = {0:"#000000"};
-// let manager = new THREE.LoadingManager();
-// manager.onStart = function(url,itemsLoaded,itemsTotal) {
-//     console.log('Started loading file: '+url+'.\nLoaded '+itemsLoaded+' of '+itemsTotal+' files.');
-// };
-
-// let lighthouse_objects = [];
-// let entropy;
-
-// GUI
-// let params = {
-//     dataSet:data_list[2],
-//     fixedPoint:first_key_list[0],
-//     color:first_key_color_dict[0],
-//     lightIntensity:0.1
-// }
-
-// let gui = new GUI({width:350, autoPlace: false});
-
-// let select_data = gui.add(params, 'dataSet', data_list).name('choose data set');
-// select_data.setValue(data_list[2]);
-// select_data.onChange(
-//     function (dataSet) {
-//         lighthouse_objects.every(object => scene.remove(object));
-//         createCitySummaryMesh(dataSet, scene);
-//     }
-// );
-// let select_fixed_point = gui.add(params, 'fixedPoint',first_key_list).name('choose fixed point');
-// let color_display = gui.addColor(params, 'color').name('display color');
-// let light_intensity = gui.add(params, 'lightIntensity').name('diversity');
-// let customContainer = document.getElementById('first-gui-container');
-// customContainer.appendChild(gui.domElement);
-
-// const animate = function () {
-//     requestAnimationFrame( animate );
-//     controls.update();
-//     renderer.render( scene, perspectiveCamera );
-// };
-
-// animate();
-
-// let result = createCitySummaryMesh(data_list[2], scene);
-// scene = result.scene;
-
-// create "lighthouse" mesh that summarize whole city information
-function createCitySummaryMesh(scene, dataSet, lighthouse_objects, entropy, first_key_color_dict, first_key_list, select_fixed_point, color_display, light_intensity) {
-    const input_file = '../scripts/lighthouse/'+dataSet+'-layers-dists.json';
-    const entropy_file = '../scripts/lighthouse/'+dataSet+'_entropy.json';
-    // $.getJSON(entropy_file, function(data){
-    //     entropy = data;
-    // });
-    // $.getJSON(input_file, function(data) {
-    //     let result = loadCitySummaryFile(data, scene, lighthouse_objects, entropy, first_key_color_dict, first_key_list, select_fixed_point, color_display, light_intensity);
-    //     scene = result.scene;
-    //     entropy = result.entropy;
-    //     lighthouse_objects = result.lighthouse_objects;
-    //     first_key_color_dict = result.first_key_color_dict;
-    //     first_key_list = result.first_key_list;
-    //     select_fixed_point = result.select_fixed_point;
-    //     color_display = result.color_display;
-    //     light_intensity = result.light_intensity;
-    // });
-    $.getJSON(entropy_file).done( function(data){
-        entropy = data;
-    });
-    $.getJSON(input_file).done( function(data) {
-        let result = loadCitySummaryFile(data, scene, lighthouse_objects, entropy, first_key_color_dict, first_key_list, select_fixed_point, color_display, light_intensity);
-        scene = result.scene;
-        entropy = result.entropy;
-        lighthouse_objects = result.lighthouse_objects;
-        first_key_color_dict = result.first_key_color_dict;
-        first_key_list = result.first_key_list;
-        select_fixed_point = result.select_fixed_point;
-        color_display = result.color_display;
-        light_intensity = result.light_intensity;
-    });
-    return {scene: scene, lighthouse_objects: lighthouse_objects, entropy: entropy, first_key_color_dict: first_key_color_dict, first_key_list: first_key_list,
-        select_fixed_point: select_fixed_point, color_display: color_display, light_intensity: light_intensity};
-}
-
-
-function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key_color_dict, first_key_list, select_fixed_point, color_display, light_intensity) {
+function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key_color_dict, first_key_list, select_fixed_point, color_display, light_intensity, bucketData, key_to_buckets) {
     let max_radius = 0;
     let scale_factor = 1;
     let original_height_sum = 0;
@@ -168,19 +68,40 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
         }
     }
     color_display.setValue(first_key_color_dict[first_key_list[0]]);
-    console.log(first_key_list);    
-    select_fixed_point.onChange (
-        function (key) {
-            color_display.setValue(first_key_color_dict[parseInt(key)]);
-            light_intensity.setValue(entropy[parseInt(key)]);
-            console.log("light_intensity2 "+entropy[parseInt(key)]);
-            // console.log("key "+key);
-            // console.log("first_key_list[key] "+first_key_list[parseInt(key)]);
+    console.log(first_key_list);
+    key_to_buckets = {};
+    for(let key in bucketData) {
+        if(bucketData.hasOwnProperty(key)){
+            for(let i in bucketData[key]){
+                let value = bucketData[key][i];
+                if(key_to_buckets.hasOwnProperty(value)){
+                    key_to_buckets[value].push(key);
+                }else{
+                    key_to_buckets[value]=[key];
+                }
+            }
         }
-    );
-    
+    }
     return {scene: scene, entropy: entropy, lighthouse_objects: lighthouse_objects, first_key_color_dict: first_key_color_dict, first_key_list: first_key_list,
-        select_fixed_point: select_fixed_point, color_display: color_display, light_intensity: light_intensity};
+        select_fixed_point: select_fixed_point, color_display: color_display, light_intensity: light_intensity, key_to_buckets: key_to_buckets};
+}
+
+function updateSelectionLights(city_all, light_objects, selected_buildings) {
+    console.log("updateSelectionLights: selected buildings are "+selected_buildings);
+    let city_name = Object.keys(city_all);
+    let city_name_sliced = city_name.slice();
+    city_name_sliced.forEach(function(name,index){
+        city_name_sliced[index]=name.slice(name.indexOf('_')+1,name.lastIndexOf('_'));
+    })
+    for(let i=0;i<selected_buildings.length;i++){
+        // console.log(i);
+        let city_index = city_name_sliced.indexOf(selected_buildings[i]);
+        let city_name_full = city_name[city_index];
+        light_objects.selectionLights[i].position.set(city_all[city_name_full].coords[0],35,city_all[city_name_full].coords[1]);
+        light_objects.selectionLights[i].target.position.set(city_all[city_name_full].coords[0],0,city_all[city_name_full].coords[1]);
+        light_objects.selectionLights[i].visible=true;
+    }
+    return {light_objects: light_objects };
 }
 
 function cylinderRadius(vh_h) {
@@ -284,4 +205,4 @@ function onWindowResize() {
     controls.handleResize();
 }
 
-export {createCitySummaryMesh};
+export { loadCitySummaryFile, updateSelectionLights };
