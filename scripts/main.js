@@ -224,7 +224,7 @@ function init() {
   selectData.setValue(paramsL.dataSet);
   selectData.onChange(
     function(dataSet) {
-      // setStrataUrl("?dataPath=simplegraph");
+      setStrataUrl("?dataPath=simplegraph");
       objects.every(object => scene_city.remove(object));
       path_objects.every(object => scene_city.remove(object));
       window_objects.every(object => scene_city.remove(object));
@@ -328,7 +328,7 @@ function init() {
   dropdown.setValue('default');
   dropdown.onChange(
     function(value) {
-//       setStrataUrl("?dataPath=simplegraph");
+      setStrataUrl("?dataPath=simplegraph");
       path_objects.every(object => scene_city.remove(object));
       animate();
       let result = PATH.pathPlanning(value, scene_city, city_all, light_objects, selected_buildings);
@@ -341,8 +341,8 @@ function init() {
       let wavemap_ID_ID_freq = value.split('_');
       let file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '-' + wavemap_ID_ID_freq[2] + '.json';
       console.log("Loading: ", file);
-//       loadFile2(file);
-      // loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
+      loadFile2(file);
+      loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
     }
   );
   f4.open();
