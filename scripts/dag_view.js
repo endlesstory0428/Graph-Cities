@@ -50,7 +50,7 @@ function setStrataUrl(request) {
 var cityContainer = document.getElementById('city');
 var gui2 = new dat.GUI({
   autoPlace: true,
-  width: 350
+  width: 200
 });
 // gui2.domElement.style = "position: absolute; top: " + cityContainer.offsetHeight + "px; left: 10px;";
 var gui2container = document.getElementById('bottom-gui-container');
@@ -59,17 +59,19 @@ console.log(cityContainer.offsetHeight);
 gui2container.style = "position: absolute; top: " + cityContainer.offsetHeight + "px; left: 10px; z-index: 1";
 
 var data_info = {
+  peel_value: '',
   vertices: '',
   edges: '',
   dag_edges: '',
-  displayed_vertices: '',
-  displayed_edges: ''
+  drawn_vertices: '',
+  drawn_edges: ''
 }
+gui2.add(data_info, 'peel_value').listen();
 gui2.add(data_info, 'vertices').listen();
 gui2.add(data_info, 'edges').listen();
 gui2.add(data_info, 'dag_edges').listen();
-gui2.add(data_info, 'displayed_vertices').listen();
-gui2.add(data_info, 'displayed_edges').listen();
+gui2.add(data_info, 'drawn_vertices').listen();
+gui2.add(data_info, 'drawn_edges').listen();
 
 let inarr = document.getElementsByTagName('input');
 for (let ind in Object.keys(inarr)) {
@@ -91,12 +93,14 @@ gui2.add(MAX_VSIZE, 'node_scale', 1, 1000)
   .onChange(size => graph && graph.nodeVal(node => nodeSize(node)));
 
 var NODE_THRESH = {
-  node_threshold_top: 1000,
-  node_threshold_bottom: 0
+  top: 1000,
+  bottom: 0
 }
-gui2ContThreshTop = gui2.add(NODE_THRESH, 'node_threshold_top', 0, 1000)
+
+let gui2f1 = gui2.addFolder('Node Size Threshold');
+gui2ContThreshTop = gui2f1.add(NODE_THRESH, 'top', 0, 1000)
   .onChange(size => graph && graph.nodeVal(node => nodeSize(node)));
-gui2ContThreshBottom = gui2.add(NODE_THRESH, 'node_threshold_bottom', 0, 1000)
+gui2ContThreshBottom = gui2f1.add(NODE_THRESH, 'bottom', 0, 1000)
   .onChange(size => graph && graph.nodeVal(node => nodeSize(node)));
 
 //fixed point
@@ -442,6 +446,7 @@ graph
   .enableNodeDrag(false)
   //.onNodeHover(node => { console.log(node) })
   .onNodeClick(node => {
+    setStrataUrl('?data=nodata');
     clicked = node;
     console.log(node['color']);
     //graph.nodeColor(node => node === clicked ? 'rgba(0,0,0,1)' : node['color']);
@@ -468,7 +473,7 @@ graph
   });
 
 function nodeSize(node) {
-  if (node.esize > NODE_THRESH.node_threshold_top || node.esize < NODE_THRESH.node_threshold_bottom) {
+  if (node.esize > NODE_THRESH.top || node.esize < NODE_THRESH.bottom) {
     return 0.0001;
   }
   if (node.esize == 0) {
@@ -505,7 +510,7 @@ function nodeGeom(node) {
       })
     ]);
   } else {
-    if (node.esize > NODE_THRESH.node_threshold_top || node.esize < NODE_THRESH.node_threshold_bottom) {
+    if (node.esize > NODE_THRESH.top || node.esize < NODE_THRESH.bottom) {
       return false;
     }
     if (node.esize == 1) {
@@ -583,6 +588,7 @@ function loadEdges(node, nodefilter) {
 }
 
 function loadLayer(dataset, layer, lcc) {
+  data_info['peel_value'] = layer;
   layer_loaded = false;
   // const [dataset, fp] = fixedpoint["Fixed Point"].split('/');
   DATASET = dataset;
@@ -930,12 +936,12 @@ function loadFile2(filename) {
     data_info.vertices = verts;
     data_info.edges = fpedges;
     data_info.dag_edges = edges;
-    data_info.displayed_vertices = nodeArr.length;
-    data_info.displayed_edges = links.length;
-    NODE_THRESH.node_threshold_top = maxNodeEdges;
+    data_info.drawn_vertices = nodeArr.length;
+    data_info.drawn_edges = links.length;
+    NODE_THRESH.top = maxNodeEdges;
     gui2ContThreshTop.min(minNodeEdges);
     gui2ContThreshTop.max(maxNodeEdges);
-    NODE_THRESH.node_threshold_bottom = minNodeEdges;
+    NODE_THRESH.bottom = minNodeEdges;
     gui2ContThreshBottom.min(minNodeEdges);
     gui2ContThreshBottom.max(maxNodeEdges);
     gui2.updateDisplay();
