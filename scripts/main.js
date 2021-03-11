@@ -16,16 +16,16 @@ import * as BUILD from './parts/building.js';
 import * as PATH from './parts/path.js';
 
 const scenes = [];
-let controls, renderer, container;
+let controls, renderer, canvas;
 let perspectiveCamera, orthographicCamera, perspectiveCameraL;
 // let spiral = []; 
 let frustumSize = 400;
 let aspect = window.innerWidth / window.innerHeight;
 let scene_city = new THREE.Scene();
-scene_city.background = new THREE.Color('skyblue');
+// scene_city.background = new THREE.Color('skyblue');
 let scene_lighthouse = new THREE.Scene();
 // scene_lighthouse.background = new THREE.Color(0xBCD48F);
-scene_lighthouse.background = new THREE.Color('white');
+// scene_lighthouse.background = new THREE.Color('white');
 let sliderPos = 362;
 
 let raycaster = new THREE.Raycaster();
@@ -44,7 +44,7 @@ let grass_objects = [];
 let bush_objects = [];
 let light_objects = {};
 let key_to_buckets = {};
-let addBuildings = true;
+let addBuildings = false;
 let metaLoaded = false,
   voronoiLoaded = false,
   lighthouseLoaded = false,
@@ -156,26 +156,41 @@ export function getParams() {
 }
 
 function init() {
-  // container = document.querySelector('.container');
+  canvas = document.getElementById("c");
+  let content = document.getElementById("city-content");
+
+  // create html for city scene
+  const scene_city_element = document.getElementById("city-element");
+  const scene_city_description = document.getElementById("city-description");
+  scene_city_description.innerText = "city stat";
+  scene_city.userData.element = scene_city_element;
+
   perspectiveCamera = new THREE.PerspectiveCamera(60, (window.innerWidth-sliderPos)/window.innerHeight, 1, 4000);
   perspectiveCamera.position.z = 600;
   perspectiveCamera.position.y = 350;
-
   orthographicCamera = new THREE.OrthographicCamera(frustumSize * aspect / -2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / -2, 1, 1000);
   orthographicCamera.position.z = 20;
+  scene_city.userData.camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
+  
+  const city_controls = new TrackballControls(scene_city.userData.camera, scene_city.userData.element);
+  city_controls.rotateSpeed = 1.0;
+  city_controls.zoomSpeed = 1.2;
+  city_controls.panSpeed = 0.8;
+  city_controls.keys = [65, 83, 68];
+  scene_city.userData.controls = city_controls;
 
-  renderer = new THREE.WebGLRenderer({
-    antialiasing: true
-  });
-  renderer.setPixelRatio(window.devicePixelRatio * 2.0);
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setScissorTest(true);
-  // container.appendChild(renderer.domElement);
-  document.getElementById('city').appendChild(renderer.domElement);
-  document.addEventListener('mousemove', onMouseMove, false);
-  window.addEventListener('resize', onWindowResize, false);
+  // renderer = new THREE.WebGLRenderer({
+  //   antialiasing: true
+  // });
+  // renderer.setPixelRatio(window.devicePixelRatio * 2.0);
+  // renderer.setSize(window.innerWidth, window.innerHeight);
+  // renderer.setScissorTest(true);
+  // // container.appendChild(renderer.domElement);
+  // document.getElementById('city').appendChild(renderer.domElement);
+  // document.addEventListener('mousemove', onMouseMove, false);
+  // window.addEventListener('resize', onWindowResize, false);
   // window.addEventListener( 'reset_camera', onResetCamera, false);
-  createControls(perspectiveCamera);
+  // createControls(perspectiveCamera);
 
   // environment lights
   light_objects = {
@@ -193,7 +208,7 @@ function init() {
   scene_city.add(light_objects.spotLight);
   scene_city.add(light_objects.spotLight.target);
   light_objects.spotLight.visible = false;
-  let selectionLightsLength=10;
+  let selectionLightsLength=30;
   for(let i=0;i<selectionLightsLength;i++){
     light_objects.selectionLights.push(new THREE.SpotLight(0xffffff, 0.4, 0, Math.PI / 3, 1, 1));
     light_objects.selectionLights[i].visible=false;
@@ -232,7 +247,7 @@ function init() {
       grass_objects.every(object => scene_city.remove(object));
       truss_objects.every(object => scene_city.remove(object));
       bush_objects.every(object => scene_city.remove(object));
-      light_objects.spotLight.visible = false;
+      light_objects.spotLight.visible = scene_lighthouse.userData.camerafalse;
       lighthouse_objects.every(object => scene_lighthouse.remove(object));
       if (dataSet === data_list[0]) {
         // friendster
@@ -347,14 +362,7 @@ function init() {
   );
   f4.open();
 
-  // ground
-  // let groundMat = new THREE.MeshBasicMaterial( {color:params.ground} );
-  // groundMat.side = THREE.DoubleSide;
-
-  // let groundUrl = "models/island.obj";
-  // let groundMesh = objLoader(groundUrl, groundMat);
-
-  // groud - 2
+  // groud
   let groundNormal = new THREE.TextureLoader().load(ground_texture_file);
   groundNormal.wrapS = THREE.RepeatWrapping;
   groundNormal.wrapT = THREE.RepeatWrapping;
@@ -363,16 +371,9 @@ function init() {
   let groundMat = new THREE.MeshStandardMaterial({
     map: groundNormal
   });
-  // groundMat.normalMap = groundNormal;
-  // groundMat.side = THREE.DoubleSide;
-  let groundMesh = groundObjLoader(land_obj, groundMat);
+  groundObjLoader(land_obj, groundMat);
 
-  // let size = 1200;
-  // let divisions = 24;
-  // let gridHelper = new THREE.GridHelper( size, divisions );
-  // scene_city.add( gridHelper );
-
-  // water - 2
+  // water
   let waterGeo = new THREE.BoxBufferGeometry(5000, 50, 5000);
   let waterNormal = new THREE.TextureLoader().load(water_texture_file, function(texture) {
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
@@ -389,12 +390,24 @@ function init() {
   scene_city.add(waterMesh);
   scenes.push(scene_city);
 
-  // scene 2
+  // lighthouse scene
+  const lighthouse_element = document.getElementById("lighthouse-element");
+  scene_lighthouse.userData.element = lighthouse_element;
+
   perspectiveCameraL = new THREE.PerspectiveCamera(75, sliderPos / window.innerHeight, 0.1, 1000);
   perspectiveCameraL.position.z = 10;
   perspectiveCameraL.position.y = 2;
-  
-  // guiL - left GUI
+  scene_lighthouse.userData.camera = perspectiveCameraL;
+
+  const lighthouse_controls = new TrackballControls(scene_lighthouse.userData.camera, scene_lighthouse.userData.element);
+  lighthouse_controls.noRotate = true;
+  lighthouse_controls.zoomSpeed = 1.0;
+  lighthouse_controls.panSpeed = 0.8;
+  lighthouse_controls.keys = [65, 83, 68];
+  scene_lighthouse.userData.controls = lighthouse_controls;
+  scenes.push(scene_lighthouse);
+
+  // guiL - GUI for lighthouse
   guiL = new GUI({
     width: 362,
     autoPlace: false
@@ -410,6 +423,11 @@ function init() {
   loadJSONFile(lighthouse_file, manager);
   loadJSONFile(entropy_file, manager);
   loadJSONFile(bucket_file, manager);
+
+  renderer = new THREE.WebGLRenderer({canvas: canvas, antialias: true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setClearColor(0x87ceeb,1);
 }
 
 //load ground OBJ file
@@ -686,7 +704,8 @@ function createControls(camera) {
   controls.keys = [65, 83, 68];
 }
 
-function onWindowResize() {
+// previous onWindowResize
+function updateSize() {
   let aspect = window.innerWidth / window.innerHeight;
 
   perspectiveCamera.aspect = aspect;
@@ -698,14 +717,18 @@ function onWindowResize() {
   orthographicCamera.bottom = -frustumSize / 2;
   orthographicCamera.updateProjectionMatrix();
 
-  renderer.setSize(window.innerWidth, window.innerHeight);
-
-  controls.handleResize();
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  if ( canvas.width !== width || canvas.height !== height ) {
+    renderer.setSize( width, height, false );
+  }
+  scenes.forEach(scene => scene.userData.controls.handleResize());
 }
 
 function animate() {
+  updateSize();
   requestAnimationFrame(animate);
-  controls.update();
+  scenes.forEach(scene => scene.userData.controls.update());
   // stats.update();
   if (city_to_load > 0) {
     console.log("animate: run createCityMeshes()");
@@ -728,13 +751,22 @@ function animate() {
 }
 
 function render() {
+  renderer.setScissorTest( false );
+  renderer.clear();
+  renderer.setScissorTest( true );
+
   let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
   renderer.setScissor(0, 0, sliderPos, window.innerHeight);
   renderer.setViewport(0, 0, sliderPos, window.innerHeight);
-  renderer.render(scene_lighthouse, perspectiveCameraL);
+  // renderer.render(scene_lighthouse, perspectiveCameraL);
+  renderer.render(scene_lighthouse,scene_lighthouse.userData.camera);
+  // sliderPos = 0;
   renderer.setScissor(sliderPos, 0, window.innerWidth, window.innerHeight);
   renderer.setViewport(sliderPos, 0, window.innerWidth, window.innerHeight);
-  renderer.render(scene_city, camera);
+  // renderer.render(scene_city, camera);
+  renderer.render(scene_city,scene_city.userData.camera);
+  
+
   // let time = performance.now() * 0.001;
   // water.material.uniforms[ 'time' ].value += 1.0 / 60.0;
   if (toPanCity) {
@@ -916,8 +948,9 @@ function initSlider() {
   function onPointerDown() {
 
     if (event.isPrimary === false) return;
-
-    controls.enabled = true;
+    
+    // controls.enabled = true;
+    scenes.forEach(scene => scene.userData.controls.enabled = true);
 
     window.addEventListener('pointermove', onPointerMove, false);
     window.addEventListener('pointerup', onPointerUp, false);
@@ -926,8 +959,9 @@ function initSlider() {
 
   function onPointerUp() {
 
-    controls.enabled = true;
-
+    // controls.enabled = true;
+    scenes.forEach(scene => scene.userData.controls.enabled = true);
+    
     window.removeEventListener('pointermove', onPointerMove, false);
     window.removeEventListener('pointerup', onPointerUp, false);
     slider.style.left = "-40px";

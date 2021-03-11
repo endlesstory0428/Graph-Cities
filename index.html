@@ -12,16 +12,13 @@
 			color: #444;
 		}
 
-		canvas {
-			display: block;
-		}
-
-		.container {
+		#c {
 			position: absolute;
+			left: 0;
 			width: 100%;
 			height: 100%;
 		}
-
+		
 		.custom_slider {
 			position: absolute;
 			cursor: ew-resize;
@@ -36,20 +33,6 @@
 			left: calc(50% - 20px);
 		}
 
-		.modal {
-			display: none;
-			position: fixed;
-			z-index: 1;
-			padding-top: 1px;
-			left: 0;
-			top: 0;
-			width: 100%;
-			height: 100%;
-			overflow: auto;
-			background-color: rgb(0, 0, 0);
-			background-color: rgba(0, 0, 0, 0.4);
-		}
-
 		#bottom-gui-container {
 			position: absolute;
 			top: 0px;
@@ -61,7 +44,60 @@
 			top: 0px;
 			left: 0px;
 		}
-	</style>
+
+		#city-view {
+			/* uncomment for another version */
+			/* position: absolute; */ 
+			width: 100%; height: 100%;
+			z-index: 0;
+		}
+		
+		.element-container {
+			display: inline-block;
+		}
+
+		.element-container:after {
+			clear:both;
+		}
+
+		#lighthouse-element {
+			float: left; height: 100%; width: 22%;
+		}
+
+		#city-element {
+			float: left; height: 100%; width: 78%;
+		}
+
+		#city-description {
+			color: #000;
+			background-color: #eee;
+			font-family: sans-serif;
+			font-size: large;
+			width: 50%;
+			margin: 0.5em;
+			text-align: center;
+			padding: 10px;
+		}
+
+		#graph {
+			float: left; width: 49.5%; display: block;
+		}
+
+		#graph-right {
+			float: right; 
+			width: 50%; 
+			border-left: 5px solid black; 
+			display: block;
+		}
+
+		#strata {
+			width: 100%; height: 100%;
+		}
+
+		#inner-view {
+			display: block;
+			width: 100%; height: 100%;
+		}
 	</style>
 	<script>
 		function locationreload() {
@@ -89,24 +125,25 @@
 </head>
 
 <body>
-	<div>
-		<div class="custom_slider"></div>
-		<div>
-			<div id="first-gui-container"></div>
-			<div id="city" style="width: 100%; height: 100%"></div>
+	<canvas id="c"></canvas>
+	<div id="city-view" class="element-container">
+		<div id="lighthouse-element"></div>
+		<div id="city-element">
+			<div id="city-description"></div>
 		</div>
-		<div>
-			<div id="bottom-gui-container"></div>
-			<div id="graph" style="float: left; width: 49.5%; height: 100%"></div>
-			<div style="float: right; width: 50%; height: 100%; border-left: 5px solid black; ">
-				<iframe id="strata" src=http://localhost:8080/?dataPath=simplegraph width="100%" height="100%"></iframe>
-			</div>
-			<!-- <div id="local"></div> -->
+		<div class="custom_slider"></div>
+		<div id="first-gui-container"></div>
+	</div>
+	<div id="inner-view" class="element-container">
+		<div id="bottom-gui-container"></div>
+		<div id="graph"></div>
+		<div id="graph-right">
+			<iframe id="strata" src=http://localhost:8080/?dataPath=simplegraph"></iframe>
 		</div>
 	</div>
 
-	<script src="scripts/dag_view.js"></script>
 	<script type="module" src="scripts/main.js"></script>
+	<!-- <script src="scripts/dag_view.js"></script> -->
 </body>
 
 </html>
