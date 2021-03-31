@@ -43,33 +43,28 @@
 			position: absolute;
 			top: 0px;
 			left: 0px;
+			z-index: 0;
 		}
 
-		/* #city-view {
-			
-			position: absolute; /*uncomment for another version
-			width: 100%; height: 100%;
-			z-index: 0;
-		} */
-
 		.col {
-			height: 100vh;
 			/* width: 50%; */
 			position: fixed;
-			z-index: 1;
-			top: 0;
 			overflow-x: hidden;
-			padding-top: 20px;
 		}
 
 		#lighthouse-view {
 			left: 0;
-			width: 20%;
+			width: 362px;
+			height: calc(100vh - 100px);
+			bottom: 0;
 		}
 
 		#city-view {
+			height: 100vh;
+			top: 0;
 			right: 0;
-			width: 80%;
+			width: calc(100vw - 375px);
+			z-index: 2;
 		}
 		
 		.element-container {
@@ -79,14 +74,6 @@
 		.element-container:after {
 			clear:both;
 		}
-/* 
-		#lighthouse-element {
-			float: left; height: 100%; width: 22%;
-		}
-
-		#city-element {
-			float: left; height: 100%; width: 78%;
-		} */
 
 		#city-description {
 			color: #000;
@@ -97,6 +84,10 @@
 			margin: 0.5em;
 			text-align: center;
 			padding: 10px;
+		}
+		
+		#city-description:hover~img{
+			display: block;
 		}
 
 		#graph {
@@ -116,8 +107,17 @@
 
 		#inner-view {
 			display: block;
-			width: 100%; height: 100%;
+			position: relative;
+			top: 100%;
+			width: 100%; 
+			height: 100%;
 		}
+		
+		img {
+			display:none;
+		}
+
+
 	</style>
 	<script>
 		function locationreload() {
@@ -146,29 +146,21 @@
 
 <body>
 	<canvas id="c"></canvas>
+	<div id="first-gui-container"></div>
 	<div class="col" id="lighthouse-view">
-		<div id="first-gui-container"></div>
 		<div id="custom_slider"></div>
 	</div>
 	<div class="col" id="city-view">
 		<div id="city-description"></div>
 	</div>
-	<!-- <div id="city-view" class="element-container">
-		<div id="lighthouse-element"></div>
-		<div id="city-element">
-			<div id="city-description"></div>
-		</div>
-		<div class="custom_slider"></div>
-		<div id="first-gui-container"></div>
-	</div> -->
 
-	<!-- <div id="inner-view" class="element-container">
+	<div id="inner-view" class="element-container">
 		<div id="bottom-gui-container"></div>
 		<div id="graph"></div>
 		<div id="graph-right">
 			<iframe id="strata" src=http://localhost:8080/?dataPath=simplegraph"></iframe>
 		</div>
-	</div> -->
+	</div>
 
 	<script type="module" src="scripts/main_test.js"></script>
 	<!-- <script src="scripts/dag_view.js"></script> -->

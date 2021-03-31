@@ -48,11 +48,13 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
         if(info.hasOwnProperty(key)) {
             // console.log(key+' -> '+info[key]);
             let color = interpolateLinearly(peel_value_color,jet); //jet colormap [0=blue, 1=red]
-            let color_string = rgbToHex(Math.round(color[0]*255),Math.round(color[1]*255),Math.round(color[2]*255));
-            first_key_color_dict[parseInt(key)] = color_string;    
-            // const material = new THREE.MeshBasicMaterial({color:color_string}); //black color
             const entropy_intensity = entropy[parseInt(key)];
-            const emissive_material = new THREE.MeshStandardMaterial({color:color_string,emissive:color_string,emissiveIntensity:entropy_intensity});
+            let color_hex = rgbToHex(Math.round(color[0]*255),Math.round(color[1]*255),Math.round(color[2]*255));
+            // const material = new THREE.MeshBasicMaterial({color:color_string}); //black color
+            
+            const emissive_material = new THREE.MeshStandardMaterial({color:color_hex,emissive:color_hex,emissiveIntensity:entropy_intensity});
+            first_key_color_dict[parseInt(key)] = color_hex;
+
             for (let key2 in info[key]) {
                 // console.log(key+'/'+key2+' -> '+info[key][key2]);
                 const Y_dis = Math.log2(key2 + 1)*scale_factor;
@@ -60,6 +62,8 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
                 const geometry = new THREE.CylinderGeometry(R,R,Y_dis,16,8);
                 geometry.translate(0,Y,0);
                 const cylinder = new THREE.Mesh(geometry,emissive_material);
+                cylinder.name = JSON.stringify(key).slice(1,-1);
+                // console.log("cylinder name "+cylinder.name);
                 scene.add(cylinder);
                 lighthouse_objects.push(cylinder);
                 Y += Y_dis;
@@ -126,9 +130,18 @@ function colorToHex(c) {
     return hex.length == 1 ? "0" + hex : hex;
 }
 
+function hexToRgb(hex) {
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+}
+
 // RGB in [0,255]
 function rgbToHex(r,g,b) {
-    return parseInt("0x"+colorToHex(r)+colorToHex(g)+colorToHex(b));
+    return parseInt("0x"+colorToHex(r)+colorToHex(g)+colorToHex(b),16);
 }
 
 //https://github.com/timothygebhard/js-colormaps/blob/master/overview.html
@@ -205,4 +218,4 @@ function onWindowResize() {
     controls.handleResize();
 }
 
-export { loadCitySummaryFile, updateSelectionLights };
+export { loadCitySummaryFile, updateSelectionLights, hexToRgb, rgbToHex };
