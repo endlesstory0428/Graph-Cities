@@ -22,13 +22,10 @@ let perspectiveCamera, orthographicCamera, perspectiveCameraL;
 let frustumSize = 400;
 let aspect = window.innerWidth / window.innerHeight;
 let scene_city = new THREE.Scene();
-// scene_city.background = new THREE.Color('skyblue');
 let scene_lighthouse = new THREE.Scene();
-// scene_lighthouse.background = new THREE.Color(0xBCD48F);
-// scene_lighthouse.background = new THREE.Color('white');
 let sliderPos = 362;
 
-let raycaster = new THREE.Raycaster();
+const raycaster = new THREE.Raycaster();
 let mouse = new THREE.Vector2();
 let INTERSECTED;
 let city_tracking = {};
@@ -69,6 +66,9 @@ let gui, guiL, select_fixed_point;
 // let DATASET = 'movies';
 // let DATASET = 'cit-Patents';
 const data_list = ['com-friendster', 'movies', 'cit-Patents'];
+const V = {'com-friendster':65608366, 'movies':218052, 'cit-Patents':3774768};
+const E = {'com-friendster':1806067135, 'movies':115050370, 'cit-Patents':16518947};
+const connected = {'com-friendster':true, 'movies':false, 'cit-Patents':false};
 let land_obj = "../models/flat_island.obj";
 let ground_texture_file = "../textures/ground_2.jpg";
 let water_texture_file = "../textures/waternormals.jpg";
@@ -129,7 +129,7 @@ let paramsL = {
     lightIntensity: 0.1
 }
 let lighthouse_objects = [];
-let entropy, bucketData, lighthouseData, metaData, voronoiData;
+let entropy, bucketData, lighthouseData, metaData, voronoiData, summaryData;
 // let selected_buildings = ["1_405063", "1_62999", "8_4342010", "1_250725", "1_140109", "3_3191982", "11_2983724"];
 let selected_buildings = [];
 const data_dir = "../data/";
@@ -143,11 +143,16 @@ let meta_file = python_dir + paramsL.dataSet + "/metagraph_normalized.txt";
 let lighthouse_file = lighthouse_dir+paramsL.dataSet+'-layers-dists.json';
 let entropy_file = lighthouse_dir+paramsL.dataSet+'_entropy.json';
 let bucket_file = lighthouse_dir+paramsL.dataSet+'-bucket2peels.json';
+let summary_file = data_dir + paramsL.dataSet+'-summary.json';
 let building_params = {
   floor: '',
   layer: ''
 };
 let water;
+const scene_city_element = document.getElementById("city-element");
+const scene_city_description = document.getElementById("city-description");
+let views, lighthouse_view, city_view;
+
 init();
 animate();
 
@@ -157,14 +162,29 @@ export function getParams() {
 
 function init() {
   canvas = document.getElementById("c");
-  let content = document.getElementById("city-content");
 
-  // create html for city scene
-  const scene_city_element = document.getElementById("city-element");
-  const scene_city_description = document.getElementById("city-description");
-  scene_city_description.innerText = "city stat";
-  scene_city.userData.element = scene_city_element;
+  renderer = new THREE.WebGLRenderer({canvas: canvas, antialias: true});
+  renderer.setPixelRatio(window.devicePixelRatio);
+  
+  lighthouse_view = document.querySelector('#lighthouse-view');
+  city_view = document.querySelector('#city-view');
+  views = [lighthouse_view, city_view];
 
+  const canvas2 = document.createElement('canvas');
+  canvas2.width = 128;
+  canvas2.height = 128;
+
+  scene_city.userData.view = views[1];
+  scene_city.background = new THREE.Color('skyblue');
+
+  // city summary
+//   scene_city_description.innerText = paramsL.dataSet+" V: "+V[paramsL.dataSet]+", E: "+E[paramsL.dataSet];
+//   scene_city_description.innerText = scene_city_description.innerText.concat(", CC");
+  let deg_img = document.createElement("img");
+  deg_img.src = data_dir+paramsL.dataSet+"_deg.png";
+  deg_img.style.width = '50%';
+  city_view.appendChild(deg_img);
+  
   perspectiveCamera = new THREE.PerspectiveCamera(60, (window.innerWidth-sliderPos)/window.innerHeight, 1, 4000);
   perspectiveCamera.position.z = 600;
   perspectiveCamera.position.y = 350;
@@ -172,25 +192,12 @@ function init() {
   orthographicCamera.position.z = 20;
   scene_city.userData.camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
   
-  const city_controls = new TrackballControls(scene_city.userData.camera, scene_city.userData.element);
+  const city_controls = new TrackballControls(scene_city.userData.camera, city_view);
   city_controls.rotateSpeed = 1.0;
   city_controls.zoomSpeed = 1.2;
   city_controls.panSpeed = 0.8;
   city_controls.keys = [65, 83, 68];
   scene_city.userData.controls = city_controls;
-
-  // renderer = new THREE.WebGLRenderer({
-  //   antialiasing: true
-  // });
-  // renderer.setPixelRatio(window.devicePixelRatio * 2.0);
-  // renderer.setSize(window.innerWidth, window.innerHeight);
-  // renderer.setScissorTest(true);
-  // // container.appendChild(renderer.domElement);
-  // document.getElementById('city').appendChild(renderer.domElement);
-  // document.addEventListener('mousemove', onMouseMove, false);
-  // window.addEventListener('resize', onWindowResize, false);
-  // window.addEventListener( 'reset_camera', onResetCamera, false);
-  // createControls(perspectiveCamera);
 
   // environment lights
   light_objects = {
@@ -228,6 +235,7 @@ function init() {
   loadJSONFile(lighthouse_file, manager);
   loadJSONFile(entropy_file, manager);
   loadJSONFile(bucket_file, manager);
+  loadJSONFile(summary_file, manager);
 
   // GUI folders
   gui = new GUI({
@@ -247,8 +255,9 @@ function init() {
       grass_objects.every(object => scene_city.remove(object));
       truss_objects.every(object => scene_city.remove(object));
       bush_objects.every(object => scene_city.remove(object));
-      light_objects.spotLight.visible = scene_lighthouse.userData.camerafalse;
+      light_objects.spotLight.visible = false;
       lighthouse_objects.every(object => scene_lighthouse.remove(object));
+      
       if (dataSet === data_list[0]) {
         // friendster
         ground_object.scale.set(0.4, 0.1, 0.3);
@@ -268,13 +277,15 @@ function init() {
         perspectiveCameraL.position.y = 2;
         perspectiveCameraL.position.z = 10;
       }
-      
+
       animate();
+    //   scene_city_description.innerText = "V: "+V[dataSet]+", E: "+E[dataSet];
       source_dir = data_dir + dataSet + "/";
       spiral_file = data_dir + dataSet + "/SPIRAL.txt";
       voronoi_file = python_dir + dataSet + "/voronoi.txt";
       neighbors_file = python_dir + dataSet + "/neighbors.txt";
       meta_file = python_dir + dataSet + "/metagraph_normalized.txt";
+      
       time = new Date();
       start_time_string = time.getMinutes() + ':' + time.getSeconds() + '.' + time.getMilliseconds();
       city_tracking = {};
@@ -289,13 +300,14 @@ function init() {
       key_to_buckets = {};
       selected_buildings = [];
       lighthouseData = {}, entropy = {}, bucketData = {};
-      select_fixed_point.onChange(function(key) {});
       lighthouse_file = '../scripts/lighthouse/'+dataSet+'-layers-dists.json';
       entropy_file = '../scripts/lighthouse/'+dataSet+'_entropy.json';
       bucket_file = '../scripts/lighthouse/'+dataSet+'-bucket2peels.json';
+      summary_file =  data_dir + dataSet + "-summary.json";
       loadJSONFile(lighthouse_file, manager);
       loadJSONFile(entropy_file, manager);
       loadJSONFile(bucket_file, manager);
+      loadJSONFile(summary_file, manager);
       animate();
     }
   );
@@ -343,7 +355,7 @@ function init() {
   dropdown.setValue('default');
   dropdown.onChange(
     function(value) {
-//       setStrataUrl("?dataPath=simplegraph");
+      setStrataUrl("?dataPath=simplegraph");
       path_objects.every(object => scene_city.remove(object));
       animate();
       let result = PATH.pathPlanning(value, scene_city, city_all, light_objects, selected_buildings);
@@ -356,8 +368,8 @@ function init() {
       let wavemap_ID_ID_freq = value.split('_');
       let file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '-' + wavemap_ID_ID_freq[2] + '.json';
       console.log("Loading: ", file);
-//       loadFile2(file);
-      // loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
+      loadFile2(file);
+      loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
     }
   );
   f4.open();
@@ -392,19 +404,29 @@ function init() {
 
   // lighthouse scene
   const lighthouse_element = document.getElementById("lighthouse-element");
-  scene_lighthouse.userData.element = lighthouse_element;
+  const canvas3 = document.createElement( 'canvas' );
+  canvas3.width = 128;
+  canvas3.height = 128;
+
+  scene_lighthouse.background = new THREE.Color('white');
+  scene_lighthouse.userData.view = views[0];
 
   perspectiveCameraL = new THREE.PerspectiveCamera(75, sliderPos / window.innerHeight, 0.1, 1000);
   perspectiveCameraL.position.z = 10;
   perspectiveCameraL.position.y = 2;
   scene_lighthouse.userData.camera = perspectiveCameraL;
 
-  const lighthouse_controls = new TrackballControls(scene_lighthouse.userData.camera, scene_lighthouse.userData.element);
-  lighthouse_controls.noRotate = true;
+  let lighthouse_controls = new TrackballControls(scene_lighthouse.userData.camera, lighthouse_view);
+  // lighthouse_controls.noRotate = false;
   lighthouse_controls.zoomSpeed = 1.0;
   lighthouse_controls.panSpeed = 0.8;
   lighthouse_controls.keys = [65, 83, 68];
+  lighthouse_controls.object = perspectiveCameraL;
   scene_lighthouse.userData.controls = lighthouse_controls;
+ 
+  lighthouse_view.addEventListener('mousedown',onMouseDownLH);
+  
+  // lighthouse_element.addEventListener('mousemove', onMouseMoveLH);
   scenes.push(scene_lighthouse);
 
   // guiL - GUI for lighthouse
@@ -417,17 +439,7 @@ function init() {
   light_intensity = guiL.add(paramsL, 'lightIntensity').name('diversity');
   let customContainer = document.getElementById('first-gui-container');
   customContainer.appendChild(guiL.domElement);
-  lighthouse_file = '../scripts/lighthouse/'+paramsL.dataSet+'-layers-dists.json';
-  entropy_file = '../scripts/lighthouse/'+paramsL.dataSet+'_entropy.json';
-  bucket_file = '../scripts/lighthouse/'+paramsL.dataSet+'-bucket2peels.json';
-  loadJSONFile(lighthouse_file, manager);
-  loadJSONFile(entropy_file, manager);
-  loadJSONFile(bucket_file, manager);
 
-  renderer = new THREE.WebGLRenderer({canvas: canvas, antialias: true});
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setClearColor(0x87ceeb,1);
 }
 
 //load ground OBJ file
@@ -629,7 +641,37 @@ function loadedJSON(evt) {
   }else if(filename.includes("layers-dists")) {
     lighthouseLoaded = true;
     lighthouseData = JSON.parse(fileString);
+    let sum = sum_obj(lighthouseData);
+    // scene_city_description.innerText = scene_city_description.innerText.concat(", # fixed point values: "+Object.keys(lighthouseData).length);
+    // scene_city_description.innerText = scene_city_description.innerText.concat(", # connected fixed point: "+sum);
+  }else if(filename.includes("summary")){
+    summaryData = JSON.parse(fileString);
+    scene_city_description.innerText = objToString(summaryData);
   }
+}
+
+function objToString (obj) {
+    var str = '| ';
+    for (var p in obj) {
+        if (obj.hasOwnProperty(p)) {
+            str += p + ': ' + obj[p]+' | ';
+        }
+    }
+    return str;
+}
+
+function sum_obj(obj){
+  var sum = 0;
+  for( var el in obj ) {
+    if( obj.hasOwnProperty( el ) ) {
+      for( let el2 in obj[el]){
+        if( obj[el].hasOwnProperty( el2 ) ) {
+          sum += obj[el][el2];
+        }
+      }
+    }
+  }
+  return sum;
 }
 
 function loaded(evt) {
@@ -657,6 +699,7 @@ function loaded(evt) {
         loadFile(floor_file, manager);
       }
     }
+    // scene_city_description.innerText = scene_city_description.innerText.concat(", # buildings: "+city_to_load);
     loadVoronoiFile(voronoi_file, manager);
     loadVoronoiFile(neighbors_file, manager);
     loadMetaFile(meta_file, manager);
@@ -730,7 +773,7 @@ function animate() {
   requestAnimationFrame(animate);
   scenes.forEach(scene => scene.userData.controls.update());
   // stats.update();
-  if (city_to_load > 0) {
+  if (city_to_load > 0 && addBuildings) {
     console.log("animate: run createCityMeshes()");
     let result = BUILD.createCityMeshes(scene_city, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, city_to_load, y_scale, paramsL.dataSet, params.isNight);
     scene_city = result.scene;
@@ -756,19 +799,26 @@ function render() {
   renderer.setScissorTest( true );
 
   let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
-  renderer.setScissor(0, 0, sliderPos, window.innerHeight);
-  renderer.setViewport(0, 0, sliderPos, window.innerHeight);
-  // renderer.render(scene_lighthouse, perspectiveCameraL);
-  renderer.render(scene_lighthouse,scene_lighthouse.userData.camera);
-  // sliderPos = 0;
-  renderer.setScissor(sliderPos, 0, window.innerWidth, window.innerHeight);
-  renderer.setViewport(sliderPos, 0, window.innerWidth, window.innerHeight);
-  // renderer.render(scene_city, camera);
-  renderer.render(scene_city,scene_city.userData.camera);
-  
+  scenes.forEach(function (scene) {
+    const rect = scene.userData.view.getBoundingClientRect();
 
-  // let time = performance.now() * 0.001;
-  // water.material.uniforms[ 'time' ].value += 1.0 / 60.0;
+    // check if it's offscreen. If so skip it
+    if ( rect.bottom < 0 || rect.top > renderer.domElement.clientHeight ||
+         rect.right < 0 || rect.left > renderer.domElement.clientWidth ) {
+        return; // it's off screen
+    }
+
+    // set the viewport
+    const width = rect.right - rect.left;
+    const height = rect.bottom - rect.top;
+    const left = rect.left;
+    const bottom = renderer.domElement.clientHeight - rect.bottom;
+
+    renderer.setViewport( left, bottom, width, height );
+    renderer.setScissor( left, bottom, width, height );
+
+    renderer.render( scene, scene.userData.camera );
+  });
   if (toPanCity) {
     // console.log("pan city "+theta);
     theta += 0.1;
@@ -833,8 +883,9 @@ function render() {
       console.log("pathPlanningDone "+pathPlanningDone+", metaLoaded && voronoiLoaded && lighthouseLoaded && bucketLoaded");
       select_fixed_point.onChange (
         function (key) {
+          const intensity = entropy[parseInt(key)];
           color_display.setValue(first_key_color_dict[parseInt(key)]);
-          light_intensity.setValue(entropy[parseInt(key)]);
+          light_intensity.setValue(intensity);
           console.log("light_intensity2 "+entropy[parseInt(key)]);
           // console.log("key "+key);
           // console.log("first_key_list[key] "+first_key_list[parseInt(key)]);
@@ -883,8 +934,10 @@ function zoomBuilding() {
 }
 
 function onMouseMove(event) {
-  mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
-  mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
+  // mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
+  // mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
+  mouse.x = (event.clientX / (window.clientWidth-sliderPos)) * 2 - 1;
+  mouse.y = -(event.clientY / (window.clientHeight-sliderPos)) * 2 + 1;
   let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
   raycaster.setFromCamera(mouse, camera);
 
@@ -910,6 +963,21 @@ function onMouseMove(event) {
     INTERSECTED = null;
     building_params.floor = '';
     building_params.layer = '';
+  }
+}
+
+function onMouseDownLH(event){
+  event.preventDefault();
+  const rect = scene_lighthouse.userData.view.getBoundingClientRect();
+  const width = rect.right-rect.left;
+  const height = rect.bottom-rect.top;
+  mouse.x=(event.clientX/width)*2-1;
+  mouse.y=-((event.clientY-100)/height)*2+1;
+  raycaster.setFromCamera(mouse, perspectiveCameraL);
+  const intersects=raycaster.intersectObjects(scene_lighthouse.children);
+  if(intersects.length>0){
+    console.log("onMouseDownLH, "+intersects[0].object.name);
+    select_fixed_point.setValue(parseInt(intersects[0].object.name));
   }
 }
 
@@ -942,7 +1010,7 @@ function onMouseDown(event) {
 
 function initSlider() {
 
-  const slider = document.querySelector('.custom_slider');
+  const slider = document.querySelector('#custom_slider');
   slider.style.left = "341px";
 
   function onPointerDown() {
