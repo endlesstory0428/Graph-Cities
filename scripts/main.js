@@ -41,7 +41,7 @@ let grass_objects = [];
 let bush_objects = [];
 let light_objects = {};
 let key_to_buckets = {};
-let addBuildings = false;
+let addBuildings = true;
 let metaLoaded = false,
   voronoiLoaded = false,
   lighthouseLoaded = false,
@@ -241,13 +241,14 @@ function init() {
   gui = new GUI({
     width: 350
   });
+  gui.domElement.style = "z-index: 3";
 
   let f0 = gui.addFolder('Data Set');
   let selectData = gui.add(paramsL, 'dataSet', data_list).name('choose data set');
   selectData.setValue(paramsL.dataSet);
   selectData.onChange(
     function(dataSet) {
-      // setStrataUrl("?dataPath=simplegraph");
+      setStrataUrl('?data=nodata');
       objects.every(object => scene_city.remove(object));
       path_objects.every(object => scene_city.remove(object));
       window_objects.every(object => scene_city.remove(object));
@@ -355,7 +356,7 @@ function init() {
   dropdown.setValue('default');
   dropdown.onChange(
     function(value) {
-      setStrataUrl("?dataPath=simplegraph");
+      setStrataUrl('?data=nodata');
       path_objects.every(object => scene_city.remove(object));
       animate();
       let result = PATH.pathPlanning(value, scene_city, city_all, light_objects, selected_buildings);
@@ -895,14 +896,14 @@ function render() {
           light_objects = result.light_objects;
         }
       );
-      let result_2 = PATH.pathPlanning(city_list[0], scene_city, city_all, light_objects, selected_buildings);
+      let result_2 = PATH.pathPlanning(city_list[city_list.length-1], scene_city, city_all, light_objects, selected_buildings);
       scene_city = result_2.scene;
       path_objects = result_2.path;
       light_objects = result_2.light_objects;
       let result = LH.updateSelectionLights(city_all, light_objects, selected_buildings);
       light_objects = result.light_objects;
       PATH.updateDropdown(dropdown, city_list);
-      dropdown.setValue(city_list[0]);
+      dropdown.setValue(city_list[city_list.length-1]);
     }
   }
 }

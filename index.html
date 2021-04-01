@@ -18,7 +18,7 @@
 			width: 100%;
 			height: 100%;
 		}
-		
+
 		.custom_slider {
 			position: absolute;
 			cursor: ew-resize;
@@ -43,7 +43,7 @@
 			position: absolute;
 			top: 0px;
 			left: 0px;
-			z-index: 0;
+			z-index: 1;
 		}
 
 		.col {
@@ -64,15 +64,15 @@
 			top: 0;
 			right: 0;
 			width: calc(100vw - 375px);
-			z-index: 2;
+			z-index: 0;
 		}
-		
+
 		.element-container {
 			display: inline-block;
 		}
 
 		.element-container:after {
-			clear:both;
+			clear: both;
 		}
 
 		#city-description {
@@ -85,40 +85,41 @@
 			text-align: center;
 			padding: 10px;
 		}
-		
-		#city-description:hover~img{
+
+		#city-description:hover~img {
 			display: block;
 			padding: 20px;
 		}
 
 		#graph {
-			float: left; width: 49.5%; display: block;
+			float: left;
+			width: 49.5%;
+			display: block;
 		}
 
 		#graph-right {
-			float: right; 
-			width: 50%; 
-			border-left: 5px solid black; 
+			float: right;
+			width: 50%;
+			border-left: 5px solid black;
 			display: block;
 		}
 
 		#strata {
-			width: 100%; height: 100%;
+			width: 100%;
+			height: 100%;
 		}
 
 		#inner-view {
 			display: block;
 			position: relative;
 			top: 100%;
-			width: 100%; 
+			width: 100%;
 			height: 100%;
 		}
-		
+
 		img {
-			display:none;
+			display: none;
 		}
-
-
 	</style>
 	<script>
 		function locationreload() {
@@ -135,8 +136,8 @@
 
 	<script src="//unpkg.com/force-graph"></script>
 
-	<script src="//unpkg.com/3d-force-graph"></script>
-	<script src="//unpkg.com/three"></script>
+	<script src="//unpkg.com/3d-force-graph@1.66"></script>
+	<script src="//unpkg.com/three@0.124"></script>
 
 	<script src="//unpkg.com/dat.gui"></script>
 	<script src="DisjointSet.js"></script>
@@ -155,10 +156,15 @@
 	</div>
 
 	<div id="inner-view" class="element-container">
+		<!-- <div id="bottom-gui-container"></div>                                         -->
+		<!-- <div id="graph"></div>                                                        -->
+		<!-- <div id="graph-right">                                                        -->
+		<!--         <iframe id="strata" src=http://localhost:8080/?data=nodata"></iframe> -->
+		<!-- </div>                                                                        -->
 		<div id="bottom-gui-container"></div>
-		<div id="graph"></div>
-		<div id="graph-right">
-			<iframe id="strata" src=http://localhost:8080/?dataPath=simplegraph"></iframe>
+		<div id="graph" style="float: left; width: 49.5%; height: 100%"></div>
+		<div style="float: right; width: 50%; height: 100%; border-left: 5px solid black; ">
+			<iframe id="strata" src=http://localhost:8080/?data=nodatasimplegraph width="100%" height="100%"></iframe>
 		</div>
 	</div>
 
