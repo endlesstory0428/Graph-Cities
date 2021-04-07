@@ -1,0 +1,579 @@
+{
+	"304": {
+		"vertices": 24528,
+		"edges": 6301889,
+		"file_suffix": 304,
+		"num_fixedpoints": 1,
+		"num_waves": 7,
+		"num_frags": 203
+	},
+	"234": {
+		"vertices": 157908,
+		"edges": 32985831,
+		"file_suffix": 234,
+		"num_fixedpoints": 1,
+		"num_waves": 128,
+		"num_frags": 1188
+	},
+	"175": {
+		"vertices": 197091,
+		"edges": 32971011,
+		"file_suffix": 175,
+		"num_fixedpoints": 1,
+		"num_waves": 40,
+		"num_frags": 931
+	},
+	"169": {
+		"vertices": 228332,
+		"edges": 32277749,
+		"file_suffix": 169,
+		"num_fixedpoints": 1,
+		"num_waves": 29,
+		"num_frags": 357
+	},
+	"140": {
+		"vertices": 764401,
+		"edges": 94970270,
+		"file_suffix": 140,
+		"num_fixedpoints": 1,
+		"num_waves": 7,
+		"num_frags": 443
+	},
+	"120": {
+		"vertices": 908835,
+		"edges": 97669888,
+		"file_suffix": 120,
+		"num_fixedpoints": 1,
+		"num_waves": 2,
+		"num_frags": 367
+	},
+	"93": {
+		"vertices": 99,
+		"edges": 4836,
+		"file_suffix": 93,
+		"num_fixedpoints": 1,
+		"num_waves": 2,
+		"num_frags": 2
+	},
+	"92": {
+		"vertices": 322,
+		"edges": 22731,
+		"file_suffix": 93,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"89": {
+		"vertices": 4570064,
+		"edges": 367562291,
+		"file_suffix": 93,
+		"num_fixedpoints": 1,
+		"num_waves": 49,
+		"num_frags": 737
+	},
+	"86": {
+		"vertices": 394,
+		"edges": 26488,
+		"file_suffix": 86,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 1
+	},
+	"82": {
+		"vertices": 262,
+		"edges": 14810,
+		"file_suffix": 86,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"80": {
+		"vertices": 213,
+		"edges": 10640,
+		"file_suffix": 86,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 1
+	},
+	"77": {
+		"vertices": 188,
+		"edges": 8550,
+		"file_suffix": 86,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"75": {
+		"vertices": 292,
+		"edges": 16242,
+		"file_suffix": 86,
+		"num_fixedpoints": 1,
+		"num_waves": 2,
+		"num_frags": 4
+	},
+	"71": {
+		"vertices": 126835,
+		"edges": 8339470,
+		"file_suffix": 86,
+		"num_fixedpoints": 1,
+		"num_waves": 56,
+		"num_frags": 768
+	},
+	"68": {
+		"vertices": 182,
+		"edges": 7780,
+		"file_suffix": 68,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"65": {
+		"vertices": 155562,
+		"edges": 9282393,
+		"file_suffix": 68,
+		"num_fixedpoints": 1,
+		"num_waves": 7,
+		"num_frags": 415
+	},
+	"60": {
+		"vertices": 63,
+		"edges": 1949,
+		"file_suffix": 60,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"59": {
+		"vertices": 66,
+		"edges": 2111,
+		"file_suffix": 60,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 5
+	},
+	"58": {
+		"vertices": 947,
+		"edges": 44857,
+		"file_suffix": 60,
+		"num_fixedpoints": 1,
+		"num_waves": 4,
+		"num_frags": 50
+	},
+	"55": {
+		"vertices": 4506,
+		"edges": 207357,
+		"file_suffix": 60,
+		"num_fixedpoints": 1,
+		"num_waves": 4,
+		"num_frags": 90
+	},
+	"54": {
+		"vertices": 67276,
+		"edges": 3389323,
+		"file_suffix": 60,
+		"num_fixedpoints": 1,
+		"num_waves": 46,
+		"num_frags": 538
+	},
+	"53": {
+		"vertices": 6878498,
+		"edges": 322297063,
+		"file_suffix": 53,
+		"num_fixedpoints": 1,
+		"num_waves": 10,
+		"num_frags": 1260
+	},
+	"52": {
+		"vertices": 57,
+		"edges": 1567,
+		"file_suffix": 52,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"51": {
+		"vertices": 189,
+		"edges": 6576,
+		"file_suffix": 52,
+		"num_fixedpoints": 1,
+		"num_waves": 4,
+		"num_frags": 6
+	},
+	"49": {
+		"vertices": 147,
+		"edges": 4415,
+		"file_suffix": 52,
+		"num_fixedpoints": 2,
+		"num_waves": 2,
+		"num_frags": 12
+	},
+	"48": {
+		"vertices": 17893,
+		"edges": 783343,
+		"file_suffix": 52,
+		"num_fixedpoints": 1,
+		"num_waves": 11,
+		"num_frags": 376
+	},
+	"46": {
+		"vertices": 91,
+		"edges": 2856,
+		"file_suffix": 52,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 15
+	},
+	"45": {
+		"vertices": 96,
+		"edges": 2248,
+		"file_suffix": 52,
+		"num_fixedpoints": 2,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"44": {
+		"vertices": 59,
+		"edges": 1534,
+		"file_suffix": 52,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 4
+	},
+	"43": {
+		"vertices": 45,
+		"edges": 989,
+		"file_suffix": 52,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"41": {
+		"vertices": 7305,
+		"edges": 270745,
+		"file_suffix": 52,
+		"num_fixedpoints": 3,
+		"num_waves": 6,
+		"num_frags": 234
+	},
+	"40": {
+		"vertices": 216081,
+		"edges": 8035443,
+		"file_suffix": 52,
+		"num_fixedpoints": 2,
+		"num_waves": 50,
+		"num_frags": 889
+	},
+	"39": {
+		"vertices": 106,
+		"edges": 2440,
+		"file_suffix": 39,
+		"num_fixedpoints": 2,
+		"num_waves": 1,
+		"num_frags": 7
+	},
+	"38": {
+		"vertices": 3144226,
+		"edges": 107272464,
+		"file_suffix": 39,
+		"num_fixedpoints": 1,
+		"num_waves": 213,
+		"num_frags": 3279
+	},
+	"37": {
+		"vertices": 343,
+		"edges": 8772,
+		"file_suffix": 37,
+		"num_fixedpoints": 4,
+		"num_waves": 4,
+		"num_frags": 22
+	},
+	"36": {
+		"vertices": 40,
+		"edges": 768,
+		"file_suffix": 37,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"35": {
+		"vertices": 9918,
+		"edges": 314143,
+		"file_suffix": 37,
+		"num_fixedpoints": 2,
+		"num_waves": 8,
+		"num_frags": 248
+	},
+	"34": {
+		"vertices": 4207,
+		"edges": 125488,
+		"file_suffix": 37,
+		"num_fixedpoints": 3,
+		"num_waves": 2,
+		"num_frags": 96
+	},
+	"33": {
+		"vertices": 14415,
+		"edges": 434325,
+		"file_suffix": 37,
+		"num_fixedpoints": 3,
+		"num_waves": 18,
+		"num_frags": 375
+	},
+	"32": {
+		"vertices": 923,
+		"edges": 24203,
+		"file_suffix": 37,
+		"num_fixedpoints": 5,
+		"num_waves": 3,
+		"num_frags": 66
+	},
+	"31": {
+		"vertices": 512,
+		"edges": 11260,
+		"file_suffix": 37,
+		"num_fixedpoints": 4,
+		"num_waves": 11,
+		"num_frags": 56
+	},
+	"30": {
+		"vertices": 9011,
+		"edges": 245880,
+		"file_suffix": 37,
+		"num_fixedpoints": 3,
+		"num_waves": 19,
+		"num_frags": 370
+	},
+	"29": {
+		"vertices": 244598,
+		"edges": 6430697,
+		"file_suffix": 37,
+		"num_fixedpoints": 2,
+		"num_waves": 15,
+		"num_frags": 722
+	},
+	"28": {
+		"vertices": 167,
+		"edges": 2870,
+		"file_suffix": 28,
+		"num_fixedpoints": 4,
+		"num_waves": 6,
+		"num_frags": 16
+	},
+	"27": {
+		"vertices": 45813,
+		"edges": 1101622,
+		"file_suffix": 28,
+		"num_fixedpoints": 5,
+		"num_waves": 30,
+		"num_frags": 748
+	},
+	"26": {
+		"vertices": 379,
+		"edges": 6983,
+		"file_suffix": 28,
+		"num_fixedpoints": 4,
+		"num_waves": 6,
+		"num_frags": 23
+	},
+	"25": {
+		"vertices": 10460847,
+		"edges": 229286219,
+		"file_suffix": 28,
+		"num_fixedpoints": 1,
+		"num_waves": 17,
+		"num_frags": 1127
+	},
+	"24": {
+		"vertices": 273,
+		"edges": 4708,
+		"file_suffix": 24,
+		"num_fixedpoints": 3,
+		"num_waves": 6,
+		"num_frags": 13
+	},
+	"23": {
+		"vertices": 201,
+		"edges": 2471,
+		"file_suffix": 24,
+		"num_fixedpoints": 7,
+		"num_waves": 2,
+		"num_frags": 6
+	},
+	"22": {
+		"vertices": 2018,
+		"edges": 34677,
+		"file_suffix": 24,
+		"num_fixedpoints": 8,
+		"num_waves": 9,
+		"num_frags": 114
+	},
+	"21": {
+		"vertices": 432014,
+		"edges": 7931887,
+		"file_suffix": 24,
+		"num_fixedpoints": 5,
+		"num_waves": 106,
+		"num_frags": 978
+	},
+	"20": {
+		"vertices": 39475,
+		"edges": 712676,
+		"file_suffix": 20,
+		"num_fixedpoints": 12,
+		"num_waves": 13,
+		"num_frags": 385
+	},
+	"19": {
+		"vertices": 836,
+		"edges": 10284,
+		"file_suffix": 20,
+		"num_fixedpoints": 21,
+		"num_waves": 5,
+		"num_frags": 41
+	},
+	"18": {
+		"vertices": 2132,
+		"edges": 28334,
+		"file_suffix": 20,
+		"num_fixedpoints": 27,
+		"num_waves": 9,
+		"num_frags": 95
+	},
+	"17": {
+		"vertices": 738488,
+		"edges": 11279923,
+		"file_suffix": 20,
+		"num_fixedpoints": 16,
+		"num_waves": 18,
+		"num_frags": 970
+	},
+	"16": {
+		"vertices": 46534,
+		"edges": 642840,
+		"file_suffix": 16,
+		"num_fixedpoints": 28,
+		"num_waves": 11,
+		"num_frags": 441
+	},
+	"15": {
+		"vertices": 5011964,
+		"edges": 68883449,
+		"file_suffix": 16,
+		"num_fixedpoints": 9,
+		"num_waves": 46,
+		"num_frags": 1874
+	},
+	"14": {
+		"vertices": 3628,
+		"edges": 37928,
+		"file_suffix": 14,
+		"num_fixedpoints": 52,
+		"num_waves": 6,
+		"num_frags": 77
+	},
+	"13": {
+		"vertices": 156853,
+		"edges": 1829190,
+		"file_suffix": 14,
+		"num_fixedpoints": 64,
+		"num_waves": 19,
+		"num_frags": 771
+	},
+	"12": {
+		"vertices": 124369,
+		"edges": 1285715,
+		"file_suffix": 14,
+		"num_fixedpoints": 98,
+		"num_waves": 20,
+		"num_frags": 310
+	},
+	"11": {
+		"vertices": 13635761,
+		"edges": 131376950,
+		"file_suffix": 11,
+		"num_fixedpoints": 5,
+		"num_waves": 75,
+		"num_frags": 2532
+	},
+	"10": {
+		"vertices": 1568,
+		"edges": 9554,
+		"file_suffix": 10,
+		"num_fixedpoints": 93,
+		"num_waves": 4,
+		"num_frags": 28
+	},
+	"9": {
+		"vertices": 32633,
+		"edges": 239533,
+		"file_suffix": 10,
+		"num_fixedpoints": 321,
+		"num_waves": 15,
+		"num_frags": 150
+	},
+	"8": {
+		"vertices": 2882071,
+		"edges": 19767228,
+		"file_suffix": 10,
+		"num_fixedpoints": 193,
+		"num_waves": 14,
+		"num_frags": 903
+	},
+	"7": {
+		"vertices": 424619,
+		"edges": 2665414,
+		"file_suffix": 7,
+		"num_fixedpoints": 680,
+		"num_waves": 43,
+		"num_frags": 1225
+	},
+	"6": {
+		"vertices": 6352083,
+		"edges": 32606979,
+		"file_suffix": 6,
+		"num_fixedpoints": 793,
+		"num_waves": 25,
+		"num_frags": 1177
+	},
+	"5": {
+		"vertices": 14030072,
+		"edges": 54607126,
+		"file_suffix": 5,
+		"num_fixedpoints": 447,
+		"num_waves": 10,
+		"num_frags": 536
+	},
+	"4": {
+		"vertices": 1509262,
+		"edges": 4760942,
+		"file_suffix": 4,
+		"num_fixedpoints": 4816,
+		"num_waves": 11,
+		"num_frags": 317
+	},
+	"3": {
+		"vertices": 20912756,
+		"edges": 46640174,
+		"file_suffix": 3,
+		"num_fixedpoints": 564,
+		"num_waves": 27,
+		"num_frags": 564
+	},
+	"2": {
+		"vertices": 20031131,
+		"edges": 26084775,
+		"file_suffix": 2,
+		"num_fixedpoints": 39188,
+		"num_waves": 8,
+		"num_frags": 99
+	},
+	"1": {
+		"vertices": 43053668,
+		"edges": 31830999,
+		"file_suffix": 1,
+		"num_fixedpoints": 11222669,
+		"num_waves": 15,
+		"num_frags": 15
+	},
+	"0": {}
+}
