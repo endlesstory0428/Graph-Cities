@@ -47,7 +47,7 @@ function setStrataUrl(request) {
   document.getElementById('strata').src = PREFIX + request;
 }
 
-var cityContainer = document.getElementById('city');
+// var cityContainer = document.getElementById('graph');
 var gui2 = new dat.GUI({
   autoPlace: true,
   width: 200
@@ -55,8 +55,8 @@ var gui2 = new dat.GUI({
 // gui2.domElement.style = "position: absolute; top: " + cityContainer.offsetHeight + "px; left: 10px;";
 var gui2container = document.getElementById('bottom-gui-container');
 gui2container.appendChild(gui2.domElement);
-console.log(cityContainer.offsetHeight);
-gui2container.style = "position: absolute; top: " + cityContainer.offsetHeight + "px; left: 10px; z-index: 1";
+// console.log(cityContainer.offsetHeight);
+gui2container.style = "position: absolute; top: " + 0 + "px; left: 10px; z-index: 1";
 
 var data_info = {
   peel_value: '',

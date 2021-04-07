@@ -13,16 +13,16 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
     const peel_vals = Object.keys(info);
     const peel_value_range = Math.max(...peel_vals) - Math.min(...peel_vals);
     const peel_value_count = peel_vals.length;
-    console.log("peel_value_min",Math.min(...peel_vals));
-    console.log("peel_value_max",Math.max(...peel_vals));
-    console.log("peel_value_range",peel_value_range);
-    console.log("peel_value_count",peel_value_count);
+    // console.log("peel_value_min",Math.min(...peel_vals));
+    // console.log("peel_value_max",Math.max(...peel_vals));
+    // console.log("peel_value_range",peel_value_range);
+    // console.log("peel_value_count",peel_value_count);
     const peel_ratio = peel_value_range / peel_value_count;
 
     first_key_list = Object.keys(info);
     select_fixed_point.setValue(first_key_list[0]);
     light_intensity.setValue(parseFloat(entropy[first_key_list[0]]));
-    console.log("light_intensity "+parseFloat(entropy[parseInt(first_key_list[0])]));
+    // console.log("light_intensity "+parseFloat(entropy[parseInt(first_key_list[0])]));
     updateDropdown(select_fixed_point, first_key_list);
 
     for(let key in info) {
@@ -37,29 +37,37 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
     }
 
     scale_factor = peel_ratio * max_radius / original_height_sum;
-    console.log("max_height",original_height_sum);
-    console.log("max_radius",max_radius);
-    console.log("peel_ratio",peel_ratio);
-    console.log("scale_factor", scale_factor);
+    // console.log("max_height",original_height_sum);
+    // console.log("max_radius",max_radius);
+    // console.log("peel_ratio",peel_ratio);
+    // console.log("scale_factor", scale_factor);
 
+    let max_R = 0;
     for(let key in info) {
         const peel_value_color = 1.0-(1.0/(Math.log2(parseInt(key)+1.0)));
         // console.log("key "+key+"peel_value_color "+peel_value_color);
         if(info.hasOwnProperty(key)) {
             // console.log(key+' -> '+info[key]);
             let color = interpolateLinearly(peel_value_color,jet); //jet colormap [0=blue, 1=red]
-            let color_string = rgbToHex(Math.round(color[0]*255),Math.round(color[1]*255),Math.round(color[2]*255));
-            first_key_color_dict[parseInt(key)] = color_string;    
-            // const material = new THREE.MeshBasicMaterial({color:color_string}); //black color
             const entropy_intensity = entropy[parseInt(key)];
-            const emissive_material = new THREE.MeshStandardMaterial({color:color_string,emissive:color_string,emissiveIntensity:entropy_intensity});
+            let color_hex = rgbToHex(Math.round(color[0]*255),Math.round(color[1]*255),Math.round(color[2]*255));
+            // const material = new THREE.MeshBasicMaterial({color:color_string}); //black color
+            
+            const emissive_material = new THREE.MeshStandardMaterial({color:color_hex,emissive:color_hex,emissiveIntensity:entropy_intensity});
+            first_key_color_dict[parseInt(key)] = color_hex;
+
             for (let key2 in info[key]) {
                 // console.log(key+'/'+key2+' -> '+info[key][key2]);
                 const Y_dis = Math.log2(key2 + 1)*scale_factor;
-                const R = cylinderRadius(info[key][key2]);
+                let R = cylinderRadius(info[key][key2]);
+                if(R>max_R) {
+                    max_R = R;
+                }
                 const geometry = new THREE.CylinderGeometry(R,R,Y_dis,16,8);
                 geometry.translate(0,Y,0);
                 const cylinder = new THREE.Mesh(geometry,emissive_material);
+                cylinder.name = JSON.stringify(key).slice(1,-1);
+                console.log("cylinder name "+cylinder.name);
                 scene.add(cylinder);
                 lighthouse_objects.push(cylinder);
                 Y += Y_dis;
@@ -67,6 +75,14 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
             }
         }
     }
+    // highlight the part of lighthouse when selected from dropdown
+    const highlighter_material = new THREE.MeshStandardMaterial({color:0x000000,wireframe:true});
+    const highlighter_geo = new THREE.CylinderGeometry(max_R*1.1,max_R*1.1,0.2,16,1);
+    const highlighter = new THREE.Mesh(highlighter_geo,highlighter_material);
+    highlighter.name = "highlighter";
+    scene.add(highlighter);
+    lighthouse_objects.push(highlighter);
+
     color_display.setValue(first_key_color_dict[first_key_list[0]]);
     console.log(first_key_list);
     key_to_buckets = {};
@@ -86,13 +102,24 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
         select_fixed_point: select_fixed_point, color_display: color_display, light_intensity: light_intensity, key_to_buckets: key_to_buckets};
 }
 
+function updateHighlighter(lighthouse_objects, selected) {
+    for(let lighthouse in lighthouse_objects){
+        // console.log(lighthouse.name, selected);
+        if(lighthouse.name === selected){
+            console.log("updateHighlighter");
+        }
+    }
+    return {lighthouse_objects: lighthouse_objects};
+}
+
 function updateSelectionLights(city_all, light_objects, selected_buildings) {
-    console.log("updateSelectionLights: selected buildings are "+selected_buildings);
+    // console.log("updateSelectionLights: selected buildings are "+selected_buildings);
     let city_name = Object.keys(city_all);
     let city_name_sliced = city_name.slice();
     city_name_sliced.forEach(function(name,index){
         city_name_sliced[index]=name.slice(name.indexOf('_')+1,name.lastIndexOf('_'));
     })
+    let selected_buildings_full = [];
     for(let i=0;i<selected_buildings.length;i++){
         // console.log(i);
         let city_index = city_name_sliced.indexOf(selected_buildings[i]);
@@ -100,8 +127,10 @@ function updateSelectionLights(city_all, light_objects, selected_buildings) {
         light_objects.selectionLights[i].position.set(city_all[city_name_full].coords[0],35,city_all[city_name_full].coords[1]);
         light_objects.selectionLights[i].target.position.set(city_all[city_name_full].coords[0],0,city_all[city_name_full].coords[1]);
         light_objects.selectionLights[i].visible=true;
+        selected_buildings_full.push(city_name_full);
     }
-    return {light_objects: light_objects };
+    // console.log("updateSelectionLights: selected buildings full names are "+selected_buildings_full);
+    return {light_objects: light_objects, selected_buildings: selected_buildings_full};
 }
 
 function cylinderRadius(vh_h) {
@@ -126,9 +155,18 @@ function colorToHex(c) {
     return hex.length == 1 ? "0" + hex : hex;
 }
 
+function hexToRgb(hex) {
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+}
+
 // RGB in [0,255]
 function rgbToHex(r,g,b) {
-    return parseInt("0x"+colorToHex(r)+colorToHex(g)+colorToHex(b));
+    return parseInt("0x"+colorToHex(r)+colorToHex(g)+colorToHex(b),16);
 }
 
 //https://github.com/timothygebhard/js-colormaps/blob/master/overview.html
@@ -205,4 +243,4 @@ function onWindowResize() {
     controls.handleResize();
 }
 
-export { loadCitySummaryFile, updateSelectionLights };
+export { loadCitySummaryFile, updateHighlighter, updateSelectionLights, hexToRgb, rgbToHex, updateDropdown };
