@@ -53,33 +53,48 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
             let color_hex = rgbToHex(Math.round(color[0]*255),Math.round(color[1]*255),Math.round(color[2]*255));
             // const material = new THREE.MeshBasicMaterial({color:color_string}); //black color
             
+            let combined_geometry = new THREE.Geometry();
+            const name = JSON.stringify(key).slice(1,-1);
             const emissive_material = new THREE.MeshStandardMaterial({color:color_hex,emissive:color_hex,emissiveIntensity:entropy_intensity});
             first_key_color_dict[parseInt(key)] = color_hex;
-
+            let dY = 0, dR = 0, Y_min = Y;
             for (let key2 in info[key]) {
                 // console.log(key+'/'+key2+' -> '+info[key][key2]);
                 const Y_dis = Math.log2(key2 + 1)*scale_factor;
                 let R = cylinderRadius(info[key][key2]);
-                if(R>max_R) {
-                    max_R = R;
+                if(R > dR) {
+                    dR = R;
                 }
                 const geometry = new THREE.CylinderGeometry(R,R,Y_dis,16,8);
                 geometry.translate(0,Y,0);
-                const cylinder = new THREE.Mesh(geometry,emissive_material);
-                cylinder.name = JSON.stringify(key).slice(1,-1);
-                console.log("cylinder name "+cylinder.name);
-                scene.add(cylinder);
-                lighthouse_objects.push(cylinder);
+                const cylinder = new THREE.Mesh(geometry);
+                cylinder.updateMatrix();
+                combined_geometry.merge(cylinder.geometry,cylinder.matrix);
+                // cylinder.name = JSON.stringify(key).slice(1,-1);
+                // console.log("cylinder name "+cylinder.name);
+                // scene.add(cylinder);
+                // lighthouse_objects.push(cylinder);
                 Y += Y_dis;
+                dY += Y_dis;
                 // console.log("Y "+Y+" Y_dis "+Y_dis+" R "+R);
             }
+            let Y_max = Y;
+            let combined_mesh = new THREE.Mesh(combined_geometry, emissive_material);
+            combined_mesh.name = name;
+            combined_mesh.maxR = dR;
+            combined_mesh.dY = dY;
+            combined_mesh.Y_pos = (Y_max+Y_min)/2;
+            console.log("lighthouse - combined mesh name:", combined_mesh.name);
+            lighthouse_objects.push(combined_mesh);
+            scene.add(combined_mesh);
         }
     }
     // highlight the part of lighthouse when selected from dropdown
     const highlighter_material = new THREE.MeshStandardMaterial({color:0x000000,wireframe:true});
-    const highlighter_geo = new THREE.CylinderGeometry(max_R*1.1,max_R*1.1,0.2,16,1);
+    const highlighter_geo = new THREE.CylinderGeometry(1,1,1,16,1);
     const highlighter = new THREE.Mesh(highlighter_geo,highlighter_material);
-    highlighter.name = "highlighter";
+    highlighter.position.set(0, lighthouse_objects[0].Y_pos, 0);
+    highlighter.scale.set(lighthouse_objects[0].maxR*1.1, lighthouse_objects[0].dY, lighthouse_objects[0].maxR*1.1);
     scene.add(highlighter);
     lighthouse_objects.push(highlighter);
 
@@ -213,7 +228,7 @@ function interpolateLinearly(x, values) {
 
 }
 
-function updateDropdown(target, list){   
+function select_fixed_point(target, list){   
     let innerHTMLStr = "";
     for(var i=0; i<list.length; i++){
         var str = "<option value='" + list[i] + "'>" + list[i] + "</option>";
@@ -241,6 +256,15 @@ function onWindowResize() {
     renderer2.setSize( window.innerWidth, window.innerHeight );
     // renderer2.setSize( window.innerWidth/2, window.innerHeight/2 );
     controls.handleResize();
+}
+
+function updateDropdown(target, list){   
+    let innerHTMLStr = "";
+    for(var i=0; i<list.length; i++){
+        var str = "<option value='" + list[i] + "'>" + list[i] + "</option>";
+        innerHTMLStr += str;        
+    }
+    if (innerHTMLStr != "") target.domElement.children[0].innerHTML = innerHTMLStr;
 }
 
 export { loadCitySummaryFile, updateHighlighter, updateSelectionLights, hexToRgb, rgbToHex, updateDropdown };

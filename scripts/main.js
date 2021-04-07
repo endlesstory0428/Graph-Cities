@@ -923,8 +923,12 @@ function render() {
           let result = LH.updateSelectionLights(city_all, light_objects, selected_buildings);
           light_objects = result.light_objects;
           selected_buildings_list = result.selected_buildings;
-          // result = LH.updateHighlighter(lighthouse_objects, key);
-          // lighthouse_objects = result.lighthouse_objects;
+          LH.updateDropdown(root_dropdown_highlighted, selected_buildings_list);
+          let highlighter = lighthouse_objects[lighthouse_objects.length-1];
+          let index = first_key_list.indexOf(String(key));
+          let selected = lighthouse_objects[index];
+          highlighter.position.set(0, selected.Y_pos, 0);
+          highlighter.scale.set(selected.maxR*1.1, selected.dY, selected.maxR*1.1);
         }
       );
       let result_2 = PATH.pathPlanning(city_list[city_list.length-1], scene_city, city_all, light_objects, selected_buildings);
@@ -1007,12 +1011,20 @@ function onMouseDownLH(event){
   const width = rect.right-rect.left;
   const height = rect.bottom-rect.top;
   mouse.x=(event.clientX/width)*2-1;
-  mouse.y=-((event.clientY-100)/height)*2+1;
+  mouse.y=-((event.clientY-84)/height)*2+1;
+  // console.log("onMouseDownLH, event.clientX = ",event.clientX, " event.clientY = ",event.clientY);
   raycaster.setFromCamera(mouse, perspectiveCameraL);
   const intersects=raycaster.intersectObjects(scene_lighthouse.children);
   if(intersects.length>0){
-    // console.log("onMouseDownLH, "+intersects[0].object.name);
-    select_fixed_point.setValue(parseInt(intersects[0].object.name));
+    const intersected = intersects[0].object;
+    if(intersected.name){
+      // console.log("onMouseDownLH ",intersected.name);
+      select_fixed_point.setValue(intersected.name);
+      let highlighter = lighthouse_objects[lighthouse_objects.length-1];
+      highlighter.position.set(0, intersected.Y_pos, 0);
+      highlighter.scale.set(intersected.maxR*1.1, intersected.dY, intersected.maxR*1.1);
+      // console.log("LH intersects: ",intersected.name,intersected.maxR,intersected.dY,intersected.Y_pos);  
+    }
   }
 }
 
