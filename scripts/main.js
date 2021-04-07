@@ -15,6 +15,8 @@ import * as LH from './parts/lighthouse.js'
 import * as BUILD from './parts/building.js';
 import * as PATH from './parts/path.js';
 
+let addBuildings = false, addDagViews = false;
+
 const scenes = [];
 let controls, renderer, canvas;
 let perspectiveCamera, orthographicCamera, perspectiveCameraL;
@@ -41,7 +43,6 @@ let grass_objects = [];
 let bush_objects = [];
 let light_objects = {};
 let key_to_buckets = {};
-let addBuildings = true;
 let metaLoaded = false,
   voronoiLoaded = false,
   lighthouseLoaded = false,
@@ -53,12 +54,12 @@ let city_to_load;
 let color_display, light_intensity;
 let time = new Date();
 let printTime = true;
-let start_time_string = time.getMinutes()+':'+time.getSeconds()+'.'+time.getMilliseconds();
+let start_time_string = time.getMinutes() + ':' + time.getSeconds() + '.' + time.getMilliseconds();
 
 // if(addBuildings){
 //     city_to_load = 77;// hard-coded
 // }
-let dropdown;
+let root_dropdown, root_dropdown_highlighted;
 let gui, guiL, select_fixed_point;
 
 // let DATASET = 'com-friendster_old';
@@ -115,18 +116,29 @@ let params = {
   // colorMap: "jet",
   // hideBuilding: false
   dataSet: data_list[1],
-  root: 'any building',
+  all: 'building',
+  highlighted: 'building',
   outer: true,
-  isNight: false
+  isNight: false,
+  goInnerView: function() {
+    let bottom = document.getElementById("inner-view").offsetTop;
+    window.scrollTo(0,bottom);
+  },
+  goOuterView: function() {
+    let top = document.getElementById("city-view".offsetTop);
+    window.scrollTo(0,top);
+  }
 };
 // lighthouse
 let first_key_list = [1];
-let first_key_color_dict = {0:"#000000"};
+let first_key_color_dict = {
+  0: "#000000"
+};
 let paramsL = {
-    dataSet: data_list[2],
-    fixedPoint: first_key_list[0],
-    color: first_key_color_dict[0],
-    lightIntensity: 0.1
+  dataSet: data_list[2],
+  fixedPoint: first_key_list[0],
+  color: first_key_color_dict[0],
+  lightIntensity: 0.1
 }
 let lighthouse_objects = [];
 let entropy, bucketData, lighthouseData, metaData, voronoiData, summaryData;
@@ -248,7 +260,9 @@ function init() {
   selectData.setValue(paramsL.dataSet);
   selectData.onChange(
     function(dataSet) {
-      setStrataUrl('?data=nodata');
+      if(addDagViews) {
+        setStrataUrl('?data=nodata');        
+      }
       objects.every(object => scene_city.remove(object));
       path_objects.every(object => scene_city.remove(object));
       window_objects.every(object => scene_city.remove(object));
@@ -351,28 +365,41 @@ function init() {
   // });
   // f3.open();
 
-  let f4 = gui.addFolder('Path Planning');
-  dropdown = f4.add(params, 'root', ['default', 'example 1', 'example 2']);
-  dropdown.setValue('default');
-  dropdown.onChange(
+  let f4 = gui.addFolder('Select Root');
+  root_dropdown = f4.add(params, 'all', ['default', 'example 1', 'example 2']);
+  root_dropdown.setValue('default');
+  root_dropdown.onChange(
     function(value) {
-      setStrataUrl('?data=nodata');
+      if(addDagViews) {
+        setStrataUrl('?data=nodata');
+      }
       path_objects.every(object => scene_city.remove(object));
       animate();
       let result = PATH.pathPlanning(value, scene_city, city_all, light_objects, selected_buildings);
       scene_city = result.scene;
       path_objects = result.path;
       light_objects = result.light_objects;
-      console.log("******** " + value + " *********");
-      console.log("******** " + paramsL.dataSet + " *********");
-
-      let wavemap_ID_ID_freq = value.split('_');
-      let file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '-' + wavemap_ID_ID_freq[2] + '.json';
-      console.log("Loading: ", file);
-      loadFile2(file);
-      loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
+      if(addDagViews){
+        console.log("******** " + value + " *********");
+        console.log("******** " + paramsL.dataSet + " *********");
+  
+        let wavemap_ID_ID_freq = value.split('_');
+        let file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '-' + wavemap_ID_ID_freq[2] + '.json';
+        console.log("Loading: ", file);
+        loadFile2(file);
+        loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);  
+      }
     }
   );
+  root_dropdown_highlighted = f4.add(params, 'highlighted',['default root']);
+  root_dropdown_highlighted.setValue('default');
+  root_dropdown_highlighted.onChange(
+    function(value) {
+      root_dropdown.setValue(value);
+    }
+  )
+  f4.add(params, 'goInnerView').name("Go Inner View");
+  f4.add(params, 'goOuterView').name("Go City View");
   f4.open();
 
   // groud
@@ -784,13 +811,13 @@ function animate() {
     city_to_load = result.remain;
     truss_objects = result.truss;
     window_objects = result.window;
-  }else if(city_to_load==0 && printTime){
+  } else if (city_to_load == 0 && printTime) {
     let end_time = new Date();
-    let end_time_string = end_time.getMinutes()+':'+end_time.getSeconds()+'.'+end_time.getMilliseconds();
-    console.log("start time is "+start_time_string);
-    console.log("end time is "+end_time_string);
+    let end_time_string = end_time.getMinutes() + ':' + end_time.getSeconds() + '.' + end_time.getMilliseconds();
+    console.log("start time is " + start_time_string);
+    console.log("end time is " + end_time_string);
     printTime = false;
-}
+  }
   render();
 }
 
@@ -832,7 +859,7 @@ function render() {
     // console.log("pan around building "+params.root);
     theta += 0.1;
     // let building_position = new THREE.Vector3(100,0,100);
-    let root_building = dropdown.getValue();
+    let root_building = root_dropdown.getValue();
     let building_position = city_all[root_building].coords;
     controls.target = new THREE.Vector3(building_position[0], 30, building_position[1]);
     camera.position.x = building_position[0] + radius * Math.sin(THREE.MathUtils.degToRad(theta));
@@ -841,9 +868,9 @@ function render() {
     camera.position.z = building_position[1] + radius * Math.cos(THREE.MathUtils.degToRad(theta));
     if (theta > 360) toPanBuilding = false;
   } else if (toZoomBuilding) {
-    // console.log("zoom in to "+dropdown.getValue());
+    // console.log("zoom in to "+root_dropdown.getValue());
     // let building_position = new THREE.Vector3(100,0,100);
-    let root_building = dropdown.getValue();
+    let root_building = root_dropdown.getValue();
     let building_position = city_all[root_building].coords;
     controls.target = new THREE.Vector3(building_position[0], 10, building_position[1]);
     // console.log(building_position[0]);
@@ -874,26 +901,34 @@ function render() {
       light_intensity = result.light_intensity;
       key_to_buckets = result.key_to_buckets;
       selected_buildings = key_to_buckets[first_key_list[0]];
-      console.log("!lighthouseDone: selected_buildings "+selected_buildings);
+      // console.log("!lighthouseDone: selected_buildings "+selected_buildings);
       lighthouseDone = true;
     }
   }
   if(lighthouseDone && (!pathPlanningDone)) {
     if (metaLoaded && voronoiLoaded && lighthouseLoaded && bucketLoaded ) {
       pathPlanningDone = true;
-      console.log("pathPlanningDone "+pathPlanningDone+", metaLoaded && voronoiLoaded && lighthouseLoaded && bucketLoaded");
+      // console.log("pathPlanningDone "+pathPlanningDone+", metaLoaded && voronoiLoaded && lighthouseLoaded && bucketLoaded");
+      let selected_buildings_list;
       select_fixed_point.onChange (
         function (key) {
           const intensity = entropy[parseInt(key)];
           color_display.setValue(first_key_color_dict[parseInt(key)]);
           light_intensity.setValue(intensity);
-          console.log("light_intensity2 "+entropy[parseInt(key)]);
+          // console.log("light_intensity2 "+entropy[parseInt(key)]);
           // console.log("key "+key);
           // console.log("first_key_list[key] "+first_key_list[parseInt(key)]);
           selected_buildings = key_to_buckets[key];
           light_objects.selectionLights.forEach(object => object.visible=false);
           let result = LH.updateSelectionLights(city_all, light_objects, selected_buildings);
           light_objects = result.light_objects;
+          selected_buildings_list = result.selected_buildings;
+          LH.updateDropdown(root_dropdown_highlighted, selected_buildings_list);
+          let highlighter = lighthouse_objects[lighthouse_objects.length-1];
+          let index = first_key_list.indexOf(String(key));
+          let selected = lighthouse_objects[index];
+          highlighter.position.set(0, selected.Y_pos, 0);
+          highlighter.scale.set(selected.maxR*1.1, selected.dY, selected.maxR*1.1);
         }
       );
       let result_2 = PATH.pathPlanning(city_list[city_list.length-1], scene_city, city_all, light_objects, selected_buildings);
@@ -902,8 +937,11 @@ function render() {
       light_objects = result_2.light_objects;
       let result = LH.updateSelectionLights(city_all, light_objects, selected_buildings);
       light_objects = result.light_objects;
-      PATH.updateDropdown(dropdown, city_list);
-      dropdown.setValue(city_list[city_list.length-1]);
+      selected_buildings_list = result.selected_buildings;
+      PATH.updateDropdown(root_dropdown, city_list);
+      root_dropdown.setValue(city_list[city_list.length-1]);
+      // console.log("LH.updateDropdown: ",selected_buildings_list);
+      LH.updateDropdown(root_dropdown_highlighted, selected_buildings_list);
     }
   }
 }
@@ -973,12 +1011,20 @@ function onMouseDownLH(event){
   const width = rect.right-rect.left;
   const height = rect.bottom-rect.top;
   mouse.x=(event.clientX/width)*2-1;
-  mouse.y=-((event.clientY-100)/height)*2+1;
+  mouse.y=-((event.clientY-84)/height)*2+1;
+  // console.log("onMouseDownLH, event.clientX = ",event.clientX, " event.clientY = ",event.clientY);
   raycaster.setFromCamera(mouse, perspectiveCameraL);
   const intersects=raycaster.intersectObjects(scene_lighthouse.children);
   if(intersects.length>0){
-    console.log("onMouseDownLH, "+intersects[0].object.name);
-    select_fixed_point.setValue(parseInt(intersects[0].object.name));
+    const intersected = intersects[0].object;
+    if(intersected.name){
+      // console.log("onMouseDownLH ",intersected.name);
+      select_fixed_point.setValue(intersected.name);
+      let highlighter = lighthouse_objects[lighthouse_objects.length-1];
+      highlighter.position.set(0, intersected.Y_pos, 0);
+      highlighter.scale.set(intersected.maxR*1.1, intersected.dY, intersected.maxR*1.1);
+      // console.log("LH intersects: ",intersected.name,intersected.maxR,intersected.dY,intersected.Y_pos);  
+    }
   }
 }
 
