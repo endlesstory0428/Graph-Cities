@@ -120,10 +120,10 @@ function loadColor(color_list,layer_name, city_all, city_tracking) {
   return {all: city_all, tracking: city_tracking};
 }
 
-function loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tracking, city_to_load, x_scale) {
+function loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tracking, x_scale) {
   // console.log("loading spiral");
   // console.log(filename);
-  city_to_load = lines.length-1;
+  let city_to_load = lines.length-1;
   console.log("city_to_load = "+city_to_load);
   let building_with_grass = [];
   for(let i=0; i<lines.length-1; i++) {
