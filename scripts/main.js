@@ -115,7 +115,7 @@ let params = {
   ground: "#CCA262",
   // colorMap: "jet",
   // hideBuilding: false
-  dataSet: data_list[1],
+  // dataSet: data_list[0],
   all: 'building',
   highlighted: 'building',
   outer: true,
@@ -428,6 +428,8 @@ function init() {
   let waterMesh = new THREE.Mesh(waterGeo, waterMat);
   waterMesh.position.y = -50;
   scene_city.add(waterMesh);
+
+  city_view.addEventListener('mousedown',onMouseDown);
   scenes.push(scene_city);
 
   // lighthouse scene
@@ -890,7 +892,7 @@ function render() {
     }
   }
   if(!lighthouseDone) {
-    if(lighthouseLoaded && entropyLoaded && bucketData) {
+    if(lighthouseLoaded && entropyLoaded && bucketLoaded) {
       let result = LH.loadCitySummaryFile(lighthouseData, scene_lighthouse, lighthouse_objects, entropy, first_key_color_dict, first_key_list, select_fixed_point, color_display, light_intensity, bucketData, key_to_buckets);
       scene_lighthouse = result.scene;
       lighthouse_objects = result.lighthouse_objects;
@@ -1029,29 +1031,20 @@ function onMouseDownLH(event){
 }
 
 function onMouseDown(event) {
-  mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
-  mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
+  // mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
+  // mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
+  event.preventDefault();
+  const rect = scene_city.userData.view.getBoundingClientRect();
+  const width = rect.right-rect.left;
+  const height = rect.bottom-rect.top;
+  mouse.x = ((event.clientX-sliderPos)/width)*2-1;
+  mouse.y = -((event.clientY)/height)*2+1;
   let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
   raycaster.setFromCamera(mouse, camera);
 
   let intersects = raycaster.intersectObjects(objects);
-  let modal = document.getElementById("infoModal");
-  let span = document.getElementsByClassName("close")[0];
-  console.log(intersects);
   if (intersects.length > 0) {
     console.log("clicked on " + intersects[0].object.name);
-    // if the closest object intersected is not the currently stored intersection object
-    if (intersects[0].object.name == "buoy") {
-      modal.style.display = "block";
-    }
-  }
-  span.onclick = function() {
-    modal.style.display = "none";
-  }
-  window.onclick = function(event) {
-    if (event.target == model) {
-      model.style.display = "none";
-    }
   }
 }
 

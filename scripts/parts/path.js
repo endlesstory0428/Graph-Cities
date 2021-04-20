@@ -71,7 +71,7 @@ function makeGraph(neighbors){
 }
 
 function pathPlanning(root, scene, city_all, light_objects){
-    console.log("pathPlanning: root is "+root);
+    // console.log("pathPlanning: root is "+root);
     let result = makeSpanningTree(scene, city_all, root);
     light_objects.spotLight.position.set(city_all[root].coords[0],35,city_all[root].coords[1]);
     light_objects.spotLight.target.position.set(city_all[root].coords[0],0,city_all[root].coords[1]);

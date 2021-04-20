@@ -99,7 +99,7 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
     lighthouse_objects.push(highlighter);
 
     color_display.setValue(first_key_color_dict[first_key_list[0]]);
-    console.log(first_key_list);
+    // console.log(first_key_list);
     key_to_buckets = {};
     for(let key in bucketData) {
         if(bucketData.hasOwnProperty(key)){
