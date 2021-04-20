@@ -15,7 +15,7 @@ import * as LH from './parts/lighthouse.js'
 import * as BUILD from './parts/building.js';
 import * as PATH from './parts/path.js';
 
-let addBuildings = false, addDagViews = false;
+let addBuildings = true, addDagViews = false;
 
 const scenes = [];
 let controls, renderer, canvas;
@@ -713,7 +713,7 @@ function loaded(evt) {
   // need to update when SPIRAL.txt updates
   if (element_count == 7) {
     // console.log("loaded: SPIRAL file");
-    let spiral = BUILD.loadSpiral(scene_city, lines, city_all, grass_objects, bush_objects, city_tracking, city_to_load, x_scale);
+    let spiral = BUILD.loadSpiral(scene_city, lines, city_all, grass_objects, bush_objects, city_tracking, x_scale);
     city_all = spiral.all;
     city_tracking = spiral.tracking;
     grass_objects = spiral.grass;

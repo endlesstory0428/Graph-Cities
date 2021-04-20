@@ -135,14 +135,16 @@ function updateSelectionLights(city_all, light_objects, selected_buildings) {
         city_name_sliced[index]=name.slice(name.indexOf('_')+1,name.lastIndexOf('_'));
     })
     let selected_buildings_full = [];
-    for(let i=0;i<selected_buildings.length;i++){
-        // console.log(i);
-        let city_index = city_name_sliced.indexOf(selected_buildings[i]);
-        let city_name_full = city_name[city_index];
-        light_objects.selectionLights[i].position.set(city_all[city_name_full].coords[0],35,city_all[city_name_full].coords[1]);
-        light_objects.selectionLights[i].target.position.set(city_all[city_name_full].coords[0],0,city_all[city_name_full].coords[1]);
-        light_objects.selectionLights[i].visible=true;
-        selected_buildings_full.push(city_name_full);
+    if (typeof selected_buildings === 'object') {
+      for(let i=0;i<selected_buildings.length;i++){
+          // console.log(i);
+          let city_index = city_name_sliced.indexOf(selected_buildings[i]);
+          let city_name_full = city_name[city_index];
+          light_objects.selectionLights[i].position.set(city_all[city_name_full].coords[0],35,city_all[city_name_full].coords[1]);
+          light_objects.selectionLights[i].target.position.set(city_all[city_name_full].coords[0],0,city_all[city_name_full].coords[1]);
+          light_objects.selectionLights[i].visible=true;
+          selected_buildings_full.push(city_name_full);
+      }
     }
     // console.log("updateSelectionLights: selected buildings full names are "+selected_buildings_full);
     return {light_objects: light_objects, selected_buildings: selected_buildings_full};
