@@ -409,7 +409,7 @@ function createFlags(scene, height, coord, base_Y, layer, V, E, flag_objects, lc
   scene.add(rod);
   flag_objects.push(flag_mesh);
   flag_objects.push(rod);
-  return {scene: scene, flags: flag_objects};
+  return {scene: scene, flag_mast: flag_height+mast_length, flags: flag_objects};
 }
 
 //check if url exists
@@ -431,7 +431,7 @@ function ifUrlExists(url) {
 
 // check city_tracking, create buildings that are ready to color & move
 // delete colored and moved building from city_tracking
-function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, city_to_load, y_scale, dataSet, isNight, oneBuilding=false) {
+function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, arrow_objects, city_to_load, y_scale, dataSet, isNight, oneBuilding=false) {
   for (let layer in city_tracking) {
       if(city_tracking[layer].ready_to_move && city_tracking[layer].ready_to_color) {
           let layer_shape = city_all[layer].shapes;
@@ -495,12 +495,37 @@ function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects
           let result = createFlags(scene, height, [X,Z], flag_base_Y, layer, city_all[layer].V, city_all[layer].E, flag_objects, lcc, fixed, mast_scale, dataSet);
           scene = result.scene;
           flag_objects = result.flags;
+          let flag_mast_height = result.flag_mast;
+          let result_arrow = createArrows(scene, layer, [X, Z], flag_base_Y, arrow_objects, flag_mast_height)
+          scene = result_arrow.scene;
+          arrow_objects = result_arrow.arrow_objects;
           // console.log("createCityMeshes: loaded "+layer+", city to load = "+city_to_load);
           delete city_tracking[layer];
           --city_to_load;
       }
   }
-  return {scene: scene, objects: objects, remain: city_to_load, all: city_all, tracking: city_tracking, truss: truss_objects, window: window_objects};
+  return {scene: scene, objects: objects, remain: city_to_load, 
+    all: city_all, tracking: city_tracking, truss: truss_objects, 
+    window: window_objects, arrow: arrow_objects};
+}
+
+function createArrows(scene, name, coord, Y, arrow_objects, flag_mast_height) {
+  const length = 30;
+  const color = 0xffffff;
+  const headLength = 10;
+  const headWidth = 5;
+  const X = coord[0];
+  Y = Y + flag_mast_height + length + headLength/2;
+  const Z = coord[1];
+  let direction = new THREE.Vector3(0,-1,0);
+  direction.normalize();
+  let origin = new THREE.Vector3(X,Y,Z);
+
+  let arrow = new THREE.ArrowHelper(direction, origin, length, color, headLength, headWidth);
+  arrow.visible = false;
+  arrow_objects[name] = arrow;
+  scene.add(arrow);
+  return {scene: scene, arrow_objects: arrow_objects};
 }
 
 export {loadColor, loadSpiral, loadFloor, loadVoronoi, createCityMeshes};

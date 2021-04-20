@@ -43,6 +43,7 @@ let grass_objects = [];
 let bush_objects = [];
 let light_objects = {};
 let key_to_buckets = {};
+let arrow_objects = {};
 let metaLoaded = false,
   voronoiLoaded = false,
   lighthouseLoaded = false,
@@ -59,7 +60,8 @@ let start_time_string = time.getMinutes() + ':' + time.getSeconds() + '.' + time
 // if(addBuildings){
 //     city_to_load = 77;// hard-coded
 // }
-let root_dropdown, root_dropdown_highlighted;
+let root_dropdown, root_dropdown_highlighted, visited_inner_views;
+let inner_view_history = [];
 let gui, guiL, select_fixed_point;
 
 // let DATASET = 'com-friendster_old';
@@ -120,13 +122,30 @@ let params = {
   highlighted: 'building',
   outer: true,
   isNight: false,
+  visitedInner: 'building',
   goInnerView: function() {
     let bottom = document.getElementById("inner-view").offsetTop;
+    let selected_building = root_dropdown_highlighted.getValue();
+    inner_view_history.push(selected_building);
     window.scrollTo(0,bottom);
+    console.log(inner_view_history);
+    LH.updateDropdown(visited_inner_views, inner_view_history);
+    visited_inner_views.setValue(inner_view_history[inner_view_history.length-1]);
+    arrow_objects[selected_building].visible = true;
   },
   goOuterView: function() {
     let top = document.getElementById("city-view".offsetTop);
     window.scrollTo(0,top);
+  },
+  clearVisitedInner: function() {
+    inner_view_history = [""];
+    LH.updateDropdown(visited_inner_views, inner_view_history);
+    visited_inner_views.setValue("");
+    let keys = Object.keys(arrow_objects);
+    keys.forEach(function(key){
+      arrow_objects[key].visible = false;
+    });
+    console.log(inner_view_history);
   }
 };
 // lighthouse
@@ -270,6 +289,7 @@ function init() {
       grass_objects.every(object => scene_city.remove(object));
       truss_objects.every(object => scene_city.remove(object));
       bush_objects.every(object => scene_city.remove(object));
+      arrow_objects.every(object => scene_city.remove(object));
       light_objects.spotLight.visible = false;
       lighthouse_objects.every(object => scene_lighthouse.remove(object));
       
@@ -306,7 +326,8 @@ function init() {
       city_tracking = {};
       city_all = {};
       city_list = [];
-      objects = [], path_objects = [], truss_objects = [], window_objects = [], flag_objects = [];
+      objects = [], path_objects = [], truss_objects = [];
+      window_objects = [], flag_objects = [], arrow_objects = [];
       metaLoaded = false, voronoiLoaded = false, entropyLoaded = false, lighthouseLoaded = false, bucketLoaded = false;
       pathPlanningDone = false, lighthouseDone = false;
       light_objects.selectionLights.forEach(object => object.visible = false);
@@ -400,6 +421,8 @@ function init() {
   )
   f4.add(params, 'goInnerView').name("Go Inner View");
   f4.add(params, 'goOuterView').name("Go City View");
+  f4.add(params, 'clearVisitedInner').name("Clear Visited History");
+  visited_inner_views = f4.add(params, 'visitedInner',[]).name("Visited Inner Views");
   f4.open();
 
   // groud
@@ -805,7 +828,7 @@ function animate() {
   // stats.update();
   if (city_to_load > 0 && addBuildings) {
     console.log("animate: run createCityMeshes()");
-    let result = BUILD.createCityMeshes(scene_city, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, city_to_load, y_scale, paramsL.dataSet, params.isNight);
+    let result = BUILD.createCityMeshes(scene_city, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, arrow_objects, city_to_load, y_scale, paramsL.dataSet, params.isNight);
     scene_city = result.scene;
     city_all = result.all;
     city_tracking = result.tracking;
@@ -813,6 +836,7 @@ function animate() {
     city_to_load = result.remain;
     truss_objects = result.truss;
     window_objects = result.window;
+    arrow_objects = result.arrow;
   } else if (city_to_load == 0 && printTime) {
     let end_time = new Date();
     let end_time_string = end_time.getMinutes() + ':' + end_time.getSeconds() + '.' + end_time.getMilliseconds();
@@ -926,6 +950,7 @@ function render() {
           light_objects = result.light_objects;
           selected_buildings_list = result.selected_buildings;
           LH.updateDropdown(root_dropdown_highlighted, selected_buildings_list);
+          root_dropdown_highlighted.setValue(selected_buildings_list[0]);
           let highlighter = lighthouse_objects[lighthouse_objects.length-1];
           let index = first_key_list.indexOf(String(key));
           let selected = lighthouse_objects[index];
@@ -944,6 +969,7 @@ function render() {
       root_dropdown.setValue(city_list[city_list.length-1]);
       // console.log("LH.updateDropdown: ",selected_buildings_list);
       LH.updateDropdown(root_dropdown_highlighted, selected_buildings_list);
+      root_dropdown_highlighted.setValue(selected_buildings_list[0]);
     }
   }
 }
