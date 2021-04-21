@@ -17,6 +17,7 @@ import * as PATH from './parts/path.js';
 
 let addBuildings = true, addDagViews = false;
 
+THREE.Cache.enabled = true;
 const scenes = [];
 let controls, renderer, canvas;
 let perspectiveCamera, orthographicCamera, perspectiveCameraL;
@@ -51,23 +52,15 @@ let metaLoaded = false,
   bucketLoaded = false,
   pathPlanningDone = false,
   lighthouseDone = false;
-let city_to_load;
+let city_to_load, city_to_load_old;
 let color_display, light_intensity;
 let time = new Date();
 let printTime = true;
 let start_time_string = time.getMinutes() + ':' + time.getSeconds() + '.' + time.getMilliseconds();
-
-// if(addBuildings){
-//     city_to_load = 77;// hard-coded
-// }
 let root_dropdown, root_dropdown_highlighted, visited_inner_views;
 let inner_view_history = [];
 let gui, guiL, select_fixed_point;
 
-// let DATASET = 'com-friendster_old';
-// let DATASET = 'com-friendster';
-// let DATASET = 'movies';
-// let DATASET = 'cit-Patents';
 const data_list = ['com-friendster', 'movies', 'cit-Patents'];
 const V = {'com-friendster':65608366, 'movies':218052, 'cit-Patents':3774768};
 const E = {'com-friendster':1806067135, 'movies':115050370, 'cit-Patents':16518947};
@@ -115,9 +108,6 @@ let params = {
     panBuilding();
   },
   ground: "#CCA262",
-  // colorMap: "jet",
-  // hideBuilding: false
-  // dataSet: data_list[0],
   all: 'building',
   highlighted: 'building',
   outer: true,
@@ -154,13 +144,13 @@ let first_key_color_dict = {
   0: "#000000"
 };
 let paramsL = {
-  dataSet: data_list[2],
+  dataSet: data_list[1],
   fixedPoint: first_key_list[0],
   color: first_key_color_dict[0],
   lightIntensity: 0.1
 }
 let lighthouse_objects = [];
-let entropy, bucketData, lighthouseData, metaData, voronoiData, summaryData;
+let entropy, bucketData = {}, lighthouseData = {}, summaryData = {};
 // let selected_buildings = ["1_405063", "1_62999", "8_4342010", "1_250725", "1_140109", "3_3191982", "11_2983724"];
 let selected_buildings = [];
 const data_dir = "../data/";
@@ -235,17 +225,17 @@ function init() {
     ambientLight: new THREE.AmbientLight(0x404040),
     dayLights: [new THREE.DirectionalLight(0xffffff, 0.8), new THREE.DirectionalLight(0xffffff, 0.5)],
     nightLight: new THREE.DirectionalLight(0xffffff, 0.01),
-    spotLight: new THREE.SpotLight(0xffffff, 0.6, 0, Math.PI / 2, 1, 1),
+    // spotLight: new THREE.SpotLight(0xffffff, 0.6, 0, Math.PI / 2, 1, 1),
     selectionLights:[]
   };
   scene_city.add(light_objects['ambientLight']);
   light_objects.dayLights[0].position.set(1000, 1000, 1000);
   light_objects.dayLights[1].position.set(-500, 500, 0);
   light_objects.dayLights.forEach(object => scene_city.add(object));
-  light_objects.spotLight.position.set(0, 30, 0);
-  scene_city.add(light_objects.spotLight);
-  scene_city.add(light_objects.spotLight.target);
-  light_objects.spotLight.visible = false;
+  // light_objects.spotLight.position.set(0, 30, 0);
+  // scene_city.add(light_objects.spotLight);
+  // scene_city.add(light_objects.spotLight.target);
+  // light_objects.spotLight.visible = false;
   let selectionLightsLength=30;
   for(let i=0;i<selectionLightsLength;i++){
     light_objects.selectionLights.push(new THREE.SpotLight(0xffffff, 0.4, 0, Math.PI / 3, 1, 1));
@@ -289,8 +279,13 @@ function init() {
       grass_objects.every(object => scene_city.remove(object));
       truss_objects.every(object => scene_city.remove(object));
       bush_objects.every(object => scene_city.remove(object));
-      arrow_objects.every(object => scene_city.remove(object));
-      light_objects.spotLight.visible = false;
+      let arrow_keys = Object.keys(arrow_objects);
+      arrow_keys.forEach(function(key){
+        scene_city.remove(arrow_objects[key]);
+      });
+      arrow_objects = {};
+      // light_objects.spotLight.visible = false;
+      light_objects.selectionLights.every(light => light.visible = false);
       lighthouse_objects.every(object => scene_lighthouse.remove(object));
       
       if (dataSet === data_list[0]) {
@@ -320,26 +315,31 @@ function init() {
       voronoi_file = python_dir + dataSet + "/voronoi.txt";
       neighbors_file = python_dir + dataSet + "/neighbors.txt";
       meta_file = python_dir + dataSet + "/metagraph_normalized.txt";
-      
+      lighthouse_file = lighthouse_dir+dataSet+'-layers-dists.json';
+      entropy_file = lighthouse_dir+dataSet+'_entropy.json';
+      bucket_file = lighthouse_dir+dataSet+'-bucket2peels.json';
+      summary_file =  data_dir + dataSet + "-summary.json";
+
       time = new Date();
+      manager = new THREE.LoadingManager();
+      manager.onStart = function(url, itemsLoaded, itemsTotal) {
+        console.log('Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.');
+      };
       start_time_string = time.getMinutes() + ':' + time.getSeconds() + '.' + time.getMilliseconds();
       city_tracking = {};
       city_all = {};
       city_list = [];
       objects = [], path_objects = [], truss_objects = [];
       window_objects = [], flag_objects = [], arrow_objects = [];
+      key_to_buckets = {};
+      selected_buildings = [];
+      lighthouseData = {}, entropy = {}, bucketData = {}, summaryData = {};
       metaLoaded = false, voronoiLoaded = false, entropyLoaded = false, lighthouseLoaded = false, bucketLoaded = false;
       pathPlanningDone = false, lighthouseDone = false;
       light_objects.selectionLights.forEach(object => object.visible = false);
+      scene_city_description.innerText = "";
       loadBushData(source_dir);
       loadFile(spiral_file, manager);
-      key_to_buckets = {};
-      selected_buildings = [];
-      lighthouseData = {}, entropy = {}, bucketData = {};
-      lighthouse_file = '../scripts/lighthouse/'+dataSet+'-layers-dists.json';
-      entropy_file = '../scripts/lighthouse/'+dataSet+'_entropy.json';
-      bucket_file = '../scripts/lighthouse/'+dataSet+'-bucket2peels.json';
-      summary_file =  data_dir + dataSet + "-summary.json";
       loadJSONFile(lighthouse_file, manager);
       loadJSONFile(entropy_file, manager);
       loadJSONFile(bucket_file, manager);
@@ -396,7 +396,9 @@ function init() {
       }
       path_objects.every(object => scene_city.remove(object));
       animate();
-      let result = PATH.pathPlanning(value, scene_city, city_all, light_objects, selected_buildings);
+      path_objects = [];
+      // console.log("394:"+value);
+      let result = PATH.pathPlanning(value, scene_city, city_all, light_objects);
       scene_city = result.scene;
       path_objects = result.path;
       light_objects = result.light_objects;
@@ -452,7 +454,8 @@ function init() {
   waterMesh.position.y = -50;
   scene_city.add(waterMesh);
 
-  city_view.addEventListener('mousedown',onMouseDown);
+  city_view.addEventListener('mousemove',onMouseMove);
+  // city_view.addEventListener('mousedown',onMouseDown);
   scenes.push(scene_city);
 
   // lighthouse scene
@@ -538,8 +541,7 @@ function loadFile(file, manager) {
       getAsText(data, file);
     },
     function(xhr) {
-
-      // console.log((file + ' ' + xhr.loaded / xhr.total * 100) + '% loaded');
+      console.log((file + ' ' + xhr.loaded / xhr.total * 100) + '% loaded');
     },
     function(err) {
       console.error('An error happened when loading ' + file);
@@ -695,8 +697,6 @@ function loadedJSON(evt) {
     lighthouseLoaded = true;
     lighthouseData = JSON.parse(fileString);
     let sum = sum_obj(lighthouseData);
-    // scene_city_description.innerText = scene_city_description.innerText.concat(", # fixed point values: "+Object.keys(lighthouseData).length);
-    // scene_city_description.innerText = scene_city_description.innerText.concat(", # connected fixed point: "+sum);
   }else if(filename.includes("summary")){
     summaryData = JSON.parse(fileString);
     scene_city_description.innerText = objToString(summaryData);
@@ -758,13 +758,13 @@ function loaded(evt) {
     loadMetaFile(meta_file, manager);
 
   } else if (element_count == 6) {
-    // console.log("loaded: color file");
+    console.log("loaded: color file, ",filename);
     layer_name = fileToLayer(filename);
     let result = BUILD.loadColor(lines, layer_name, city_all, city_tracking);
     city_all = result.all;
     city_tracking = result.tracking;
   } else if (element_count == 3) {
-    // console.log("loaded: floor file");
+    console.log("loaded: floor file, ",filename);
     layer_name = fileToLayer(filename);
     let result = BUILD.loadFloor(lines, layer_name, city_all, city_tracking);
     city_all = result.all;
@@ -958,16 +958,11 @@ function render() {
           highlighter.scale.set(selected.maxR*1.1, selected.dY, selected.maxR*1.1);
         }
       );
-      let result_2 = PATH.pathPlanning(city_list[city_list.length-1], scene_city, city_all, light_objects, selected_buildings);
-      scene_city = result_2.scene;
-      path_objects = result_2.path;
-      light_objects = result_2.light_objects;
       let result = LH.updateSelectionLights(city_all, light_objects, selected_buildings);
       light_objects = result.light_objects;
       selected_buildings_list = result.selected_buildings;
       PATH.updateDropdown(root_dropdown, city_list);
       root_dropdown.setValue(city_list[city_list.length-1]);
-      // console.log("LH.updateDropdown: ",selected_buildings_list);
       LH.updateDropdown(root_dropdown_highlighted, selected_buildings_list);
       root_dropdown_highlighted.setValue(selected_buildings_list[0]);
     }
@@ -1001,10 +996,16 @@ function zoomBuilding() {
 }
 
 function onMouseMove(event) {
+  event.preventDefault();
+  const rect = scene_city.userData.view.getBoundingClientRect();
+  const width = rect.right-rect.left;
+  const height = rect.bottom-rect.top;
+  mouse.x = ((event.clientX-sliderPos)/width)*2-1;
+  mouse.y = -(event.clientY/height)*2+1;
   // mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
   // mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
-  mouse.x = (event.clientX / (window.clientWidth-sliderPos)) * 2 - 1;
-  mouse.y = -(event.clientY / (window.clientHeight-sliderPos)) * 2 + 1;
+  // mouse.x = (event.clientX / (window.clientWidth-sliderPos)) * 2 - 1;
+  // mouse.y = -(event.clientY / (window.clientHeight-sliderPos)) * 2 + 1;
   let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
   raycaster.setFromCamera(mouse, camera);
 
@@ -1046,12 +1047,12 @@ function onMouseDownLH(event){
   if(intersects.length>0){
     const intersected = intersects[0].object;
     if(intersected.name){
-      // console.log("onMouseDownLH ",intersected.name);
+      console.log("onMouseDownLH ",intersected.name);
       select_fixed_point.setValue(intersected.name);
       let highlighter = lighthouse_objects[lighthouse_objects.length-1];
       highlighter.position.set(0, intersected.Y_pos, 0);
       highlighter.scale.set(intersected.maxR*1.1, intersected.dY, intersected.maxR*1.1);
-      // console.log("LH intersects: ",intersected.name,intersected.maxR,intersected.dY,intersected.Y_pos);  
+      console.log("LH intersects: ",intersected.name,intersected.maxR,intersected.dY,intersected.Y_pos);  
     }
   }
 }

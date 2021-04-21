@@ -84,7 +84,7 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
             combined_mesh.maxR = dR;
             combined_mesh.dY = dY;
             combined_mesh.Y_pos = (Y_max+Y_min)/2;
-            console.log("lighthouse - combined mesh name:", combined_mesh.name);
+            // console.log("lighthouse - combined mesh name:", combined_mesh.name);
             lighthouse_objects.push(combined_mesh);
             scene.add(combined_mesh);
         }
@@ -228,15 +228,6 @@ function interpolateLinearly(x, values) {
 
     return [enforceBounds(r), enforceBounds(g), enforceBounds(b)];
 
-}
-
-function select_fixed_point(target, list){   
-    let innerHTMLStr = "";
-    for(var i=0; i<list.length; i++){
-        var str = "<option value='" + list[i] + "'>" + list[i] + "</option>";
-        innerHTMLStr += str;        
-    }
-    if (innerHTMLStr != "") target.domElement.children[0].innerHTML = innerHTMLStr;
 }
 
 function createControls( camera ) {

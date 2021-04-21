@@ -433,76 +433,75 @@ function ifUrlExists(url) {
 // delete colored and moved building from city_tracking
 function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, arrow_objects, city_to_load, y_scale, dataSet, isNight, oneBuilding=false) {
   for (let layer in city_tracking) {
-      if(city_tracking[layer].ready_to_move && city_tracking[layer].ready_to_color) {
-          let layer_shape = city_all[layer].shapes;
-          let height = layer_shape.length;
-          // translate in X,Z direction
-          let X = city_all[layer].coords[0];
-          let Z = city_all[layer].coords[1];
-          if(oneBuilding){
-            X = 0;
-            Z = 0;
-          }
-          // loop from bottom floor to top floor
-          for (let h=1; h<height; h++) {
-              // translate in Y direction
-              let Y = y_scale*(0.5*layer_shape[h].height + 0.5*layer_shape[h-1].height);
-              // create inner frustum geometry
-              let top_in_r = layer_shape[h].inner_radius;
-              let btm_in_r = layer_shape[h-1].inner_radius;
-              let tall = y_scale*(layer_shape[h].height - layer_shape[h-1].height);
-              let floor = new THREE.CylinderBufferGeometry(top_in_r,btm_in_r,tall,16,16);
-              floor.translate(X,Y,Z);
-              // apply colors
-              let r, g, b;
-              try {
-                  r = parseInt(city_all[layer].colors.inner[h-1].r*255);
-                  g = parseInt(city_all[layer].colors.inner[h-1].g*255);
-                  b = parseInt(city_all[layer].colors.inner[h-1].b*255);    
-              } catch(err) {
-                  console.log(err.message+" "+layer);
-              }
-              // let material = new THREE.MeshStandardMaterial({color:rgbToHex(r,g,b),transparent:true,opacity:0.3});
-              let material = new THREE.MeshStandardMaterial({color:rgbToHex(r,g,b)});
-              let frustum_mesh = new THREE.Mesh(floor,material);
-              frustum_mesh.floor_name = h;
-              frustum_mesh.layer_name = layer.substring(8);
-              // draw inner frustums
-              scene.add(frustum_mesh);
-              objects.push(frustum_mesh);
-
-              // outer frustums
-              if(h<height-1) {
-                  //create outer frustum as truss structure
-                  let top_out_r = layer_shape[h].outer_radius;
-                  let btm_out_r = btm_in_r;
-                  r = parseInt(city_all[layer].colors.outer[h-1].r*255);
-                  g = parseInt(city_all[layer].colors.outer[h-1].g*255);
-                  b = parseInt(city_all[layer].colors.outer[h-1].b*255);
-                  let result = addTruss(scene,truss_objects,window_objects,h,[X,Y,Z],top_out_r,btm_out_r,top_in_r,tall,r,g,b,isNight);
-                  truss_objects = result.truss;
-                  window_objects = result.window;
-                  scene = result.scene;
-              }
-          }
-          let flag_base_Y = y_scale * layer_shape[height-1].height;
-          let lcc =  parseInt(layer.slice(layer.lastIndexOf('_')+1)); // last
-          let sliced = layer.slice(0,layer.lastIndexOf('_'));
-          sliced = sliced.slice(0,sliced.lastIndexOf('_'));
-          let fixed = parseInt(sliced.slice(sliced.lastIndexOf('_')+1)); // third to last
-          let mast_scale = y_scale;
-          // let mast_length = mast_scale * height;
-          let result = createFlags(scene, height, [X,Z], flag_base_Y, layer, city_all[layer].V, city_all[layer].E, flag_objects, lcc, fixed, mast_scale, dataSet);
-          scene = result.scene;
-          flag_objects = result.flags;
-          let flag_mast_height = result.flag_mast;
-          let result_arrow = createArrows(scene, layer, [X, Z], flag_base_Y, arrow_objects, flag_mast_height)
-          scene = result_arrow.scene;
-          arrow_objects = result_arrow.arrow_objects;
-          // console.log("createCityMeshes: loaded "+layer+", city to load = "+city_to_load);
-          delete city_tracking[layer];
-          --city_to_load;
+    if(city_tracking[layer].ready_to_move && city_tracking[layer].ready_to_color) {
+      let layer_shape = city_all[layer].shapes;
+      let height = layer_shape.length;
+      // translate in X,Z direction
+      let X = city_all[layer].coords[0];
+      let Z = city_all[layer].coords[1];
+      if(oneBuilding){
+        X = 0;
+        Z = 0;
       }
+      // loop from bottom floor to top floor
+      for (let h=1; h<height; h++) {
+        // translate in Y direction
+        let Y = y_scale*(0.5*layer_shape[h].height + 0.5*layer_shape[h-1].height);
+        // create inner frustum geometry
+        let top_in_r = layer_shape[h].inner_radius;
+        let btm_in_r = layer_shape[h-1].inner_radius;
+        let tall = y_scale*(layer_shape[h].height - layer_shape[h-1].height);
+        let floor = new THREE.CylinderBufferGeometry(top_in_r,btm_in_r,tall,16,16);
+        floor.translate(X,Y,Z);
+        // apply colors
+        let r, g, b;
+        try {
+            r = parseInt(city_all[layer].colors.inner[h-1].r*255);
+            g = parseInt(city_all[layer].colors.inner[h-1].g*255);
+            b = parseInt(city_all[layer].colors.inner[h-1].b*255);
+        } catch(err) {
+            console.log(err.message+" "+layer);
+        }
+        let material = new THREE.MeshStandardMaterial({color:rgbToHex(r,g,b)});
+        let frustum_mesh = new THREE.Mesh(floor,material);
+        frustum_mesh.floor_name = h;
+        frustum_mesh.layer_name = layer.substring(8);
+        // draw inner frustums
+        scene.add(frustum_mesh);
+        objects.push(frustum_mesh);
+
+        // outer frustums
+        if(h<height-1) {
+            //create outer frustum as truss structure
+            let top_out_r = layer_shape[h].outer_radius;
+            let btm_out_r = btm_in_r;
+            r = parseInt(city_all[layer].colors.outer[h-1].r*255);
+            g = parseInt(city_all[layer].colors.outer[h-1].g*255);
+            b = parseInt(city_all[layer].colors.outer[h-1].b*255);
+            let result = addTruss(scene,truss_objects,window_objects,h,[X,Y,Z],top_out_r,btm_out_r,top_in_r,tall,r,g,b,isNight);
+            truss_objects = result.truss;
+            window_objects = result.window;
+            scene = result.scene;
+        }
+      }
+      let flag_base_Y = y_scale * layer_shape[height-1].height;
+      let lcc =  parseInt(layer.slice(layer.lastIndexOf('_')+1)); // last
+      let sliced = layer.slice(0,layer.lastIndexOf('_'));
+      sliced = sliced.slice(0,sliced.lastIndexOf('_'));
+      let fixed = parseInt(sliced.slice(sliced.lastIndexOf('_')+1)); // third to last
+      let mast_scale = y_scale;
+      // let mast_length = mast_scale * height;
+      let result = createFlags(scene, height, [X,Z], flag_base_Y, layer, city_all[layer].V, city_all[layer].E, flag_objects, lcc, fixed, mast_scale, dataSet);
+      scene = result.scene;
+      flag_objects = result.flags;
+      let flag_mast_height = result.flag_mast;
+      let result_arrow = createArrows(scene, layer, [X, Z], flag_base_Y, arrow_objects, flag_mast_height)
+      scene = result_arrow.scene;
+      arrow_objects = result_arrow.arrow_objects;
+      console.log("createCityMeshes: loaded "+layer+", city to load = "+city_to_load);
+      delete city_tracking[layer];
+      --city_to_load;
+    }
   }
   return {scene: scene, objects: objects, remain: city_to_load, 
     all: city_all, tracking: city_tracking, truss: truss_objects, 
