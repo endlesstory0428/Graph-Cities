@@ -22,11 +22,12 @@ function getLayerTrackingObj(layer_name) {
 }
 
 // add a new floor shape to a given building
-function addNewFloor(city_all, layer_name, h, inner_r, outer_r) {
+function addNewFloor(city_all, layer_name, h, ground_r, inner_r, outer_r) {
   let floor = {
     height: h,
-    inner_radius: inner_r,
-    outer_radius: outer_r
+    ground_radius: ground_r, // ground radius, inner radius for prev floor
+    inner_radius: inner_r, // central radius
+    outer_radius: outer_r // outter ring radius
   }
   city_all[layer_name].shapes.push(floor);
   return {all: city_all};
@@ -41,36 +42,33 @@ function loadFloor(lines,layer_name, city_all, city_tracking) {
     city_all[layer_name] = getLayerTrackingObj(layer_name);
   }
   let i;
-  let tmp_outer_radius = 0;
+  let tmp_ground_radius = 0;
+  let tmp_inner_radius = 0;
   
   for(i=0; i<lines.length; i++) {
       let elements = lines[i].split(' ');
       // console.log("loadFloor: floor "+i);
       // console.log(elements);
-      if (elements.length == 3) {
-          if (elements[1] == 0) {
-            // console.log("loadFloor: add new floor "+city_all[layer_name].shapes.length);
-            let result = addNewFloor(city_all,layer_name,0.0,parseFloat(elements[2]),0.0);
+      if (elements.length === 4) {
+        // // floor height radius type(ground\inner\outer)
+        if (i % 3 == 0) {
+          // // ground
+          if (elements[0] === "0") {
+            let result = addNewFloor(city_all, layer_name, 0.0, 0.0, 0.0, 0.0);
             city_all = result.all;
-          } 
-          else if (i%2 == 1){
-            if(i < lines.length-3) {
-              tmp_outer_radius = elements[2];
-            }
-            else {
-              let result = addNewFloor(city_all,layer_name,parseFloat(elements[1]),parseFloat(elements[2]),0.0);
-              city_all = result.all;
-            }
-          } 
-          else if (i%2 == 0) {
-            // console.log("loadFloor: add new floor "+city_all[layer_name].shapes.length);
-            if(i == lines.length-2) {
-                tmp_outer_radius = 0;
-            }
-            // console.log("loadFloor: add new floor "+elements[0]+' '+elements[1]+' '+elements[2]+' '+tmp_outer_radius);
-            let result = addNewFloor(city_all,layer_name,parseFloat(elements[1]),parseFloat(elements[2]),parseFloat(tmp_outer_radius));
-            city_all = result.all;
-          }
+          };
+          // console.log("loadFloor: add new floor "+city_all[layer_name].shapes.length);
+          tmp_ground_radius = elements[2];
+        } else if (i % 3 === 1){
+          // // inner
+          tmp_inner_radius = elements[2];
+        } else if (i % 3 === 2) {
+          // // outter
+          // console.log("loadFloor: add new floor "+city_all[layer_name].shapes.length);
+          // console.log("loadFloor: add new floor "+elements[0]+' '+elements[1]+' '+elements[2]+' '+tmp_outer_radius);
+          let result = addNewFloor(city_all, layer_name, parseFloat(elements[1]), parseFloat(tmp_ground_radius), parseFloat(tmp_inner_radius), parseFloat(elements[2]));
+          city_all = result.all;
+        };
       }
   }
   city_all[layer_name].b_value = lines[lines.length-1];
@@ -93,9 +91,11 @@ function loadColor(color_list,layer_name, city_all, city_tracking) {
   }
   // inner structure of colors in layer_all dictionary
   let color_dict = {
-    disc:[],
-    inner:[],
-    outer:[]
+    ground:[], // ground disc color
+    inner:[], // central frustum color
+    outer:[], // outer ring color
+    next:[], // inner frustum color
+    ceil:[] // ceiling disc color
   };
   // read lines from a color file into "colors" dictionary
   let i;
@@ -106,12 +106,21 @@ function loadColor(color_list,layer_name, city_all, city_tracking) {
         g: parseFloat(elements[4]),
         b: parseFloat(elements[5])
     };
-    if (color_list[i].search("disc")>0) {
-      color_dict.disc.push(rgb);
+    if (color_list[i].search("ground")>0) {
+      // // ground disc color
+      color_dict.ground.push(rgb);
     } else if (color_list[i].search("inner")>0) {
+      // // central frustum color
       color_dict.inner.push(rgb);
     } else if (color_list[i].search("outer")>0) {
+      // // outer ring color
       color_dict.outer.push(rgb);
+    } else if (color_list[i].search("next")>0) {
+      // // inner frustum color
+      color_dict.next.push(rgb);
+    }else if (color_list[i].search("ceil")>0) {
+      // ceiling disc color
+      color_dict.ceil.push(rgb);
     }
   }
   city_all[layer_name].colors = color_dict;
@@ -123,7 +132,7 @@ function loadColor(color_list,layer_name, city_all, city_tracking) {
 function loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tracking, x_scale) {
   // console.log("loading spiral");
   // console.log(filename);
-  let city_to_load = lines.length-1;
+  let city_to_load = (lines.length-1) / 2; // each building has two lines: building position, and fragment distribution
   console.log("city_to_load = "+city_to_load);
   let building_with_grass = [];
   for(let i=0; i<lines.length-1; i++) {
@@ -161,6 +170,14 @@ function loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tr
     // flag
     city_all[layer_name].V = parseInt(elements[5]);
     city_all[layer_name].E = parseInt(elements[6]);
+    city_all[layer_name]['fragNum'] = parseInt(elements[7]); // number of fragments
+    city_all[layer_name]['fragNeg'] = parseInt(elements[8]); // number of buckets of fragments where fragments are smaller than mean
+    city_all[layer_name]['fragPos'] = parseInt(elements[9]); // number of buckets fo fragments where fragments are larger than mean
+
+    i++; // read the second line of each building
+
+    city_all[layer_name]['fragBucket'] = lines[i].split(' ').map(x => parseInt(x, 10)); // accumulated number of fragments in each bucket
+
     // coordinates is ready, check if shape of building is ready
     if(city_all[layer_name].shapes.length > 0) {
       city_tracking[layer_name].ready_to_move = true;
@@ -324,13 +341,14 @@ function addTruss(scene,truss_objects,window_objects,h,center,top_radius,btm_rad
   return {scene:scene, truss: truss_objects, window: window_objects};
 }
 
-function createFlags(scene, height, coord, base_Y, layer, V, E, flag_objects, lcc, peel, mast_scale, dataSet) {
+function createFlags(scene, height, coord, base_Y, layer, V, E, fragNum, fragNeg, fragPos, fragBucket, flag_objects, lcc, peel, mast_scale, dataSet) {
   let loadFlagTexture = true;
   // console.log("coord of flag", fixed_point_number, "is", coord, "height of flag is", base_Y);
   let X = coord[0], Z = coord[1];
   let flag_width = Math.log(V), flag_height = Math.log(E), flag_thickness = 0.5;
-  let mast_length = mast_scale*0.1 + mast_scale*2.0*E/(V*(V-1));
-  
+  let mast_radius = Math.sqrt((1 + fragNeg + fragPos) / 4); // radius represents how spread the distribution is
+  let mast_length = mast_scale * Math.log(fragNum + 1) / Math.pow(mast_radius, 2) / 8; // volume represents how many fragments are in the building
+
   let flag_mesh;
 
   if(loadFlagTexture){
@@ -400,7 +418,7 @@ function createFlags(scene, height, coord, base_Y, layer, V, E, flag_objects, lc
   flag_mesh.translateX(X+flag_width/2);
   flag_mesh.translateY(base_Y+mast_length+flag_height/2);
   flag_mesh.translateZ(Z);
-  let rod = new THREE.Mesh( new THREE.CylinderBufferGeometry(flag_thickness,flag_thickness,mast_length,8), new THREE.MeshStandardMaterial( {color: 0x000000}));
+  let rod = new THREE.Mesh( new THREE.CylinderBufferGeometry(mast_radius,mast_radius,mast_length,8), new THREE.MeshStandardMaterial( {color: 0xcccccc}));
   rod.translateX(X);
   rod.translateY(base_Y+mast_length/2);
   rod.translateZ(Z);
@@ -409,6 +427,31 @@ function createFlags(scene, height, coord, base_Y, layer, V, E, flag_objects, lc
   scene.add(rod);
   flag_objects.push(flag_mesh);
   flag_objects.push(rod);
+
+  // // add pole markers
+  for (let index = -1; index < fragBucket.length + 1; index++) {
+    let fragdensity = 0; // count the ratio of fragments that are already counted
+    if (index === -1) {
+      fragdensity = 0;
+    } else {
+      fragdensity = fragBucket[index] / fragNum;
+    };
+    const markerPos = mast_length * fragdensity; // marker height position with respect to the pole
+    let markerSize = 0.05; // marker height
+    let marker_radius = mast_radius * (1 + 0.05 * (1 + Math.abs(index - fragNeg + 1))); // the more it is off from the mean, the larger its radius is
+    let markerColor = 0x000000;
+    if (index === fragNeg - 1) {
+      markerSize = 0.025
+      markerColor = 0xff0000; // mean marker is red
+    }
+    let marker = new THREE.Mesh( new THREE.CylinderBufferGeometry(marker_radius,marker_radius,markerSize,8), new THREE.MeshStandardMaterial( {color: markerColor}));
+    marker.translateX(X);
+    marker.translateY(base_Y + markerPos + markerSize / 2);
+    marker.translateZ(Z);
+
+    scene.add(marker);
+    flag_objects.push(marker);
+  }
   return {scene: scene, flag_mast: flag_height+mast_length, flags: flag_objects};
 }
 
@@ -431,8 +474,10 @@ function ifUrlExists(url) {
 
 // check city_tracking, create buildings that are ready to color & move
 // delete colored and moved building from city_tracking
-function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, arrow_objects, city_to_load, y_scale, dataSet, isNight, oneBuilding=false) {
+function createCityMeshes(scene, objects, city_all, city_tracking, ceil_objects, middle_objects, truss_objects, window_objects, flag_objects, arrow_objects, city_to_load, y_scale, dataSet, ceilVisible, isNight, oneBuilding=false) {
   for (let layer in city_tracking) {
+    // console.log(city_tracking[layer].ready_to_move)
+    // console.log(city_tracking[layer].ready_to_color)
     if(city_tracking[layer].ready_to_move && city_tracking[layer].ready_to_color) {
       let layer_shape = city_all[layer].shapes;
       let height = layer_shape.length;
@@ -449,7 +494,7 @@ function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects
         let Y = y_scale*(0.5*layer_shape[h].height + 0.5*layer_shape[h-1].height);
         // create inner frustum geometry
         let top_in_r = layer_shape[h].inner_radius;
-        let btm_in_r = layer_shape[h-1].inner_radius;
+        let btm_in_r = layer_shape[h].ground_radius;
         let tall = y_scale*(layer_shape[h].height - layer_shape[h-1].height);
         let floor = new THREE.CylinderBufferGeometry(top_in_r,btm_in_r,tall,16,16);
         floor.translate(X,Y,Z);
@@ -462,27 +507,63 @@ function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects
         } catch(err) {
             console.log(err.message+" "+layer);
         }
-        let material = new THREE.MeshStandardMaterial({color:rgbToHex(r,g,b)});
+        // let material = new THREE.MeshStandardMaterial({color:rgbToHex(r,g,b),transparent:true,opacity:0.3});
+        let material = new THREE.MeshStandardMaterial({color:rgbToHex(r,g,b), opacity:1.0, transparent:true});
         let frustum_mesh = new THREE.Mesh(floor,material);
         frustum_mesh.floor_name = h;
         frustum_mesh.layer_name = layer.substring(8);
         // draw inner frustums
         scene.add(frustum_mesh);
+        middle_objects.push(frustum_mesh);
         objects.push(frustum_mesh);
 
+
+        // draw ceil
+        const ceil_size = 0.05;
+        const ceilY = y_scale * layer_shape[h].height - ceil_size / 2;
+        let ceil = new THREE.CylinderBufferGeometry(top_in_r,top_in_r,ceil_size,16,16);
+        ceil.translate(X,ceilY,Z);
+        
+        r = parseInt(city_all[layer].colors.ceil[h-1].r*255);
+        g = parseInt(city_all[layer].colors.ceil[h-1].g*255);
+        b = parseInt(city_all[layer].colors.ceil[h-1].b*255);
+        
+        material = new THREE.MeshStandardMaterial({color:rgbToHex(r,g,b)});
+        frustum_mesh = new THREE.Mesh(ceil,material);
+        frustum_mesh.visible = ceilVisible;
+
+        scene.add(frustum_mesh);
+        ceil_objects.push(frustum_mesh);
+
+        // draw center frustums
+        if (h < height - 1) {
+          let top_nx_r = layer_shape[h+1].ground_radius;
+          let btm_nx_r = btm_in_r;
+          let center = new THREE.CylinderBufferGeometry(top_nx_r,btm_nx_r,tall,16,16);
+          center.translate(X,Y,Z);
+
+          r = parseInt(city_all[layer].colors.next[h-1].r*255);
+          g = parseInt(city_all[layer].colors.next[h-1].g*255);
+          b = parseInt(city_all[layer].colors.next[h-1].b*255);
+
+          material = new THREE.MeshStandardMaterial({color:rgbToHex(r,g,b)});
+          frustum_mesh = new THREE.Mesh(center,material);
+
+          scene.add(frustum_mesh);
+          objects.push(frustum_mesh);
+        };
+
         // outer frustums
-        if(h<height-1) {
-            //create outer frustum as truss structure
-            let top_out_r = layer_shape[h].outer_radius;
-            let btm_out_r = btm_in_r;
-            r = parseInt(city_all[layer].colors.outer[h-1].r*255);
-            g = parseInt(city_all[layer].colors.outer[h-1].g*255);
-            b = parseInt(city_all[layer].colors.outer[h-1].b*255);
-            let result = addTruss(scene,truss_objects,window_objects,h,[X,Y,Z],top_out_r,btm_out_r,top_in_r,tall,r,g,b,isNight);
-            truss_objects = result.truss;
-            window_objects = result.window;
-            scene = result.scene;
-        }
+        //create outer frustum as truss structure
+        let top_out_r = layer_shape[h].outer_radius;
+        let btm_out_r = btm_in_r;
+        r = parseInt(city_all[layer].colors.outer[h-1].r*255);
+        g = parseInt(city_all[layer].colors.outer[h-1].g*255);
+        b = parseInt(city_all[layer].colors.outer[h-1].b*255);
+        let result = addTruss(scene,truss_objects,window_objects,h,[X,Y,Z],top_out_r,btm_out_r,top_in_r,tall,r,g,b,isNight);
+        truss_objects = result.truss;
+        window_objects = result.window;
+        scene = result.scene;
       }
       let flag_base_Y = y_scale * layer_shape[height-1].height;
       let lcc =  parseInt(layer.slice(layer.lastIndexOf('_')+1)); // last
@@ -491,7 +572,7 @@ function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects
       let fixed = parseInt(sliced.slice(sliced.lastIndexOf('_')+1)); // third to last
       let mast_scale = y_scale;
       // let mast_length = mast_scale * height;
-      let result = createFlags(scene, height, [X,Z], flag_base_Y, layer, city_all[layer].V, city_all[layer].E, flag_objects, lcc, fixed, mast_scale, dataSet);
+      let result = createFlags(scene, height-1, [X,Z], flag_base_Y, layer, city_all[layer].V, city_all[layer].E, city_all[layer].fragNum, city_all[layer].fragNeg, city_all[layer].fragPos, city_all[layer].fragBucket, flag_objects, lcc, fixed, mast_scale, dataSet);
       scene = result.scene;
       flag_objects = result.flags;
       let flag_mast_height = result.flag_mast;
@@ -504,7 +585,7 @@ function createCityMeshes(scene, objects, city_all, city_tracking, truss_objects
     }
   }
   return {scene: scene, objects: objects, remain: city_to_load, 
-    all: city_all, tracking: city_tracking, truss: truss_objects, 
+    all: city_all, tracking: city_tracking, ceil: ceil_objects, middle: middle_objects, truss: truss_objects, 
     window: window_objects, arrow: arrow_objects};
 }
 

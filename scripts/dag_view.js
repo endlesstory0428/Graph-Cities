@@ -3,7 +3,7 @@
 //   gui
 // } from '../node_modules/three/examples/jsm/libs/dat.gui.module.js';
 
-var PREFIX = "http://localhost:8080/";
+var PREFIX = "http://172.16.93.174:8080/";
 
 function httpGet(theUrl) {
   var xmlHttp = new XMLHttpRequest();
@@ -459,16 +459,22 @@ graph
     const setid = nodeDS._findById(node.id);
     console.log("Setid: ", setid);
     const nodefilter = new Set();
+    const nodefilter_label = [{source: "new_id", target: "name"}]; // column name for labels.csv
     for (const sid in nodeDS._objects) {
       if (nodeDS._findById(sid) === setid) {
         //console.log(nodeDS._objects[sid], DATA.nodes[nodeDS._objects[sid].id]);
         const vertices = DATA.nodes[nodeDS._objects[sid].id].vertices
+        const labels = DATA.nodes[nodeDS._objects[sid].id].labels;
         for (const vert in vertices) {
           nodefilter.add(vertices[vert]);
-        }
+        };
+        // // push vertex labels for vertex in nodefilter
+        for (let vIndex = 0; vIndex < vertices.length; vIndex++) {
+          nodefilter_label.push({source: vertices[vIndex], target:labels[vIndex]});
+        };
       }
     }
-    loadEdges(node, nodefilter);
+    loadEdges(node, nodefilter, nodefilter_label);
     //Graph.zoomToFit();
   });
 
@@ -535,7 +541,7 @@ var layer_links = [];
 var layer_loaded = false;
 var prev_suffix = null;
 
-function loadEdges(node, nodefilter) {
+function loadEdges(node, nodefilter, nodefilter_label) {
   if (!layer_loaded) {
     console.log("Not done loading edges!");
     return
@@ -569,13 +575,24 @@ function loadEdges(node, nodefilter) {
     console.log(res)
     console.log(res.errno)
     if (res.errno == 0 || res.errno == -17) {
-      let C = new THREE.Color(node.color);
-      console.log("?dataPath=" + filename + '&nodeColor={"r":' + C.r + ',"g":' + C.g + ',"b":' + C.b + '}');
-      console.log(document.getElementById('strata').src);
-      httpGetAsync(PREFIX + "query?type=add&file=" + filename + ".csv", function(res) {
-        console.log(res);
-        setStrataUrl("?dataPath=" + filename + '&nodeColor={"r":' + C.r + ',"g":' + C.g + ',"b":' + C.b + '}&nodeColorProperty=waveLevel&heightProperty=waveLevel');
-        console.log(document.getElementById('strata').src);
+      // // send labels to strata
+      content = JSON.stringify({
+        filename: filename + "_labels.csv",
+        edges: nodefilter_label
+      });
+      httpPostAsync(content, PREFIX + "save", function(res) {
+        console.log(res)
+        console.log(res.errno)
+        if (res.errno == 0 || res.errno == -17) {
+          let C = new THREE.Color(node.color);
+          console.log("?dataPath=" + filename + '&nodeColor={"r":' + C.r + ',"g":' + C.g + ',"b":' + C.b + '}');
+          console.log(document.getElementById('strata').src);
+          httpGetAsync(PREFIX + "query?type=add&file=" + filename + ".csv", function(res) {
+            console.log(res);
+            setStrataUrl("?dataPath=" + filename + '&nodeColor={"r":' + C.r + ',"g":' + C.g + ',"b":' + C.b + '}&nodeColorProperty=waveLevel&heightProperty=waveLevel');
+            console.log(document.getElementById('strata').src);
+          });
+        };
       });
     }
   });

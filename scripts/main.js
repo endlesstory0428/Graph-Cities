@@ -15,7 +15,7 @@ import * as LH from './parts/lighthouse.js'
 import * as BUILD from './parts/building.js';
 import * as PATH from './parts/path.js';
 
-let addBuildings = true, addDagViews = false;
+let addBuildings = true, addDagViews = true;
 
 THREE.Cache.enabled = true;
 const scenes = [];
@@ -37,6 +37,8 @@ let city_list = [];
 let objects = [];
 let ground_object;
 let path_objects = [];
+let ceil_objects = []; // floor ceiling disc in buildings
+let middle_objects = []; // floor central frustum in buildings
 let truss_objects = [];
 let window_objects = [];
 let flag_objects = [];
@@ -61,7 +63,7 @@ let root_dropdown, root_dropdown_highlighted, visited_inner_views;
 let inner_view_history = [];
 let gui, guiL, select_fixed_point;
 
-const data_list = ['com-friendster', 'movies', 'cit-Patents'];
+const data_list = ['got', 'cit-Patents', 'starwars'];
 const V = {'com-friendster':65608366, 'movies':218052, 'cit-Patents':3774768};
 const E = {'com-friendster':1806067135, 'movies':115050370, 'cit-Patents':16518947};
 const connected = {'com-friendster':true, 'movies':false, 'cit-Patents':false};
@@ -111,6 +113,8 @@ let params = {
   all: 'building',
   highlighted: 'building',
   outer: true,
+  middle: true, // show central frustum
+  ceilVisible: false, // show ceiling disc
   isNight: false,
   visitedInner: 'building',
   goInnerView: function() {
@@ -277,6 +281,8 @@ function init() {
       window_objects.every(object => scene_city.remove(object));
       flag_objects.every(object => scene_city.remove(object));
       grass_objects.every(object => scene_city.remove(object));
+      ceil_objects.every(object => scene_city.remove(object));
+      middle_objects.every(object => scene_city.remove(object));
       truss_objects.every(object => scene_city.remove(object));
       bush_objects.every(object => scene_city.remove(object));
       let arrow_keys = Object.keys(arrow_objects);
@@ -329,7 +335,7 @@ function init() {
       city_tracking = {};
       city_all = {};
       city_list = [];
-      objects = [], path_objects = [], truss_objects = [];
+      objects = [], path_objects = [], ceil_objects = [], middle_objects = [], truss_objects = [];
       window_objects = [], flag_objects = [], arrow_objects = [];
       key_to_buckets = {};
       selected_buildings = [];
@@ -374,6 +380,14 @@ function init() {
     truss_objects.forEach(object => object.visible = value);
     animate();
   });
+  f3.add(params, 'middle').name('middle frustums').onChange(function(value) {
+    middle_objects.forEach(object => object.visible = value);
+    animate();
+  });
+  f3.add(params, 'ceilVisible').name('frustum ceiling').onChange(function(value) {
+    ceil_objects.forEach(object => object.visible = value);
+    animate();
+  });
   f3.add(params, 'isNight').name('night view').onChange(function(value) {
     dayAndNight(value, light_objects, window_objects);
     animate();
@@ -402,12 +416,14 @@ function init() {
       scene_city = result.scene;
       path_objects = result.path;
       light_objects = result.light_objects;
+      // console.log('addDagViews')
+      // console.log(addDagViews)
       if(addDagViews){
         console.log("******** " + value + " *********");
         console.log("******** " + paramsL.dataSet + " *********");
   
         let wavemap_ID_ID_freq = value.split('_');
-        let file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '-' + wavemap_ID_ID_freq[2] + '.json';
+        let file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2] + '.json';
         console.log("Loading: ", file);
         loadFile2(file);
         loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);  
@@ -514,10 +530,10 @@ function groundObjLoader(obj_url, obj_material) {
         object.scale.set(0.4, 0.1, 0.3);
         object.position.set(-60, -10, 20);
       } else if (paramsL.dataSet === data_list[1]) {
-        object.scale.set(0.22, 0.08, 0.2);
+        object.scale.set(0.4, 0.1, 0.3);
         object.position.set(-30, -9, 0);
       } else if (paramsL.dataSet === data_list[2]) {
-        object.scale.set(0.22, 0.08, 0.2);
+        object.scale.set(0.4, 0.1, 0.3);
         object.position.set(-30, -9, 0);
       }
       ground_object = object;
@@ -734,7 +750,8 @@ function loaded(evt) {
   let lines = fileString.split('\n');
   let element_count = (lines[0].split(' ')).length;
   // need to update when SPIRAL.txt updates
-  if (element_count == 7) {
+  if (element_count == 10) {
+    // // the first line of SPIRAL.txt has 10 elements. Note: the second line depends
     // console.log("loaded: SPIRAL file");
     let spiral = BUILD.loadSpiral(scene_city, lines, city_all, grass_objects, bush_objects, city_tracking, x_scale);
     city_all = spiral.all;
@@ -763,7 +780,7 @@ function loaded(evt) {
     let result = BUILD.loadColor(lines, layer_name, city_all, city_tracking);
     city_all = result.all;
     city_tracking = result.tracking;
-  } else if (element_count == 3) {
+  } else if (element_count == 4) {
     console.log("loaded: floor file, ",filename);
     layer_name = fileToLayer(filename);
     let result = BUILD.loadFloor(lines, layer_name, city_all, city_tracking);
@@ -828,12 +845,14 @@ function animate() {
   // stats.update();
   if (city_to_load > 0 && addBuildings) {
     console.log("animate: run createCityMeshes()");
-    let result = BUILD.createCityMeshes(scene_city, objects, city_all, city_tracking, truss_objects, window_objects, flag_objects, arrow_objects, city_to_load, y_scale, paramsL.dataSet, params.isNight);
+    let result = BUILD.createCityMeshes(scene_city, objects, city_all, city_tracking, ceil_objects, middle_objects, truss_objects, window_objects, flag_objects, arrow_objects, city_to_load, y_scale, paramsL.dataSet, params.ceilVisible, params.isNight);
     scene_city = result.scene;
     city_all = result.all;
     city_tracking = result.tracking;
     objects = result.objects;
     city_to_load = result.remain;
+    ceil_objects = result.ceil;
+    middle_objects = result.middle;
     truss_objects = result.truss;
     window_objects = result.window;
     arrow_objects = result.arrow;

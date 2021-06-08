@@ -12,7 +12,7 @@ function updateDropdown(target, list){
 function loadNeighbors(city_all, lines, filename='') {
     let neighbors = [];
     for(let i=0; i<lines.length-1; i++){
-        let elements = lines[i].split(' ');
+        let elements = lines[i].trim().split(' ');
         let neighbor_pair = [elements[0],elements[1]];
         neighbors.push(neighbor_pair);
     }

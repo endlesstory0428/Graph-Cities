@@ -1,7 +1,8 @@
 import * as THREE from '../../node_modules/three/build/three.module.js';
 // import {TrackballControls} from '../../node_modules/three/examples/jsm/controls/TrackballControls.js';
 // import {GUI} from '../../node_modules/three/examples/jsm/libs/dat.gui.module.js';
-import {jet} from '../lighthouse/jet_colormap.js';
+// import {jet} from '../lighthouse/jet_colormap.js';
+import {grey2red} from '../lighthouse/grey2red_colormap.js';
 
 function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key_color_dict, first_key_list, select_fixed_point, color_display, light_intensity, bucketData, key_to_buckets) {
     let max_radius = 0;
@@ -13,6 +14,10 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
     const peel_vals = Object.keys(info);
     const peel_value_range = Math.max(...peel_vals) - Math.min(...peel_vals);
     const peel_value_count = peel_vals.length;
+    const peel_meanDegree = peel_vals.map(layer => info[layer]['meanDegree']); // array of mean degree of each fixpoint
+    const max_peel_meanDegree = Math.max(...peel_meanDegree);
+    const mean_peel_meanDegree = peel_meanDegree.reduce((x, y) => x + y, 0) / peel_meanDegree.length;
+    const color_factor = Math.pow((mean_peel_meanDegree / max_peel_meanDegree) / ((mean_peel_meanDegree / max_peel_meanDegree) - 1), 2); // color factor to scale color for better perception, the same mechanism used in building color
     // console.log("peel_value_min",Math.min(...peel_vals));
     // console.log("peel_value_max",Math.max(...peel_vals));
     // console.log("peel_value_range",peel_value_range);
@@ -26,10 +31,10 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
     updateDropdown(select_fixed_point, first_key_list);
 
     for(let key in info) {
-        original_height_sum += sum_log(info[key]);
+        original_height_sum += sum_log(info[key]['dist']);
         // console.log("sum_log "+sum_log(info[key]));
         // console.log("original_height_sum "+original_height_sum);
-        const layer_vals = Object.values(info[key]);
+        const layer_vals = Object.values(info[key]['dist']);
         const layer_max_radius = Math.max(...layer_vals);
         // console.log(key+'/'+layer_max_radius);
         const rad = cylinderRadius(layer_max_radius);
@@ -44,11 +49,13 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
 
     let max_R = 0;
     for(let key in info) {
-        const peel_value_color = 1.0-(1.0/(Math.log2(parseInt(key)+1.0)));
+        // const peel_value_color = 1.0-(1.0/(Math.log2(parseFloat(info[key]['meanDegree'])+1.0)));
+        const peel_value_color = 1 - Math.log((info[key]['meanDegree'] / max_peel_meanDegree) * (1 - color_factor) + color_factor) / Math.log(color_factor); // use color factor to scale (meanDegree / max(meanDegree))
         // console.log("key "+key+"peel_value_color "+peel_value_color);
         if(info.hasOwnProperty(key)) {
             // console.log(key+' -> '+info[key]);
-            let color = interpolateLinearly(peel_value_color,jet); //jet colormap [0=blue, 1=red]
+            // let color = interpolateLinearly(peel_value_color,jet); //jet colormap [0=blue, 1=red]
+            let color = interpolateLinearly(peel_value_color,grey2red); //grey2red colormap [0=grey, 1=red]
             const entropy_intensity = entropy[parseInt(key)];
             let color_hex = rgbToHex(Math.round(color[0]*255),Math.round(color[1]*255),Math.round(color[2]*255));
             // const material = new THREE.MeshBasicMaterial({color:color_string}); //black color
@@ -58,10 +65,10 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
             const emissive_material = new THREE.MeshStandardMaterial({color:color_hex,emissive:color_hex,emissiveIntensity:entropy_intensity});
             first_key_color_dict[parseInt(key)] = color_hex;
             let dY = 0, dR = 0, Y_min = Y;
-            for (let key2 in info[key]) {
+            for (let key2 in info[key]['dist']) {
                 // console.log(key+'/'+key2+' -> '+info[key][key2]);
                 const Y_dis = Math.log2(key2 + 1)*scale_factor;
-                let R = cylinderRadius(info[key][key2]);
+                let R = cylinderRadius(info[key]['dist'][key2]);
                 if(R > dR) {
                     dR = R;
                 }
