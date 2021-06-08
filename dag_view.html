@@ -31,7 +31,7 @@
   <div>
     <div id="graph" style="float: left; width: 49.5%; height: 100%"></div>
     <div style="float: right; width: 50%; height: 100%; border-left: 5px solid black; ">
-      <iframe id="strata" src=http://localhost:8080/?dataPath=simplegraph width="100%" height="100%"></iframe>
+      <iframe id="strata" src=http://addressSample:8080/?dataPath=simplegraph width="100%" height="100%"></iframe>
     </div>
     <div id="local"></div>
   </div>
@@ -41,7 +41,7 @@
     //import * as THREE from './node_modules/three/build/three.module.js';
     // import * as fs from './node_modules/fs-extra/lib/index.js';
 
-    var PREFIX = "http://localhost:8080/";
+    var PREFIX = "http://addressSample:8080/";
 
     function httpGet(theUrl) {
       var xmlHttp = new XMLHttpRequest();
