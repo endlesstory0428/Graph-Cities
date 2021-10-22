@@ -14,10 +14,10 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
     const peel_vals = Object.keys(info);
     const peel_value_range = Math.max(...peel_vals) - Math.min(...peel_vals);
     const peel_value_count = peel_vals.length;
-    const peel_meanDegree = peel_vals.map(layer => info[layer]['meanDegree']); // array of mean degree of each fixpoint
+    const peel_meanDegree = peel_vals.map(layer => info[layer]['meanDegree']);
     const max_peel_meanDegree = Math.max(...peel_meanDegree);
     const mean_peel_meanDegree = peel_meanDegree.reduce((x, y) => x + y, 0) / peel_meanDegree.length;
-    const color_factor = Math.pow((mean_peel_meanDegree / max_peel_meanDegree) / ((mean_peel_meanDegree / max_peel_meanDegree) - 1), 2); // color factor to scale color for better perception, the same mechanism used in building color
+    const color_factor = Math.pow((mean_peel_meanDegree / max_peel_meanDegree) / ((mean_peel_meanDegree / max_peel_meanDegree) - 1), 2);
     // console.log("peel_value_min",Math.min(...peel_vals));
     // console.log("peel_value_max",Math.max(...peel_vals));
     // console.log("peel_value_range",peel_value_range);
@@ -50,7 +50,7 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
     let max_R = 0;
     for(let key in info) {
         // const peel_value_color = 1.0-(1.0/(Math.log2(parseFloat(info[key]['meanDegree'])+1.0)));
-        const peel_value_color = 1 - Math.log((info[key]['meanDegree'] / max_peel_meanDegree) * (1 - color_factor) + color_factor) / Math.log(color_factor); // use color factor to scale (meanDegree / max(meanDegree))
+        const peel_value_color = 1 - Math.log((info[key]['meanDegree'] / max_peel_meanDegree) * (1 - color_factor) + color_factor) / Math.log(color_factor);
         // console.log("key "+key+"peel_value_color "+peel_value_color);
         if(info.hasOwnProperty(key)) {
             // console.log(key+' -> '+info[key]);
@@ -147,6 +147,11 @@ function updateSelectionLights(city_all, light_objects, selected_buildings) {
           // console.log(i);
           let city_index = city_name_sliced.indexOf(selected_buildings[i]);
           let city_name_full = city_name[city_index];
+        //   console.log('city_name_full')
+        //   console.log(selected_buildings[i])
+        //   console.log(city_name_sliced)
+        //   console.log(city_name)
+        //   console.log(city_name_full)
           light_objects.selectionLights[i].position.set(city_all[city_name_full].coords[0],35,city_all[city_name_full].coords[1]);
           light_objects.selectionLights[i].target.position.set(city_all[city_name_full].coords[0],0,city_all[city_name_full].coords[1]);
           light_objects.selectionLights[i].visible=true;

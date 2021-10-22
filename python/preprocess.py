@@ -39,6 +39,8 @@ def main():
     spiral_file = open(SPIRAL_FILE,'r')
     lines = spiral_file.readlines()
     for l in lines:
+        if l[:4] != 'wave':
+            continue
         line = l.split(' ')
         point = [line[1], line[2]]
         points.append(point)

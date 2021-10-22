@@ -1,0 +1,366 @@
+{
+  "0": {
+    "threshold": 0,
+    "count": 88,
+    "peel": {
+      "1": [
+        {
+          "layer": 1,
+          "count": 88,
+          "vertices": 201,
+          "edges": 113,
+          "single": false
+        }
+      ]
+    }
+  },
+  "1": {
+    "threshold": 3,
+    "count": 34,
+    "peel": {
+      "2": [
+        {
+          "lcc": 3,
+          "vertices": 5,
+          "edges": 6,
+          "waves": {
+            "1": {
+              "vertices": 5,
+              "edges": 6,
+              "source": 3
+            }
+          }
+        },
+        {
+          "lcc": 91,
+          "vertices": 3,
+          "edges": 3,
+          "waves": {
+            "1": {
+              "vertices": 3,
+              "edges": 3,
+              "source": 3
+            }
+          }
+        }
+      ],
+      "1": [
+        {
+          "layer": 1,
+          "count": 32,
+          "vertices": 184,
+          "edges": 152,
+          "single": false
+        }
+      ]
+    }
+  },
+  "2": {
+    "threshold": 11,
+    "count": 9,
+    "peel": {
+      "6": [
+        {
+          "lcc": 3,
+          "vertices": 8,
+          "edges": 27,
+          "waves": {
+            "1": {
+              "vertices": 8,
+              "edges": 27,
+              "source": 2
+            }
+          }
+        },
+        {
+          "lcc": 286,
+          "vertices": 8,
+          "edges": 25,
+          "waves": {
+            "1": {
+              "vertices": 8,
+              "edges": 25,
+              "source": 6
+            }
+          }
+        }
+      ],
+      "4": [
+        {
+          "lcc": 21,
+          "vertices": 6,
+          "edges": 13,
+          "waves": {
+            "1": {
+              "vertices": 6,
+              "edges": 13,
+              "source": 4
+            }
+          }
+        },
+        {
+          "lcc": 34,
+          "vertices": 7,
+          "edges": 16,
+          "waves": {
+            "1": {
+              "vertices": 7,
+              "edges": 16,
+              "source": 4
+            }
+          }
+        }
+      ],
+      "1": [
+        {
+          "layer": 1,
+          "count": 5,
+          "vertices": 91,
+          "edges": 86,
+          "single": false
+        }
+      ]
+    }
+  },
+  "3": {
+    "threshold": 37,
+    "count": 1,
+    "peel": {
+      "4": [
+        {
+          "lcc": 35,
+          "vertices": 18,
+          "edges": 49,
+          "waves": {
+            "1": {
+              "vertices": 18,
+              "edges": 39,
+              "source": 9
+            },
+            "2": {
+              "vertices": 5,
+              "edges": 10,
+              "source": 5
+            }
+          }
+        }
+      ]
+    }
+  },
+  "4": {
+    "threshold": 124,
+    "count": 3,
+    "peel": {
+      "13": [
+        {
+          "lcc": 48,
+          "vertices": 20,
+          "edges": 163,
+          "waves": {
+            "1": {
+              "vertices": 20,
+              "edges": 72,
+              "source": 4
+            },
+            "2": {
+              "vertices": 14,
+              "edges": 91,
+              "source": 14
+            }
+          }
+        }
+      ],
+      "8": [
+        {
+          "lcc": 6,
+          "vertices": 28,
+          "edges": 133,
+          "waves": {
+            "1": {
+              "vertices": 28,
+              "edges": 133,
+              "source": 10
+            }
+          }
+        }
+      ],
+      "2": [
+        {
+          "lcc": 2,
+          "vertices": 276,
+          "edges": 392,
+          "waves": {
+            "1": {
+              "vertices": 267,
+              "edges": 328,
+              "source": 179
+            },
+            "2": {
+              "vertices": 49,
+              "edges": 61,
+              "source": 30
+            },
+            "3": {
+              "vertices": 3,
+              "edges": 3,
+              "source": 3
+            }
+          }
+        }
+      ]
+    }
+  },
+  "5": {
+    "threshold": 415,
+    "count": 3,
+    "peel": {
+      "9": [
+        {
+          "lcc": 0,
+          "vertices": 66,
+          "edges": 487,
+          "waves": {
+            "1": {
+              "vertices": 45,
+              "edges": 70,
+              "source": 8
+            },
+            "2": {
+              "vertices": 41,
+              "edges": 62,
+              "source": 6
+            },
+            "3": {
+              "vertices": 30,
+              "edges": 44,
+              "source": 5
+            },
+            "4": {
+              "vertices": 34,
+              "edges": 60,
+              "source": 5
+            },
+            "5": {
+              "vertices": 39,
+              "edges": 251,
+              "source": 7
+            }
+          }
+        }
+      ],
+      "5": [
+        {
+          "lcc": 2,
+          "vertices": 168,
+          "edges": 710,
+          "waves": {
+            "1": {
+              "vertices": 126,
+              "edges": 238,
+              "source": 34
+            },
+            "2": {
+              "vertices": 65,
+              "edges": 77,
+              "source": 15
+            },
+            "3": {
+              "vertices": 43,
+              "edges": 45,
+              "source": 9
+            },
+            "4": {
+              "vertices": 37,
+              "edges": 45,
+              "source": 6
+            },
+            "5": {
+              "vertices": 44,
+              "edges": 69,
+              "source": 10
+            },
+            "6": {
+              "vertices": 20,
+              "edges": 23,
+              "source": 4
+            },
+            "7": {
+              "vertices": 28,
+              "edges": 43,
+              "source": 5
+            },
+            "8": {
+              "vertices": 31,
+              "edges": 52,
+              "source": 6
+            },
+            "9": {
+              "vertices": 21,
+              "edges": 20,
+              "source": 4
+            },
+            "10": {
+              "vertices": 24,
+              "edges": 42,
+              "source": 3
+            },
+            "11": {
+              "vertices": 18,
+              "edges": 56,
+              "source": 6
+            }
+          }
+        }
+      ],
+      "3": [
+        {
+          "lcc": 1,
+          "vertices": 201,
+          "edges": 448,
+          "waves": {
+            "1": {
+              "vertices": 180,
+              "edges": 304,
+              "source": 90
+            },
+            "2": {
+              "vertices": 57,
+              "edges": 71,
+              "source": 19
+            },
+            "3": {
+              "vertices": 36,
+              "edges": 59,
+              "source": 14
+            },
+            "4": {
+              "vertices": 8,
+              "edges": 14,
+              "source": 5
+            }
+          }
+        }
+      ]
+    }
+  },
+  "layers": [
+    13,
+    9,
+    8,
+    6,
+    5,
+    4,
+    3,
+    2,
+    1
+  ],
+  "buckets": [
+    0,
+    3,
+    11,
+    37,
+    124,
+    415,
+    1387
+  ]
+}
