@@ -25,9 +25,9 @@ function getLayerTrackingObj(layer_name) {
 function addNewFloor(city_all, layer_name, h, ground_r, inner_r, outer_r) {
   let floor = {
     height: h,
-    ground_radius: ground_r, // ground radius, inner radius for prev floor
-    inner_radius: inner_r, // central radius
-    outer_radius: outer_r // outter ring radius
+    ground_radius: ground_r,
+    inner_radius: inner_r,
+    outer_radius: outer_r
   }
   city_all[layer_name].shapes.push(floor);
   return {all: city_all};
@@ -50,9 +50,7 @@ function loadFloor(lines,layer_name, city_all, city_tracking) {
       // console.log("loadFloor: floor "+i);
       // console.log(elements);
       if (elements.length === 4) {
-        // // floor height radius type(ground\inner\outer)
         if (i % 3 == 0) {
-          // // ground
           if (elements[0] === "0") {
             let result = addNewFloor(city_all, layer_name, 0.0, 0.0, 0.0, 0.0);
             city_all = result.all;
@@ -60,10 +58,8 @@ function loadFloor(lines,layer_name, city_all, city_tracking) {
           // console.log("loadFloor: add new floor "+city_all[layer_name].shapes.length);
           tmp_ground_radius = elements[2];
         } else if (i % 3 === 1){
-          // // inner
           tmp_inner_radius = elements[2];
         } else if (i % 3 === 2) {
-          // // outter
           // console.log("loadFloor: add new floor "+city_all[layer_name].shapes.length);
           // console.log("loadFloor: add new floor "+elements[0]+' '+elements[1]+' '+elements[2]+' '+tmp_outer_radius);
           let result = addNewFloor(city_all, layer_name, parseFloat(elements[1]), parseFloat(tmp_ground_radius), parseFloat(tmp_inner_radius), parseFloat(elements[2]));
@@ -91,11 +87,11 @@ function loadColor(color_list,layer_name, city_all, city_tracking) {
   }
   // inner structure of colors in layer_all dictionary
   let color_dict = {
-    ground:[], // ground disc color
-    inner:[], // central frustum color
-    outer:[], // outer ring color
-    next:[], // inner frustum color
-    ceil:[] // ceiling disc color
+    ground:[],
+    inner:[],
+    outer:[],
+    next:[],
+    ceil:[]
   };
   // read lines from a color file into "colors" dictionary
   let i;
@@ -107,19 +103,14 @@ function loadColor(color_list,layer_name, city_all, city_tracking) {
         b: parseFloat(elements[5])
     };
     if (color_list[i].search("ground")>0) {
-      // // ground disc color
       color_dict.ground.push(rgb);
     } else if (color_list[i].search("inner")>0) {
-      // // central frustum color
       color_dict.inner.push(rgb);
     } else if (color_list[i].search("outer")>0) {
-      // // outer ring color
       color_dict.outer.push(rgb);
     } else if (color_list[i].search("next")>0) {
-      // // inner frustum color
       color_dict.next.push(rgb);
     }else if (color_list[i].search("ceil")>0) {
-      // ceiling disc color
       color_dict.ceil.push(rgb);
     }
   }
@@ -132,7 +123,7 @@ function loadColor(color_list,layer_name, city_all, city_tracking) {
 function loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tracking, x_scale) {
   // console.log("loading spiral");
   // console.log(filename);
-  let city_to_load = (lines.length-1) / 2; // each building has two lines: building position, and fragment distribution
+  let city_to_load = (lines.length-1) / 2;
   console.log("city_to_load = "+city_to_load);
   let building_with_grass = [];
   for(let i=0; i<lines.length-1; i++) {
@@ -170,13 +161,13 @@ function loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tr
     // flag
     city_all[layer_name].V = parseInt(elements[5]);
     city_all[layer_name].E = parseInt(elements[6]);
-    city_all[layer_name]['fragNum'] = parseInt(elements[7]); // number of fragments
-    city_all[layer_name]['fragNeg'] = parseInt(elements[8]); // number of buckets of fragments where fragments are smaller than mean
-    city_all[layer_name]['fragPos'] = parseInt(elements[9]); // number of buckets fo fragments where fragments are larger than mean
+    city_all[layer_name]['fragNum'] = parseInt(elements[7]);
+    city_all[layer_name]['fragNeg'] = parseInt(elements[8]);
+    city_all[layer_name]['fragPos'] = parseInt(elements[9]);
 
-    i++; // read the second line of each building
+    i++;
 
-    city_all[layer_name]['fragBucket'] = lines[i].split(' ').map(x => parseInt(x, 10)); // accumulated number of fragments in each bucket
+    city_all[layer_name]['fragBucket'] = lines[i].split(' ').map(x => parseInt(x, 10));
 
     // coordinates is ready, check if shape of building is ready
     if(city_all[layer_name].shapes.length > 0) {
@@ -346,8 +337,8 @@ function createFlags(scene, height, coord, base_Y, layer, V, E, fragNum, fragNeg
   // console.log("coord of flag", fixed_point_number, "is", coord, "height of flag is", base_Y);
   let X = coord[0], Z = coord[1];
   let flag_width = Math.log(V), flag_height = Math.log(E), flag_thickness = 0.5;
-  let mast_radius = Math.sqrt((1 + fragNeg + fragPos) / 4); // radius represents how spread the distribution is
-  let mast_length = mast_scale * Math.log(fragNum + 1) / Math.pow(mast_radius, 2) / 8; // volume represents how many fragments are in the building
+  let mast_radius = Math.sqrt((1 + fragNeg + fragPos) / 4);
+  let mast_length = mast_scale * Math.log(fragNum + 1) / Math.pow(mast_radius, 2) / 8;
 
   let flag_mesh;
 
@@ -428,21 +419,20 @@ function createFlags(scene, height, coord, base_Y, layer, V, E, fragNum, fragNeg
   flag_objects.push(flag_mesh);
   flag_objects.push(rod);
 
-  // // add pole markers
   for (let index = -1; index < fragBucket.length + 1; index++) {
-    let fragdensity = 0; // count the ratio of fragments that are already counted
+    let fragdensity = 0;
     if (index === -1) {
       fragdensity = 0;
     } else {
       fragdensity = fragBucket[index] / fragNum;
     };
-    const markerPos = mast_length * fragdensity; // marker height position with respect to the pole
-    let markerSize = 0.05; // marker height
-    let marker_radius = mast_radius * (1 + 0.05 * (1 + Math.abs(index - fragNeg + 1))); // the more it is off from the mean, the larger its radius is
+    const markerPos = mast_length * fragdensity;
+    let markerSize = 0.05
+    let marker_radius = mast_radius * (1 + 0.05 * (1 + Math.abs(index - fragNeg + 1)));
     let markerColor = 0x000000;
     if (index === fragNeg - 1) {
       markerSize = 0.025
-      markerColor = 0xff0000; // mean marker is red
+      markerColor = 0xff0000;
     }
     let marker = new THREE.Mesh( new THREE.CylinderBufferGeometry(marker_radius,marker_radius,markerSize,8), new THREE.MeshStandardMaterial( {color: markerColor}));
     marker.translateX(X);
@@ -503,7 +493,7 @@ function createCityMeshes(scene, objects, city_all, city_tracking, ceil_objects,
         try {
             r = parseInt(city_all[layer].colors.inner[h-1].r*255);
             g = parseInt(city_all[layer].colors.inner[h-1].g*255);
-            b = parseInt(city_all[layer].colors.inner[h-1].b*255);
+            b = parseInt(city_all[layer].colors.inner[h-1].b*255);    
         } catch(err) {
             console.log(err.message+" "+layer);
         }
@@ -566,6 +556,7 @@ function createCityMeshes(scene, objects, city_all, city_tracking, ceil_objects,
         scene = result.scene;
       }
       let flag_base_Y = y_scale * layer_shape[height-1].height;
+      city_all[layer].coords[3] = flag_base_Y; // 2021-10-18: I am not sure what coords[2] is, so I just append after it.
       let lcc =  parseInt(layer.slice(layer.lastIndexOf('_')+1)); // last
       let sliced = layer.slice(0,layer.lastIndexOf('_'));
       sliced = sliced.slice(0,sliced.lastIndexOf('_'));

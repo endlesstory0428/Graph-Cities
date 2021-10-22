@@ -56,7 +56,7 @@ var gui2 = new dat.GUI({
 var gui2container = document.getElementById('bottom-gui-container');
 gui2container.appendChild(gui2.domElement);
 // console.log(cityContainer.offsetHeight);
-gui2container.style = "position: absolute; top: " + 0 + "px; left: 10px; z-index: 1";
+gui2container.style = "position: absolute; top: " + 0 + "px; left: 10px; z-index: 5";
 
 var data_info = {
   peel_value: '',
@@ -568,7 +568,7 @@ function loadEdges(node, nodefilter, nodefilter_label) {
     filename: filename + ".csv",
     edges: links
   });
-  httpGetAsync(PREFIX + "query?type=setdatadir&file=./dataTemp", function(res) {
+  httpGetAsync(PREFIX + "query?type=setdatadir&file=./temp", function(res) {
     console.log(res);
   });
   httpPostAsync(content, PREFIX + "save", function(res) {
@@ -644,7 +644,7 @@ function loadLayer(dataset, layer, lcc) {
         });
         */
         d3.text(layerfile).then(function(text) {
-          //console.log(text.split('\n'));
+          // console.log(text.split('\n'));
           var ldata = d3.csvParseRows(text, function(d, i) {
             return {
               source: Number(d[0]),

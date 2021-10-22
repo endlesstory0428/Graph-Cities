@@ -37,13 +37,14 @@
 			position: absolute;
 			top: 0px;
 			left: 0px;
+			z-index: 5;
 		}
 
 		#first-gui-container {
 			position: absolute;
-			top: 0px;
+			top: 32px;
 			left: 0px;
-			z-index: 1;
+			z-index: 4;
 		}
 
 		.col {
@@ -54,13 +55,58 @@
 		#lighthouse-view {
 			left: 0;
 			width: 362px;
-			height: calc(100vh - 100px);
-			bottom: 0;
+			height: calc(100vh - 200px);
+			bottom: 0px;
 		}
 
+		#dataset-gui-container {
+			position: absolute;
+			top: 0px;
+			z-index: 4;
+		}
+
+		#city-gui-container {
+			position: absolute;
+			bottom: 26px;
+			height: 330px;
+			z-index: 4;
+		}
+
+		#city-building-map {
+			position: absolute;
+			top: 100px;
+			right: 0px;
+			height: 200px;
+			width: calc(100vw - 375px);
+			overflow: scroll;
+		}
+
+        .mapAxis line{
+          stroke: white;
+        }
+        
+        .mapAxis path{
+          stroke: white;
+        }
+        
+        .mapAxis text{
+          fill: white;
+        }
+
+        .mapGrid line{
+          stroke: grey;
+          opacity: 0.4;
+        }
+
+		/* #cityGUI{
+			right: 0px;
+			top: 300px;
+			z-index: 3;
+		} */
+
 		#city-view {
-			height: 100vh;
-			top: 0;
+			height: calc(100vh - 300px);
+			top: 300px;
 			right: 0;
 			width: calc(100vw - 375px);
 			z-index: 0;
@@ -74,20 +120,52 @@
 			clear: both;
 		}
 
-		#city-description {
-			color: #000;
-			background-color: #eee;
-			font-family: sans-serif;
-			font-size: large;
-			width: 60%;
-			margin: 0.5em;
-			text-align: center;
-			padding: 10px;
+		#city-description-container {
+			position: relative;
+			left: 350px;
+			width: calc(100vw - 375px);
+			height:  100px;
 		}
 
-		#city-description:hover~img {
+		#city-description-div {
+			display: table;
+			color: #000;
+			background-color: #ddd;
+			width: calc(100vw - 375px);
+			height: 100px;
+			/* margin: 0.5em; */
+			text-align: center;
+			/* padding: 10px; */
+			z-index: 2;
+			position: absolute;
+		}
+
+		#city-description {
+			padding: 1em;
+			font-family: sans-serif;
+			font-size: 1.2em;
+			font-weight: 1000;
+			display: table-cell;
+			vertical-align: middle;
+		}
+
+		#city-description-wrap {
+			z-index: 4;
+			position: absolute;
+			bottom: 0px;
+			right: 0px;
+		}
+
+		/* #city-description-deg-dist {
+			height: 1.5em;
+			width: 20em;
+		} */
+
+		#city-description-wrap:hover img {
 			display: block;
 			padding: 20px;
+			z-index: 3;
+			position: absolute;
 		}
 
 		#graph {
@@ -127,6 +205,7 @@
 	</script>
 	<script src="//unpkg.com/d3-dsv"></script>
 	<script src="//unpkg.com/d3-fetch"></script>
+	<script src="https://d3js.org/d3.v6.js"></script>
 
 	<script src="//unpkg.com/d3-octree"></script>
 	<script src="//unpkg.com/d3-force-3d"></script>
@@ -146,13 +225,20 @@
 
 <body>
 	<canvas id="c"></canvas>
+	<div id="dataset-gui-container"></div>
 	<div id="first-gui-container"></div>
 	<div class="col" id="lighthouse-view">
 		<div id="custom_slider"></div>
 	</div>
-	<div class="col" id="city-view">
-		<div id="city-description"></div>
+	<div id="city-gui-container"></div>
+	<div id="city-description-container">
+		<div id="city-description-div"><span id="city-description"></span></div>
+		<div id="city-description-wrap">
+			<div id="city-description-deg-dist-div"><span id="city-description-deg-dist">degree distribution</span></div>
+		</div>
 	</div>
+	<div id="city-building-map"></div>
+	<div class="col" id="city-view"></div>
 
 	<div id="inner-view" class="element-container">
 		<!-- <div id="bottom-gui-container"></div>                                         -->

@@ -14,8 +14,10 @@ import {
 import * as LH from './parts/lighthouse.js'
 import * as BUILD from './parts/building.js';
 import * as PATH from './parts/path.js';
+import * as CM from './parts/cityMap.js';
+import { DataTexture3D } from '../three.js/build/three.module.js';
 
-let addBuildings = true, addDagViews = true;
+let addBuildings = true, addDagViews = true, onDagViews = false;
 
 THREE.Cache.enabled = true;
 const scenes = [];
@@ -27,6 +29,7 @@ let aspect = window.innerWidth / window.innerHeight;
 let scene_city = new THREE.Scene();
 let scene_lighthouse = new THREE.Scene();
 let sliderPos = 362;
+let mapPos = 300; // top building map
 
 const raycaster = new THREE.Raycaster();
 let mouse = new THREE.Vector2();
@@ -37,8 +40,8 @@ let city_list = [];
 let objects = [];
 let ground_object;
 let path_objects = [];
-let ceil_objects = []; // floor ceiling disc in buildings
-let middle_objects = []; // floor central frustum in buildings
+let ceil_objects = [];
+let middle_objects = [];
 let truss_objects = [];
 let window_objects = [];
 let flag_objects = [];
@@ -62,8 +65,9 @@ let start_time_string = time.getMinutes() + ':' + time.getSeconds() + '.' + time
 let root_dropdown, root_dropdown_highlighted, visited_inner_views;
 let inner_view_history = [];
 let gui, guiL, select_fixed_point;
+let guiDataset;
 
-const data_list = ['got', 'cit-Patents', 'starwars'];
+const data_list = ['cit-Patents', 'got', 'starwars'];
 const V = {'com-friendster':65608366, 'movies':218052, 'cit-Patents':3774768};
 const E = {'com-friendster':1806067135, 'movies':115050370, 'cit-Patents':16518947};
 const connected = {'com-friendster':true, 'movies':false, 'cit-Patents':false};
@@ -89,6 +93,7 @@ let params = {
     toPanBuilding = false;
     toPanCity = false;
     toZoomBuilding = false;
+    console.log(controls)
     controls.reset();
     animate();
   },
@@ -113,26 +118,37 @@ let params = {
   all: 'building',
   highlighted: 'building',
   outer: true,
-  middle: true, // show central frustum
-  ceilVisible: false, // show ceiling disc
+  middle: true,
+  ceilVisible: false,
   isNight: false,
   visitedInner: 'building',
   goInnerView: function() {
     let bottom = document.getElementById("inner-view").offsetTop;
-    let selected_building = root_dropdown_highlighted.getValue();
+    let selected_building = root_dropdown.getValue();
+    onDagViews = true;
     inner_view_history.push(selected_building);
     window.scrollTo(0,bottom);
     console.log(inner_view_history);
     LH.updateDropdown(visited_inner_views, inner_view_history);
     visited_inner_views.setValue(inner_view_history[inner_view_history.length-1]);
-    arrow_objects[selected_building].visible = true;
+    // arrow_objects[selected_building].visible = true;
+    
+    console.log("******** " + selected_building + " *********");
+    console.log("******** " + paramsL.dataSet + " *********");
+
+    let wavemap_ID_ID_freq = selected_building.split('_');
+    let file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2] + '.json';
+    console.log("Loading: ", file);
+    loadFile2(file);
+    loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
   },
   goOuterView: function() {
     let top = document.getElementById("city-view".offsetTop);
+    onDagViews = false;
     window.scrollTo(0,top);
   },
   clearVisitedInner: function() {
-    inner_view_history = [""];
+    inner_view_history = [];
     LH.updateDropdown(visited_inner_views, inner_view_history);
     visited_inner_views.setValue("");
     let keys = Object.keys(arrow_objects);
@@ -160,6 +176,7 @@ let selected_buildings = [];
 const data_dir = "../data/";
 const python_dir = "../python/";
 const lighthouse_dir = "../scripts/lighthouse/";
+const map_dir = "../data_maps/";
 let source_dir = data_dir + paramsL.dataSet + "/";
 let spiral_file = data_dir + paramsL.dataSet + "/SPIRAL.txt";
 let voronoi_file = python_dir + paramsL.dataSet + "/voronoi.txt";
@@ -169,9 +186,11 @@ let lighthouse_file = lighthouse_dir+paramsL.dataSet+'-layers-dists.json';
 let entropy_file = lighthouse_dir+paramsL.dataSet+'_entropy.json';
 let bucket_file = lighthouse_dir+paramsL.dataSet+'-bucket2peels.json';
 let summary_file = data_dir + paramsL.dataSet+'-summary.json';
+let buildingMap_file = map_dir + paramsL.dataSet+'-lccWaves.vBuck.b.p.json';
 let building_params = {
   floor: '',
-  layer: ''
+  layer: '',
+  position: ''
 };
 let water;
 const scene_city_element = document.getElementById("city-element");
@@ -202,13 +221,35 @@ function init() {
   scene_city.userData.view = views[1];
   scene_city.background = new THREE.Color('skyblue');
 
+  // city map
+  console.log(buildingMap_file);
+  function handleMouseOver(selectedDot) {
+    // console.log(selectedDot);
+    select_fixed_point.setValue(selectedDot['layer']);
+    // console.log(select_fixed_point);
+  };
+  function handleLeftClick(selectedDot) {
+    // console.log(selectedDot);
+    // select_fixed_point.setValue(selectedDot['layer']);
+    // theta = 0.003;
+    // toZoomBuilding = true;
+    // toPanBuilding = false;
+    // toPanCity = false;
+    // render();
+    zoomBuilding();
+    // console.log(select_fixed_point);
+  };
+  d3.json(buildingMap_file).then(data => CM.drawMap(data)).then(() => CM.addOnMouseover(handleMouseOver)).then(() => CM.addOnLeftClick(handleLeftClick));
   // city summary
 //   scene_city_description.innerText = paramsL.dataSet+" V: "+V[paramsL.dataSet]+", E: "+E[paramsL.dataSet];
 //   scene_city_description.innerText = scene_city_description.innerText.concat(", CC");
   let deg_img = document.createElement("img");
   deg_img.src = data_dir+paramsL.dataSet+"_deg.png";
   deg_img.style.width = '50%';
-  city_view.appendChild(deg_img);
+  console.log(scene_city_description);
+  console.log(city_view);
+  console.log(deg_img);
+  document.getElementById("city-description-wrap").appendChild(deg_img);
   
   perspectiveCamera = new THREE.PerspectiveCamera(60, (window.innerWidth-sliderPos)/window.innerHeight, 1, 4000);
   perspectiveCamera.position.z = 600;
@@ -216,6 +257,8 @@ function init() {
   orthographicCamera = new THREE.OrthographicCamera(frustumSize * aspect / -2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / -2, 1, 1000);
   orthographicCamera.position.z = 20;
   scene_city.userData.camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
+
+  createControls(perspectiveCamera);
   
   const city_controls = new TrackballControls(scene_city.userData.camera, city_view);
   city_controls.rotateSpeed = 1.0;
@@ -264,12 +307,24 @@ function init() {
 
   // GUI folders
   gui = new GUI({
-    width: 350
+    width: 362,
+    height: 330
   });
   gui.domElement.style = "z-index: 3";
+  gui.domElement.id = 'cityGUI';
+  // console.log(document.getElementById("city-gui-container"))
+  document.getElementById("city-gui-container").appendChild(gui.domElement);
 
-  let f0 = gui.addFolder('Data Set');
-  let selectData = gui.add(paramsL, 'dataSet', data_list).name('choose data set');
+  guiDataset = new GUI({
+    width: 362,
+  });
+  guiDataset.domElement.style = "z-index: 3";
+  guiDataset.domElement.id = 'cityGUI';
+  // console.log(document.getElementById("dataset-gui-container"))
+  document.getElementById("dataset-gui-container").appendChild(guiDataset.domElement);
+
+  // let f0 = guiDataset.addFolder('Data Set');
+  let selectData = guiDataset.add(paramsL, 'dataSet', data_list).name('Choose Data Set');
   selectData.setValue(paramsL.dataSet);
   selectData.onChange(
     function(dataSet) {
@@ -354,12 +409,12 @@ function init() {
     }
   );
 
-  f0.open();
+  // f0.open();
 
-  let f1 = gui.addFolder('Building Info');
-  f1.add(building_params, 'floor').name('floor number').listen();
-  f1.add(building_params, 'layer').name('layer info').listen();
-  f1.open();
+  let f1 = gui.addFolder('Positioning Info');
+  f1.add(building_params, 'position').name('floor id').listen();
+  // f1.add(building_params, 'layer').name('layer info').listen();
+  // f1.open();
 
   let f2 = gui.addFolder('Camera Control');
   f2.add(params, 'resetCamera').name('reset camera');
@@ -400,7 +455,7 @@ function init() {
   // });
   // f3.open();
 
-  let f4 = gui.addFolder('Select Root');
+  let f4 = gui.addFolder('Spanning Tree Root');
   root_dropdown = f4.add(params, 'all', ['default', 'example 1', 'example 2']);
   root_dropdown.setValue('default');
   root_dropdown.onChange(
@@ -418,7 +473,7 @@ function init() {
       light_objects = result.light_objects;
       // console.log('addDagViews')
       // console.log(addDagViews)
-      if(addDagViews){
+      if(onDagViews){
         console.log("******** " + value + " *********");
         console.log("******** " + paramsL.dataSet + " *********");
   
@@ -438,7 +493,7 @@ function init() {
     }
   )
   f4.add(params, 'goInnerView').name("Go Inner View");
-  f4.add(params, 'goOuterView').name("Go City View");
+  f4.add(params, 'goOuterView').name("Go City View"); // TODO: move to DAG view
   f4.add(params, 'clearVisitedInner').name("Clear Visited History");
   visited_inner_views = f4.add(params, 'visitedInner',[]).name("Visited Inner Views");
   f4.open();
@@ -506,12 +561,12 @@ function init() {
     width: 362,
     autoPlace: false
   });
+  guiL.addFolder('data summary sculpture');
   select_fixed_point = guiL.add(paramsL, 'fixedPoint', first_key_list).name('choose fixed point');
   color_display = guiL.addColor(paramsL, 'color').name('display color');
   light_intensity = guiL.add(paramsL, 'lightIntensity').name('diversity');
   let customContainer = document.getElementById('first-gui-container');
   customContainer.appendChild(guiL.domElement);
-
 }
 
 //load ground OBJ file
@@ -751,7 +806,6 @@ function loaded(evt) {
   let element_count = (lines[0].split(' ')).length;
   // need to update when SPIRAL.txt updates
   if (element_count == 10) {
-    // // the first line of SPIRAL.txt has 10 elements. Note: the second line depends
     // console.log("loaded: SPIRAL file");
     let spiral = BUILD.loadSpiral(scene_city, lines, city_all, grass_objects, bush_objects, city_tracking, x_scale);
     city_all = spiral.all;
@@ -811,6 +865,7 @@ function dayAndNight(isNight, light_objects, window_objects) {
 
 function createControls(camera) {
   controls = new TrackballControls(camera, renderer.domElement);
+  console.log('createControls', controls);
   controls.rotateSpeed = 1.0;
   controls.zoomSpeed = 1.2;
   controls.panSpeed = 0.8;
@@ -913,22 +968,56 @@ function render() {
     camera.position.z = building_position[1] + radius * Math.cos(THREE.MathUtils.degToRad(theta));
     if (theta > 360) toPanBuilding = false;
   } else if (toZoomBuilding) {
+    // // console.log("zoom in to "+root_dropdown.getValue());
+    // // let building_position = new THREE.Vector3(100,0,100);
+    // let root_building = root_dropdown.getValue();
+    // let building_position = city_all[root_building].coords;
+    // controls.target = new THREE.Vector3(building_position[0], 10, building_position[1]);
+    // // console.log(building_position[0]);
+    // if (Math.abs(building_position[0] - camera.position.x) >= 20) {
+    //   camera.position.x += theta * (building_position[0] - camera.position.x);
+    //   // console.log("x");
+    // }
+    // if (Math.abs(camera.position.y) >= 100) {
+    //   camera.position.y += theta * (0 - camera.position.y);
+    //   // console.log("y");
+    // }
+    // if (Math.abs(building_position[1] - camera.position.z) >= 20) {
+    //   camera.position.z += theta * (building_position[1] - camera.position.z);
+    //   // console.log("z");  
+    // } else {
+    //   toZoomBuilding = false;
+    // }
+
     // console.log("zoom in to "+root_dropdown.getValue());
     // let building_position = new THREE.Vector3(100,0,100);
     let root_building = root_dropdown.getValue();
     let building_position = city_all[root_building].coords;
-    controls.target = new THREE.Vector3(building_position[0], 10, building_position[1]);
+    let objectPos = new THREE.Vector3(building_position[0], building_position[3], building_position[1] + 50); // 2021-10-18: 0 is x, 1 is z, 3 is y, and I don't know what is 2
+    controls.target.set(building_position[0], building_position[3] + 20, building_position[1]); // 2021-10-18: 0 is x, 1 is z, 3 is y, and I don't know what is 2
+    console.log(controls.target);
+    console.log(camera.position);
+    console.log(controls);
+    // console.log(city_all[root_building]);
+    // camera.lookAt(building_position[0], building_position[3], building_position[1]);
+    // camera.matrix[8] = building_position[0];
+    // camera.matrix[9] = building_position[3];
+    // camera.matrix[10] = building_position[1];
+    let lookAtVector = new THREE.Vector3(camera.matrix[8], camera.matrix[9], camera.matrix[10]);
+    console.log(lookAtVector);
+    console.log(camera.matrix);
+    // console.log(camera);
     // console.log(building_position[0]);
-    if (Math.abs(building_position[0] - camera.position.x) >= 20) {
-      camera.position.x += theta * (building_position[0] - camera.position.x);
+    if (Math.abs(objectPos.x - camera.position.x) >= 2) {
+      camera.position.x += theta * (objectPos.x - camera.position.x);
       // console.log("x");
     }
-    if (Math.abs(camera.position.y) >= 100) {
-      camera.position.y += theta * (0 - camera.position.y);
+    if (Math.abs(objectPos.y - camera.position.y) >= 5) {
+      camera.position.y += theta * (objectPos.y - camera.position.y);
       // console.log("y");
     }
-    if (Math.abs(building_position[1] - camera.position.z) >= 20) {
-      camera.position.z += theta * (building_position[1] - camera.position.z);
+    if (Math.abs(objectPos.z - camera.position.z) >= 2) {
+      camera.position.z += theta * (objectPos.z - camera.position.z);
       // console.log("z");  
     } else {
       toZoomBuilding = false;
@@ -975,6 +1064,13 @@ function render() {
           let selected = lighthouse_objects[index];
           highlighter.position.set(0, selected.Y_pos, 0);
           highlighter.scale.set(selected.maxR*1.1, selected.dY, selected.maxR*1.1);
+
+          for (const [tempBuilding, tempArrow] of Object.entries(arrow_objects)) {
+            tempArrow.visible = false;
+          };
+          arrow_objects[selected_buildings_list[0]].visible = true;
+          // console.log(arrow_objects)
+          // console.log(arrow_objects[selected_buildings_list[0]])
         }
       );
       let result = LH.updateSelectionLights(city_all, light_objects, selected_buildings);
@@ -1007,7 +1103,7 @@ function panBuilding() {
 }
 
 function zoomBuilding() {
-  theta = 0.003;
+  theta = 0.03;
   toZoomBuilding = true;
   toPanBuilding = false;
   toPanCity = false;
@@ -1020,7 +1116,7 @@ function onMouseMove(event) {
   const width = rect.right-rect.left;
   const height = rect.bottom-rect.top;
   mouse.x = ((event.clientX-sliderPos)/width)*2-1;
-  mouse.y = -(event.clientY/height)*2+1;
+  mouse.y = -((event.clientY-mapPos)/height)*2+1;
   // mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
   // mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
   // mouse.x = (event.clientX / (window.clientWidth-sliderPos)) * 2 - 1;
@@ -1044,12 +1140,14 @@ function onMouseMove(event) {
       } else {
         building_params.layer = '';
       }
+      building_params.position = building_params.layer + '_' + building_params.floor;
     }
   } else // there are no intersections
   {
     INTERSECTED = null;
     building_params.floor = '';
     building_params.layer = '';
+    building_params.position = '';
   }
 }
 
@@ -1084,7 +1182,7 @@ function onMouseDown(event) {
   const width = rect.right-rect.left;
   const height = rect.bottom-rect.top;
   mouse.x = ((event.clientX-sliderPos)/width)*2-1;
-  mouse.y = -((event.clientY)/height)*2+1;
+  mouse.y = -((event.clientY-mapPos)/height)*2+1;
   let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
   raycaster.setFromCamera(mouse, camera);
 
