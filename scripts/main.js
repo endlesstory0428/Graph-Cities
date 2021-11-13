@@ -66,8 +66,15 @@ let root_dropdown, root_dropdown_highlighted, visited_inner_views;
 let inner_view_history = [];
 let gui, guiL, select_fixed_point;
 let guiDataset;
+let mapControlHighLight = false;
+let mapControlHighLightBuilding = [];
+let mapWaveSelection = false;
+let mapWaveSelectedName;
+let dagSizeDict;
 
-const data_list = ['cit-Patents', 'got', 'starwars'];
+let buildingMapControls = {}
+
+const data_list = ['cit-Patents', 'sellbuycc8und', 'starwars'];
 const V = {'com-friendster':65608366, 'movies':218052, 'cit-Patents':3774768};
 const E = {'com-friendster':1806067135, 'movies':115050370, 'cit-Patents':16518947};
 const connected = {'com-friendster':true, 'movies':false, 'cit-Patents':false};
@@ -125,22 +132,56 @@ let params = {
   goInnerView: function() {
     let bottom = document.getElementById("inner-view").offsetTop;
     let selected_building = root_dropdown.getValue();
-    onDagViews = true;
-    inner_view_history.push(selected_building);
-    window.scrollTo(0,bottom);
-    console.log(inner_view_history);
-    LH.updateDropdown(visited_inner_views, inner_view_history);
-    visited_inner_views.setValue(inner_view_history[inner_view_history.length-1]);
-    // arrow_objects[selected_building].visible = true;
-    
-    console.log("******** " + selected_building + " *********");
-    console.log("******** " + paramsL.dataSet + " *********");
 
     let wavemap_ID_ID_freq = selected_building.split('_');
-    let file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2] + '.json';
-    console.log("Loading: ", file);
-    loadFile2(file);
-    loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
+    let file;
+    let validCheck = true;
+    let forkView = false;
+    let nameSuffix = '';
+    const validSize = 262144;
+    if (!mapWaveSelection) {
+      // console.log(dagSizeDict)
+      const key = 'dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2]
+      if (dagSizeDict.hasOwnProperty(key)) {
+        console.log(dagSizeDict[key])
+        if (parseInt(dagSizeDict[key]) > parseInt(validSize)) {
+          validCheck = false;
+          alert('Please select a wave');
+        }
+      }
+      file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2] + '.json';
+    } else {
+      // console.log(dagSizeDict)
+      console.log(dagSizeDict['dagmeta_' + mapWaveSelectedName])
+      if (parseInt(dagSizeDict['dagmeta_' + mapWaveSelectedName]) > parseInt(validSize)) {
+        console.log('frag fork')
+        // validCheck = false;
+        forkView = true;
+        nameSuffix = 'f'+mapWaveSelectedName.split('w')[1];
+        file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + mapWaveSelectedName.replace('w', 'f') + '.json'
+      } else {
+        nameSuffix = 'w'+mapWaveSelectedName.split('w')[1];
+        file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + mapWaveSelectedName + '.json';
+      }
+    }
+    mapWaveSelection = false;
+    if (validCheck) {
+      onDagViews = true;
+      inner_view_history.push(selected_building);
+      window.scrollTo(0,bottom);
+      console.log(inner_view_history);
+      LH.updateDropdown(visited_inner_views, inner_view_history);
+      visited_inner_views.setValue(inner_view_history[inner_view_history.length-1]);
+      arrow_objects[selected_building].visible = true;
+      
+      console.log("******** " + selected_building + " *********");
+      console.log("******** " + paramsL.dataSet + " *********");
+
+      console.log("Loading: ", file);
+      loadFile2(file, forkView, nameSuffix);
+      loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
+    }
+    onDagViews = false;
   },
   goOuterView: function() {
     let top = document.getElementById("city-view".offsetTop);
@@ -186,7 +227,9 @@ let lighthouse_file = lighthouse_dir+paramsL.dataSet+'-layers-dists.json';
 let entropy_file = lighthouse_dir+paramsL.dataSet+'_entropy.json';
 let bucket_file = lighthouse_dir+paramsL.dataSet+'-bucket2peels.json';
 let summary_file = data_dir + paramsL.dataSet+'-summary.json';
-let buildingMap_file = map_dir + paramsL.dataSet+'-lccWaves.vBuck.b.p.json';
+let buildingMap_file = map_dir + paramsL.dataSet+'-lccWaves.vBuck.b.p.mm.json';
+let buildingMapBucket_file = map_dir + 'building2bucket-'+paramsL.dataSet+'.json';
+let dagSize_file = map_dir + paramsL.dataSet+'-dagSize.json';
 let building_params = {
   floor: '',
   layer: '',
@@ -223,29 +266,103 @@ function init() {
 
   // city map
   console.log(buildingMap_file);
-  function handleMouseOver(selectedDot) {
+  function handleMouseOver(selectedDot, data) {
+    // console.log(data)
     // console.log(selectedDot);
-    select_fixed_point.setValue(selectedDot['layer']);
+    // console.log(buildingMapControls.ignoreHover)
+    // console.log(buildingMapControls)
+    if (!buildingMapControls.ignoreHover) {
+      mapControlHighLight = true;
+      mapControlHighLightBuilding = data['buildingName'];
+      select_fixed_point.setValue(selectedDot['layer']);
+    }
     // console.log(select_fixed_point);
   };
-  function handleLeftClick(selectedDot) {
+  function handleMouseOut(selectedDot, data) {
     // console.log(selectedDot);
     // select_fixed_point.setValue(selectedDot['layer']);
+    // console.log(select_fixed_point);
+    // console.log('out')
+  };
+  function handleLeftClick(selectedDot, data) {
+    mapControlHighLight = true;
+    mapControlHighLightBuilding = data['buildingName'];
+    select_fixed_point.setValue(selectedDot['layer']);
     // theta = 0.003;
     // toZoomBuilding = true;
     // toPanBuilding = false;
     // toPanCity = false;
     // render();
-    zoomBuilding();
+    // zoomBuilding();
     // console.log(select_fixed_point);
+    // console.log('click')
   };
-  d3.json(buildingMap_file).then(data => CM.drawMap(data)).then(() => CM.addOnMouseover(handleMouseOver)).then(() => CM.addOnLeftClick(handleLeftClick));
+  function addMapDropListHandle() {
+    const spiralDropListCollection = document.getElementsByClassName("mapSpiralDropList");
+    // console.log(spiralDropListCollection);
+    for (const spiralDropList of spiralDropListCollection) {
+      spiralDropList.addEventListener('change', function() {
+        // console.log(this.value);
+        // console.log(root_dropdown_highlighted.domElement.children[0].options)
+        // console.log(Array.from(root_dropdown_highlighted.domElement.children[0].options).map(x => x.text))
+        // console.log(Array.from(root_dropdown_highlighted.domElement.children[0].options).map(x => x.text)[this.value])
+        const selectedBuilding = Array.from(root_dropdown_highlighted.domElement.children[0].options).map(x => x.text)[this.value]
+        root_dropdown_highlighted.setValue(selectedBuilding);
+        for (const [tempBuilding, tempArrow] of Object.entries(arrow_objects)) {
+          tempArrow.visible = false;
+        };
+        // console.log(arrow_objects)
+        arrow_objects[selectedBuilding].visible = true;
+      });
+    };
+
+    const buildingDropListCollection = document.getElementsByClassName("mapBuildingDropList");
+    for (const buildingDropList of buildingDropListCollection) {
+      buildingDropList.addEventListener('change', function() {
+        const waveIdx = this.value;
+        // console.log(waveIdx);
+        if (parseInt(waveIdx) === 0) {
+          mapWaveSelection = false;
+        } else {
+          mapWaveSelection = true;
+          // console.log(mapControlHighLightBuilding)
+          mapWaveSelectedName = mapControlHighLightBuilding+'w'+waveIdx;
+          console.log(mapWaveSelectedName);
+          // console.log(this.parentNode);
+        };
+      });
+    };
+  };
+  function addZoomButtonHandle() {
+    const spiralZoomButtonCollection = document.getElementsByClassName("mapSpiralZoomButton");
+    for (const spiralZoomButton of spiralZoomButtonCollection) {
+      spiralZoomButton.addEventListener('click', function() {
+        zoomBuilding();
+      });
+    };
+    const buildingZoomButtonCollection = document.getElementsByClassName("mapBuildingZoomButton");
+    for (const buildingZoomButton of buildingZoomButtonCollection) {
+      buildingZoomButton.addEventListener('click', function() {
+        zoomBuilding();
+      });
+    };
+  };
+
+  Promise.all([d3.json(buildingMap_file), d3.json(buildingMapBucket_file), d3.json(bucket_file)])
+    .then(datas => CM.drawMap(datas, buildingMapControls))
+    .then(() => CM.addOnMouseOver(handleMouseOver, buildingMapControls))
+    .then(() => CM.addOnMouseOut(handleMouseOut, buildingMapControls))
+    .then(() => CM.addOnLeftClick(handleLeftClick, buildingMapControls))
+    .then(() => addMapDropListHandle())
+    .then(() => addZoomButtonHandle());
+  
+  d3.json(dagSize_file).then(data => dagSizeDict = data);
   // city summary
 //   scene_city_description.innerText = paramsL.dataSet+" V: "+V[paramsL.dataSet]+", E: "+E[paramsL.dataSet];
 //   scene_city_description.innerText = scene_city_description.innerText.concat(", CC");
   let deg_img = document.createElement("img");
   deg_img.src = data_dir+paramsL.dataSet+"_deg.png";
-  deg_img.style.width = '50%';
+  // deg_img.style.width = '50%';
   console.log(scene_city_description);
   console.log(city_view);
   console.log(deg_img);
@@ -473,16 +590,16 @@ function init() {
       light_objects = result.light_objects;
       // console.log('addDagViews')
       // console.log(addDagViews)
-      if(onDagViews){
-        console.log("******** " + value + " *********");
-        console.log("******** " + paramsL.dataSet + " *********");
+      // if(onDagViews){
+      //   console.log("******** " + value + " *********");
+      //   console.log("******** " + paramsL.dataSet + " *********");
   
-        let wavemap_ID_ID_freq = value.split('_');
-        let file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2] + '.json';
-        console.log("Loading: ", file);
-        loadFile2(file);
-        loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);  
-      }
+      //   let wavemap_ID_ID_freq = value.split('_');
+      //   let file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2] + '.json';
+      //   console.log("Loading: ", file);
+      //   loadFile2(file);
+      //   loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);  
+      // }
     }
   );
   root_dropdown_highlighted = f4.add(params, 'highlighted',['default root']);
@@ -995,17 +1112,17 @@ function render() {
     let building_position = city_all[root_building].coords;
     let objectPos = new THREE.Vector3(building_position[0], building_position[3], building_position[1] + 50); // 2021-10-18: 0 is x, 1 is z, 3 is y, and I don't know what is 2
     controls.target.set(building_position[0], building_position[3] + 20, building_position[1]); // 2021-10-18: 0 is x, 1 is z, 3 is y, and I don't know what is 2
-    console.log(controls.target);
-    console.log(camera.position);
-    console.log(controls);
+    // console.log(controls.target);
+    // console.log(camera.position);
+    // console.log(controls);
     // console.log(city_all[root_building]);
     // camera.lookAt(building_position[0], building_position[3], building_position[1]);
     // camera.matrix[8] = building_position[0];
     // camera.matrix[9] = building_position[3];
     // camera.matrix[10] = building_position[1];
-    let lookAtVector = new THREE.Vector3(camera.matrix[8], camera.matrix[9], camera.matrix[10]);
-    console.log(lookAtVector);
-    console.log(camera.matrix);
+    // let lookAtVector = new THREE.Vector3(camera.matrix[8], camera.matrix[9], camera.matrix[10]);
+    // console.log(lookAtVector);
+    // console.log(camera.matrix);
     // console.log(camera);
     // console.log(building_position[0]);
     if (Math.abs(objectPos.x - camera.position.x) >= 2) {
@@ -1052,7 +1169,14 @@ function render() {
           // console.log("light_intensity2 "+entropy[parseInt(key)]);
           // console.log("key "+key);
           // console.log("first_key_list[key] "+first_key_list[parseInt(key)]);
-          selected_buildings = key_to_buckets[key];
+          if (mapControlHighLight) {
+            selected_buildings = mapControlHighLightBuilding;
+          } else {
+            selected_buildings = key_to_buckets[key];
+          }
+          mapControlHighLight = false;
+          // console.log(key_to_buckets);
+          // console.log(city_all)
           light_objects.selectionLights.forEach(object => object.visible=false);
           let result = LH.updateSelectionLights(city_all, light_objects, selected_buildings);
           light_objects = result.light_objects;
@@ -1157,7 +1281,7 @@ function onMouseDownLH(event){
   const width = rect.right-rect.left;
   const height = rect.bottom-rect.top;
   mouse.x=(event.clientX/width)*2-1;
-  mouse.y=-((event.clientY-84)/height)*2+1;
+  mouse.y=-((event.clientY-166)/height)*2+1;
   // console.log("onMouseDownLH, event.clientX = ",event.clientX, " event.clientY = ",event.clientY);
   raycaster.setFromCamera(mouse, perspectiveCameraL);
   const intersects=raycaster.intersectObjects(scene_lighthouse.children);
