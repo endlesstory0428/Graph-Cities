@@ -4,6 +4,8 @@
 // } from '../node_modules/three/examples/jsm/libs/dat.gui.module.js';
 
 var PREFIX = "http://addressSample:8080/";
+const peelCCFolder = '../data_dags/peelCC/'
+var nameSuffix = '';
 
 function httpGet(theUrl) {
   var xmlHttp = new XMLHttpRequest();
@@ -442,13 +444,30 @@ const graph = ForceGraph3D()(elem)
     return nodeGeom(node)
   })
 
+let peelCCFlag = false;
+let forkFlag = false;
+
 graph
   .enableNodeDrag(false)
   //.onNodeHover(node => { console.log(node) })
   .onNodeClick(node => {
+    peelCCBoardWarp.style.visibility = 'hidden';
     setStrataUrl('?data=nodata');
     clicked = node;
     console.log(node['color']);
+    console.log(node)
+    const peelCCThreshold = 16384;
+    console.log('forkFlag', forkFlag);
+    if (forkFlag) {
+      if (parseInt(node['esize']) > parseInt(peelCCThreshold)) {
+        // alert('peelCC DAG');
+        peelCCFlag = true;
+      } else {
+        peelCCFlag = false;
+      };
+    } else {
+      peelCCFlag = false;
+    }
     //graph.nodeColor(node => node === clicked ? 'rgba(0,0,0,1)' : node['color']);
     graph.nodeThreeObject(function(node) {
       return nodeGeom(node)
@@ -464,7 +483,7 @@ graph
       if (nodeDS._findById(sid) === setid) {
         //console.log(nodeDS._objects[sid], DATA.nodes[nodeDS._objects[sid].id]);
         const vertices = DATA.nodes[nodeDS._objects[sid].id].vertices
-        const labels = DATA.nodes[nodeDS._objects[sid].id].labels;
+        const labels = DATA.nodes[nodeDS._objects[sid].id].vertices;
         for (const vert in vertices) {
           nodefilter.add(vertices[vert]);
         };
@@ -561,13 +580,14 @@ function loadEdges(node, nodefilter, nodefilter_label) {
       }
     }
   }
-  console.log(links);
-  let filename = DATASET + "_" + layer_lcc.replace("/", "-") + node.id;
+  // console.log(links);
+  let filename = DATASET + "_" + layer_lcc.replace("/", "-") + nameSuffix + node.id;
   console.log(filename);
   let content = JSON.stringify({
     filename: filename + ".csv",
     edges: links
   });
+  // console.log(content);
   httpGetAsync(PREFIX + "query?type=setdatadir&file=./temp", function(res) {
     console.log(res);
   });
@@ -584,14 +604,21 @@ function loadEdges(node, nodefilter, nodefilter_label) {
         console.log(res)
         console.log(res.errno)
         if (res.errno == 0 || res.errno == -17) {
-          let C = new THREE.Color(node.color);
-          console.log("?dataPath=" + filename + '&nodeColor={"r":' + C.r + ',"g":' + C.g + ',"b":' + C.b + '}');
-          console.log(document.getElementById('strata').src);
-          httpGetAsync(PREFIX + "query?type=add&file=" + filename + ".csv", function(res) {
-            console.log(res);
-            setStrataUrl("?dataPath=" + filename + '&nodeColor={"r":' + C.r + ',"g":' + C.g + ',"b":' + C.b + '}&nodeColorProperty=waveLevel&heightProperty=waveLevel');
+          if (peelCCFlag) {
+            // console.log(peelCCBoardWarp)
+            // peelCCBoardWarp.style.visibility = 'visible';
+            console.log(filename)
+            drawPeelCC(filename+'.mtx-m1')
+          } else {
+            let C = new THREE.Color(node.color);
+            console.log("?dataPath=" + filename + '&nodeColor={"r":' + C.r + ',"g":' + C.g + ',"b":' + C.b + '}');
             console.log(document.getElementById('strata').src);
-          });
+            httpGetAsync(PREFIX + "query?type=add&file=" + filename + ".csv", function(res) {
+              console.log(res);
+              setStrataUrl("?dataPath=" + filename + '&nodeColor={"r":' + C.r + ',"g":' + C.g + ',"b":' + C.b + '}&nodeColorProperty=waveLevel&heightProperty=waveLevel');
+              console.log(document.getElementById('strata').src);
+            });
+          }
         };
       });
     }
@@ -749,7 +776,9 @@ let layer_lcc = null;
 let DATASET = null;
 //let nodeMAP = null;
 
-function loadFile2(filename) {
+function loadFile2(filename, forkView, tempSuffix) {
+  forkFlag = forkView;
+  nameSuffix = tempSuffix;
   d3.json(filename).then(function(data) {
     // console.log(data);
     let verts = 0;
@@ -1015,4 +1044,147 @@ function interpolateLinearly(x, values) {
   var g = g_values[i] + scaling_factor * (g_values[i + 1] - g_values[i]);
   var b = b_values[i] + scaling_factor * (b_values[i + 1] - b_values[i]);
   return [enforceBounds(r), enforceBounds(g), enforceBounds(b)];
+}
+
+
+const peelCCBoardWarp = document.getElementById('peelCC-warp');
+const peelCCBoard = document.getElementById('peelCC');
+const peelCCBoardClose = document.getElementById('peelCC-close');
+peelCCBoardClose.onclick = function () {
+  // console.log('here')
+  peelCCBoardWarp.style.visibility = 'hidden';
+}
+
+let peelCCGraph;
+let peelCCEdges;
+
+function drawPeelCC(fileName) {
+  function plotPeelCC(peelCCData) {
+    peelCCBoardWarp.style.visibility = 'visible';
+    peelCCGraph = ForceGraph3D()(peelCCBoard)
+      .graphData(peelCCData)
+      .width(peelCCBoard.offsetWidth)
+      .height(peelCCBoard.offsetHeight)
+      .backgroundColor('#888888')
+      .linkOpacity(0.8)
+      .nodeRelSize(10)
+      .nodeAutoColorBy('density')
+      .nodeVal(node => peelCCNodeSize(node))
+      .linkVisibility(true)
+      .nodeLabel(node => `peel${node.peel}<br>V${node.vSize}<br>E${node.eSize}`);
+
+    peelCCGraph.d3Force('charge').strength(-200);
+    peelCCInfo.drawn_vertices = peelCCData.nodes.length;
+    peelCCInfo.drawn_edges = peelCCData.links.length;
+    const [minESize, maxESize] = d3.extent(peelCCData.nodes, d => d['eSize']);
+    peelCCNODE_THRESH.top = maxESize;
+    peelCCGUIContThreshTop.min(minESize);
+    peelCCGUIContThreshTop.max(maxESize);
+    peelCCNODE_THRESH.bottom = minESize;
+    peelCCGUIContThreshBottom.min(minESize);
+    peelCCGUIContThreshBottom.max(maxESize);
+    peelCCGUI.updateDisplay();
+  };
+  function processEdge(textData) {
+    peelCCEdges = d3.csvParseRows(textData, d => {
+      // d = d.map(parseInt);
+      tempEdge = {s: parseInt(d[0]), t: parseInt(d[1]), sp: parseInt(d[2]), sc: parseInt(d[3]), tp: parseInt(d[4]), tc: parseInt(d[5])};
+      return tempEdge;
+    });
+  }
+  function addStrata() {
+    console.log(peelCCEdges)
+    peelCCGraph.enableNodeDrag(false)
+    .onNodeClick(node => {
+      console.log(node)
+      const clickedPeel = parseInt(node['peel']);
+      const clickedCC = parseInt(node['cc']);
+      setStrataUrl('?data=nodata');
+      // const nodefilter = new Set();
+      const links = [];
+      // const nodefilter_label = [{source: "new_id", target: "name"}]; // column name for labels.csv
+      for (tempEdge of peelCCEdges) {
+        if (tempEdge.sp <= tempEdge.tp && tempEdge.sp === clickedPeel && tempEdge.sc === clickedCC) {
+          links.push({source: tempEdge.s, target: tempEdge.t});
+        } else if (tempEdge.tp >= tempEdge.sp && tempEdge.tp === clickedPeel && tempEdge.tc === clickedCC) {
+          links.push({source: tempEdge.s, target: tempEdge.t});
+        };
+      };
+      // console.log(links)
+      //   loadEdges(node, nodefilter, nodefilter_label);
+      let filename = fileName + node.id;
+      console.log(filename);
+      let content = JSON.stringify({
+        filename: filename + ".csv",
+        edges: links
+      });
+      // console.log(content)
+      httpGetAsync(PREFIX + "query?type=setdatadir&file=./temp", function(res) {
+        console.log(res);
+      });
+      httpPostAsync(content, PREFIX + "save", function (res) {
+        console.log(res)
+        console.log(res.errno)
+        if (res.errno == 0 || res.errno == -17) {
+          let C = new THREE.Color(node.color);
+          console.log("?dataPath=" + filename + '&nodeColor={"r":' + C.r + ',"g":' + C.g + ',"b":' + C.b + '}');
+          console.log(document.getElementById('strata').src);
+          httpGetAsync(PREFIX + "query?type=add&file=" + filename + ".csv", function (res) {
+            console.log(res);
+            setStrataUrl("?dataPath=" + filename + '&nodeColor={"r":' + C.r + ',"g":' + C.g + ',"b":' + C.b + '}&nodeColorProperty=waveLevel&heightProperty=waveLevel');
+            console.log(document.getElementById('strata').src);
+          });
+        };
+      });
+    });
+  };
+
+  Promise.all([
+    d3.json(peelCCFolder+fileName+'.json')
+        .then(peelCCData => plotPeelCC(peelCCData)),
+    d3.text(peelCCFolder+fileName+'.s-t-p-c-p-c.l.edge')
+      .then(processEdge)
+  ]).then(() => addStrata());
+}
+
+var peelCCGUI = new dat.GUI({
+  autoPlace: true,
+  width: 200
+});
+// gui2.domElement.style = "position: absolute; top: " + cityContainer.offsetHeight + "px; left: 10px;";
+var peelCCGUIcontainer = document.getElementById('peelCC-menu');
+peelCCGUIcontainer.appendChild(peelCCGUI.domElement);
+// console.log(cityContainer.offsetHeight);
+// peelCCGUIcontainer.style = "position: absolute; top: " + 0 + "px; left: 10px; z-index: 5";
+
+var peelCCInfo = {
+  drawn_vertices: '',
+  drawn_edges: ''
+}
+peelCCGUI.add(peelCCInfo, 'drawn_vertices').listen();
+peelCCGUI.add(peelCCInfo, 'drawn_edges').listen();
+
+const peelCCMAX_MAXSIZE = 200;
+var peelCCMAX_VSIZE = {
+  node_scale: peelCCMAX_MAXSIZE
+}
+peelCCGUI.add(peelCCMAX_VSIZE, 'node_scale', 1, 1000)
+  .onChange(size => peelCCGraph && peelCCGraph.nodeVal(node => peelCCNodeSize(node)));
+
+var peelCCNODE_THRESH = {
+  top: 1000,
+  bottom: 0
+}
+
+let peelCCGUIf1 = peelCCGUI.addFolder('Node Size Threshold');
+peelCCGUIContThreshTop = peelCCGUIf1.add(peelCCNODE_THRESH, 'top', 0, 1000)
+  .onChange(size => peelCCGraph && peelCCGraph.nodeVal(node => peelCCNodeSize(node)));
+peelCCGUIContThreshBottom = peelCCGUIf1.add(peelCCNODE_THRESH, 'bottom', 0, 1000)
+  .onChange(size => peelCCGraph && peelCCGraph.nodeVal(node => peelCCNodeSize(node)));
+
+function peelCCNodeSize(node) {
+  if (node['eSize'] > peelCCNODE_THRESH.top || node['eSize'] < peelCCNODE_THRESH.bottom) {
+    return 0.0001;
+  }
+  return 5 * node['relVal'] * (peelCCMAX_VSIZE.node_scale / peelCCMAX_MAXSIZE);
 }

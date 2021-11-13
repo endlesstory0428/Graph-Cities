@@ -50,14 +50,22 @@ const aveDeg = d => d['edges'] / d['vertices'] * 2;
 const density = d => d['vertices'] === 1 ? 0 : aveDeg(d) / (d['vertices'] - 1);
 const curve = (val, factor) => 1 - Math.log(val * (1 - factor) + factor) / Math.log(factor);
 // // for tooltip
-const buildingWaveTooltip = d => `wave ${d['wave']}\nV: ${d['info']['vertices']} E: ${d['info']['edges']}\naveDeg: ${aveDeg(d['info']).toFixed(2)} density: ${density(d['info']).toFixed(5)}`;
-const buildingFixpointTooltip = d => `fixpoint ${d['layer']}-${d['lcc']}\nV: ${d['vertices']} E: ${d['edges']}\naveDeg: ${aveDeg(d).toFixed(2)} density: ${density(d).toFixed(5)}`;
-const buildingFixpointCircleTooltip = d => `fixpoint ${d['layer']}-${d['lccList'][0]['lcc']}\nV: ${d['lccList'][0]['vertices']} E: ${d['lccList'][0]['edges']}\naveDeg: ${aveDeg(d['lccList'][0]).toFixed(2)} density: ${density(d['lccList'][0]).toFixed(5)}`;
-const spiralCCTooltip = d => d['layer'] === 1 ? `#cc: ${d['count']}` : `#cc: ${d['count']} #sub-bucket: ${Object.keys(d['subBucket']).length}`
-const spiralFixpointTooltip = d => `fixpoint ${d['layer']}\nV: ${d['vertices']} E: ${d['edges']}\naveDeg: ${aveDeg(d).toFixed(2)} density: ${density(d).toFixed(5)}`
+const buildingWaveTooltip = d => `wave ${d['wave']}\nV: ${d['info']['vertices']} E: ${d['info']['edges']}\naveDeg: ${aveDeg(d['info']).toFixed(2)} density: ${density(d['info']).toExponential(2)}`;
+const buildingFixpointTooltip = d => `fixpoint ${d['layer']}-${d['lcc']}\nV: ${d['vertices']} E: ${d['edges']}\naveDeg: ${aveDeg(d).toFixed(2)} density: ${density(d).toExponential(2)}`;
+const buildingFixpointCircleTooltip = d => `fixpoint ${d['layer']}-${d['lccList'][0]['lcc']}\nV: ${d['lccList'][0]['vertices']} E: ${d['lccList'][0]['edges']}\naveDeg: ${aveDeg(d['lccList'][0]).toFixed(2)} density: ${density(d['lccList'][0]).toExponential(2)}`;
+const spiralCCTooltip = d => (d['layer'] === 1 ? `#cc: ${d['count']}` : `#cc: ${d['count']} #sub-bucket: ${Object.keys(d['subBucket']).length}`) + ` minSize: V${d['minCC'][1]}E${d['minCC'][0]} aveSize: V${(d['vertices']/d['count']).toFixed(0)}E${(d['edges']/d['count']).toFixed(0)} maxSize: V${d['maxCC'][1]}E${d['maxCC'][0]}`
+const spiralFixpointTooltip = d => `fixpoint ${d['layer']}\nV: ${d['vertices']} E: ${d['edges']}\naveDeg: ${aveDeg(d).toFixed(2)} density: ${density(d).toExponential(2)}`
 // // for ploting
 const speedometerLine = (srcPos, vPos, xPos, yPos, sizeSacle) => d3.line()([srcPos, [0, 0], vPos].map(pos => [pos[0] * sizeSacle + xPos, pos[1] * sizeSacle + yPos]));
 const spiralLine = (posList, xPos, yPos, sizeSacle) => d3.line().curve(d3.curveBasis)(posList.map(pos => [pos[0] * sizeSacle + xPos, pos[1] * sizeSacle + yPos]));
+// Create buildingId 
+const buildingId = d => `b${d['bucket']}l${d['layer']}`;
+
+// // data object for click selection
+// let buildingMapControls = {};
+// let intrestedElement;
+// let ignoreHover;
+// let isOpen;
 
 // // split a building into waves
 function expandWave(building) {
@@ -122,24 +130,25 @@ function logBucket(lccList) {
 }
 
 // // split data into buildings(stars) and sprials
-function splitSpiral(data) {
+function splitSpiral(data, bucketPeel2Building) {
     const buildingList = [];
     const spiralList = [];
     for (const [bucket, bucketInfo] of Object.entries(data)) {
         const peelData = bucketInfo['peel'];
-        for (const [peel, lccList] of Object.entries(peelData)) {
+        for (const [peel, lccInfo] of Object.entries(peelData)) {
+            const lccList = lccInfo['lccList'];
             if (parseInt(peel) === 1) {
                 if (lccList[0]['single']) {
-                    buildingList.push({ 'bucket': parseInt(bucket), 'layer': parseInt(peel), 'lccList': lccList });
+                    buildingList.push({ 'bucket': parseInt(bucket), 'layer': parseInt(peel), 'lccList': lccList, 'buildingName': bucketPeel2Building[bucket][peel] });
                 } else {
-                    spiralList.push({ 'bucket': parseInt(bucket), 'layer': parseInt(peel), 'count': lccList[0]['count'], 'lccList': lccList });
+                    spiralList.push({ 'bucket': parseInt(bucket), 'layer': parseInt(peel), 'count': lccList[0]['count'], 'lccList': lccList, 'buildingName': bucketPeel2Building[bucket][peel], 'minCC': lccInfo['minSize'], 'maxCC': lccInfo['maxSize'] });
                 };
             } else {
                 const lccCount = lccList.length;
                 if (lccCount === 1) {
-                    buildingList.push({ 'bucket': parseInt(bucket), 'layer': parseInt(peel), 'lccList': lccList });
+                    buildingList.push({ 'bucket': parseInt(bucket), 'layer': parseInt(peel), 'lccList': lccList, 'buildingName': bucketPeel2Building[bucket][peel] });
                 } else {
-                    spiralList.push({ 'bucket': parseInt(bucket), 'layer': parseInt(peel), 'count': lccCount, 'lccList': lccList, 'subBucket': logBucket(lccList) });
+                    spiralList.push({ 'bucket': parseInt(bucket), 'layer': parseInt(peel), 'count': lccCount, 'lccList': lccList, 'subBucket': logBucket(lccList), 'buildingName': bucketPeel2Building[bucket][peel], 'minCC': lccInfo['minSize'], 'maxCC': lccInfo['maxSize'] });
                 };
             }
         };
@@ -278,7 +287,12 @@ function breakX(xList) {
 }
 
 // // main function to draw the map
-function drawMap(data) {
+function drawMap(datas, buildingMapControls) {
+    buildingMapControls.ignoreHover = false;
+    buildingMapControls.isOpen = false;
+
+    const bucketPeel2Building = getBucketPeelBuilding(datas[1], datas[2]);
+    const data = datas[0];
     const board = d3.select("#city-building-map");
     document.getElementById('city-building-map').onwheel = function(){ return false; } // disable mouse scrolling to avoid zooming confliction
 
@@ -290,7 +304,7 @@ function drawMap(data) {
 
     // console.log(board.node().clientWidth)
 
-    // // append the svg object to the body of the page
+    // // append the svg object to the body of the page 
     const boardSvg = board.append("svg")
         .attr("class", "drawingBoard")
         .attr("width", width + margin.left + margin.right + padMargin.left + padMargin.right)
@@ -358,7 +372,7 @@ function drawMap(data) {
     // console.log()
 
     // process data into buildings and spirals
-    const [buildingList, spiralList] = splitSpiral(data);
+    const [buildingList, spiralList] = splitSpiral(data, bucketPeel2Building);
     // console.log(buildingList)
     // console.log(spiralList)
 
@@ -408,20 +422,6 @@ function drawMap(data) {
     const buildingCircleEnter = buildingCircle.enter().append('g');
     const buildingEnter = buildingDot.enter().append('g');
 
-    // // building underlying circle
-    buildingCircleEnter.append("circle")
-        .attr("class", "buildingCircle")
-        .attr("cx", d => x(brokenX[d['layer']]))
-        .attr("cy", d => y(d['bucket']))
-        .attr("r", d => buildingCircleSize * Math.sqrt(Math.log(1 + d['lccList'][0]['edges'])))
-        .attr("fill", "#000000")
-        .attr("fill-opacity", 0)
-        .attr("stroke-width", 1)
-        .attr("stroke", d => d3.rgb(...interpolateLinearly(curve(density(d['lccList'][0]), aveBuildingDensity), grey2red).map(x => x * 255)))
-        .attr("opacity", 0.8)
-        .append("title")
-        .text(d => `${buildingFixpointCircleTooltip(d)}`);
-
     // // building stars
     buildingEnter.append("path")
         .attr("class", "buildingDot")
@@ -429,10 +429,23 @@ function drawMap(data) {
         .attr("stroke-width", 0.01)
         .attr("stroke", "grey")
         .attr("opacity", 0.8)
-        .attr("d", d => speedometerLine(d['info']['srcPos'], d['info']['vPos'], x(brokenX[d['layer']]), y(d['bucket']), buildingDotSize))
-        .append("title")
-        .text(d => `${buildingWaveTooltip(d)}\n\n${buildingFixpointTooltip(d)}`);
-
+        .attr("d", d => speedometerLine(d['info']['srcPos'], d['info']['vPos'], x(brokenX[d['layer']]), y(d['bucket']), buildingDotSize));
+        // .append("title")
+        // .text(d => `${buildingWaveTooltip(d)}\n\n${buildingFixpointTooltip(d)}`);
+    
+    // // building underlying circle
+    buildingCircleEnter.append("circle")
+        .attr("class", "buildingCircle")        
+        .attr("cx", d => x(brokenX[d['layer']]))
+        .attr("cy", d => y(d['bucket']))
+        .attr("r", d => buildingCircleSize * Math.sqrt(Math.log(1 + d['lccList'][0]['edges'])))
+        .attr("fill", "#000000")
+        .attr("fill-opacity", 0)
+        .attr("stroke-width", 1)
+        .attr("stroke", d => d3.rgb(...interpolateLinearly(curve(density(d['lccList'][0]), aveBuildingDensity), grey2red).map(x => x * 255)))
+        .attr("opacity", 0.8);
+        // .append("title")
+        // .text(d => `${buildingFixpointCircleTooltip(d)}`);
 
     // // add spiral dots
     const spiralDotSize = 0.5 * spiralSizeFactor;
@@ -444,18 +457,6 @@ function drawMap(data) {
     spiralCircle.remove();
     spiralDot.remove();
 
-    // // spiral underlyting circles
-    const spiralCircleEnter = spiralCircle.enter().append('g');
-    spiralCircleEnter.append("circle")
-        .attr("class", "spiralCircle")
-        .attr("cx", d => x(brokenX[d['layer']]))
-        .attr("cy", d => y(d['bucket']))
-        .attr("r", d => spiralDotSize * d['radius'])
-        .attr("fill", "#000000")
-        .attr("fill-opacity", 0)
-        .attr("stroke-width", 0)
-        .append("title")
-        .text(d => `${spiralCCTooltip(d)}\n\n${spiralFixpointTooltip(d)}`);
 
     // // spiral spirals
     const spiralEnter = spiralDot.enter().append('g');
@@ -465,10 +466,175 @@ function drawMap(data) {
         .attr("stroke-width", Math.min(2, x(1) / 8))
         .attr("stroke", d => d3.rgb(...interpolateLinearly(curve(density(d), aveBuildingDensity), grey2red).map(x => x * 255)))
         .attr("opacity", 0.8)
-        .attr("d", d => spiralLine(d['pos'], x(brokenX[d['layer']]), y(d['bucket']), spiralDotSize))
-        .append("title")
-        .text(d => `${spiralCCTooltip(d)}\n\n${spiralFixpointTooltip(d)}`);
+        .attr("d", d => spiralLine(d['pos'], x(brokenX[d['layer']]), y(d['bucket']), spiralDotSize));
+        // .append("title")
+        // .text(d => `${spiralCCTooltip(d)}\n\n${spiralFixpointTooltip(d)}`);
 
+    // // spiral underlyting circles    
+    const spiralCircleEnter = spiralCircle.enter().append('g');
+    spiralCircleEnter.append("circle")
+        .attr("class", "spiralCircle")
+        .attr("cx", d => x(brokenX[d['layer']]))
+        .attr("cy", d => y(d['bucket']))
+        .attr("r", d => spiralDotSize * d['radius'])
+        .attr("fill", "#000000")
+        .attr("fill-opacity", 0)
+        .attr("stroke-width", 0);
+        // .append("title")
+        // .text(d => `${spiralCCTooltip(d)}\n\n${spiralFixpointTooltip(d)}`);
+
+
+    
+
+    const buildingCircleEnterModal = attachModal(buildingCircleEnter, buildingMapControls);
+    const buildingCircleEnterDiv = buildingCircleEnterModal.append("xhtml:div")
+                    .attr("class", "map-tooltip")
+                    .style("border", "solid")
+                    .style("background-color", "white")
+                    // .style("border-width", "3px")
+                    .style("border-radius", "5px")
+                    .style("padding", "10px")
+                    .style("padding", "10px");
+
+    // buildingCircleEnterSelect.append("xhtml:option").attr("value", "1").text("1");
+    // buildingCircleEnterSelect.append("xhtml:option").attr("value", "2").text("2");
+    // buildingCircleEnterSelect.append("xhtml:option").attr("value", "3").text("3");
+
+    buildingCircleEnterDiv.append("xhtml:p")
+            .style("margin-block-end", '0.5em')
+            .text(d => `${buildingFixpointCircleTooltip(d)}`);
+
+    const buildingCircleEnterSelect = buildingCircleEnterDiv.append("xhtml:select").style("width", "80%").style("margin-bottom", "4px").attr("class", "mapBuildingDropList");
+    buildingCircleEnterSelect.each(function(d) {
+            // console.log(d['lccList'][0]['waves'])
+            const self = d3.select(this);
+            self.append("xhtml:option").attr("value", 0).text(`all`);
+            for (const [name, info] of Object.entries(d['lccList'][0]['waves'])) {
+                self.append("xhtml:option").attr("value", name).text(`wave: ${name} V: ${info['vertices']} E: ${info['edges']} aveDeg: ${aveDeg(info).toFixed(2)}, density: ${density(info).toExponential(2)}`);
+            }})
+    
+    const buildingCircleEnterButton = buildingCircleEnterDiv.append("xhtml:button").attr("class", "mapBuildingZoomButton").text("zoom in");
+
+    // const buildingEnterModal = attachModal(buildingEnter);
+    // buildingEnterModal.append("xhtml:div")
+    //         .style("border", "solid")
+    //         .style("background-color", "white")
+    //         .style("border-width", "3px")
+    //         .style("border-radius", "5px")
+    //         .style("padding", "10px")
+    //         .style("padding", "10px")
+    //         .append("xhtml:p")
+    //         .text(d => `NEW2: ${buildingWaveTooltip(d)}\n\n${buildingFixpointTooltip(d)}`);
+
+    const spiralCircleEnterModal = attachModal(spiralCircleEnter, buildingMapControls);
+    const spiralCircleEnterDiv = spiralCircleEnterModal.append("xhtml:div")
+            .attr("class", "map-tooltip")
+            .style("border", "solid")
+            .style("background-color", "white")
+            .style("border-width", "3px")
+            .style("border-radius", "5px")
+            .style("padding", "10px")
+            .style("padding", "10px")
+            
+
+    spiralCircleEnterDiv.append("xhtml:p")
+            .style("margin-block-end", '0.5em')
+            .text(d => `${spiralCCTooltip(d)}\n\n${spiralFixpointTooltip(d)}`);
+
+    const spiralCircleEnterSelect = spiralCircleEnterDiv.append("xhtml:select").style("width", "80%").style("margin-bottom", "4px").attr("class", "mapSpiralDropList");
+    spiralCircleEnterSelect.each(function(d) {
+            const self = d3.select(this);
+            const nameListLength = d['buildingName'].length;
+            // console.log(nameListLength);
+            for (const [index, name] of Object.entries(d['buildingName'])) {
+                if (nameListLength !== 1) {
+                    if (parseInt(index) === 0) {
+                        self.append("xhtml:option").attr("value", index).text(`wavemap ${name} (min)`);
+                    } else if (parseInt(index) === nameListLength - 1) {
+                        self.append("xhtml:option").attr("value", index).text(`wavemap ${name} (max)`);
+                    } else {
+                        self.append("xhtml:option").attr("value", index).text(`wavemap ${name}`);
+                    }
+                } else {
+                    self.append("xhtml:option").attr("value", index).text(`wavemap ${name}`);
+                }
+            }})
+        // .attr("value", d => d['buildingName'])
+        // .text(d => d['buildingName'])
+    
+    const spiralCircleEnterButton = spiralCircleEnterDiv.append("xhtml:button").attr("class", "mapSpiralZoomButton").text("zoom in");
+            
+    // const spiralEnterModal = attachModal(spiralEnter);
+    // spiralEnterModal.append("xhtml:div")
+    //         .style("border", "solid")
+    //         .style("background-color", "white")
+    //         .style("border-width", "3px")
+    //         .style("border-radius", "5px")
+    //         .style("padding", "10px")
+    //         .style("padding", "10px")
+    //         .append("xhtml:p")
+    //         .text(d => `NEW4: ${spiralCCTooltip(d)}\n\n${spiralFixpointTooltip(d)}`); 
+
+    function attachModal(element, buildingMapControls){
+        console.log();
+        // // Add modal for any element
+        const modal = element.append("foreignObject")
+            .attr("id", d => buildingId(d))
+            .attr("x", d => {
+                let xVal = x(brokenX[d['layer']]);
+                if (xVal + 500 > width){
+                    xVal = xVal - 500;
+                }
+                return xVal;
+            })
+            .attr("y", d => {
+                let yVal = y(d['bucket']);
+                if (yVal + 100 > height){
+                    yVal = yVal - 100;
+                }
+                if (yVal < 0) {
+                    yVal = 0;
+                }
+                return yVal;
+            })
+            .attr("height", "100px")
+            .attr("width", "500px")
+            .attr("visibility", "hidden");
+
+        const close = element.append('text')
+            .attr("id", d => buildingId(d))
+            .attr("x", d => {
+                let xVal = x(brokenX[d['layer']]) + 470;
+                if (xVal + 30 > width){
+                    xVal = xVal - 500;
+                }
+                return xVal;
+            })
+            .attr("y", d => {
+                let yVal = y(d['bucket']) + 5;
+                if (yVal + 95 > height){
+                    yVal = yVal - 100;
+                }
+                if (yVal < 5) {
+                    yVal = 5;
+                }
+                return yVal;
+            })
+            .text('X')
+            .attr("dominant-baseline","text-before-edge")
+            .attr("font-family", "sans-serif")
+            .attr("font-size", "20px")
+            .style("stroke", "black")
+            .style("stroke-width", "2")
+            .attr("visibility", "hidden");
+
+        close.on("click", function(){
+            hideElement(buildingMapControls.intrestedElement.id, buildingMapControls);
+            buildingMapControls.ignoreHover = false;
+        });
+
+        return modal;
+    }
 
     // // tool functions for transforamtion
     function zoomed(event) {
@@ -493,6 +659,10 @@ function drawMap(data) {
         const dx = d3.max([0, board.node().clientWidth / 2 - scaledWidth / 2]);
         const dy = d3.max([0, board.node().clientHeight / 2 - scaledHeight / 2]);
         boardSvg.attr('transform', `translate(${dx}, ${dy})`);
+
+
+        updateSize(buildingMapControls);
+
     };
 
     function scrolled(event) {
@@ -518,53 +688,218 @@ function drawMap(data) {
 // function readAndDrawMap(name) {
 //     d3.json(`${name}-lccWaves.b.p.json`).then(data => drawMap(data));
 // };
+function updateSize(buildingMapControls) {        
+    //const scale = d3.zoomTransform(parent).k;
+    const board = d3.select("#city-building-map");
 
+    const margin = { top: 10, right: 30, bottom: 30, left: 60 },
+        width = board.node().clientWidth - margin.left - margin.right,
+        height = board.node().clientHeight - margin.top - margin.bottom;
+    const scale = d3.zoomTransform(board.node()).k;
+
+    const parent = d3.select(buildingMapControls.intrestedElement.id).select(function() { return this.parentNode; });
+    const fObjGetX = parent.select("circle").attr("cx");
+    const fObjGetY = parent.select("circle").attr("cy");
+
+    const intrestedForiegnObject = parent.select("foreignObject");
+    const intrestedClose = parent.select("text");
+    
+    const notScale = 1/scale;
+            
+    intrestedForiegnObject.attr("transform", `scale(${notScale})`);
+    intrestedForiegnObject.attr("x", d => {
+        let xVal = parseFloat(fObjGetX) * scale;
+        if (xVal + 500 > width){
+            xVal = xVal - 500;
+        }
+        return xVal;
+    });
+    intrestedForiegnObject.attr("y", d => {
+        let yVal = parseFloat(fObjGetY) * scale;
+        if (yVal + 100 > height){
+            yVal = yVal - 100;
+        }
+        if (yVal < 0) {
+            yVal = 0;
+        }
+        return yVal;
+    });
+
+    intrestedClose.attr("transform", `scale(${notScale})`);
+    intrestedClose.attr("x", d => {
+        let xVal = (parseFloat(fObjGetX) * scale) + 470;
+        if (xVal + 30 > width){
+            xVal = xVal - 500;
+        }
+        return xVal;
+    });    
+    intrestedClose.attr("y", d => {
+        let yVal = (parseFloat(fObjGetY) * scale) + 5;
+        if (yVal + 95 > height){
+            yVal = yVal - 100;
+        }
+        if (yVal < 5) {
+            yVal = 5;
+        }
+        return yVal;
+    });
+    return;
+}
+
+
+// Pass Id to toggle visibility
+function showElement(elementID, buildingMapControls){    
+    buildingMapControls.isOpen = true;
+    d3.selectAll(elementID)
+        .attr("visibility", "visible");
+    updateSize(buildingMapControls);
+}
+
+function hideElement(elementID, buildingMapControls){
+    buildingMapControls.isOpen = false;
+    d3.selectAll(elementID)
+        .attr("visibility", "hidden");
+    updateSize(buildingMapControls);
+}
+
+function updateIntrestedElement(data, buildingMapControls){
+    // console.log(buildingMapControls);
+    buildingMapControls.intrestedElement = {
+        id: `#b${data['bucket']}l${data['layer']}`,
+        bucket: data['bucket'],
+        layer: data['layer']
+    }
+    return buildingMapControls.intrestedElement;
+}
 
 // // event handlers
-// function handleMouseOver(selectedDot) {
-//     console.log('over', selectedDot);
-// }
+function handleMouseOverAPI(selectedDot, data) {
+    console.log('over: ', selectedDot);
+};
+function handleMouseOver(selectedDot, data, buildingMapControls, APIFunc) {
+    // console.log('over', selectedDot);
+    
+    if(!buildingMapControls.isOpen){
+        updateIntrestedElement(data, buildingMapControls);
+        showElement(buildingMapControls.intrestedElement.id, buildingMapControls);
+    }
 
-// function handleLeftClick(selectedDot) {
-//     console.log('click', selectedDot);
-// }
+    APIFunc(selectedDot, data);
+}
+
+function handleMouseOutAPI(selectedDot, data) {
+    console.log('out: ', selectedDot);
+};
+function handleMouseOut(selectedDot, data, buildingMapControls, APIFunc) {
+    // console.log('out', selectedDot);
+    
+    if (typeof buildingMapControls.ignoreHover !== 'undefined'){
+        if (!buildingMapControls.ignoreHover){
+            hideElement(buildingMapControls.intrestedElement.id, buildingMapControls);            
+        }
+    }else{
+        hideElement(buildingMapControls.intrestedElement.id, buildingMapControls);
+    }
+
+    APIFunc(selectedDot, data);
+}
+
+function handleLeftClickAPI(selectedDot, data) {
+    console.log('Clicked on: ', selectedDot);
+};
+function handleLeftClick(selectedDot, data, buildingMapControls, APIFunc) {
+    // console.log('Clicked on: ', selectedDot);
+
+    if (typeof buildingMapControls.intrestedElement !== 'undefined'){
+        hideElement(buildingMapControls.intrestedElement.id, buildingMapControls);        
+    }
+
+    updateIntrestedElement(data, buildingMapControls);  
+    buildingMapControls.ignoreHover = true;  
+    showElement(buildingMapControls.intrestedElement.id, buildingMapControls);
+    
+    APIFunc(selectedDot, data);
+}
 
 // // process selection events
-function processSelection(event, data, handleSelectionFnc) {
+function processSelection(event, data, handleSelectionFnc, buildingMapControls, APIFunc) {
     // console.log(event);
     // console.log(data);
     const selectedDot = {'bucket': data['bucket'], 'layer': data['layer']}
-    handleSelectionFnc(selectedDot);
+    handleSelectionFnc(selectedDot, data, buildingMapControls, APIFunc);
 };
 
 // // add event handlers
-function addOnMouseover(handleSelectionFnc) {
+function addOnMouseOver(APIFunc, buildingMapControls) {
     const svg = d3.select("#city-building-map svg g g");
     const buildingDot = svg.selectAll(".buildingDot");
     const spiralDot = svg.selectAll(".spiralDot");
     const builidngCircle = svg.selectAll(".buildingCircle");
     const spiralCircle = svg.selectAll(".spiralCircle");
 
-    buildingDot.on('mouseover', (e, d) => processSelection(e, d, handleSelectionFnc));
-    spiralDot.on('mouseover', (e, d) => processSelection(e, d, handleSelectionFnc));
-    builidngCircle.on('mouseover', (e, d) => processSelection(e, d, handleSelectionFnc));
-    spiralCircle.on('mouseover', (e, d) => processSelection(e, d, handleSelectionFnc));
+    buildingDot.on('mouseover', (e, d) => processSelection(e, d, handleMouseOver, buildingMapControls, APIFunc));
+    spiralDot.on('mouseover', (e, d) => processSelection(e, d, handleMouseOver, buildingMapControls, APIFunc));
+    builidngCircle.on('mouseover', (e, d) => processSelection(e, d, handleMouseOver, buildingMapControls, APIFunc));
+    spiralCircle.on('mouseover', (e, d) => processSelection(e, d, handleMouseOver, buildingMapControls, APIFunc));
     // console.log('here', buildingDot);
 }
 
-function addOnLeftClick(handleSelectionFnc) {
+function addOnMouseOut(APIFunc, buildingMapControls) {
     const svg = d3.select("#city-building-map svg g g");
     const buildingDot = svg.selectAll(".buildingDot");
     const spiralDot = svg.selectAll(".spiralDot");
     const builidngCircle = svg.selectAll(".buildingCircle");
     const spiralCircle = svg.selectAll(".spiralCircle");
 
-    buildingDot.on('click', (e, d) => processSelection(e, d, handleSelectionFnc));
-    spiralDot.on('click', (e, d) => processSelection(e, d, handleSelectionFnc));
-    builidngCircle.on('click', (e, d) => processSelection(e, d, handleSelectionFnc));
-    spiralCircle.on('click', (e, d) => processSelection(e, d, handleSelectionFnc));
+    buildingDot.on('mouseout', (e, d) => processSelection(e, d, handleMouseOut, buildingMapControls, APIFunc));
+    spiralDot.on('mouseout', (e, d) => processSelection(e, d, handleMouseOut, buildingMapControls, APIFunc));
+    builidngCircle.on('mouseout', (e, d) => processSelection(e, d, handleMouseOut, buildingMapControls, APIFunc));
+    spiralCircle.on('mouseout', (e, d) => processSelection(e, d, handleMouseOut, buildingMapControls, APIFunc));
     // console.log('here', buildingDot);
 }
 
-// readAndDrawMap('com-friendster');
-export {drawMap, addOnMouseover, addOnLeftClick};
+function addOnLeftClick(APIFunc, buildingMapControls) {
+    const svg = d3.select("#city-building-map svg g g");
+    const buildingDot = svg.selectAll(".buildingDot");
+    const spiralDot = svg.selectAll(".spiralDot");
+    const builidngCircle = svg.selectAll(".buildingCircle");
+    const spiralCircle = svg.selectAll(".spiralCircle");
+
+    buildingDot.on('click', (e, d) => processSelection(e, d, handleLeftClick, buildingMapControls, APIFunc));
+    spiralDot.on('click', (e, d) => processSelection(e, d, handleLeftClick, buildingMapControls, APIFunc));
+    builidngCircle.on('click', (e, d) => processSelection(e, d, handleLeftClick, buildingMapControls, APIFunc));
+    spiralCircle.on('click', (e, d) => processSelection(e, d, handleLeftClick, buildingMapControls, APIFunc));
+    // console.log('here', buildingDot);
+}
+
+
+function getBucketPeelBuilding (bucket2Building, building2Peel) {
+    const bucketPeel2Building = {}
+    // console.log(bucket2Building, building2Peel);
+    for (const [bucket, subBucket2Building] of Object.entries(bucket2Building)) {
+        for (const [subBucket, building] of Object.entries(subBucket2Building)) {
+            const peelList = building2Peel[building];
+            if (!(bucketPeel2Building.hasOwnProperty(bucket))) {
+                bucketPeel2Building[bucket] = {};
+            }
+            const tempBucket = bucketPeel2Building[bucket];
+            // console.log(building);
+            // console.log(peelList);
+            for (const peel of peelList) {
+                if (!(tempBucket.hasOwnProperty(peel))) {
+                    tempBucket[peel] = [];
+                };
+                tempBucket[peel].push(building);
+            };
+        };
+    };
+    // console.log(bucketPeel2Building);
+    return bucketPeel2Building;
+}
+
+
+// main call
+// const buildingMap_file = 'movies-lccWaves.b.p.json';
+// d3.json(buildingMap_file).then(data => drawMap(data, buildingMapControls)).then(() => addOnMouseOver(handleMouseOverAPI, buildingMapControls)).then(() => addOnMouseOut(handleMouseOutAPI, buildingMapControls)).then(() => addOnLeftClick(handleLeftClickAPI, buildingMapControls));
+
+export {drawMap, addOnMouseOver, addOnMouseOut, addOnLeftClick};
