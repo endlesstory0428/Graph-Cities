@@ -96,31 +96,31 @@ let radius = 500,
 // GUI parameters
 let params = {
   orthographicCamera: false,
-  // resetCamera: function() {
-  //   toPanBuilding = false;
-  //   toPanCity = false;
-  //   toZoomBuilding = false;
-  //   console.log(controls)
-  //   controls.reset();
-  //   animate();
-  // },
-  // topView: function() {
-  //   toPanBuilding = false;
-  //   toPanCity = false;
-  //   toZoomBuilding = false;
-  //   perspectiveCamera.position.z = 200;
-  //   perspectiveCamera.position.x = 0;
-  //   perspectiveCamera.position.y = 400;
-  // },
-  // panCity: function() {
-  //   panCity();
-  // },
-  // zoomBuilding: function() {
-  //   zoomBuilding();
-  // },
-  // panBuilding: function() {
-  //   panBuilding();
-  // },
+  resetCamera: function() {
+    toPanBuilding = false;
+    toPanCity = false;
+    toZoomBuilding = false;
+    console.log(controls)
+    controls.reset();
+    animate();
+  },
+  topView: function() {
+    toPanBuilding = false;
+    toPanCity = false;
+    toZoomBuilding = false;
+    perspectiveCamera.position.z = 200;
+    perspectiveCamera.position.x = 0;
+    perspectiveCamera.position.y = 400;
+  },
+  panCity: function() {
+    panCity();
+  },
+  zoomBuilding: function() {
+    zoomBuilding();
+  },
+  panBuilding: function() {
+    panBuilding();
+  },
   ground: "#CCA262",
   all: 'building',
   highlighted: 'building',
@@ -129,75 +129,75 @@ let params = {
   ceilVisible: false,
   isNight: false,
   visitedInner: 'building',
-  // goInnerView: function() {
-  //   let bottom = document.getElementById("inner-view").offsetTop;
-  //   let selected_building = root_dropdown.getValue();
+  goInnerView: function() {
+    let bottom = document.getElementById("inner-view").offsetTop;
+    let selected_building = root_dropdown.getValue();
 
-  //   let wavemap_ID_ID_freq = selected_building.split('_');
-  //   let file;
-  //   let validCheck = true;
-  //   let forkView = false;
-  //   let nameSuffix = '';
-  //   const validSize = 262144;
-  //   if (!mapWaveSelection) {
-  //     // console.log(dagSizeDict)
-  //     const key = 'dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2]
-  //     if (dagSizeDict.hasOwnProperty(key)) {
-  //       console.log(dagSizeDict[key])
-  //       if (parseInt(dagSizeDict[key]) > parseInt(validSize)) {
-  //         validCheck = false;
-  //         alert('Please select a wave');
-  //       }
-  //     }
-  //     file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2] + '.json';
-  //   } else {
-  //     // console.log(dagSizeDict)
-  //     console.log(dagSizeDict['dagmeta_' + mapWaveSelectedName])
-  //     if (parseInt(dagSizeDict['dagmeta_' + mapWaveSelectedName]) > parseInt(validSize)) {
-  //       console.log('frag fork')
-  //       // validCheck = false;
-  //       forkView = true;
-  //       nameSuffix = 'f'+mapWaveSelectedName.split('w')[1];
-  //       file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + mapWaveSelectedName.replace('w', 'f') + '.json'
-  //     } else {
-  //       nameSuffix = 'w'+mapWaveSelectedName.split('w')[1];
-  //       file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + mapWaveSelectedName + '.json';
-  //     }
-  //   }
-  //   mapWaveSelection = false;
-  //   if (validCheck) {
-  //     onDagViews = true;
-  //     inner_view_history.push(selected_building);
-  //     window.scrollTo(0,bottom);
-  //     console.log(inner_view_history);
-  //     LH.updateDropdown(visited_inner_views, inner_view_history);
-  //     visited_inner_views.setValue(inner_view_history[inner_view_history.length-1]);
-  //     arrow_objects[selected_building].visible = true;
+    let wavemap_ID_ID_freq = selected_building.split('_');
+    let file;
+    let validCheck = true;
+    let forkView = false;
+    let nameSuffix = '';
+    const validSize = 262144;
+    if (!mapWaveSelection) {
+      // console.log(dagSizeDict)
+      const key = 'dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2]
+      if (dagSizeDict.hasOwnProperty(key)) {
+        console.log(dagSizeDict[key])
+        if (parseInt(dagSizeDict[key]) > parseInt(validSize)) {
+          validCheck = false;
+          alert('Please select a wave');
+        }
+      }
+      file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2] + '.json';
+    } else {
+      // console.log(dagSizeDict)
+      console.log(dagSizeDict['dagmeta_' + mapWaveSelectedName])
+      if (parseInt(dagSizeDict['dagmeta_' + mapWaveSelectedName]) > parseInt(validSize)) {
+        console.log('frag fork')
+        // validCheck = false;
+        forkView = true;
+        nameSuffix = 'f'+mapWaveSelectedName.split('w')[1];
+        file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + mapWaveSelectedName.replace('w', 'f') + '.json'
+      } else {
+        nameSuffix = 'w'+mapWaveSelectedName.split('w')[1];
+        file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + mapWaveSelectedName + '.json';
+      }
+    }
+    mapWaveSelection = false;
+    if (validCheck) {
+      onDagViews = true;
+      inner_view_history.push(selected_building);
+      window.scrollTo(0,bottom);
+      console.log(inner_view_history);
+      LH.updateDropdown(visited_inner_views, inner_view_history);
+      visited_inner_views.setValue(inner_view_history[inner_view_history.length-1]);
+      arrow_objects[selected_building].visible = true;
       
-  //     console.log("******** " + selected_building + " *********");
-  //     console.log("******** " + paramsL.dataSet + " *********");
+      console.log("******** " + selected_building + " *********");
+      console.log("******** " + paramsL.dataSet + " *********");
 
-  //     console.log("Loading: ", file);
-  //     loadFile2(file, forkView, nameSuffix);
-  //     loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
-  //   }
-  //   onDagViews = false;
-  // },
-  // goOuterView: function() {
-  //   let top = document.getElementById("city-view".offsetTop);
-  //   onDagViews = false;
-  //   window.scrollTo(0,top);
-  // },
-  // clearVisitedInner: function() {
-  //   inner_view_history = [];
-  //   LH.updateDropdown(visited_inner_views, inner_view_history);
-  //   visited_inner_views.setValue("");
-  //   let keys = Object.keys(arrow_objects);
-  //   keys.forEach(function(key){
-  //     arrow_objects[key].visible = false;
-  //   });
-  //   console.log(inner_view_history);
-  // }
+      console.log("Loading: ", file);
+      loadFile2(file, forkView, nameSuffix);
+      loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
+    }
+    onDagViews = false;
+  },
+  goOuterView: function() {
+    let top = document.getElementById("city-view".offsetTop);
+    onDagViews = false;
+    window.scrollTo(0,top);
+  },
+  clearVisitedInner: function() {
+    inner_view_history = [];
+    LH.updateDropdown(visited_inner_views, inner_view_history);
+    visited_inner_views.setValue("");
+    let keys = Object.keys(arrow_objects);
+    keys.forEach(function(key){
+      arrow_objects[key].visible = false;
+    });
+    console.log(inner_view_history);
+  }
 };
 // lighthouse
 let first_key_list = [1];
@@ -423,197 +423,197 @@ function init() {
   // loadJSONFile(summary_file, manager);
 
   // GUI folders
-  // gui = new GUI({
-  //   width: 362,
-  //   height: 330
-  // });
-  // gui.domElement.style = "z-index: 3";
-  // gui.domElement.id = 'cityGUI';
-  // // console.log(document.getElementById("city-gui-container"))
-  // document.getElementById("city-gui-container").appendChild(gui.domElement);
+  gui = new GUI({
+    width: 362,
+    height: 330
+  });
+  gui.domElement.style = "z-index: 3";
+  gui.domElement.id = 'cityGUI';
+  // console.log(document.getElementById("city-gui-container"))
+  document.getElementById("city-gui-container").appendChild(gui.domElement);
 
-  // guiDataset = new GUI({
-  //   width: 362,
-  // });
-  // guiDataset.domElement.style = "z-index: 3";
-  // guiDataset.domElement.id = 'cityGUI';
-  // // console.log(document.getElementById("dataset-gui-container"))
-  // document.getElementById("dataset-gui-container").appendChild(guiDataset.domElement);
+  guiDataset = new GUI({
+    width: 362,
+  });
+  guiDataset.domElement.style = "z-index: 3";
+  guiDataset.domElement.id = 'cityGUI';
+  // console.log(document.getElementById("dataset-gui-container"))
+  document.getElementById("dataset-gui-container").appendChild(guiDataset.domElement);
 
-  // // let f0 = guiDataset.addFolder('Data Set');
-  // let selectData = guiDataset.add(paramsL, 'dataSet', data_list).name('Choose Data Set');
-  // selectData.setValue(paramsL.dataSet);
-  // selectData.onChange(
-  //   function(dataSet) {
-  //     if(addDagViews) {
-  //       setStrataUrl('?data=nodata');        
-  //     }
-  //     objects.every(object => scene_city.remove(object));
-  //     path_objects.every(object => scene_city.remove(object));
-  //     window_objects.every(object => scene_city.remove(object));
-  //     flag_objects.every(object => scene_city.remove(object));
-  //     grass_objects.every(object => scene_city.remove(object));
-  //     ceil_objects.every(object => scene_city.remove(object));
-  //     middle_objects.every(object => scene_city.remove(object));
-  //     truss_objects.every(object => scene_city.remove(object));
-  //     bush_objects.every(object => scene_city.remove(object));
-  //     let arrow_keys = Object.keys(arrow_objects);
-  //     arrow_keys.forEach(function(key){
-  //       scene_city.remove(arrow_objects[key]);
-  //     });
-  //     arrow_objects = {};
-  //     // light_objects.spotLight.visible = false;
-  //     light_objects.selectionLights.every(light => light.visible = false);
-  //     lighthouse_objects.every(object => scene_lighthouse.remove(object));
+  // let f0 = guiDataset.addFolder('Data Set');
+  let selectData = guiDataset.add(paramsL, 'dataSet', data_list).name('Choose Data Set');
+  selectData.setValue(paramsL.dataSet);
+  selectData.onChange(
+    function(dataSet) {
+      if(addDagViews) {
+        setStrataUrl('?data=nodata');        
+      }
+      objects.every(object => scene_city.remove(object));
+      path_objects.every(object => scene_city.remove(object));
+      window_objects.every(object => scene_city.remove(object));
+      flag_objects.every(object => scene_city.remove(object));
+      grass_objects.every(object => scene_city.remove(object));
+      ceil_objects.every(object => scene_city.remove(object));
+      middle_objects.every(object => scene_city.remove(object));
+      truss_objects.every(object => scene_city.remove(object));
+      bush_objects.every(object => scene_city.remove(object));
+      let arrow_keys = Object.keys(arrow_objects);
+      arrow_keys.forEach(function(key){
+        scene_city.remove(arrow_objects[key]);
+      });
+      arrow_objects = {};
+      // light_objects.spotLight.visible = false;
+      light_objects.selectionLights.every(light => light.visible = false);
+      lighthouse_objects.every(object => scene_lighthouse.remove(object));
       
-  //     if (dataSet === data_list[0]) {
-  //       // friendster
-  //       ground_object.scale.set(0.4, 0.1, 0.3);
-  //       ground_object.position.set(-60, -10, 20);
-  //       perspectiveCameraL.position.y = 10;
-  //       perspectiveCameraL.position.z = 20;
-  //     } else if (dataSet === data_list[1]) {
-  //       // movies
-  //       ground_object.scale.set(0.22, 0.08, 0.2);
-  //       ground_object.position.set(-30, -9, 0);
-  //       perspectiveCameraL.position.y = 60;
-  //       perspectiveCameraL.position.z = 85;
-  //     } else if (dataSet === data_list[2]) {
-  //       // patents
-  //       ground_object.scale.set(0.22, 0.08, 0.2);
-  //       ground_object.position.set(-30, -9, 0);
-  //       perspectiveCameraL.position.y = 2;
-  //       perspectiveCameraL.position.z = 10;
-  //     }
+      if (dataSet === data_list[0]) {
+        // friendster
+        ground_object.scale.set(0.4, 0.1, 0.3);
+        ground_object.position.set(-60, -10, 20);
+        perspectiveCameraL.position.y = 10;
+        perspectiveCameraL.position.z = 20;
+      } else if (dataSet === data_list[1]) {
+        // movies
+        ground_object.scale.set(0.22, 0.08, 0.2);
+        ground_object.position.set(-30, -9, 0);
+        perspectiveCameraL.position.y = 60;
+        perspectiveCameraL.position.z = 85;
+      } else if (dataSet === data_list[2]) {
+        // patents
+        ground_object.scale.set(0.22, 0.08, 0.2);
+        ground_object.position.set(-30, -9, 0);
+        perspectiveCameraL.position.y = 2;
+        perspectiveCameraL.position.z = 10;
+      }
 
-  //     animate();
-  //   //   scene_city_description.innerText = "V: "+V[dataSet]+", E: "+E[dataSet];
-  //     source_dir = data_dir + dataSet + "/";
-  //     spiral_file = data_dir + dataSet + "/SPIRAL.txt";
-  //     voronoi_file = python_dir + dataSet + "/voronoi.txt";
-  //     neighbors_file = python_dir + dataSet + "/neighbors.txt";
-  //     meta_file = python_dir + dataSet + "/metagraph_normalized.txt";
-  //     lighthouse_file = lighthouse_dir+dataSet+'-layers-dists.json';
-  //     entropy_file = lighthouse_dir+dataSet+'_entropy.json';
-  //     bucket_file = lighthouse_dir+dataSet+'-bucket2peels.json';
-  //     summary_file =  data_dir + dataSet + "-summary.json";
+      animate();
+    //   scene_city_description.innerText = "V: "+V[dataSet]+", E: "+E[dataSet];
+      source_dir = data_dir + dataSet + "/";
+      spiral_file = data_dir + dataSet + "/SPIRAL.txt";
+      voronoi_file = python_dir + dataSet + "/voronoi.txt";
+      neighbors_file = python_dir + dataSet + "/neighbors.txt";
+      meta_file = python_dir + dataSet + "/metagraph_normalized.txt";
+      lighthouse_file = lighthouse_dir+dataSet+'-layers-dists.json';
+      entropy_file = lighthouse_dir+dataSet+'_entropy.json';
+      bucket_file = lighthouse_dir+dataSet+'-bucket2peels.json';
+      summary_file =  data_dir + dataSet + "-summary.json";
 
-  //     time = new Date();
-  //     manager = new THREE.LoadingManager();
-  //     manager.onStart = function(url, itemsLoaded, itemsTotal) {
-  //       console.log('Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.');
-  //     };
-  //     start_time_string = time.getMinutes() + ':' + time.getSeconds() + '.' + time.getMilliseconds();
-  //     city_tracking = {};
-  //     city_all = {};
-  //     city_list = [];
-  //     objects = [], path_objects = [], ceil_objects = [], middle_objects = [], truss_objects = [];
-  //     window_objects = [], flag_objects = [], arrow_objects = [];
-  //     key_to_buckets = {};
-  //     selected_buildings = [];
-  //     lighthouseData = {}, entropy = {}, bucketData = {}, summaryData = {};
-  //     metaLoaded = false, voronoiLoaded = false, entropyLoaded = false, lighthouseLoaded = false, bucketLoaded = false;
-  //     pathPlanningDone = false, lighthouseDone = false;
-  //     light_objects.selectionLights.forEach(object => object.visible = false);
-  //     scene_city_description.innerText = "";
-  //     loadBushData(source_dir);
-  //     loadFile(spiral_file, manager);
-  //     loadJSONFile(lighthouse_file, manager);
-  //     loadJSONFile(entropy_file, manager);
-  //     loadJSONFile(bucket_file, manager);
-  //     loadJSONFile(summary_file, manager);
-  //     animate();
-  //   }
-  // );
+      time = new Date();
+      manager = new THREE.LoadingManager();
+      manager.onStart = function(url, itemsLoaded, itemsTotal) {
+        console.log('Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.');
+      };
+      start_time_string = time.getMinutes() + ':' + time.getSeconds() + '.' + time.getMilliseconds();
+      city_tracking = {};
+      city_all = {};
+      city_list = [];
+      objects = [], path_objects = [], ceil_objects = [], middle_objects = [], truss_objects = [];
+      window_objects = [], flag_objects = [], arrow_objects = [];
+      key_to_buckets = {};
+      selected_buildings = [];
+      lighthouseData = {}, entropy = {}, bucketData = {}, summaryData = {};
+      metaLoaded = false, voronoiLoaded = false, entropyLoaded = false, lighthouseLoaded = false, bucketLoaded = false;
+      pathPlanningDone = false, lighthouseDone = false;
+      light_objects.selectionLights.forEach(object => object.visible = false);
+      scene_city_description.innerText = "";
+      loadBushData(source_dir);
+      loadFile(spiral_file, manager);
+      loadJSONFile(lighthouse_file, manager);
+      loadJSONFile(entropy_file, manager);
+      loadJSONFile(bucket_file, manager);
+      loadJSONFile(summary_file, manager);
+      animate();
+    }
+  );
 
   // f0.open();
 
-  // let f1 = gui.addFolder('Positioning Info');
-  // f1.add(building_params, 'position').name('floor id').listen();
-  // // f1.add(building_params, 'layer').name('layer info').listen();
-  // // f1.open();
+  let f1 = gui.addFolder('Positioning Info');
+  f1.add(building_params, 'position').name('floor id').listen();
+  // f1.add(building_params, 'layer').name('layer info').listen();
+  // f1.open();
 
-  // let f2 = gui.addFolder('Camera Control');
-  // f2.add(params, 'resetCamera').name('reset camera');
-  // f2.add(params, 'topView').name('top view');
-  // f2.add(params, 'orthographicCamera').name('use orthographic').onChange(
-  //   function(value) {
-  //     // controls.dispose();
-  //     createControls(value ? orthographicCamera : perspectiveCamera);
+  let f2 = gui.addFolder('Camera Control');
+  f2.add(params, 'resetCamera').name('reset camera');
+  f2.add(params, 'topView').name('top view');
+  f2.add(params, 'orthographicCamera').name('use orthographic').onChange(
+    function(value) {
+      // controls.dispose();
+      createControls(value ? orthographicCamera : perspectiveCamera);
+      animate();
+    });
+  f2.add(params, 'panCity').name('Pan around a city');
+  f2.add(params, 'zoomBuilding').name('Zoom in to "root"');
+  f2.add(params, 'panBuilding').name('Zoom in and pan around');
+  // f2.open();
+
+  let f3 = gui.addFolder('Environment Control');
+  f3.add(params, 'outer').name('outer frustums').onChange(function(value) {
+    truss_objects.forEach(object => object.visible = value);
+    animate();
+  });
+  f3.add(params, 'middle').name('middle frustums').onChange(function(value) {
+    middle_objects.forEach(object => object.visible = value);
+    animate();
+  });
+  f3.add(params, 'ceilVisible').name('frustum ceiling').onChange(function(value) {
+    ceil_objects.forEach(object => object.visible = value);
+    animate();
+  });
+  f3.add(params, 'isNight').name('night view').onChange(function(value) {
+    dayAndNight(value, light_objects, window_objects);
+    animate();
+  });
+  // f3.addColor(params, 'ground').name('ground color').onChange( function( colorValue ) {
+  //     colorValue = parseInt(colorValue.replace('#','0x'), 16);
+  //     let colorObject = new THREE.Color( colorValue );
+  //     groundMesh.material.color = colorObject;
   //     animate();
-  //   });
-  // f2.add(params, 'panCity').name('Pan around a city');
-  // f2.add(params, 'zoomBuilding').name('Zoom in to "root"');
-  // f2.add(params, 'panBuilding').name('Zoom in and pan around');
-  // // f2.open();
+  // });
+  // f3.open();
 
-  // let f3 = gui.addFolder('Environment Control');
-  // f3.add(params, 'outer').name('outer frustums').onChange(function(value) {
-  //   truss_objects.forEach(object => object.visible = value);
-  //   animate();
-  // });
-  // f3.add(params, 'middle').name('middle frustums').onChange(function(value) {
-  //   middle_objects.forEach(object => object.visible = value);
-  //   animate();
-  // });
-  // f3.add(params, 'ceilVisible').name('frustum ceiling').onChange(function(value) {
-  //   ceil_objects.forEach(object => object.visible = value);
-  //   animate();
-  // });
-  // f3.add(params, 'isNight').name('night view').onChange(function(value) {
-  //   dayAndNight(value, light_objects, window_objects);
-  //   animate();
-  // });
-  // // f3.addColor(params, 'ground').name('ground color').onChange( function( colorValue ) {
-  // //     colorValue = parseInt(colorValue.replace('#','0x'), 16);
-  // //     let colorObject = new THREE.Color( colorValue );
-  // //     groundMesh.material.color = colorObject;
-  // //     animate();
-  // // });
-  // // f3.open();
-
-  // let f4 = gui.addFolder('Spanning Tree Root');
-  // root_dropdown = f4.add(params, 'all', ['default', 'example 1', 'example 2']);
-  // root_dropdown.setValue('default');
-  // root_dropdown.onChange(
-  //   function(value) {
-  //     if(addDagViews) {
-  //       setStrataUrl('?data=nodata');
-  //     }
-  //     path_objects.every(object => scene_city.remove(object));
-  //     animate();
-  //     path_objects = [];
-  //     // console.log("394:"+value);
-  //     let result = PATH.pathPlanning(value, scene_city, city_all, light_objects);
-  //     scene_city = result.scene;
-  //     path_objects = result.path;
-  //     light_objects = result.light_objects;
-  //     // console.log('addDagViews')
-  //     // console.log(addDagViews)
-  //     // if(onDagViews){
-  //     //   console.log("******** " + value + " *********");
-  //     //   console.log("******** " + paramsL.dataSet + " *********");
+  let f4 = gui.addFolder('Spanning Tree Root');
+  root_dropdown = f4.add(params, 'all', ['default', 'example 1', 'example 2']);
+  root_dropdown.setValue('default');
+  root_dropdown.onChange(
+    function(value) {
+      if(addDagViews) {
+        setStrataUrl('?data=nodata');
+      }
+      path_objects.every(object => scene_city.remove(object));
+      animate();
+      path_objects = [];
+      // console.log("394:"+value);
+      let result = PATH.pathPlanning(value, scene_city, city_all, light_objects);
+      scene_city = result.scene;
+      path_objects = result.path;
+      light_objects = result.light_objects;
+      // console.log('addDagViews')
+      // console.log(addDagViews)
+      // if(onDagViews){
+      //   console.log("******** " + value + " *********");
+      //   console.log("******** " + paramsL.dataSet + " *********");
   
-  //     //   let wavemap_ID_ID_freq = value.split('_');
-  //     //   let file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2] + '.json';
-  //     //   console.log("Loading: ", file);
-  //     //   loadFile2(file);
-  //     //   loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);  
-  //     // }
-  //   }
-  // );
-  // root_dropdown_highlighted = f4.add(params, 'highlighted',['default root']);
-  // root_dropdown_highlighted.setValue('default');
-  // root_dropdown_highlighted.onChange(
-  //   function(value) {
-  //     root_dropdown.setValue(value);
-  //   }
-  // )
-  // f4.add(params, 'goInnerView').name("Go Inner View");
-  // f4.add(params, 'goOuterView').name("Go City View"); // TODO: move to DAG view
-  // f4.add(params, 'clearVisitedInner').name("Clear Visited History");
-  // visited_inner_views = f4.add(params, 'visitedInner',[]).name("Visited Inner Views");
-  // f4.open();
+      //   let wavemap_ID_ID_freq = value.split('_');
+      //   let file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2] + '.json';
+      //   console.log("Loading: ", file);
+      //   loadFile2(file);
+      //   loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);  
+      // }
+    }
+  );
+  root_dropdown_highlighted = f4.add(params, 'highlighted',['default root']);
+  root_dropdown_highlighted.setValue('default');
+  root_dropdown_highlighted.onChange(
+    function(value) {
+      root_dropdown.setValue(value);
+    }
+  )
+  f4.add(params, 'goInnerView').name("Go Inner View");
+  f4.add(params, 'goOuterView').name("Go City View"); // TODO: move to DAG view
+  f4.add(params, 'clearVisitedInner').name("Clear Visited History");
+  visited_inner_views = f4.add(params, 'visitedInner',[]).name("Visited Inner Views");
+  f4.open();
 
   // groud
   let groundNormal = new THREE.TextureLoader().load(ground_texture_file);
@@ -1208,31 +1208,31 @@ function render() {
   // }
 }
 
-// function panCity() {
-//   theta = 0;
-//   radius = 400;
-//   toPanCity = true;
-//   toPanBuilding = false;
-//   toZoomBuilding = false;
-//   render();
-// }
+function panCity() {
+  theta = 0;
+  radius = 400;
+  toPanCity = true;
+  toPanBuilding = false;
+  toZoomBuilding = false;
+  render();
+}
 
-// function panBuilding() {
-//   theta = 0;
-//   radius = 50;
-//   toPanBuilding = true;
-//   toPanCity = false;
-//   toZoomBuilding = false;
-//   render();
-// }
+function panBuilding() {
+  theta = 0;
+  radius = 50;
+  toPanBuilding = true;
+  toPanCity = false;
+  toZoomBuilding = false;
+  render();
+}
 
-// function zoomBuilding() {
-//   theta = 0.03;
-//   toZoomBuilding = true;
-//   toPanBuilding = false;
-//   toPanCity = false;
-//   render();
-// }
+function zoomBuilding() {
+  theta = 0.03;
+  toZoomBuilding = true;
+  toPanBuilding = false;
+  toPanCity = false;
+  render();
+}
 
 function onMouseMove(event) {
   event.preventDefault();
