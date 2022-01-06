@@ -11,12 +11,19 @@ function updateDropdown(target, list){
 
 function loadNeighbors(city_all, lines, filename='') {
     let neighbors = [];
+    let weightedNeighbors = [];
+    // console.log(lines)
+    // console.log('loadNeighbors')
     for(let i=0; i<lines.length-1; i++){
         let elements = lines[i].trim().split(' ');
+        // console.log(elements)
         let neighbor_pair = [elements[0],elements[1]];
+        let weightedNeighbor_pair = [elements[0],elements[1],parseFloat(elements[2])];
         neighbors.push(neighbor_pair);
+        weightedNeighbors.push(weightedNeighbor_pair);
     }
     city_all.graph = makeGraph(neighbors);
+    city_all.weightedGraph = makeWeightedGraph(weightedNeighbors);
     return {all: city_all};
 }
 
@@ -65,6 +72,26 @@ function makeGraph(neighbors){
         }
         if(! graph_dict[element[1]].includes(element[0])){
             graph_dict[element[1]].push(element[0]);
+        }        
+    }
+    return graph_dict;
+}
+
+function makeWeightedGraph(weighedNeighbors){
+    let graph_dict = {};
+    for (let i = 0; i < weighedNeighbors.length; i++) {
+        let element = weighedNeighbors[i];
+        if(!(element[0] in graph_dict)){
+            graph_dict[element[0]] = [];
+        }
+        if(!(element[1] in graph_dict)){
+            graph_dict[element[1]] = [];
+        }
+        if(! graph_dict[element[0]].includes(element[1])){
+            graph_dict[element[0]].push([element[1], element[2]]);
+        }
+        if(! graph_dict[element[1]].includes(element[0])){
+            graph_dict[element[1]].push([element[0], element[2]]);
         }        
     }
     return graph_dict;
@@ -258,4 +285,36 @@ function makeSpanningTreeDebug(graph, root){
 // let root = 'A';
 // makeSpanningTreeDebug(graph, root);
 
-export {updateDropdown, loadNeighbors, loadMeta, pathPlanning};
+function getTourPath(graph, src, tgt) {
+    const prevDict = {};
+    const queue = new PriorityQueue({ comparator: function(a, b) { return -(b[1] - a[1]); }});
+    queue.queue([src, 0, null]);
+    console.log(graph)
+    while(queue.length !== 0) {
+        const [tempNode, tempDist, prevNode] = queue.dequeue();
+        if (prevDict.hasOwnProperty(tempNode)) {
+            continue;
+        }
+        prevDict[tempNode] = prevNode;
+        if (tempNode.normalize() === tgt.normalize()) {
+            break;
+        }
+
+        for (const [nextNode, dist] of graph[tempNode]) {
+            if (prevDict.hasOwnProperty(nextNode)) {
+                continue;
+            }
+            queue.queue([nextNode, tempDist + dist, tempNode])
+        };
+    }
+    
+    let tempNode = tgt;
+    const path = [];
+    while (tempNode !== null) {
+        path.unshift(tempNode);
+        tempNode = prevDict[tempNode];
+    };
+    return path;
+}
+
+export {updateDropdown, loadNeighbors, loadMeta, pathPlanning, getTourPath};
