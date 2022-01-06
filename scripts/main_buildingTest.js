@@ -221,7 +221,8 @@ const map_dir = "../data_maps/";
 let source_dir = data_dir + paramsL.dataSet + "/";
 let spiral_file = data_dir + paramsL.dataSet + "/SPIRAL.txt";
 let voronoi_file = python_dir + paramsL.dataSet + "/voronoi.txt";
-let neighbors_file = python_dir + paramsL.dataSet + "/neighbors.txt";
+// let neighbors_file = python_dir + paramsL.dataSet + "/neighbors.txt";
+let neighbors_file = python_dir + paramsL.dataSet + "/neighbors_weighted.txt";
 let meta_file = python_dir + paramsL.dataSet + "/metagraph_normalized.txt";
 // let lighthouse_file = lighthouse_dir+paramsL.dataSet+'-layers-dists.json';
 // let entropy_file = lighthouse_dir+paramsL.dataSet+'_entropy.json';
@@ -846,7 +847,7 @@ function loadedVoronoi(evt) {
   let element_count = (lines[0].split(' ').length);
   let filename = evt.target.url;
   let result;
-  if (element_count > 2) {
+  if (element_count > 3) {
     result = BUILD.loadVoronoi(city_all, lines, filename);
   } else {
     result = PATH.loadNeighbors(city_all, lines, filename);
