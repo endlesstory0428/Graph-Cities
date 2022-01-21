@@ -74,6 +74,100 @@
 			z-index: 4;
 		}
 
+		/* start controller css */
+
+		#city-overlay-container {
+			position: relative;
+			display: inline-flex;
+			left: 365px;
+			top: 210px;
+			cursor: pointer;
+		}
+
+		#reset-camera {
+			position: relative;
+			right: 180px;
+			top: -25px;
+			height: 20px;
+		}
+
+		#zoom-in{
+			position: relative;
+			right: 151px;
+			top: 50px;
+			z-index: 4;
+			height: 20px;
+		}
+
+		#zoom-out{
+			position: relative;
+			right: 220px;
+			top: 70px;
+			z-index: 4;
+			height: 20px;
+		}
+
+		#overlay-slider {
+			writing-mode: bt-lr;
+			/* IE */
+			-webkit-appearance: slider-vertical;
+			width: 30px;
+		}
+
+		#overlay-circle-controller {
+			border-radius: 50%;
+			background-color: rgba(0, 0, 0, 0.10);
+			z-index: 4;
+			/* cursor: pointer; */
+		}
+
+		#left {
+			position: relative;
+			top: 55px;
+		}
+
+		#up {
+			position: relative;
+			left: 45px;
+		}
+
+		#right {
+			position: relative;
+			top: 55px;
+			left: 95px;
+		}
+
+		#down {
+			position: relative;
+			top: 110px;
+			left: 10px;
+		}
+
+		#north-west {
+			position: relative;
+			top: 15px;
+			right: 45px;
+		}
+
+		#north-east {
+			position: relative;
+			top: 15px;
+			left: 20px;
+		}
+
+		#south-east {
+			position: relative;
+			top: 95px;
+		}
+
+		#south-west {
+			position: relative;
+			top: 95px;
+			right: 105px;
+		}
+
+		/* end */
+
 		#city-building-map {
 			position: absolute;
 			top: 100px;
@@ -83,28 +177,28 @@
 			overflow: scroll;
 		}
 
-		.map-tooltip{
+		.map-tooltip {
 			z-index: 5;
-        	font-size: smaller;
+			font-size: smaller;
 			max-height: 100px;
-        }
+		}
 
-        .axis line{
-          stroke: white;
-        }
-        
-        .axis path{
-          stroke: white;
-        }
-        
-        .axis text{
-          fill: white;
-        }
+		.axis line {
+			stroke: white;
+		}
 
-        .grid line{
-          stroke: grey;
-          opacity: 0.4;
-        }
+		.axis path {
+			stroke: white;
+		}
+
+		.axis text {
+			fill: white;
+		}
+
+		.grid line {
+			stroke: grey;
+			opacity: 0.4;
+		}
 
 		/* #cityGUI{
 			right: 0px;
@@ -132,7 +226,7 @@
 			position: relative;
 			left: 350px;
 			width: calc(100vw - 375px);
-			height:  100px;
+			height: 100px;
 		}
 
 		#city-description-div {
@@ -242,14 +336,43 @@
 		<div id="custom_slider"></div>
 	</div>
 	<div id="city-gui-container"></div>
+
+
 	<div id="city-description-container">
 		<div id="city-description-div"><span id="city-description"></span></div>
 		<div id="city-description-wrap">
-			<div id="city-description-deg-dist-div"><span id="city-description-deg-dist">degree distribution</span></div>
+			<div id="city-description-deg-dist-div"><span id="city-description-deg-dist">degree distribution</span>
+			</div>
 		</div>
 	</div>
 	<div id="city-building-map"></div>
+
 	<div class="col" id="city-view"></div>
+	<div id="city-overlay-container">
+		<input type="range" orient="vertical" id="overlay-slider">
+		<div id="overlay-circle-controller">
+			<!-- left -->
+			<span id="left">&#8592;</span>
+			<!-- up -->
+			<span id="up">&#8593;</span>
+			<!-- right -->
+			<span id="right">&#8594;</span>
+			<!-- down -->
+			<span id="down">&#8595;</span>
+			<!-- north west -->
+			<span id="north-west">&#8598;</span>
+			<!-- north east -->
+			<span id="north-east">&#8599;</span>
+			<!-- south east -->
+			<span id="south-east">&#8600;</span>
+			<!-- south west -->
+			<span id="south-west">&#8601;</span>			
+		</div>
+		<input type="button" value="Reset" id="reset-camera">
+		<input type="button" value="Zoom-In" id="zoom-in">
+		<input type="button" value="Zoom-Out" id="zoom-out">
+	</div>
+	</div>
 
 	<div id="inner-view" class="element-container">
 		<!-- <div id="bottom-gui-container"></div>                                         -->
@@ -259,13 +382,17 @@
 		<!-- </div>                                                                        -->
 		<div id="bottom-gui-container"></div>
 		<div id="graph" style="float: left; width: 49.5%; height: 100%"></div>
-		<div id="peelCC-warp" style="border-style:solid; position: absolute; bottom: 4px; left: 4px; width: 49%; height: 45%; visibility: hidden;">
-			<div id="peelCC-close" style="position: absolute; top: 2px; right: 4px; font-family: sans-serif; font-size: 20px; z-index: 2;">x</div>
+		<div id="peelCC-warp"
+			style="border-style:solid; position: absolute; bottom: 4px; left: 4px; width: 49%; height: 45%; visibility: hidden;">
+			<div id="peelCC-close"
+				style="position: absolute; top: 2px; right: 4px; font-family: sans-serif; font-size: 20px; z-index: 2;">
+				x</div>
 			<div id="peelCC" style="width: 100%; height: 100%"></div>
 			<div id="peelCC-menu" style="position: absolute; top: 0px; left: 4px;"></div>
 		</div>
 		<div style="float: right; width: 50%; height: 100%; border-left: 5px solid black; ">
-			<iframe id="strata" src=http://172.16.93.174:8080/?data=nodatasimplegraph width="100%" height="100%"></iframe>
+			<iframe id="strata" src=http://172.16.93.174:8080/?data=nodatasimplegraph width="100%"
+				height="100%"></iframe>
 		</div>
 	</div>
 

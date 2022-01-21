@@ -2,6 +2,7 @@ import * as THREE from '../node_modules/three/build/three.module.js';
 import {
   TrackballControls
 } from '../node_modules/three/examples/jsm/controls/TrackballControls.js';
+import { OrbitControls } from "https://threejs.org/examples/jsm/controls/OrbitControls.js";
 import {
   GUI
 } from '../node_modules/three/examples/jsm/libs/dat.gui.module.js';
@@ -50,6 +51,7 @@ let bush_objects = [];
 let light_objects = {};
 let key_to_buckets = {};
 let arrow_objects = {};
+let flag_objects_new = {};
 let metaLoaded = false,
   voronoiLoaded = false,
   lighthouseLoaded = false,
@@ -71,10 +73,16 @@ let mapControlHighLightBuilding = [];
 let mapWaveSelection = false;
 let mapWaveSelectedName;
 let dagSizeDict;
+let global_building = {};
+let allowed;
+let shouldArrowBeVisible;
+let visibleRadius = 50;
 
 let buildingMapControls = {}
 
 const data_list = ['got', 'cit-Patents', 'starwars'];
+//const data_list = ['got', 'movies', 'starwars'];
+//const data_list = ['got', 'com-friendster', 'starwars'];
 const V = {'com-friendster':65608366, 'movies':218052, 'cit-Patents':3774768};
 const E = {'com-friendster':1806067135, 'movies':115050370, 'cit-Patents':16518947};
 const connected = {'com-friendster':true, 'movies':false, 'cit-Patents':false};
@@ -93,9 +101,29 @@ let radius = 500,
   toPanCity = false,
   toPanBuilding = false,
   toZoomBuilding = false;
+// Camera offset
+let offset = 15;
 // GUI parameters
 let params = {
   orthographicCamera: false,
+  // move_north: function() {
+  //   moveCamera("North", -1 * offset);
+  // },
+  // move_south: function() {
+  //   moveCamera("South", offset);
+  // },
+  // move_west: function() {
+  //   moveCamera("West", -1 * offset);
+  // },
+  // move_east: function() {
+  //   moveCamera("East", offset);
+  // },
+  // move_up: function() {
+  //   moveCamera("UP", offset);
+  // },
+  // move_down: function() {   
+  //   moveCamera("Down", -1 * offset);
+  // },
   resetCamera: function() {
     toPanBuilding = false;
     toPanCity = false;
@@ -221,7 +249,7 @@ const map_dir = "../data_maps/";
 let source_dir = data_dir + paramsL.dataSet + "/";
 let spiral_file = data_dir + paramsL.dataSet + "/SPIRAL.txt";
 let voronoi_file = python_dir + paramsL.dataSet + "/voronoi.txt";
-// let neighbors_file = python_dir + paramsL.dataSet + "/neighbors.txt";
+//let neighbors_file = python_dir + paramsL.dataSet + "/neighbors.txt";
 let neighbors_file = python_dir + paramsL.dataSet + "/neighbors_weighted.txt";
 let meta_file = python_dir + paramsL.dataSet + "/metagraph_normalized.txt";
 // let lighthouse_file = lighthouse_dir+paramsL.dataSet+'-layers-dists.json';
@@ -240,6 +268,8 @@ let water;
 const scene_city_element = document.getElementById("city-element");
 const scene_city_description = document.getElementById("city-description");
 let views, lighthouse_view, city_view;
+let overlay_slider, overlay_circle_controller, overlay_reset_camera, overlay_zoom_in, overlay_zoom_out;
+let controllerOnHold = {status: false, target: null};
 
 init();
 animate();
@@ -256,6 +286,7 @@ function init() {
   
   lighthouse_view = document.querySelector('#lighthouse-view');
   city_view = document.querySelector('#city-view');
+  
   views = [lighthouse_view, city_view];
 
   const canvas2 = document.createElement('canvas');
@@ -378,7 +409,11 @@ function init() {
 
   createControls(perspectiveCamera);
   
-  const city_controls = new TrackballControls(scene_city.userData.camera, city_view);
+  //const city_controls = new TrackballControls(scene_city.userData.camera, city_view);
+  const city_controls = new OrbitControls(scene_city.userData.camera, city_view);
+  city_controls.minDistance = 20;
+  city_controls.maxDistance = 800;
+  city_controls.maxPolarAngle = Math.PI / 2 ;
   city_controls.rotateSpeed = 1.0;
   city_controls.zoomSpeed = 1.2;
   city_controls.panSpeed = 0.8;
@@ -463,12 +498,20 @@ function init() {
         scene_city.remove(arrow_objects[key]);
       });
       arrow_objects = {};
+      //
+      let flag_objects_new_keys = Object.keys(flag_objects_new);
+      flag_objects_new_keys.forEach(function(key){
+        scene_city.remove(flag_objects_new[key]);
+      });
+      flag_objects_new = {};
+      //
+      
       // light_objects.spotLight.visible = false;
       light_objects.selectionLights.every(light => light.visible = false);
       lighthouse_objects.every(object => scene_lighthouse.remove(object));
       
       if (dataSet === data_list[0]) {
-        // friendster
+        // friendster 
         ground_object.scale.set(0.4, 0.1, 0.3);
         ground_object.position.set(-60, -10, 20);
         perspectiveCameraL.position.y = 10;
@@ -528,6 +571,15 @@ function init() {
   );
 
   // f0.open();
+
+
+  // let f0 = gui.addFolder('Camera Navigation');
+  // f0.add(params, 'move_north').name('Move North');
+  // f0.add(params, 'move_south').name('Move South');
+  // f0.add(params, 'move_west').name('Move West');
+  // f0.add(params, 'move_east').name('Move East');
+  // f0.add(params, 'move_up').name('Move Up');
+  // f0.add(params, 'move_down').name('Move Down');
 
   let f1 = gui.addFolder('Positioning Info');
   f1.add(building_params, 'position').name('floor id').listen();
@@ -644,7 +696,7 @@ function init() {
   scene_city.add(waterMesh);
 
   city_view.addEventListener('mousemove',onMouseMove);
-  // city_view.addEventListener('mousedown',onMouseDown);
+  city_view.addEventListener('mousedown',onMouseDown);
   scenes.push(scene_city);
 
   // // lighthouse scene
@@ -687,6 +739,28 @@ function init() {
   // customContainer.appendChild(guiL.domElement);
 }
 
+function zoomAtBuilding(selected_building){  
+  let camera = scene_city.userData.camera;  
+  let initialCameraPosition = camera.position;
+  let initialTargetPosition = scene_city.userData.controls.target;
+
+  let building = city_all[selected_building].coords;
+  let building_position = new THREE.Vector3(building[0], building[3], building[1]);
+  let arrow_position = arrow_objects[selected_building].position;
+
+  let finalTargetPosition = new THREE.Vector3(building_position.x, arrow_position.y * 0.40, building_position.z);
+  let move_away = arrow_position.y / (2 * Math.tan( THREE.MathUtils.degToRad( camera.fov ) / 2 ));
+  let finalCameraPosition = new THREE.Vector3(building_position.x, arrow_position.y, building_position.z + move_away);
+  
+  return new Promise((resolve) => {
+    setTimeout(resolve, transitionCamera(    
+      {camera: initialCameraPosition, target: initialTargetPosition},
+      {camera: finalCameraPosition, target: finalTargetPosition},
+      1000
+    ) + 500)
+  });
+}
+
 //load ground OBJ file
 function groundObjLoader(obj_url, obj_material) {
   var loader = new OBJLoader();
@@ -698,14 +772,14 @@ function groundObjLoader(obj_url, obj_material) {
         if (child.type == "Mesh") {
           child.material = obj_material;
         }
-      });
-      if (paramsL.dataSet === data_list[0]) {
+      });      
+      if (paramsL.dataSet === data_list[0]) {        
         object.scale.set(0.4, 0.1, 0.3);
         object.position.set(-60, -10, 20);
       } else if (paramsL.dataSet === data_list[1]) {
         object.scale.set(0.4, 0.1, 0.3);
         object.position.set(-30, -9, 0);
-      } else if (paramsL.dataSet === data_list[2]) {
+      } else if (paramsL.dataSet === data_list[2]) {      
         object.scale.set(0.4, 0.1, 0.3);
         object.position.set(-30, -9, 0);
       }
@@ -982,7 +1056,8 @@ function loaded(evt) {
 // }
 
 function createControls(camera) {
-  controls = new TrackballControls(camera, renderer.domElement);
+  //controls = new TrackballControls(camera, renderer.domElement);
+  controls = new OrbitControls(camera, renderer.domElement);
   console.log('createControls', controls);
   controls.rotateSpeed = 1.0;
   controls.zoomSpeed = 1.2;
@@ -1008,7 +1083,7 @@ function updateSize() {
   if ( canvas.width !== width || canvas.height !== height ) {
     renderer.setSize( width, height, false );
   }
-  scenes.forEach(scene => scene.userData.controls.handleResize());
+//  scenes.forEach(scene => scene.userData.controls.handleResize());
 }
 
 function animate() {
@@ -1029,12 +1104,36 @@ function animate() {
     truss_objects = result.truss;
     window_objects = result.window;
     arrow_objects = result.arrow;
+    flag_objects_new = result.flag;
   } else if (city_to_load == 0 && printTime) {
     let end_time = new Date();
     let end_time_string = end_time.getMinutes() + ':' + end_time.getSeconds() + '.' + end_time.getMilliseconds();
     console.log("start time is " + start_time_string);
     console.log("end time is " + end_time_string);
     printTime = false;
+    initOverlay();
+    
+    let allowToWalkOnPath_FeatureFlag = false;
+    if(allowToWalkOnPath_FeatureFlag){       
+      //let pathList = PATH.getTourPath(city_all.weightedGraph, 'wavemap_3_3191982_27', 'wavemap_15_3718944_45');      
+      // let path_to_try = ["wavemap_1_140109_1283","wavemap_1_62999_1884","wavemap_22_919138_1","wavemap_1_250725_1023","wavemap_11_164183_1","wavemap_10_196384_1","wavemap_5_2061_1","wavemap_13_30471_1","wavemap_19_2571623_35","wavemap_18_2914315_48","wavemap_23_1433320_64","wavemap_21_3292172_25","wavemap_4_1243_1","wavemap_15_3718944_45","wavemap_16_1362234_16","wavemap_17_1851996_8","wavemap_9_28722_1","wavemap_25_3804978_8","wavemap_3_42_1","wavemap_2_13_1","wavemap_3_3191982_27","wavemap_43_1965538_5","wavemap_19_239987_3","wavemap_1_405063_798","wavemap_14_1037462_1","wavemap_8_27645_1","wavemap_7_30601_1","wavemap_8_4342010_162","wavemap_11_2983724_385","wavemap_17_389660_1","wavemap_15_3515498_169","wavemap_15_275340_1","wavemap_6_2182_1","wavemap_12_508033_1","wavemap_13_3434164_105","wavemap_1_140109_1283"];
+
+      
+      let path_patents = ['wavemap_2_13_1', 'wavemap_3_42_1', 'wavemap_14_1037462_1', 'wavemap_1_140109_1283', 'wavemap_22_919138_1', 'wavemap_8_27645_1', 'wavemap_1_62999_1884', 'wavemap_19_239987_3', 'wavemap_3_3191982_27', 'wavemap_1_250725_1023', 'wavemap_1_405063_798', 'wavemap_8_4342010_162', 'wavemap_17_389660_1', 'wavemap_7_30601_1', 'wavemap_11_2983724_385', 'wavemap_15_275340_1', 'wavemap_15_3515498_169', 'wavemap_13_3434164_105', 'wavemap_12_508033_1', 'wavemap_6_2182_1', 'wavemap_15_3718944_45', 'wavemap_13_30471_1', 'wavemap_23_1433320_64', 'wavemap_18_2914315_48', 'wavemap_11_164183_1', 'wavemap_5_2061_1', 'wavemap_19_2571623_35', 'wavemap_10_196384_1', 'wavemap_21_3292172_25', 'wavemap_16_1362234_16', 'wavemap_4_1243_1', 'wavemap_17_1851996_8', 'wavemap_25_3804978_8', 'wavemap_9_28722_1', 'wavemap_43_1965538_5', 'wavemap_2_13_1'];
+      let path_patents_in_to_out = ["wavemap_3_42_1","wavemap_5_2061_1","wavemap_6_2182_1","wavemap_7_30601_1","wavemap_8_27645_1","wavemap_2_13_1","wavemap_9_28722_1","wavemap_4_1243_1","wavemap_10_196384_1","wavemap_11_164183_1","wavemap_13_30471_1","wavemap_12_508033_1","wavemap_15_275340_1","wavemap_17_389660_1","wavemap_14_1037462_1","wavemap_22_919138_1","wavemap_19_239987_3","wavemap_43_1965538_5","wavemap_25_3804978_8","wavemap_17_1851996_8","wavemap_16_1362234_16","wavemap_21_3292172_25","wavemap_19_2571623_35","wavemap_18_2914315_48","wavemap_23_1433320_64","wavemap_15_3718944_45","wavemap_13_3434164_105","wavemap_15_3515498_169","wavemap_11_2983724_385","wavemap_8_4342010_162","wavemap_1_405063_798","wavemap_1_250725_1023","wavemap_1_140109_1283","wavemap_1_62999_1884","wavemap_3_3191982_27"]
+      let path_patents_out_to_in = path_patents_in_to_out.slice().reverse();
+
+      // let path_friend = ['wavemap_1_2878103_708', 'wavemap_1_17833995_771', 'wavemap_1_6980866_827', 'wavemap_58_2035500_1', 'wavemap_21_1374_1', 'wavemap_15_690_1', 'wavemap_40_38645_1', 'wavemap_34_87642_1', 'wavemap_1_60939141_881', 'wavemap_22_6161_1', 'wavemap_29_735_1', 'wavemap_1_15204409_930', 'wavemap_14_14107_1', 'wavemap_1_31820411_979', 'wavemap_1_201283_1031', 'wavemap_1_10126754_1079', 'wavemap_92_49855703_1', 'wavemap_4_101_1', 'wavemap_3_101_1', 'wavemap_53_1266_1', 'wavemap_86_49855703_1', 'wavemap_304_1850520_1', 'wavemap_5_173_1', 'wavemap_1_14609_1141', 'wavemap_32_248525_1', 'wavemap_54_1563_1', 'wavemap_1_7241947_1198', 'wavemap_20_9823427_1', 'wavemap_4_6552536_1280', 'wavemap_1_1443591_1372', 'wavemap_1_754869_1520', 'wavemap_82_49855703_2', 'wavemap_13_101_1', 'wavemap_175_260453_1', 'wavemap_25_167_1', 'wavemap_75_49855703_1', 'wavemap_7_101_1', 'wavemap_234_262712_1', 'wavemap_1_1623531_1994', 'wavemap_80_49855703_2', 'wavemap_12_131002_1', 'wavemap_2_2407314_44', 'wavemap_77_49855703_4', 'wavemap_1_8645756_634', 'wavemap_9_164816_1', 'wavemap_1_58275384_547', 'wavemap_55_643725_1', 'wavemap_71_102807_1', 'wavemap_140_180407_1', 'wavemap_9_201256_351', 'wavemap_30_11086_1', 'wavemap_65_4182_1', 'wavemap_120_11459_1', 'wavemap_89_1202_1', 'wavemap_7_19325784_356', 'wavemap_1_5249714_247', 'wavemap_41_1905_1', 'wavemap_14_238083_160', 'wavemap_35_1750_1', 'wavemap_17_60024_1', 'wavemap_19_19546040_102', 'wavemap_33_1467_1', 'wavemap_8_176_1', 'wavemap_38_1202_1', 'wavemap_16_1284_1', 'wavemap_34_90152410_52', 'wavemap_16_41201_32', 'wavemap_41_60187632_16', 'wavemap_20_123_1', 'wavemap_2_101_1', 'wavemap_31_4062912_8', 'wavemap_48_6608327_1', 'wavemap_169_11459_1', 'wavemap_11_167_1', 'wavemap_18_13234024_3', 'wavemap_27_146_1', 'wavemap_6_284_1', 'wavemap_1_2878103_708'];
+      // let path_friend_in_to_out = ["wavemap_89_1202_1","wavemap_53_1266_1","wavemap_25_167_1","wavemap_11_167_1","wavemap_38_1202_1","wavemap_120_11459_1","wavemap_140_180407_1","wavemap_15_690_1","wavemap_5_173_1","wavemap_3_101_1","wavemap_234_262712_1","wavemap_175_260453_1","wavemap_6_284_1","wavemap_169_11459_1","wavemap_2_101_1","wavemap_8_176_1","wavemap_17_60024_1","wavemap_65_4182_1","wavemap_71_102807_1","wavemap_40_38645_1","wavemap_21_1374_1","wavemap_29_735_1","wavemap_304_1850520_1","wavemap_4_101_1","wavemap_54_1563_1","wavemap_7_101_1","wavemap_13_101_1","wavemap_12_131002_1","wavemap_27_146_1","wavemap_48_6608327_1","wavemap_20_123_1","wavemap_16_1284_1","wavemap_33_1467_1","wavemap_35_1750_1","wavemap_41_1905_1","wavemap_30_11086_1","wavemap_55_643725_1","wavemap_9_164816_1","wavemap_34_87642_1","wavemap_58_2035500_1","wavemap_22_6161_1","wavemap_14_14107_1","wavemap_86_49855703_1","wavemap_92_49855703_1","wavemap_32_248525_1","wavemap_20_9823427_1","wavemap_75_49855703_1","wavemap_82_49855703_2","wavemap_80_49855703_2","wavemap_77_49855703_4","wavemap_18_13234024_3","wavemap_31_4062912_8","wavemap_41_60187632_16","wavemap_16_41201_32","wavemap_34_90152410_52","wavemap_19_19546040_102","wavemap_14_238083_160","wavemap_1_5249714_247","wavemap_7_19325784_356","wavemap_9_201256_351","wavemap_1_58275384_547","wavemap_1_8645756_634","wavemap_1_2878103_708","wavemap_1_17833995_771","wavemap_1_6980866_827","wavemap_1_60939141_881","wavemap_1_15204409_930","wavemap_1_31820411_979","wavemap_1_201283_1031","wavemap_1_10126754_1079","wavemap_1_14609_1141","wavemap_1_7241947_1198","wavemap_4_6552536_1280","wavemap_1_1443591_1372","wavemap_1_754869_1520","wavemap_1_1623531_1994","wavemap_2_2407314_44"]
+      // let path_friend_out_to_in = path_friend_in_to_out.slice().reverse();
+
+      // let path_movies = ['wavemap_31_12735_1', 'wavemap_27_11403_1', 'wavemap_50_12860_1', 'wavemap_36_12116_1', 'wavemap_13_11413_1', 'wavemap_757_11398_1', 'wavemap_1246_11398_1', 'wavemap_60_12370_2', 'wavemap_29_11432_1', 'wavemap_185_11398_1', 'wavemap_48_13096_2', 'wavemap_76_12776_2', 'wavemap_41_13114_2', 'wavemap_34_11472_1', 'wavemap_527_11398_1', 'wavemap_14_11452_1', 'wavemap_57_15545_3', 'wavemap_119_11833_1', 'wavemap_38_15906_3', 'wavemap_18_13639_3', 'wavemap_28_12051_1', 'wavemap_84_11398_1', 'wavemap_8_11589_3', 'wavemap_32_11773_1', 'wavemap_47_11398_1', 'wavemap_2070_11400_1', 'wavemap_56_16757_5', 'wavemap_53_12597_1', 'wavemap_40_13169_6', 'wavemap_37_12382_9', 'wavemap_30_12673_1', 'wavemap_26_11399_1', 'wavemap_37_23740_12', 'wavemap_62_12456_1', 'wavemap_101_11400_1', 'wavemap_414_11398_1', 'wavemap_46_11766_17', 'wavemap_7_11427_1', 'wavemap_24_12180_23', 'wavemap_29_13695_43', 'wavemap_123_11670_1', 'wavemap_12_11399_1', 'wavemap_9_12922_89', 'wavemap_16_11696_1', 'wavemap_6_11398_1', 'wavemap_283_11398_1', 'wavemap_15_17754_35', 'wavemap_33_11491_1', 'wavemap_4_11398_1', 'wavemap_14_14781_337', 'wavemap_5_16664_287', 'wavemap_2_15608_15', 'wavemap_35_13487_1', 'wavemap_2_11398_1', 'wavemap_3114_11398_1', 'wavemap_15_11645_1', 'wavemap_31_12735_1'];
+      // let path_movies_in_to_out = ["wavemap_1246_11398_1","wavemap_2070_11400_1","wavemap_414_11398_1","wavemap_283_11398_1","wavemap_3114_11398_1","wavemap_757_11398_1","wavemap_185_11398_1","wavemap_527_11398_1","wavemap_84_11398_1","wavemap_47_11398_1","wavemap_26_11399_1","wavemap_101_11400_1","wavemap_12_11399_1","wavemap_6_11398_1","wavemap_4_11398_1","wavemap_2_11398_1","wavemap_27_11403_1","wavemap_13_11413_1","wavemap_29_11432_1","wavemap_14_11452_1","wavemap_34_11472_1","wavemap_119_11833_1","wavemap_28_12051_1","wavemap_32_11773_1","wavemap_53_12597_1","wavemap_30_12673_1","wavemap_62_12456_1","wavemap_7_11427_1","wavemap_123_11670_1","wavemap_16_11696_1","wavemap_33_11491_1","wavemap_15_11645_1","wavemap_35_13487_1","wavemap_31_12735_1","wavemap_50_12860_1","wavemap_36_12116_1","wavemap_60_12370_2","wavemap_48_13096_2","wavemap_76_12776_2","wavemap_41_13114_2","wavemap_57_15545_3","wavemap_38_15906_3","wavemap_18_13639_3","wavemap_8_11589_3","wavemap_56_16757_5","wavemap_40_13169_6","wavemap_37_12382_9","wavemap_37_23740_12","wavemap_46_11766_17","wavemap_24_12180_23","wavemap_29_13695_43","wavemap_9_12922_89","wavemap_15_17754_35","wavemap_14_14781_337","wavemap_5_16664_287","wavemap_2_15608_15"];
+      // let path_movies_out_to_in = path_movies_in_to_out.slice().reverse();
+
+      walkOnPath(path_patents);
+
+    }
   }
   render();
 }
@@ -1065,6 +1164,99 @@ function render() {
 
     renderer.render( scene, scene.userData.camera );
   });
+
+  // if focused at a building, then global_building is assigned.
+  if(global_building.name){
+
+    let building_target = scene_city.userData.controls.target;
+    
+    if (building_target.distanceTo(camera.position) < visibleRadius){
+      shouldArrowBeVisible = true;
+    }else{
+      shouldArrowBeVisible = false;
+    }   
+    
+    if (shouldArrowBeVisible){
+      // arrowHeight is the default height(y-axis) at which we will show thw arrow.
+      let arrowHeight;
+      let needToUpdateArrow = false;
+      if(global_building.focusAtHeight !== undefined){
+        arrowHeight = global_building.focusAtHeight;
+        needToUpdateArrow = true;
+      }else{
+        arrowHeight = getFloorHeight(global_building.name);
+      }
+  
+      if(!global_building.arrowHelper){
+        showArrowFunction(global_building.name, arrowHeight);
+      }else{
+        if(needToUpdateArrow){
+          scene_city.remove(global_building.arrowHelper);
+          delete global_building.arrowHelper;
+          showArrowFunction(global_building.name, arrowHeight);
+        }  
+      }
+    }else{
+      if(global_building.arrowHelper){
+        scene_city.remove(global_building.arrowHelper);
+        delete global_building.arrowHelper;
+      }    
+    }
+
+  }
+
+  
+  
+
+  // always update the slider position wrt to the camera 'y' position
+  updateOverlaySlider(overlay_slider);
+
+  if (controllerOnHold.status){
+    
+    let direction = controllerOnHold.target;
+
+    let camera = scene_city.userData.camera;
+    let target = scene_city.userData.controls.target;
+    let direction_vector = new THREE.Vector3();
+
+    var ground_object_coord = new THREE.Box3().setFromObject(ground_object);
+    let min_coord = ground_object_coord.min;
+    let max_coord = ground_object_coord.max;
+    
+    camera.getWorldDirection(direction_vector);    
+
+    var axis = new THREE.Vector3( 0, 1, 0 );
+    let speed = camera.position.y * 0.025;
+    
+    if(allowed || allowed === undefined){
+      direction_vector.y = 0;
+      moveCamera(direction, direction_vector, axis, camera, target, speed);
+
+      if (camera.position.x > (1.5 * max_coord.x) || camera.position.x < (1.5 * min_coord.x) || camera.position.z > (1.5 * max_coord.z) || camera.position.z < (1.5 * min_coord.z)){
+        allowed = false;
+      }
+    }else{
+      var origin;
+      direction_vector = getDirectionVector(direction, direction_vector, axis);
+
+      if(camera.position.x > (1.5 * max_coord.x)){        
+        origin = new THREE.Vector3( -1, 0, 0 );
+      }else if(camera.position.x < (1.5 * min_coord.x)){
+        origin = new THREE.Vector3( 1, 0, 0 );
+      }else if(camera.position.z > (1.5 * max_coord.z)){
+        origin = new THREE.Vector3( 0, 0, -1 );
+      }else if(camera.position.z < (1.5 * min_coord.z)){
+        origin = new THREE.Vector3( 0, 0, 1 );
+      }
+      if(origin.dot(direction_vector) > 0){
+        allowed = true;
+      }
+    }    
+
+  }
+
+  
+
   // if (toPanCity) {
   //   // console.log("pan city "+theta);
   //   theta += 0.1;
@@ -1267,12 +1459,17 @@ function onMouseMove(event) {
       }
       building_params.position = building_params.layer + '_' + building_params.floor;
     }
+    
+    if(shouldArrowBeVisible && global_building.name){      
+      global_building.focusAtHeight = getFloorHeight(global_building.name, building_params.floor);
+    }
   } else // there are no intersections
   {
     INTERSECTED = null;
     building_params.floor = '';
     building_params.layer = '';
     building_params.position = '';
+    delete global_building.focusAtHeight;
   }
 }
 
@@ -1299,23 +1496,40 @@ function onMouseMove(event) {
 //   }
 // }
 
-// function onMouseDown(event) {
-//   // mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
-//   // mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
-//   event.preventDefault();
-//   const rect = scene_city.userData.view.getBoundingClientRect();
-//   const width = rect.right-rect.left;
-//   const height = rect.bottom-rect.top;
-//   mouse.x = ((event.clientX-sliderPos)/width)*2-1;
-//   mouse.y = -((event.clientY-mapPos)/height)*2+1;
-//   let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
-//   raycaster.setFromCamera(mouse, camera);
+function onMouseDown(event) {
+  // mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
+  // mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
+  event.preventDefault();
+  const rect = scene_city.userData.view.getBoundingClientRect();
+  const width = rect.right-rect.left;
+  const height = rect.bottom-rect.top;
+  mouse.x = ((event.clientX-sliderPos)/width)*2-1;
+  mouse.y = -((event.clientY-mapPos)/height)*2+1;
+  let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
+  raycaster.setFromCamera(mouse, camera);
 
-//   let intersects = raycaster.intersectObjects(objects);
-//   if (intersects.length > 0) {
-//     console.log("clicked on " + intersects[0].object.name);
-//   }
-// }
+  let intersects = raycaster.intersectObjects(objects);
+  let selected_building = null;
+  if (intersects.length > 0) {    
+    selected_building = "wavemap_" + intersects[0].object.layer_name; 
+    
+    // if(global_building.name){
+    //   let clickEvent = new Event('mousedown');
+    //   overlay_reset_camera.dispatchEvent(clickEvent);
+    // }
+
+    global_building.name = selected_building;    
+
+    zoomAtBuilding(selected_building)      
+    .then(() => {            
+      let showBuildingTour_FeatureFlag = false;
+      if(showBuildingTour_FeatureFlag){            
+        buildingTour(selected_building);            
+      }
+    });
+    
+  }
+}
 
 // function initSlider() {
 
@@ -1358,3 +1572,378 @@ function onMouseMove(event) {
 //   slider.style.touchAction = 'none'; // disable touch scroll
 //   slider.addEventListener('pointerdown', onPointerDown);
 // }
+
+function initOverlay(){
+  overlay_slider = document.querySelector('#overlay-slider');
+  overlay_circle_controller = document.querySelector('#overlay-circle-controller');
+  
+  overlay_zoom_in = document.querySelector('#zoom-in');
+  overlay_zoom_in.addEventListener('mousedown', onControllerZoom);
+  overlay_zoom_in.scale = 4;
+
+  overlay_zoom_out = document.querySelector('#zoom-out');
+  overlay_zoom_out.addEventListener('mousedown', onControllerZoom);
+  overlay_zoom_out.scale = 4;
+
+
+  let camera = scene_city.userData.camera;
+  overlay_slider.setAttribute("min", 10);
+  overlay_slider.setAttribute("value", camera.position.y);
+  overlay_slider.setAttribute("max", camera.position.y * 1.1);
+  overlay_slider.addEventListener('input', onSliderInput);
+  
+  overlay_reset_camera = document.querySelector('#reset-camera');
+  overlay_reset_camera.addEventListener('mousedown', onControllerReset);
+
+  let left = document.querySelector('#left');
+  left.addEventListener('mousedown', onControllerDown);
+  left.addEventListener('mouseup', onControllerUp);
+  
+  let up = document.querySelector('#up');
+  up.addEventListener('mousedown', onControllerDown);
+  up.addEventListener('mouseup', onControllerUp);
+
+  let right = document.querySelector('#right');
+  right.addEventListener('mousedown', onControllerDown);
+  right.addEventListener('mouseup', onControllerUp);
+
+  let down = document.querySelector('#down');
+  down.addEventListener('mousedown', onControllerDown);
+  down.addEventListener('mouseup', onControllerUp);
+
+  let north_west = document.querySelector('#north-west');
+  north_west.addEventListener('mousedown', onControllerDown);
+  north_west.addEventListener('mouseup', onControllerUp);
+  
+  let north_east = document.querySelector('#north-east');
+  north_east.addEventListener('mousedown', onControllerDown);
+  north_east.addEventListener('mouseup', onControllerUp);
+
+  let south_east = document.querySelector('#south-east');
+  south_east.addEventListener('mousedown', onControllerDown);
+  south_east.addEventListener('mouseup', onControllerUp);
+
+  let south_west = document.querySelector('#south-west');
+  south_west.addEventListener('mousedown', onControllerDown);
+  south_west.addEventListener('mouseup', onControllerUp);
+}
+
+async function onControllerReset(event){
+  event.preventDefault();  
+  let initialCameraPosition = scene_city.userData.camera.position;
+  let initialTargetPosition = scene_city.userData.controls.target;
+
+  let finalTargetPosition = new THREE.Vector3(0, 10, 0);
+  let finalCameraPosition = new THREE.Vector3(0, 350, 600);  
+
+  await new Promise((resolve) => setTimeout(resolve, transitionCamera(    
+    {camera: initialCameraPosition, target: initialTargetPosition},
+    {camera: finalCameraPosition, target: finalTargetPosition}    
+  )));
+  controls.reset();
+
+  if(global_building.name){
+    delete global_building.name;
+    if(global_building.timmers){
+      for(let i=0; i<global_building.timmers.length ; i++){    
+        clearTimeout(global_building.timmers[i]);
+      }  
+      delete global_building.timmers;
+    }
+    if(global_building.arrowHelper){
+      scene_city.remove(global_building.arrowHelper);
+      delete global_building.arrowHelper;
+    }
+  }  
+  global_building = {};
+  console.log(`Exit: ${JSON.stringify(global_building)}`);
+}
+
+function onControllerZoom(event){
+  event.preventDefault();
+  let wheelEventInit = {
+    'bubbles':    true,
+    'cancelable': false    
+  };
+  if (event.target.id === 'zoom-in'){
+    wheelEventInit.deltaY = -120;
+  }else{
+    wheelEventInit.deltaY = 120;
+  }
+  city_view.dispatchEvent(new WheelEvent('wheel', wheelEventInit));
+}
+
+function onControllerUp(event){
+  event.preventDefault();
+  controllerOnHold = {status: false, target: null};
+}
+
+function onControllerDown(event){
+  event.preventDefault();
+  controllerOnHold = {status: true, target: event.target.id};
+}
+
+function updateOverlaySlider(inputSlider){
+  let camera = scene_city.userData.camera;
+  if (inputSlider !== undefined){
+    inputSlider.value = camera.position.y;
+  }  
+}
+
+function moveCamera(direction, direction_vector, axis, camera, target, speed){
+  
+  direction_vector = getDirectionVector(direction, direction_vector, axis);
+  camera.position.addScaledVector(direction_vector, speed);
+  target.addScaledVector(direction_vector, speed);
+}
+
+function getDirectionVector(direction, direction_vector, axis){
+  if(direction === 'down'){
+    direction_vector.multiplyScalar(-1);
+  }else if(direction === 'left'){    
+    var angle = Math.PI / 2;
+    direction_vector.applyAxisAngle(axis, angle);
+  }else if(direction === 'right'){
+    var angle = -1 * (Math.PI / 2);
+    direction_vector.applyAxisAngle(axis, angle);
+  }else if(direction === 'north-west'){
+    var angle = (Math.PI / 2) - (Math.PI / 4);
+    direction_vector.applyAxisAngle(axis, angle);
+  }else if(direction === 'north-east'){
+    var angle = Math.PI + (Math.PI / 2) + (Math.PI / 4);
+    direction_vector.applyAxisAngle(axis, angle);
+  }else if(direction === 'south-east'){
+    var angle = Math.PI + (Math.PI / 4);
+    direction_vector.applyAxisAngle(axis, angle);
+  }else if(direction === 'south-west'){
+    var angle = Math.PI - (Math.PI / 4);
+    direction_vector.applyAxisAngle(axis, angle);
+  }  
+  return direction_vector
+}
+
+function onSliderInput(event){
+  event.preventDefault();
+  let inputSlider = document.querySelector('#overlay-slider');
+  let camera = scene_city.userData.camera;
+  let target = scene_city.userData.controls.target;
+  
+  let isIncreasing = false;
+  let changeFactor = 0;
+  if (camera.position.y < inputSlider.value){
+    isIncreasing = true;
+    changeFactor = inputSlider.value - camera.position.y;
+  }else{
+    changeFactor = camera.position.y - inputSlider.value;
+  }
+  
+  camera.position.y = inputSlider.value;
+  if (isIncreasing){
+    target.y += changeFactor;
+  }else{
+    target.y -= changeFactor;
+  }
+}
+
+function getFloorHeight(buildingName, floor = undefined){
+  // Take building name and floor as input and return y-coord of floor. If floor is undefined then take building height.
+  let building = city_all[buildingName];
+  if(floor !== undefined && building.shapes.length >= floor){
+    return y_scale * building.shapes[floor].height;
+  }else{
+    return building.coords[3];
+  }
+}
+
+function showArrowFunction(building_name, floorCoords){
+  const dir = new THREE.Vector3(0, 0, -1);
+  // normalize the direction vector (convert to vector of length 1)
+  dir.normalize();
+  const hex = 0xffffff;
+  const length = 50;
+  let building = city_all[building_name];
+  const origin = new THREE.Vector3(building.coords[0], floorCoords, building.coords[1] + (length * 1.1));
+
+  global_building.arrowHelper = new THREE.ArrowHelper(dir, origin, length, hex, length/5);
+  scene_city.add(global_building.arrowHelper);
+  
+}
+
+
+function transitionCamera(initial, final, totalSteps=1000){
+  let camera = scene_city.userData.camera;
+  let cameraX = (final.camera.x - initial.camera.x) / totalSteps;
+  let cameraY = (final.camera.y - initial.camera.y) / totalSteps;
+  let cameraZ = (final.camera.z - initial.camera.z) / totalSteps;
+
+  let targetX = (final.target.x - initial.target.x) / totalSteps;
+  let targetY = (final.target.y - initial.target.y) / totalSteps;
+  let targetZ = (final.target.z - initial.target.z) / totalSteps;
+
+  let clock = 500;
+  global_building.timmers = [];
+
+  for(let i=0; i <= totalSteps; i++){
+    global_building.timmers.push(setTimeout(function() {
+      let currentCameraPosition = camera.position;
+      let currentTargetPosition = scene_city.userData.controls.target;   
+      scene_city.userData.controls.target.set(currentTargetPosition.x + targetX, currentTargetPosition.y + targetY, currentTargetPosition.z + targetZ);
+      camera.position.set(currentCameraPosition.x + cameraX, currentCameraPosition.y + cameraY, currentCameraPosition.z + cameraZ);
+      controls.update();
+    }, clock));
+    clock += 1;
+  } 
+
+  return clock;
+}
+
+async function iterateCameraOverBuilding(selected_building){  
+  let camera = scene_city.userData.camera;
+  let building = city_all[selected_building];
+  let building_position = new THREE.Vector3(building.coords[0], building.coords[3], building.coords[1]);
+
+  let initialCameraPosition = camera.position;
+  let initialTargetPosition = scene_city.userData.controls.target;
+
+  let theta = 30;
+  let radius = 30;
+  let seconds;
+  if(building.shapes.length < 10){
+    seconds = 0.5;
+  } else if(building.shapes.length > 10 && building.shapes.length < 20){
+    seconds = 1;
+  } else {
+    seconds = 2;
+  }
+
+  let a = radius * Math.cos(THREE.MathUtils.degToRad(theta));
+  let o = radius * Math.sin(THREE.MathUtils.degToRad(theta));
+
+  let intermediateTargetPosition = new THREE.Vector3(building_position.x, 0, building_position.z);
+  let intermediateCameraPosition = new THREE.Vector3(building_position.x, 0 + o, building_position.z + a);
+
+  let totalSteps = (seconds * 1000);
+  let finalTargetPosition = new THREE.Vector3(building_position.x, building_position.y, building_position.z);
+  let finalCameraPosition = new THREE.Vector3(building_position.x + o, building_position.y + o, building_position.z + a);  
+
+  await new Promise((resolve) => setTimeout(resolve, transitionCamera(    
+    {camera: initialCameraPosition, target: initialTargetPosition},
+    {camera: intermediateCameraPosition, target: intermediateTargetPosition}    
+  )));
+
+  return new Promise((resolve) => {
+    setTimeout(resolve, transitionCamera(
+      {camera: intermediateCameraPosition, target: intermediateTargetPosition},
+      {camera: finalCameraPosition, target: finalTargetPosition},
+      totalSteps
+    ) + 500);
+  });
+}
+
+function zoomAtBuildingFlag(selected_building){
+  let camera = scene_city.userData.camera;  
+  let initialCameraPosition = camera.position;
+  let initialTargetPosition = scene_city.userData.controls.target;
+
+  let building = city_all[selected_building].coords;
+  let building_position = new THREE.Vector3(building[0], building[3], building[1]);  
+  let flag_details = flag_objects_new[selected_building];
+  let flag_height = JSON.parse(JSON.stringify(flag_details.flag_rod)).geometries[0].height;
+
+  let observeFlagFor = 2 * 1000;
+  // should be more that observeFlagFor
+  let totalTransitionTime = 3 * 1000;
+
+
+  let totalSteps = totalTransitionTime - observeFlagFor;
+  let finalTargetPosition = new THREE.Vector3(building_position.x, building_position.y + flag_height, building_position.z);
+  let move_away = flag_height / (2 * Math.tan( THREE.MathUtils.degToRad( camera.fov ) / 2 ));  
+  let finalCameraPosition = new THREE.Vector3(building_position.x, building_position.y, building_position.z + move_away);  
+
+  return new Promise((resolve) => {
+    setTimeout(resolve, transitionCamera(
+      {camera: initialCameraPosition, target: initialTargetPosition},
+      {camera: finalCameraPosition, target: finalTargetPosition},
+      totalSteps
+    ) + observeFlagFor);
+  });
+}
+
+async function rotateAtBuilding(selected_building){     
+  let camera = scene_city.userData.camera;
+  let building = city_all[selected_building].coords;
+  let building_position = new THREE.Vector3(building[0], building[3], building[1]);
+  
+  let theta = 45;
+  let radius = 30;  
+  let initialCameraPosition = camera.position;
+  let initialTargetPosition = scene_city.userData.controls.target;
+  let clock = 500;
+  let a = radius * Math.cos(THREE.MathUtils.degToRad(theta));
+  let o = radius * Math.sin(THREE.MathUtils.degToRad(theta));
+
+  let intermediateTargetPosition = new THREE.Vector3(building_position.x, building_position.y, building_position.z);
+  let intermediateCameraPosition = new THREE.Vector3(building_position.x, building_position.y + o, building_position.z + a);
+
+  await new Promise((resolve) => setTimeout(resolve, transitionCamera(    
+    {camera: initialCameraPosition, target: initialTargetPosition},
+    {camera: intermediateCameraPosition, target: intermediateTargetPosition}    
+  )));
+  
+  return new Promise((resolve) => {
+    for(let thetaToRotate=0; thetaToRotate <= 360; thetaToRotate+=0.1){
+      global_building.timmers.push(setTimeout(function() {  
+        camera.position.x = building_position.x + (radius * Math.sin(THREE.MathUtils.degToRad(thetaToRotate)));
+        camera.position.z = building_position.z + (radius * Math.cos(THREE.MathUtils.degToRad(thetaToRotate)));
+        controls.update();      
+      }, clock));  
+      clock += 5;    
+    }
+    setTimeout(resolve, clock + 500);    
+  });
+}
+
+function buildingTour(selected_building){ 
+  console.log(`buildingTour for ${selected_building} Starting.`);
+  
+  return new Promise(resolve => {  
+    zoomAtBuilding(selected_building)
+    .then(() => {      
+      return iterateCameraOverBuilding(selected_building);
+    })  
+    .then(() => {      
+      return zoomAtBuildingFlag(selected_building);
+    })
+    .then(() => {
+      return rotateAtBuilding(selected_building);
+    })
+    .then(() => {      
+      resolve();      
+    });
+  });
+
+}
+
+function walkOnPath(path){  
+  function takeStep(path, index){
+    if(index == path.length){
+      return;
+    }else if(index == 0 || index == path.length - 1){
+      buildingTour(path[index])
+      .then(() => {        
+        takeStep(path, ++index);
+        //Here
+      });
+    }else{
+      zoomAtBuilding(path[index])      
+      .then(() => {      
+        takeStep(path, ++index); 
+        //Here
+      });
+    }
+  }
+
+  console.log(`Walk Starting from ${path[0]} to ${path[path.length - 1]}`);
+  let index = 0;
+  takeStep(path, index);
+}
