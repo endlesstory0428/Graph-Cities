@@ -332,7 +332,7 @@ function addTruss(scene,truss_objects,window_objects,h,center,top_radius,btm_rad
   return {scene:scene, truss: truss_objects, window: window_objects};
 }
 
-function createFlags(scene, height, coord, base_Y, layer, V, E, fragNum, fragNeg, fragPos, fragBucket, flag_objects, lcc, peel, mast_scale, dataSet) {
+function createFlags(scene, height, coord, base_Y, layer, V, E, fragNum, fragNeg, fragPos, fragBucket, flag_objects, lcc, peel, mast_scale, dataSet, flag_objects_new) {
   let loadFlagTexture = true;
   // console.log("coord of flag", fixed_point_number, "is", coord, "height of flag is", base_Y);
   let X = coord[0], Z = coord[1];
@@ -417,6 +417,7 @@ function createFlags(scene, height, coord, base_Y, layer, V, E, fragNum, fragNeg
   scene.add(flag_mesh);
   scene.add(rod);
   flag_objects.push(flag_mesh);
+  flag_objects_new[layer] = {flag_mesh: flag_mesh, flag_rod: rod};
   flag_objects.push(rod);
 
   for (let index = -1; index < fragBucket.length + 1; index++) {
@@ -442,7 +443,7 @@ function createFlags(scene, height, coord, base_Y, layer, V, E, fragNum, fragNeg
     scene.add(marker);
     flag_objects.push(marker);
   }
-  return {scene: scene, flag_mast: flag_height+mast_length, flags: flag_objects};
+  return {scene: scene, flag_mast: flag_height+mast_length, flags: flag_objects, flag_objects_new:flag_objects_new};
 }
 
 //check if url exists
@@ -465,6 +466,7 @@ function ifUrlExists(url) {
 // check city_tracking, create buildings that are ready to color & move
 // delete colored and moved building from city_tracking
 function createCityMeshes(scene, objects, city_all, city_tracking, ceil_objects, middle_objects, truss_objects, window_objects, flag_objects, arrow_objects, city_to_load, y_scale, dataSet, ceilVisible, isNight, oneBuilding=false) {
+  let flag_objects_new = {};
   for (let layer in city_tracking) {
     // console.log(city_tracking[layer].ready_to_move)
     // console.log(city_tracking[layer].ready_to_color)
@@ -563,9 +565,9 @@ function createCityMeshes(scene, objects, city_all, city_tracking, ceil_objects,
       let fixed = parseInt(sliced.slice(sliced.lastIndexOf('_')+1)); // third to last
       let mast_scale = y_scale;
       // let mast_length = mast_scale * height;
-      let result = createFlags(scene, height-1, [X,Z], flag_base_Y, layer, city_all[layer].V, city_all[layer].E, city_all[layer].fragNum, city_all[layer].fragNeg, city_all[layer].fragPos, city_all[layer].fragBucket, flag_objects, lcc, fixed, mast_scale, dataSet);
+      let result = createFlags(scene, height-1, [X,Z], flag_base_Y, layer, city_all[layer].V, city_all[layer].E, city_all[layer].fragNum, city_all[layer].fragNeg, city_all[layer].fragPos, city_all[layer].fragBucket, flag_objects, lcc, fixed, mast_scale, dataSet, flag_objects_new);
       scene = result.scene;
-      flag_objects = result.flags;
+      flag_objects_new = result.flag_objects_new;
       let flag_mast_height = result.flag_mast;
       let result_arrow = createArrows(scene, layer, [X, Z], flag_base_Y, arrow_objects, flag_mast_height)
       scene = result_arrow.scene;
@@ -577,7 +579,7 @@ function createCityMeshes(scene, objects, city_all, city_tracking, ceil_objects,
   }
   return {scene: scene, objects: objects, remain: city_to_load, 
     all: city_all, tracking: city_tracking, ceil: ceil_objects, middle: middle_objects, truss: truss_objects, 
-    window: window_objects, arrow: arrow_objects};
+    window: window_objects, arrow: arrow_objects, flag: flag_objects_new};
 }
 
 function createArrows(scene, name, coord, Y, arrow_objects, flag_mast_height) {
