@@ -136,11 +136,12 @@ function updateHighlighter(lighthouse_objects, selected) {
 
 function updateSelectionLights(city_all, light_objects, selected_buildings) {
     // console.log("updateSelectionLights: selected buildings are "+selected_buildings);
-    let city_name = Object.keys(city_all);
+    let city_name = Object.keys(city_all).filter(name => name.slice(0, 8) === 'wavemap_');
     let city_name_sliced = city_name.slice();
     city_name_sliced.forEach(function(name,index){
         city_name_sliced[index]=name.slice(name.indexOf('_')+1,name.lastIndexOf('_'));
     })
+    // console.log(city_name_sliced)
     let selected_buildings_full = [];
     if (typeof selected_buildings === 'object') {
       for(let i=0;i<selected_buildings.length;i++){

@@ -56,14 +56,14 @@
 			/* position: absolute; */
 			left: 0;
 			width: 362px;
-			height: calc(100vh - 180px);
-			top: 166px;
+			height: calc(100vh - 300px);
+			top: 300px;
 		}
 
 		#dataset-gui-container {
 			position: absolute;
 			top: 0px;
-			z-index: 4;
+			z-index: 5;
 		}
 
 		#city-gui-container {
@@ -71,7 +71,7 @@
 			bottom: 20px;
 			/* height: 330px; */
 			/* max-height: 330px; */
-			z-index: 4;
+			z-index: 6;
 		}
 
 		/* start controller css */
@@ -79,8 +79,8 @@
 		#city-overlay-container {
 			position: relative;
 			display: inline-flex;
-			left: 365px;
-			top: 210px;
+			left: 80px;
+			top: 5px;
 			cursor: pointer;
 		}
 
@@ -91,7 +91,7 @@
 			height: 20px;
 		}
 
-		#zoom-in{
+		#zoom-in {
 			position: relative;
 			right: 151px;
 			top: 50px;
@@ -99,7 +99,7 @@
 			height: 20px;
 		}
 
-		#zoom-out{
+		#zoom-out {
 			position: relative;
 			right: 220px;
 			top: 70px;
@@ -184,20 +184,25 @@
 		}
 
 		.axis line {
-			stroke: white;
+			stroke: #000;
 		}
 
 		.axis path {
-			stroke: white;
+			stroke: #000;
 		}
 
 		.axis text {
-			fill: white;
+			fill: #000;
 		}
 
 		.grid line {
 			stroke: grey;
-			opacity: 0.4;
+			opacity: 0;
+		}
+
+		.grid path {
+			stroke: grey;
+			opacity: 0;
 		}
 
 		/* #cityGUI{
@@ -210,7 +215,7 @@
 			height: calc(100vh - 300px);
 			top: 300px;
 			right: 0;
-			width: calc(100vw - 375px);
+			width: calc(100vw - 380px);
 			z-index: 0;
 		}
 
@@ -224,17 +229,15 @@
 
 		#city-description-container {
 			position: relative;
-			left: 350px;
+			left: 360px;
 			width: calc(100vw - 375px);
-			height: 100px;
 		}
 
 		#city-description-div {
 			display: table;
 			color: #000;
-			background-color: #ddd;
+			background-color: #ffffff;
 			width: calc(100vw - 375px);
-			height: 100px;
 			/* margin: 0.5em; */
 			text-align: center;
 			/* padding: 10px; */
@@ -252,7 +255,7 @@
 		}
 
 		#city-description-wrap {
-			z-index: 4;
+			z-index: 5;
 			position: absolute;
 			bottom: 0px;
 			right: 0px;
@@ -270,6 +273,66 @@
 			position: absolute;
 			width: 33vw;
 			right: 0px;
+		}
+
+		#city-tour-button-div {
+			position:absolute;
+			bottom: 0px;
+			left: 0px;
+			z-index: 5;
+		}
+
+		#city-best-building-button-div {
+			display: table;
+			width: calc(100vw - 375px);
+			text-align: center;
+			z-index: 4;
+			position: absolute;
+			bottom: 0px;
+			right: 0px;
+		}
+
+		#city-best-building-button-span {
+			display: table-cell;
+			vertical-align: middle;
+		}
+
+		#city-buidling-tour {
+			position: absolute;
+			z-index: 4;
+			top: 250px;
+			left: 10px;
+			width: 360px;
+		}
+
+		#city-buidling-tour-button-div {
+			display: table;
+			width: 360px;
+			text-align: center;
+		}
+
+		#city-buidling-tour-button-span {
+			display: table-cell;
+			vertical-align: middle;
+		}
+
+		#city-path-navigation {
+			position: absolute;
+			z-index: 4;
+			bottom: 20px;
+			left: 10px;
+			width: 360px;
+		}
+
+		#city-path-navigation-button-div {
+			display: table;
+			width: 360px;
+			text-align: center;
+		}
+
+		#city-path-navigation-button-span {
+			display: table-cell;
+			vertical-align: middle;
 		}
 
 		#graph {
@@ -336,18 +399,29 @@
 		<div id="custom_slider"></div>
 	</div>
 	<div id="city-gui-container"></div>
-
-
 	<div id="city-description-container">
-		<div id="city-description-div"><span id="city-description"></span></div>
+		<div id="city-description-div">
+			<span id="city-description"></span>
+		</div>
 		<div id="city-description-wrap">
-			<div id="city-description-deg-dist-div"><span id="city-description-deg-dist">degree distribution</span>
+			<div id="city-description-deg-dist-div">
+				<span id="city-description-deg-dist">degree distribution</span>
 			</div>
+		</div>
+		<div id="city-tour-button-div">
+			<button type="button" id="city-tour-button">City Tour</button>
+		</div>
+		<div id="city-best-building-button-div">
+			<span id="city-best-buidling-button-span">
+				<button type="button" id="city-largest-building-button">Largest</button>
+				<button type="button" id="city-tallest-building-button">Tallest</button>
+				<button type="button" id="city-densest-building-button">Densest</button>
+			</span>
 		</div>
 	</div>
 	<div id="city-building-map"></div>
-
 	<div class="col" id="city-view"></div>
+
 	<div id="city-overlay-container">
 		<input type="range" orient="vertical" id="overlay-slider">
 		<div id="overlay-circle-controller">
@@ -366,13 +440,42 @@
 			<!-- south east -->
 			<span id="south-east">&#8600;</span>
 			<!-- south west -->
-			<span id="south-west">&#8601;</span>			
+			<span id="south-west">&#8601;</span>
 		</div>
 		<input type="button" value="Reset" id="reset-camera">
 		<input type="button" value="Zoom-In" id="zoom-in">
 		<input type="button" value="Zoom-Out" id="zoom-out">
 	</div>
+
+	<div id="city-buidling-tour">
+		<div id="city-buidling-tour-button-div">
+			<span id="city-buidling-tour-button-span">
+				<button type="button" id="city-buidling-tour-button">Building Tour</button>
+			</span>
+		</div>
+		<div id="city-buidling-tour-menu" style="visibility: hidden;">
+			<div title="Select a buidling from the map by left click a glyph or from the city by left clicking a building.">
+				Building: <select id="city-buidling-tour-buidling"></select>
+			</div>
+		</div>
 	</div>
+
+	<div id="city-path-navigation">
+		<div id="city-path-navigation-menu" style="visibility: hidden;">
+			<div title="Select a buidling from the map by left click a glyph or from the city by left clicking a building.">
+				Source:<span style="left: 65px; top: 0.1em; position: absolute;"><select id="city-path-navigation-src"></select></span>
+			</div>
+			<div title="Select a target from the city by right click a building.">
+				Target:<span style="left: 65px; top: 1.7em; position: absolute;"><select id="city-path-navigation-tgt"></select></span>
+			</div>
+		</div>
+		<div id="city-path-navigation-button-div">
+			<span id="city-path-navigation-button-span">
+				<button type="button" id="city-path-navigation-button">Path Navigation</button>
+			</span>
+		</div>
+	</div>
+
 
 	<div id="inner-view" class="element-container">
 		<!-- <div id="bottom-gui-container"></div>                                         -->
@@ -397,7 +500,7 @@
 	</div>
 
 	<script src="scripts/dag_view.js"></script>
-	<script type="module" src="scripts/main_buildingTest.js"></script>
+	<script type="module" src="scripts/main.js"></script>
 	<!-- <script src="scripts/dag_view.js"></script> -->
 </body>
 
