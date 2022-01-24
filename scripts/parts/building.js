@@ -465,8 +465,7 @@ function ifUrlExists(url) {
 
 // check city_tracking, create buildings that are ready to color & move
 // delete colored and moved building from city_tracking
-function createCityMeshes(scene, objects, city_all, city_tracking, ceil_objects, middle_objects, truss_objects, window_objects, flag_objects, arrow_objects, city_to_load, y_scale, dataSet, ceilVisible, isNight, oneBuilding=false) {
-  let flag_objects_new = {};
+function createCityMeshes(scene, objects, city_all, city_tracking, ceil_objects, middle_objects, truss_objects, window_objects, flag_objects, flag_objects_new, arrow_objects, city_to_load, y_scale, dataSet, ceilVisible, isNight, oneBuilding=false) {
   for (let layer in city_tracking) {
     // console.log(city_tracking[layer].ready_to_move)
     // console.log(city_tracking[layer].ready_to_color)

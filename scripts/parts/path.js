@@ -1,4 +1,6 @@
 import * as THREE from '../../node_modules/three/build/three.module.js';
+// import * as mst from './TSP-MST/MST.js'
+// import {AdjMatrixGraph} from './TSP-MST/adjMatrixGraph.js'
 
 function updateDropdown(target, list){   
     let innerHTMLStr = "";
@@ -285,11 +287,12 @@ function makeSpanningTreeDebug(graph, root){
 // let root = 'A';
 // makeSpanningTreeDebug(graph, root);
 
-function getTourPath(graph, src, tgt) {
+function getTourPath(triangulationGraph, src, tgt) {
+    // TODO: check it is a valid triangulation
     const prevDict = {};
     const queue = new PriorityQueue({ comparator: function(a, b) { return -(b[1] - a[1]); }});
     queue.queue([src, 0, null]);
-    console.log(graph)
+    // console.log(triangulationGraph)
     while(queue.length !== 0) {
         const [tempNode, tempDist, prevNode] = queue.dequeue();
         if (prevDict.hasOwnProperty(tempNode)) {
@@ -300,14 +303,14 @@ function getTourPath(graph, src, tgt) {
             break;
         }
 
-        for (const [nextNode, dist] of graph[tempNode]) {
+        for (const [nextNode, dist] of triangulationGraph[tempNode]) {
             if (prevDict.hasOwnProperty(nextNode)) {
                 continue;
             }
             queue.queue([nextNode, tempDist + dist, tempNode])
         };
     }
-    
+
     let tempNode = tgt;
     const path = [];
     while (tempNode !== null) {
@@ -317,4 +320,197 @@ function getTourPath(graph, src, tgt) {
     return path;
 }
 
-export {updateDropdown, loadNeighbors, loadMeta, pathPlanning, getTourPath};
+function getMST(graph) {
+    const prevDict = {};
+    const queue = new PriorityQueue({ comparator: function(a, b) { return -(b[1] - a[1]); }});
+    const vertexList = Object.keys(graph)
+    queue.queue([vertexList[0], 0, null]);
+
+    let leftVerticesNum = vertexList.length;
+    while(leftVerticesNum > 0) {
+        const [tempNode, tempDist, prevNode] = queue.dequeue();
+        if (prevDict.hasOwnProperty(tempNode)) {
+            continue;
+        }
+        prevDict[tempNode] = prevNode;
+        leftVerticesNum --;
+
+        for (const [nextNode, dist] of graph[tempNode]) {
+            if (prevDict.hasOwnProperty(nextNode)) {
+                continue;
+            }
+            queue.queue([nextNode, dist, tempNode])
+        };
+    };
+    // console.log(prevDict, vertexList[0]);
+
+    const childDict = {};
+    for (const [child, parent] of Object.entries(prevDict)) {
+        if (parent === null) {
+            continue;
+        }
+        if (!childDict.hasOwnProperty(parent)) {
+            childDict[parent] = []
+        }
+        childDict[parent].push(child)
+    };
+
+    // console.log(childDict, vertexList[0])
+    return [childDict, vertexList[0]]
+}
+
+function getPreOrder(tree, root) {
+    const queue = [root];
+    const retval = [];
+
+    while (queue.length !== 0) {
+        const tempNode = queue.shift();
+        retval.push(tempNode);
+        if (tree.hasOwnProperty(tempNode)) {
+            // console.log(tree[tempNode])
+            queue.unshift(...tree[tempNode])
+        }
+    }
+    return retval;
+}
+// // // TSP-MST by Rajath start
+// function minDistance(dist,sptSet, V)
+// {
+//     let min = Number.MAX_VALUE;
+//     let min_index = -1;
+    
+//     for(let v = 0; v < V; v++)
+//     {
+//         if (sptSet[v] == false && dist[v] <= min) 
+//         {
+//             min = dist[v];
+//             min_index = v;
+//         }
+//     }
+//     return min_index;
+// }
+
+// function dijkstra(graph, src, V)
+// {
+//     let dist = new Array(V);
+//     let sptSet = new Array(V);
+
+//     for(let i = 0; i < V; i++)
+//     {
+//         dist[i] = Number.MAX_VALUE;
+//         sptSet[i] = false;
+//     }
+    
+//     dist[src] = 0;
+
+//     for(let count = 0; count < V - 1; count++)
+//     {
+//         let u = minDistance(dist, sptSet, V);    
+//         sptSet[u] = true;
+
+//         for(let v = 0; v < V; v++)
+//         {
+//             if (!sptSet[v] && graph[u][v] != 0 && dist[u] != Number.MAX_VALUE && dist[u] + graph[u][v] < dist[v]){
+//                 dist[v] = dist[u] + graph[u][v];
+//             }
+//         }
+//     }
+
+//     return dist
+// }
+
+// function getCityTourArray(data) {
+//     let dataDict = {};    
+//     let it = 0
+
+//     for (let loc in data){
+//         dataDict[loc] = it;
+//         it += 1;
+//     }
+
+//     let V = Object.keys(dataDict).length
+//     let nodeList = Array(V).fill(' ')
+
+//     for (let nodeVal in dataDict){
+//         nodeList[dataDict[nodeVal]] = nodeVal
+//     }
+
+//     let graph = new AdjMatrixGraph(V)
+
+//     for (let loc in data){
+//         let d = data[loc]
+//         for(let j = 0; j < d.length; j++){
+//             graph.addEdge(dataDict[loc], dataDict[d[j][0]], d[j][1])
+//         }        
+//     }
+
+//     // let selectedGraph = new AdjMatrixGraph(V)
+
+//     // for(let i = 0; i < V; i++){
+//     //     let distances = dijkstra(graph.matrix, i, V)
+//     //     for(let j = 0; j < V; j++){
+//     //         selectedGraph.addEdge(i, j, distances[j])
+//     //     }
+//     // }
+//     let selectedGraph = graph
+
+//     // writeToFile('./graph.json', JSON.stringify(graph))
+//     console.log(selectedGraph)
+
+//     // writeToFile('./selectedGraph.json', JSON.stringify(selectedGraph))
+//     let path = mst.primMST(selectedGraph.matrix, V) 
+
+//     let output = []
+//     for (let x in path){
+//         output.push(nodeList[x])
+//     }    
+//     // output.push(output[0])
+
+//     console.log(output)
+//     return output;
+// }
+// // // TSP-MST by Rajath end
+
+function getCityTour(triangulationGraph, startBuilding) {
+    const [MST, root] = getMST(triangulationGraph);
+    const tourArray = getPreOrder(MST, root);
+    // console.log(tourArray)
+    if (startBuilding === null || startBuilding === undefined) {
+        return [...tourArray, tourArray[0]];
+    }
+    const startIndex = tourArray.indexOf(startBuilding);
+    if (startIndex === -1) {
+        alert('wrong index');
+        return [...tourArray, tourArray[0]];
+    }
+    return [...tourArray.slice(startIndex), ...tourArray.slice(0, startIndex), tourArray[startIndex]];
+}
+
+function drawPath(city_all, buildingList) {
+    const path_objects = [];
+    const width = 1;
+    const path = buildingList.map(d => [city_all[d].coords[0], city_all[d].coords[1]])
+    for (let i = 0; i < path.length-1; i++) {
+        let height = getDistance(path[i],path[i+1]);
+        if(width > 0){
+            let geometry = new THREE.PlaneBufferGeometry(width+1, height);
+            let material = new THREE.MeshStandardMaterial( {color: 0xffffff, side: THREE.DoubleSide} );
+            let path_segment = new THREE.Mesh( geometry, material );
+            let position = getMiddlePoint(path[i],path[i+1]);
+            let rotation = getRotation(path[i],path[i+1]);
+            path_segment.rotateX(90*Math.PI/180);
+            let path_segment_tmp_1 = new THREE.Object3D(); 
+            path_segment_tmp_1.add(path_segment);
+            path_segment_tmp_1.rotateY(rotation); 
+            let path_segment_tmp_2 = new THREE.Object3D();
+            path_segment_tmp_2.add(path_segment_tmp_1);
+            path_segment_tmp_2.position.set(position[0],0,position[1]);
+            // console.log("connectNeighbors: "+height+" "+position+" "+rotation);
+            path_objects.push(path_segment_tmp_2);
+        }
+    }
+    return path_objects;
+}
+
+
+export {updateDropdown, loadNeighbors, loadMeta, pathPlanning, getTourPath, getCityTour, getMST, drawPath};

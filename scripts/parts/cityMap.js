@@ -291,7 +291,8 @@ function drawMap(datas, buildingMapControls) {
     buildingMapControls.ignoreHover = false;
     buildingMapControls.isOpen = false;
 
-    const bucketPeel2Building = getBucketPeelBuilding(datas[1], datas[2]);
+    const bucketPeel2Building = getBucketPeel2Building(datas[1], datas[2]);
+    console.log(bucketPeel2Building)
     const data = datas[0];
     const board = d3.select("#city-building-map");
     document.getElementById('city-building-map').onwheel = function(){ return false; } // disable mouse scrolling to avoid zooming confliction
@@ -309,7 +310,7 @@ function drawMap(datas, buildingMapControls) {
         .attr("class", "drawingBoard")
         .attr("width", width + margin.left + margin.right + padMargin.left + padMargin.right)
         .attr("height", height + margin.top + margin.bottom + padMargin.top + padMargin.bottom)
-        .style("background-color", "#222222");
+        .style("background-color", "#dddddd");
 
     // console.log(height + margin.top + margin.bottom + padMargin.top + padMargin.bottom)
 
@@ -331,8 +332,10 @@ function drawMap(datas, buildingMapControls) {
     let buildingWaveList = [];
     let buildingDot;
     let buildingCircle;
+    let buildingHighLight;
     let spiralDot;
     let spiralCircle;
+    let spiralHighLight;
 
     // Add X axis
     // Add Y axis
@@ -412,6 +415,8 @@ function drawMap(datas, buildingMapControls) {
     // // add building dots
     const buildingCircleSize = buildingCircleSizeFactor * 0.5;
     const buildingDotSize = speedometerSizeFactor * 0.5;
+    buildingHighLight = svg.selectAll(".buildingHighLight")
+        .data(buildingList)
     buildingCircle = svg.selectAll(".buildingCircle")
         .data(buildingList);
     buildingDot = svg.selectAll(".buildingDot")
@@ -419,13 +424,23 @@ function drawMap(datas, buildingMapControls) {
 
     // console.log(buildingDot)
 
-    const buildingCircleEnter = buildingCircle.enter().append('g');
-    const buildingEnter = buildingDot.enter().append('g');
+    const buildingHighLightEnter = buildingHighLight.enter().append('g');
+    buildingHighLightEnter.append("circle")
+        .attr("class", "buildingHighLight")
+        .attr("cx", d => x(brokenX[d['layer']]))
+        .attr("cy", d => y(d['bucket']))
+        .attr("r", d => 1.5 * buildingCircleSize * Math.sqrt(Math.log(1 + d['lccList'][0]['edges'])))
+        .attr("fill", "#ffffff")
+        .attr("id", d => `mapHighLight_${d['layer']}_${d['bucket']}`)
+        .attr("visibility", "hidden")
+
+    
 
     // // building stars
+    const buildingEnter = buildingDot.enter().append('g');
     buildingEnter.append("path")
         .attr("class", "buildingDot")
-        .attr("fill", d => d3.rgb(...interpolateLinearly(curve(density(d['info']), aveBuildingDensity), grey2red).map(x => x * 255)))
+        .attr("fill", d => d3.rgb(...interpolateLinearly(curve(density(d['info']), aveBuildingDensity), grey2red).map(x => x * 255)).darker(1.25))
         .attr("stroke-width", 0.01)
         .attr("stroke", "grey")
         .attr("opacity", 0.8)
@@ -434,6 +449,7 @@ function drawMap(datas, buildingMapControls) {
         // .text(d => `${buildingWaveTooltip(d)}\n\n${buildingFixpointTooltip(d)}`);
     
     // // building underlying circle
+    const buildingCircleEnter = buildingCircle.enter().append('g');
     buildingCircleEnter.append("circle")
         .attr("class", "buildingCircle")        
         .attr("cx", d => x(brokenX[d['layer']]))
@@ -442,20 +458,34 @@ function drawMap(datas, buildingMapControls) {
         .attr("fill", "#000000")
         .attr("fill-opacity", 0)
         .attr("stroke-width", 1)
-        .attr("stroke", d => d3.rgb(...interpolateLinearly(curve(density(d['lccList'][0]), aveBuildingDensity), grey2red).map(x => x * 255)))
+        .attr("stroke", d => d3.rgb(...interpolateLinearly(curve(density(d['lccList'][0]), aveBuildingDensity), grey2red).map(x => x * 255)).darker(1.25))
         .attr("opacity", 0.8);
         // .append("title")
         // .text(d => `${buildingFixpointCircleTooltip(d)}`);
 
     // // add spiral dots
     const spiralDotSize = 0.5 * spiralSizeFactor;
+    
+    spiralHighLight = svg.selectAll(".spiralHighLight")
+        .data(spiralList);
     spiralCircle = svg.selectAll(".spiralCircle")
         .data(spiralList);
     spiralDot = svg.selectAll(".spiralDot")
         .data(spiralList);
 
+    spiralHighLight.remove();
     spiralCircle.remove();
     spiralDot.remove();
+
+    const spiralHighLightEnter = spiralHighLight.enter().append('g');
+    spiralHighLightEnter.append("circle")
+        .attr("class", "spiralHighLight")
+        .attr("cx", d => x(brokenX[d['layer']]))
+        .attr("cy", d => y(d['bucket']))
+        .attr("r", d => 1.5 * spiralDotSize * d['radius'])
+        .attr("fill", "#ffffff")
+        .attr("id", d => `mapHighLight_${d['layer']}_${d['bucket']}`)
+        .attr("visibility", "hidden")
 
 
     // // spiral spirals
@@ -464,7 +494,7 @@ function drawMap(datas, buildingMapControls) {
         .attr("class", "spiralDot")
         .attr("fill", "none")
         .attr("stroke-width", Math.min(2, x(1) / 8))
-        .attr("stroke", d => d3.rgb(...interpolateLinearly(curve(density(d), aveBuildingDensity), grey2red).map(x => x * 255)))
+        .attr("stroke", d => d3.rgb(...interpolateLinearly(curve(density(d), aveBuildingDensity), grey2red).map(x => x * 255)).darker(1.25))
         .attr("opacity", 0.8)
         .attr("d", d => spiralLine(d['pos'], x(brokenX[d['layer']]), y(d['bucket']), spiralDotSize));
         // .append("title")
@@ -636,6 +666,7 @@ function drawMap(datas, buildingMapControls) {
         return modal;
     }
 
+
     // // tool functions for transforamtion
     function zoomed(event) {
         // console.log(event)
@@ -683,6 +714,8 @@ function drawMap(datas, buildingMapControls) {
             .scaleExtent([1, 10])
             .translateExtent([[0, 0], [width + margin.left + margin.right + padMargin.left + padMargin.right, height + margin.top + margin.bottom + padMargin.top + padMargin.bottom]])
             .on('zoom', zoomed))
+
+    return getBuilding2BucketPeel(bucketPeel2Building)
 };
 
 // function readAndDrawMap(name) {
@@ -873,7 +906,7 @@ function addOnLeftClick(APIFunc, buildingMapControls) {
 }
 
 
-function getBucketPeelBuilding (bucket2Building, building2Peel) {
+function getBucketPeel2Building(bucket2Building, building2Peel) {
     const bucketPeel2Building = {}
     // console.log(bucket2Building, building2Peel);
     for (const [bucket, subBucket2Building] of Object.entries(bucket2Building)) {
@@ -897,9 +930,44 @@ function getBucketPeelBuilding (bucket2Building, building2Peel) {
     return bucketPeel2Building;
 }
 
+function getBuilding2BucketPeel(bucketPeel2Building) {
+    const building2BucketPeel = {}
+    for (const [bucket, peel2Building] of Object.entries(bucketPeel2Building)) {
+        for (const [peel, buildingList] of Object.entries(peel2Building)) {
+            for (const building of buildingList) {
+                if (!building2BucketPeel.hasOwnProperty(building)) {
+                    building2BucketPeel[building] = [];
+                };
+                building2BucketPeel[building].push([bucket, peel])
+            }
+        }
+    }
+    return building2BucketPeel;
+}
+
+
+function enableHighLight(building2BucketPeel, building, disableOthers) {
+    if (disableOthers === null || disableOthers === undefined) {
+        disableOthers = true;
+    }
+    if (disableOthers === true) {
+        d3.selectAll(".spiralHighLight").attr("visibility", "hidden");
+        d3.selectAll(".buildingHighLight").attr("visibility", "hidden");
+    }
+    const buildingNames = building.split('_')
+    const buildingShort = `${buildingNames[1]}_${buildingNames[2]}`
+    const bucketPeelList = building2BucketPeel[buildingShort];
+    if (bucketPeelList === null || bucketPeelList === undefined) {
+        alert("wrong index");
+        return;
+    }
+    for (const bucketPeel of bucketPeelList) {
+        d3.select(`#mapHighLight_${bucketPeel[1]}_${bucketPeel[0]}`).attr("visibility", "visible");
+    }
+}
 
 // main call
 // const buildingMap_file = 'movies-lccWaves.b.p.json';
 // d3.json(buildingMap_file).then(data => drawMap(data, buildingMapControls)).then(() => addOnMouseOver(handleMouseOverAPI, buildingMapControls)).then(() => addOnMouseOut(handleMouseOutAPI, buildingMapControls)).then(() => addOnLeftClick(handleLeftClickAPI, buildingMapControls));
 
-export {drawMap, addOnMouseOver, addOnMouseOut, addOnLeftClick};
+export {drawMap, addOnMouseOver, addOnMouseOut, addOnLeftClick, enableHighLight};

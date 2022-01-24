@@ -3,6 +3,9 @@ import {
   TrackballControls
 } from '../node_modules/three/examples/jsm/controls/TrackballControls.js';
 import {
+  OrbitControls
+} from "https://threejs.org/examples/jsm/controls/OrbitControls.js";
+import {
   GUI
 } from '../node_modules/three/examples/jsm/libs/dat.gui.module.js';
 import {
@@ -28,7 +31,7 @@ let frustumSize = 400;
 let aspect = window.innerWidth / window.innerHeight;
 let scene_city = new THREE.Scene();
 let scene_lighthouse = new THREE.Scene();
-let sliderPos = 362;
+let sliderPos = 365;
 let mapPos = 300; // top building map
 
 const raycaster = new THREE.Raycaster();
@@ -50,6 +53,7 @@ let bush_objects = [];
 let light_objects = {};
 let key_to_buckets = {};
 let arrow_objects = {};
+let flag_objects_new = {};
 let metaLoaded = false,
   voronoiLoaded = false,
   lighthouseLoaded = false,
@@ -72,9 +76,21 @@ let mapWaveSelection = false;
 let mapWaveSelectedName;
 let dagSizeDict;
 
+let global_building = {};
+let allowed;
+let shouldArrowBeVisible;
+let visibleRadius = 50;
+
 let buildingMapControls = {}
 
-const data_list = ['cit-Patents', 'sellbuycc8und', 'starwars'];
+let buildingCoordMax = 0;
+
+let selectingBuildingTour = false;
+let selectingPathNavigation = false;
+
+let tempCityPathObjList = [];
+
+const data_list = ['got', 'cit-patents', 'starwars'];
 const V = {'com-friendster':65608366, 'movies':218052, 'cit-Patents':3774768};
 const E = {'com-friendster':1806067135, 'movies':115050370, 'cit-Patents':16518947};
 const connected = {'com-friendster':true, 'movies':false, 'cit-Patents':false};
@@ -93,6 +109,8 @@ let radius = 500,
   toPanCity = false,
   toPanBuilding = false,
   toZoomBuilding = false;
+// Camera offset
+let offset = 15;
 // GUI parameters
 let params = {
   orthographicCamera: false,
@@ -241,6 +259,9 @@ const scene_city_element = document.getElementById("city-element");
 const scene_city_description = document.getElementById("city-description");
 let views, lighthouse_view, city_view;
 
+let overlay_slider, overlay_circle_controller, overlay_reset_camera, overlay_zoom_in, overlay_zoom_out;
+let controllerOnHold = {status: false, target: null};
+
 init();
 animate();
 
@@ -275,20 +296,22 @@ function init() {
     if (!buildingMapControls.ignoreHover) {
       mapControlHighLight = true;
       mapControlHighLightBuilding = data['buildingName'];
-      select_fixed_point.setValue(selectedDot['layer']);
+      select_fixed_point.setValue(selectedDot['layer']);  // NOTE: 2022-1-22 temp disable
     }
     // console.log(select_fixed_point);
   };
+
   function handleMouseOut(selectedDot, data) {
     // console.log(selectedDot);
     // select_fixed_point.setValue(selectedDot['layer']);
     // console.log(select_fixed_point);
     // console.log('out')
   };
+
   function handleLeftClick(selectedDot, data) {
     mapControlHighLight = true;
     mapControlHighLightBuilding = data['buildingName'];
-    select_fixed_point.setValue(selectedDot['layer']);
+    select_fixed_point.setValue(selectedDot['layer']); // NOTE: 2022-1-22 temp disable
     // theta = 0.003;
     // toZoomBuilding = true;
     // toPanBuilding = false;
@@ -297,7 +320,29 @@ function init() {
     // zoomBuilding();
     // console.log(select_fixed_point);
     // console.log('click')
+    if (selectingBuildingTour) {
+      let selectedBuilding = '';
+      const shortName = data.buildingName[0];
+      for (const buildingName of Object.keys(city_all.graph)) {
+        const splitedName = buildingName.split('_');
+        if (`${splitedName[1]}_${splitedName[2]}` === shortName) {
+          selectedBuilding = buildingName;
+        }
+      }
+      document.getElementById('city-buidling-tour-buidling').value = selectedBuilding;
+    } else if (selectingPathNavigation) {
+      let selectedBuilding = '';
+      const shortName = data.buildingName[0];
+      for (const buildingName of Object.keys(city_all.graph)) {
+        const splitedName = buildingName.split('_');
+        if (`${splitedName[1]}_${splitedName[2]}` === shortName) {
+          selectedBuilding = buildingName;
+        }
+      }
+      document.getElementById('city-path-navigation-src').value = selectedBuilding;
+    }
   };
+
   function addMapDropListHandle() {
     const spiralDropListCollection = document.getElementsByClassName("mapSpiralDropList");
     // console.log(spiralDropListCollection);
@@ -314,6 +359,11 @@ function init() {
         };
         // console.log(arrow_objects)
         arrow_objects[selectedBuilding].visible = true;
+        if (selectingBuildingTour) {
+          document.getElementById('city-buidling-tour-buidling').value = selectedBuilding;
+        } else if (selectingPathNavigation) {
+          document.getElementById('city-path-navigation-src').value = selectedBuilding;
+        }
       });
     };
 
@@ -334,24 +384,37 @@ function init() {
       });
     };
   };
+
   function addZoomButtonHandle() {
     const spiralZoomButtonCollection = document.getElementsByClassName("mapSpiralZoomButton");
     for (const spiralZoomButton of spiralZoomButtonCollection) {
       spiralZoomButton.addEventListener('click', function() {
-        zoomBuilding();
+        // zoomBuilding();
+        console.log(root_dropdown_highlighted.domElement.children[0].value)
+        const buildingName = root_dropdown_highlighted.domElement.children[0].value;
+        CM.enableHighLight(city_all.building2BucketPeel, buildingName, true);
+        buildingTour(buildingName);
       });
     };
     const buildingZoomButtonCollection = document.getElementsByClassName("mapBuildingZoomButton");
     for (const buildingZoomButton of buildingZoomButtonCollection) {
       buildingZoomButton.addEventListener('click', function() {
-        zoomBuilding();
+        // zoomBuilding();
+        console.log(root_dropdown_highlighted.domElement.children[0].value)
+        const buildingName = root_dropdown_highlighted.domElement.children[0].value;
+        CM.enableHighLight(city_all.building2BucketPeel, buildingName, true);
+        buildingTour(buildingName);
       });
     };
   };
 
-  Promise.all([d3.json(buildingMap_file), d3.json(buildingMapBucket_file), d3.json(bucket_file)])
-    .then(datas => CM.drawMap(datas, buildingMapControls))
-    .then(() => CM.addOnMouseOver(handleMouseOver, buildingMapControls))
+  Promise.all([
+    d3.json(buildingMap_file),
+    d3.json(buildingMapBucket_file),
+    d3.json(bucket_file)
+  ]).then(function (datas) {
+    city_all.building2BucketPeel = CM.drawMap(datas, buildingMapControls)
+  }).then(() => CM.addOnMouseOver(handleMouseOver, buildingMapControls))
     .then(() => CM.addOnMouseOut(handleMouseOut, buildingMapControls))
     .then(() => CM.addOnLeftClick(handleLeftClick, buildingMapControls))
     .then(() => addMapDropListHandle())
@@ -378,7 +441,11 @@ function init() {
 
   createControls(perspectiveCamera);
   
-  const city_controls = new TrackballControls(scene_city.userData.camera, city_view);
+  // const city_controls = new TrackballControls(scene_city.userData.camera, city_view);
+  const city_controls = new OrbitControls(scene_city.userData.camera, city_view);
+  city_controls.minDistance = 20;
+  city_controls.maxDistance = 800;
+  city_controls.maxPolarAngle = Math.PI / 2 ;
   city_controls.rotateSpeed = 1.0;
   city_controls.zoomSpeed = 1.2;
   city_controls.panSpeed = 0.8;
@@ -432,6 +499,7 @@ function init() {
   gui.domElement.id = 'cityGUI';
   // console.log(document.getElementById("city-gui-container"))
   document.getElementById("city-gui-container").appendChild(gui.domElement);
+  gui.close();
 
   guiDataset = new GUI({
     width: 362,
@@ -450,6 +518,7 @@ function init() {
         setStrataUrl('?data=nodata');        
       }
       objects.every(object => scene_city.remove(object));
+      clearTempPath();
       path_objects.every(object => scene_city.remove(object));
       window_objects.every(object => scene_city.remove(object));
       flag_objects.every(object => scene_city.remove(object));
@@ -463,6 +532,15 @@ function init() {
         scene_city.remove(arrow_objects[key]);
       });
       arrow_objects = {};
+
+      //
+      let flag_objects_new_keys = Object.keys(flag_objects_new);
+      flag_objects_new_keys.forEach(function(key){
+        scene_city.remove(flag_objects_new[key]);
+      });
+      flag_objects_new = {};
+      //
+
       // light_objects.spotLight.visible = false;
       light_objects.selectionLights.every(light => light.visible = false);
       lighthouse_objects.every(object => scene_lighthouse.remove(object));
@@ -581,8 +659,9 @@ function init() {
       if(addDagViews) {
         setStrataUrl('?data=nodata');
       }
+      clearTempPath();
       path_objects.every(object => scene_city.remove(object));
-      animate();
+      // animate(); NOTE: 2022-1-23: seems this line makes the whole page lagging, temp disabled
       path_objects = [];
       // console.log("394:"+value);
       let result = PATH.pathPlanning(value, scene_city, city_all, light_objects);
@@ -644,7 +723,7 @@ function init() {
   scene_city.add(waterMesh);
 
   city_view.addEventListener('mousemove',onMouseMove);
-  // city_view.addEventListener('mousedown',onMouseDown);
+  city_view.addEventListener('mousedown',onMouseDown);
   scenes.push(scene_city);
 
   // lighthouse scene
@@ -679,12 +758,56 @@ function init() {
     width: 362,
     autoPlace: false
   });
-  guiL.addFolder('data summary sculpture');
+  // guiL.addFolder('data summary sculpture');
   select_fixed_point = guiL.add(paramsL, 'fixedPoint', first_key_list).name('choose fixed point');
   color_display = guiL.addColor(paramsL, 'color').name('display color');
   light_intensity = guiL.add(paramsL, 'lightIntensity').name('diversity');
+
+  const light_intensity_GUI_elem = light_intensity.domElement.parentElement // get first dat.gui element
+  const par_light_intensity_GUI_elem = light_intensity_GUI_elem.parentElement // get the list item containing a
+  const color_display_GUI_elem = color_display.domElement.parentElement // get second element
+  const par_color_display_GUI_elem = color_display_GUI_elem.parentElement // get the list item containing b
+  const tab = document.createElement("table") // create table element
+  const tr = document.createElement("tr") // create row element
+  const td_a = document.createElement("td") // create column for a
+  const td_b = document.createElement("td") // create column for b
+
+  // build the table:
+  td_a.appendChild(light_intensity_GUI_elem)
+  td_b.appendChild(color_display_GUI_elem)
+  tr.appendChild(td_a)
+  tr.appendChild(td_b)
+  tab.appendChild(tr)
+
+  // add table to the list and remove empty list element
+  par_light_intensity_GUI_elem.appendChild(tab)
+  par_color_display_GUI_elem.remove()
+
   let customContainer = document.getElementById('first-gui-container');
   customContainer.appendChild(guiL.domElement);
+  guiL.close();
+}
+
+function zoomAtBuilding(selected_building){  
+  let camera = scene_city.userData.camera;  
+  let initialCameraPosition = camera.position;
+  let initialTargetPosition = scene_city.userData.controls.target;
+
+  let building = city_all[selected_building].coords;
+  let building_position = new THREE.Vector3(building[0], building[3], building[1]);
+  let arrow_position = arrow_objects[selected_building].position;
+
+  let finalTargetPosition = new THREE.Vector3(building_position.x, arrow_position.y * 0.40, building_position.z);
+  let move_away = arrow_position.y / (2 * Math.tan( THREE.MathUtils.degToRad( camera.fov ) / 2 ));
+  let finalCameraPosition = new THREE.Vector3(building_position.x, arrow_position.y, building_position.z + move_away);
+  
+  return new Promise((resolve) => {
+    setTimeout(resolve, transitionCamera(    
+      {camera: initialCameraPosition, target: initialTargetPosition},
+      {camera: finalCameraPosition, target: finalTargetPosition},
+      1000
+    ) + 500)
+  });
 }
 
 //load ground OBJ file
@@ -704,7 +827,7 @@ function groundObjLoader(obj_url, obj_material) {
         object.position.set(-60, -10, 20);
       } else if (paramsL.dataSet === data_list[1]) {
         object.scale.set(0.4, 0.1, 0.3);
-        object.position.set(-30, -9, 0);
+        object.position.set(0, -9, 0);
       } else if (paramsL.dataSet === data_list[2]) {
         object.scale.set(0.4, 0.1, 0.3);
         object.position.set(-30, -9, 0);
@@ -932,6 +1055,9 @@ function loaded(evt) {
     bush_objects = spiral.bush;
     city_to_load = spiral.city_count;
     for (const [key, value] of Object.entries(city_all)) {
+      if (key.slice(0, 8) !== 'wavemap_') {
+        continue;
+      }
       let layer_name = key;
       city_list.push(layer_name);
       if (addBuildings) {
@@ -982,7 +1108,8 @@ function dayAndNight(isNight, light_objects, window_objects) {
 }
 
 function createControls(camera) {
-  controls = new TrackballControls(camera, renderer.domElement);
+  //controls = new TrackballControls(camera, renderer.domElement);
+  controls = new OrbitControls(camera, renderer.domElement);
   console.log('createControls', controls);
   controls.rotateSpeed = 1.0;
   controls.zoomSpeed = 1.2;
@@ -1008,7 +1135,7 @@ function updateSize() {
   if ( canvas.width !== width || canvas.height !== height ) {
     renderer.setSize( width, height, false );
   }
-  scenes.forEach(scene => scene.userData.controls.handleResize());
+  // scenes.forEach(scene => scene.userData.controls.handleResize());
 }
 
 function animate() {
@@ -1018,7 +1145,7 @@ function animate() {
   // stats.update();
   if (city_to_load > 0 && addBuildings) {
     console.log("animate: run createCityMeshes()");
-    let result = BUILD.createCityMeshes(scene_city, objects, city_all, city_tracking, ceil_objects, middle_objects, truss_objects, window_objects, flag_objects, arrow_objects, city_to_load, y_scale, paramsL.dataSet, params.ceilVisible, params.isNight);
+    let result = BUILD.createCityMeshes(scene_city, objects, city_all, city_tracking, ceil_objects, middle_objects, truss_objects, window_objects, flag_objects, flag_objects_new, arrow_objects, city_to_load, y_scale, paramsL.dataSet, params.ceilVisible, params.isNight);
     scene_city = result.scene;
     city_all = result.all;
     city_tracking = result.tracking;
@@ -1029,13 +1156,61 @@ function animate() {
     truss_objects = result.truss;
     window_objects = result.window;
     arrow_objects = result.arrow;
+    flag_objects_new = result.flag;
   } else if (city_to_load == 0 && printTime) {
+
+    // console.log(flag_objects_new['wavemap_3_42_1'])
+    
+    // // adjust ground size according to city size
+    buildingCoordMax = 0;
+    for (const buildingName in city_all.graph) {
+      if (Math.abs(city_all[buildingName].coords[0]) > buildingCoordMax) {
+        buildingCoordMax = Math.abs(city_all[buildingName].coords[0]);
+      }
+      if (Math.abs(city_all[buildingName].coords[1]) > buildingCoordMax) {
+        buildingCoordMax = Math.abs(city_all[buildingName].coords[1])
+      }
+    }
+    // console.log(buildingCoordMax)
+    let groundScale = (buildingCoordMax + 100) / 1750 * 1.25;
+    ground_object.scale.set(groundScale, 0.1, groundScale);
+    
     let end_time = new Date();
     let end_time_string = end_time.getMinutes() + ':' + end_time.getSeconds() + '.' + end_time.getMilliseconds();
     console.log("start time is " + start_time_string);
     console.log("end time is " + end_time_string);
     printTime = false;
-    // console.log(PATH.getTourPath(city_all.weightedGraph, 'wavemap_15_275340_1', 'wavemap_1_405063_798'))
+
+    initOverlay();
+    
+    // let allowToWalkOnPath_FeatureFlag = false;
+    // if(allowToWalkOnPath_FeatureFlag){       
+    //   //let pathList = PATH.getTourPath(city_all.weightedGraph, 'wavemap_3_3191982_27', 'wavemap_15_3718944_45');      
+    //   // let path_to_try = ["wavemap_1_140109_1283","wavemap_1_62999_1884","wavemap_22_919138_1","wavemap_1_250725_1023","wavemap_11_164183_1","wavemap_10_196384_1","wavemap_5_2061_1","wavemap_13_30471_1","wavemap_19_2571623_35","wavemap_18_2914315_48","wavemap_23_1433320_64","wavemap_21_3292172_25","wavemap_4_1243_1","wavemap_15_3718944_45","wavemap_16_1362234_16","wavemap_17_1851996_8","wavemap_9_28722_1","wavemap_25_3804978_8","wavemap_3_42_1","wavemap_2_13_1","wavemap_3_3191982_27","wavemap_43_1965538_5","wavemap_19_239987_3","wavemap_1_405063_798","wavemap_14_1037462_1","wavemap_8_27645_1","wavemap_7_30601_1","wavemap_8_4342010_162","wavemap_11_2983724_385","wavemap_17_389660_1","wavemap_15_3515498_169","wavemap_15_275340_1","wavemap_6_2182_1","wavemap_12_508033_1","wavemap_13_3434164_105","wavemap_1_140109_1283"];
+
+      
+    //   let path_patents = ['wavemap_2_13_1', 'wavemap_3_42_1', 'wavemap_14_1037462_1', 'wavemap_1_140109_1283', 'wavemap_22_919138_1', 'wavemap_8_27645_1', 'wavemap_1_62999_1884', 'wavemap_19_239987_3', 'wavemap_3_3191982_27', 'wavemap_1_250725_1023', 'wavemap_1_405063_798', 'wavemap_8_4342010_162', 'wavemap_17_389660_1', 'wavemap_7_30601_1', 'wavemap_11_2983724_385', 'wavemap_15_275340_1', 'wavemap_15_3515498_169', 'wavemap_13_3434164_105', 'wavemap_12_508033_1', 'wavemap_6_2182_1', 'wavemap_15_3718944_45', 'wavemap_13_30471_1', 'wavemap_23_1433320_64', 'wavemap_18_2914315_48', 'wavemap_11_164183_1', 'wavemap_5_2061_1', 'wavemap_19_2571623_35', 'wavemap_10_196384_1', 'wavemap_21_3292172_25', 'wavemap_16_1362234_16', 'wavemap_4_1243_1', 'wavemap_17_1851996_8', 'wavemap_25_3804978_8', 'wavemap_9_28722_1', 'wavemap_43_1965538_5', 'wavemap_2_13_1'];
+    //   let path_patents_in_to_out = ["wavemap_3_42_1","wavemap_5_2061_1","wavemap_6_2182_1","wavemap_7_30601_1","wavemap_8_27645_1","wavemap_2_13_1","wavemap_9_28722_1","wavemap_4_1243_1","wavemap_10_196384_1","wavemap_11_164183_1","wavemap_13_30471_1","wavemap_12_508033_1","wavemap_15_275340_1","wavemap_17_389660_1","wavemap_14_1037462_1","wavemap_22_919138_1","wavemap_19_239987_3","wavemap_43_1965538_5","wavemap_25_3804978_8","wavemap_17_1851996_8","wavemap_16_1362234_16","wavemap_21_3292172_25","wavemap_19_2571623_35","wavemap_18_2914315_48","wavemap_23_1433320_64","wavemap_15_3718944_45","wavemap_13_3434164_105","wavemap_15_3515498_169","wavemap_11_2983724_385","wavemap_8_4342010_162","wavemap_1_405063_798","wavemap_1_250725_1023","wavemap_1_140109_1283","wavemap_1_62999_1884","wavemap_3_3191982_27"]
+    //   let path_patents_out_to_in = path_patents_in_to_out.slice().reverse();
+
+    //   // let path_friend = ['wavemap_1_2878103_708', 'wavemap_1_17833995_771', 'wavemap_1_6980866_827', 'wavemap_58_2035500_1', 'wavemap_21_1374_1', 'wavemap_15_690_1', 'wavemap_40_38645_1', 'wavemap_34_87642_1', 'wavemap_1_60939141_881', 'wavemap_22_6161_1', 'wavemap_29_735_1', 'wavemap_1_15204409_930', 'wavemap_14_14107_1', 'wavemap_1_31820411_979', 'wavemap_1_201283_1031', 'wavemap_1_10126754_1079', 'wavemap_92_49855703_1', 'wavemap_4_101_1', 'wavemap_3_101_1', 'wavemap_53_1266_1', 'wavemap_86_49855703_1', 'wavemap_304_1850520_1', 'wavemap_5_173_1', 'wavemap_1_14609_1141', 'wavemap_32_248525_1', 'wavemap_54_1563_1', 'wavemap_1_7241947_1198', 'wavemap_20_9823427_1', 'wavemap_4_6552536_1280', 'wavemap_1_1443591_1372', 'wavemap_1_754869_1520', 'wavemap_82_49855703_2', 'wavemap_13_101_1', 'wavemap_175_260453_1', 'wavemap_25_167_1', 'wavemap_75_49855703_1', 'wavemap_7_101_1', 'wavemap_234_262712_1', 'wavemap_1_1623531_1994', 'wavemap_80_49855703_2', 'wavemap_12_131002_1', 'wavemap_2_2407314_44', 'wavemap_77_49855703_4', 'wavemap_1_8645756_634', 'wavemap_9_164816_1', 'wavemap_1_58275384_547', 'wavemap_55_643725_1', 'wavemap_71_102807_1', 'wavemap_140_180407_1', 'wavemap_9_201256_351', 'wavemap_30_11086_1', 'wavemap_65_4182_1', 'wavemap_120_11459_1', 'wavemap_89_1202_1', 'wavemap_7_19325784_356', 'wavemap_1_5249714_247', 'wavemap_41_1905_1', 'wavemap_14_238083_160', 'wavemap_35_1750_1', 'wavemap_17_60024_1', 'wavemap_19_19546040_102', 'wavemap_33_1467_1', 'wavemap_8_176_1', 'wavemap_38_1202_1', 'wavemap_16_1284_1', 'wavemap_34_90152410_52', 'wavemap_16_41201_32', 'wavemap_41_60187632_16', 'wavemap_20_123_1', 'wavemap_2_101_1', 'wavemap_31_4062912_8', 'wavemap_48_6608327_1', 'wavemap_169_11459_1', 'wavemap_11_167_1', 'wavemap_18_13234024_3', 'wavemap_27_146_1', 'wavemap_6_284_1', 'wavemap_1_2878103_708'];
+    //   // let path_friend_in_to_out = ["wavemap_89_1202_1","wavemap_53_1266_1","wavemap_25_167_1","wavemap_11_167_1","wavemap_38_1202_1","wavemap_120_11459_1","wavemap_140_180407_1","wavemap_15_690_1","wavemap_5_173_1","wavemap_3_101_1","wavemap_234_262712_1","wavemap_175_260453_1","wavemap_6_284_1","wavemap_169_11459_1","wavemap_2_101_1","wavemap_8_176_1","wavemap_17_60024_1","wavemap_65_4182_1","wavemap_71_102807_1","wavemap_40_38645_1","wavemap_21_1374_1","wavemap_29_735_1","wavemap_304_1850520_1","wavemap_4_101_1","wavemap_54_1563_1","wavemap_7_101_1","wavemap_13_101_1","wavemap_12_131002_1","wavemap_27_146_1","wavemap_48_6608327_1","wavemap_20_123_1","wavemap_16_1284_1","wavemap_33_1467_1","wavemap_35_1750_1","wavemap_41_1905_1","wavemap_30_11086_1","wavemap_55_643725_1","wavemap_9_164816_1","wavemap_34_87642_1","wavemap_58_2035500_1","wavemap_22_6161_1","wavemap_14_14107_1","wavemap_86_49855703_1","wavemap_92_49855703_1","wavemap_32_248525_1","wavemap_20_9823427_1","wavemap_75_49855703_1","wavemap_82_49855703_2","wavemap_80_49855703_2","wavemap_77_49855703_4","wavemap_18_13234024_3","wavemap_31_4062912_8","wavemap_41_60187632_16","wavemap_16_41201_32","wavemap_34_90152410_52","wavemap_19_19546040_102","wavemap_14_238083_160","wavemap_1_5249714_247","wavemap_7_19325784_356","wavemap_9_201256_351","wavemap_1_58275384_547","wavemap_1_8645756_634","wavemap_1_2878103_708","wavemap_1_17833995_771","wavemap_1_6980866_827","wavemap_1_60939141_881","wavemap_1_15204409_930","wavemap_1_31820411_979","wavemap_1_201283_1031","wavemap_1_10126754_1079","wavemap_1_14609_1141","wavemap_1_7241947_1198","wavemap_4_6552536_1280","wavemap_1_1443591_1372","wavemap_1_754869_1520","wavemap_1_1623531_1994","wavemap_2_2407314_44"]
+    //   // let path_friend_out_to_in = path_friend_in_to_out.slice().reverse();
+
+    //   // let path_movies = ['wavemap_31_12735_1', 'wavemap_27_11403_1', 'wavemap_50_12860_1', 'wavemap_36_12116_1', 'wavemap_13_11413_1', 'wavemap_757_11398_1', 'wavemap_1246_11398_1', 'wavemap_60_12370_2', 'wavemap_29_11432_1', 'wavemap_185_11398_1', 'wavemap_48_13096_2', 'wavemap_76_12776_2', 'wavemap_41_13114_2', 'wavemap_34_11472_1', 'wavemap_527_11398_1', 'wavemap_14_11452_1', 'wavemap_57_15545_3', 'wavemap_119_11833_1', 'wavemap_38_15906_3', 'wavemap_18_13639_3', 'wavemap_28_12051_1', 'wavemap_84_11398_1', 'wavemap_8_11589_3', 'wavemap_32_11773_1', 'wavemap_47_11398_1', 'wavemap_2070_11400_1', 'wavemap_56_16757_5', 'wavemap_53_12597_1', 'wavemap_40_13169_6', 'wavemap_37_12382_9', 'wavemap_30_12673_1', 'wavemap_26_11399_1', 'wavemap_37_23740_12', 'wavemap_62_12456_1', 'wavemap_101_11400_1', 'wavemap_414_11398_1', 'wavemap_46_11766_17', 'wavemap_7_11427_1', 'wavemap_24_12180_23', 'wavemap_29_13695_43', 'wavemap_123_11670_1', 'wavemap_12_11399_1', 'wavemap_9_12922_89', 'wavemap_16_11696_1', 'wavemap_6_11398_1', 'wavemap_283_11398_1', 'wavemap_15_17754_35', 'wavemap_33_11491_1', 'wavemap_4_11398_1', 'wavemap_14_14781_337', 'wavemap_5_16664_287', 'wavemap_2_15608_15', 'wavemap_35_13487_1', 'wavemap_2_11398_1', 'wavemap_3114_11398_1', 'wavemap_15_11645_1', 'wavemap_31_12735_1'];
+    //   // let path_movies_in_to_out = ["wavemap_1246_11398_1","wavemap_2070_11400_1","wavemap_414_11398_1","wavemap_283_11398_1","wavemap_3114_11398_1","wavemap_757_11398_1","wavemap_185_11398_1","wavemap_527_11398_1","wavemap_84_11398_1","wavemap_47_11398_1","wavemap_26_11399_1","wavemap_101_11400_1","wavemap_12_11399_1","wavemap_6_11398_1","wavemap_4_11398_1","wavemap_2_11398_1","wavemap_27_11403_1","wavemap_13_11413_1","wavemap_29_11432_1","wavemap_14_11452_1","wavemap_34_11472_1","wavemap_119_11833_1","wavemap_28_12051_1","wavemap_32_11773_1","wavemap_53_12597_1","wavemap_30_12673_1","wavemap_62_12456_1","wavemap_7_11427_1","wavemap_123_11670_1","wavemap_16_11696_1","wavemap_33_11491_1","wavemap_15_11645_1","wavemap_35_13487_1","wavemap_31_12735_1","wavemap_50_12860_1","wavemap_36_12116_1","wavemap_60_12370_2","wavemap_48_13096_2","wavemap_76_12776_2","wavemap_41_13114_2","wavemap_57_15545_3","wavemap_38_15906_3","wavemap_18_13639_3","wavemap_8_11589_3","wavemap_56_16757_5","wavemap_40_13169_6","wavemap_37_12382_9","wavemap_37_23740_12","wavemap_46_11766_17","wavemap_24_12180_23","wavemap_29_13695_43","wavemap_9_12922_89","wavemap_15_17754_35","wavemap_14_14781_337","wavemap_5_16664_287","wavemap_2_15608_15"];
+    //   // let path_movies_out_to_in = path_movies_in_to_out.slice().reverse();
+
+    //   walkOnPath(path_patents);
+
+    // }
+
+    // console.log(JSON.stringify(city_all.weightedGraph))
+    // console.log(PATH.getTourPath(city_all.weightedGraph, 'wavemap_2_13_1', 'wavemap_18_2914315_48'))
+    // console.log(PATH.getCityTour(city_all.weightedGraph))
+    // console.log(city_all.building2BucketPeel)
+    // CM.enableHighLight(city_all.building2BucketPeel, 'wavemap_2_13_1', true)
+    // CM.enableHighLight(city_all.building2BucketPeel, 'wavemap_18_2914315_48', false)
   }
   render();
 }
@@ -1066,82 +1241,172 @@ function render() {
 
     renderer.render( scene, scene.userData.camera );
   });
-  if (toPanCity) {
-    // console.log("pan city "+theta);
-    theta += 0.1;
-    camera.position.x = radius * Math.sin(THREE.MathUtils.degToRad(theta));
-    // camera.position.y = radius/5+(radius/10) * Math.sin( THREE.MathUtils.degToRad( theta ) );
-    camera.position.z = radius * Math.cos(THREE.MathUtils.degToRad(theta));
-    camera.lookAt(scene.position);
-    if (theta > 360) toPanCity = false;
-  } else if (toPanBuilding) {
-    // console.log("pan around building "+params.root);
-    theta += 0.1;
-    // let building_position = new THREE.Vector3(100,0,100);
-    let root_building = root_dropdown.getValue();
-    let building_position = city_all[root_building].coords;
-    controls.target = new THREE.Vector3(building_position[0], 30, building_position[1]);
-    camera.position.x = building_position[0] + radius * Math.sin(THREE.MathUtils.degToRad(theta));
-    camera.position.y = 100;
-    // camera.position.y = radius * Math.sin( THREE.MathUtils.degToRad( theta ) );
-    camera.position.z = building_position[1] + radius * Math.cos(THREE.MathUtils.degToRad(theta));
-    if (theta > 360) toPanBuilding = false;
-  } else if (toZoomBuilding) {
-    // // console.log("zoom in to "+root_dropdown.getValue());
-    // // let building_position = new THREE.Vector3(100,0,100);
-    // let root_building = root_dropdown.getValue();
-    // let building_position = city_all[root_building].coords;
-    // controls.target = new THREE.Vector3(building_position[0], 10, building_position[1]);
-    // // console.log(building_position[0]);
-    // if (Math.abs(building_position[0] - camera.position.x) >= 20) {
-    //   camera.position.x += theta * (building_position[0] - camera.position.x);
-    //   // console.log("x");
-    // }
-    // if (Math.abs(camera.position.y) >= 100) {
-    //   camera.position.y += theta * (0 - camera.position.y);
-    //   // console.log("y");
-    // }
-    // if (Math.abs(building_position[1] - camera.position.z) >= 20) {
-    //   camera.position.z += theta * (building_position[1] - camera.position.z);
-    //   // console.log("z");  
-    // } else {
-    //   toZoomBuilding = false;
-    // }
 
-    // console.log("zoom in to "+root_dropdown.getValue());
-    // let building_position = new THREE.Vector3(100,0,100);
-    let root_building = root_dropdown.getValue();
-    let building_position = city_all[root_building].coords;
-    let objectPos = new THREE.Vector3(building_position[0], building_position[3], building_position[1] + 50); // 2021-10-18: 0 is x, 1 is z, 3 is y, and I don't know what is 2
-    controls.target.set(building_position[0], building_position[3] + 20, building_position[1]); // 2021-10-18: 0 is x, 1 is z, 3 is y, and I don't know what is 2
-    // console.log(controls.target);
-    // console.log(camera.position);
-    // console.log(controls);
-    // console.log(city_all[root_building]);
-    // camera.lookAt(building_position[0], building_position[3], building_position[1]);
-    // camera.matrix[8] = building_position[0];
-    // camera.matrix[9] = building_position[3];
-    // camera.matrix[10] = building_position[1];
-    // let lookAtVector = new THREE.Vector3(camera.matrix[8], camera.matrix[9], camera.matrix[10]);
-    // console.log(lookAtVector);
-    // console.log(camera.matrix);
-    // console.log(camera);
-    // console.log(building_position[0]);
-    if (Math.abs(objectPos.x - camera.position.x) >= 2) {
-      camera.position.x += theta * (objectPos.x - camera.position.x);
-      // console.log("x");
+  // if focused at a building, then global_building is assigned.
+  if(global_building.name){
+
+    let building_target = scene_city.userData.controls.target;
+    
+    if (building_target.distanceTo(camera.position) < visibleRadius){
+      shouldArrowBeVisible = true;
+    }else{
+      shouldArrowBeVisible = false;
+    }   
+    
+    if (shouldArrowBeVisible){
+      // arrowHeight is the default height(y-axis) at which we will show thw arrow.
+      let arrowHeight;
+      let needToUpdateArrow = false;
+      if(global_building.focusAtHeight !== undefined){
+        arrowHeight = global_building.focusAtHeight;
+        needToUpdateArrow = true;
+      }else{
+        arrowHeight = getFloorHeight(global_building.name);
+      }
+  
+      if(!global_building.arrowHelper){
+        showArrowFunction(global_building.name, arrowHeight);
+      }else{
+        if(needToUpdateArrow){
+          scene_city.remove(global_building.arrowHelper);
+          delete global_building.arrowHelper;
+          showArrowFunction(global_building.name, arrowHeight);
+        }  
+      }
+    }else{
+      if(global_building.arrowHelper){
+        scene_city.remove(global_building.arrowHelper);
+        delete global_building.arrowHelper;
+      }    
     }
-    if (Math.abs(objectPos.y - camera.position.y) >= 5) {
-      camera.position.y += theta * (objectPos.y - camera.position.y);
-      // console.log("y");
-    }
-    if (Math.abs(objectPos.z - camera.position.z) >= 2) {
-      camera.position.z += theta * (objectPos.z - camera.position.z);
-      // console.log("z");  
-    } else {
-      toZoomBuilding = false;
-    }
+
   }
+
+  
+  
+
+  // always update the slider position wrt to the camera 'y' position
+  updateOverlaySlider(overlay_slider);
+
+  if (controllerOnHold.status){
+    
+    let direction = controllerOnHold.target;
+
+    let camera = scene_city.userData.camera;
+    let target = scene_city.userData.controls.target;
+    let direction_vector = new THREE.Vector3();
+
+    var ground_object_coord = new THREE.Box3().setFromObject(ground_object);
+    let min_coord = ground_object_coord.min;
+    let max_coord = ground_object_coord.max;
+    
+    camera.getWorldDirection(direction_vector);    
+
+    var axis = new THREE.Vector3( 0, 1, 0 );
+    let speed = camera.position.y * 0.025;
+    
+    if(allowed || allowed === undefined){
+      direction_vector.y = 0;
+      moveCamera(direction, direction_vector, axis, camera, target, speed);
+
+      if (camera.position.x > (1.5 * max_coord.x) || camera.position.x < (1.5 * min_coord.x) || camera.position.z > (1.5 * max_coord.z) || camera.position.z < (1.5 * min_coord.z)){
+        allowed = false;
+      }
+    }else{
+      var origin;
+      direction_vector = getDirectionVector(direction, direction_vector, axis);
+
+      if(camera.position.x > (1.5 * max_coord.x)){        
+        origin = new THREE.Vector3( -1, 0, 0 );
+      }else if(camera.position.x < (1.5 * min_coord.x)){
+        origin = new THREE.Vector3( 1, 0, 0 );
+      }else if(camera.position.z > (1.5 * max_coord.z)){
+        origin = new THREE.Vector3( 0, 0, -1 );
+      }else if(camera.position.z < (1.5 * min_coord.z)){
+        origin = new THREE.Vector3( 0, 0, 1 );
+      }
+      if(origin.dot(direction_vector) > 0){
+        allowed = true;
+      }
+    }    
+
+  }
+  // if (toPanCity) {
+  //   // console.log("pan city "+theta);
+  //   theta += 0.1;
+  //   camera.position.x = radius * Math.sin(THREE.MathUtils.degToRad(theta));
+  //   // camera.position.y = radius/5+(radius/10) * Math.sin( THREE.MathUtils.degToRad( theta ) );
+  //   camera.position.z = radius * Math.cos(THREE.MathUtils.degToRad(theta));
+  //   camera.lookAt(scene.position);
+  //   if (theta > 360) toPanCity = false;
+  // } else if (toPanBuilding) {
+  //   // console.log("pan around building "+params.root);
+  //   theta += 0.1;
+  //   // let building_position = new THREE.Vector3(100,0,100);
+  //   let root_building = root_dropdown.getValue();
+  //   let building_position = city_all[root_building].coords;
+  //   controls.target = new THREE.Vector3(building_position[0], 30, building_position[1]);
+  //   camera.position.x = building_position[0] + radius * Math.sin(THREE.MathUtils.degToRad(theta));
+  //   camera.position.y = 100;
+  //   // camera.position.y = radius * Math.sin( THREE.MathUtils.degToRad( theta ) );
+  //   camera.position.z = building_position[1] + radius * Math.cos(THREE.MathUtils.degToRad(theta));
+  //   if (theta > 360) toPanBuilding = false;
+  // } else if (toZoomBuilding) {
+  //   // // console.log("zoom in to "+root_dropdown.getValue());
+  //   // // let building_position = new THREE.Vector3(100,0,100);
+  //   // let root_building = root_dropdown.getValue();
+  //   // let building_position = city_all[root_building].coords;
+  //   // controls.target = new THREE.Vector3(building_position[0], 10, building_position[1]);
+  //   // // console.log(building_position[0]);
+  //   // if (Math.abs(building_position[0] - camera.position.x) >= 20) {
+  //   //   camera.position.x += theta * (building_position[0] - camera.position.x);
+  //   //   // console.log("x");
+  //   // }
+  //   // if (Math.abs(camera.position.y) >= 100) {
+  //   //   camera.position.y += theta * (0 - camera.position.y);
+  //   //   // console.log("y");
+  //   // }
+  //   // if (Math.abs(building_position[1] - camera.position.z) >= 20) {
+  //   //   camera.position.z += theta * (building_position[1] - camera.position.z);
+  //   //   // console.log("z");  
+  //   // } else {
+  //   //   toZoomBuilding = false;
+  //   // }
+
+  //   // console.log("zoom in to "+root_dropdown.getValue());
+  //   // let building_position = new THREE.Vector3(100,0,100);
+  //   let root_building = root_dropdown.getValue();
+  //   let building_position = city_all[root_building].coords;
+  //   let objectPos = new THREE.Vector3(building_position[0], building_position[3], building_position[1] + 50); // 2021-10-18: 0 is x, 1 is z, 3 is y, and I don't know what is 2
+  //   controls.target.set(building_position[0], building_position[3] + 20, building_position[1]); // 2021-10-18: 0 is x, 1 is z, 3 is y, and I don't know what is 2
+  //   // console.log(controls.target);
+  //   // console.log(camera.position);
+  //   // console.log(controls);
+  //   // console.log(city_all[root_building]);
+  //   // camera.lookAt(building_position[0], building_position[3], building_position[1]);
+  //   // camera.matrix[8] = building_position[0];
+  //   // camera.matrix[9] = building_position[3];
+  //   // camera.matrix[10] = building_position[1];
+  //   // let lookAtVector = new THREE.Vector3(camera.matrix[8], camera.matrix[9], camera.matrix[10]);
+  //   // console.log(lookAtVector);
+  //   // console.log(camera.matrix);
+  //   // console.log(camera);
+  //   // console.log(building_position[0]);
+  //   if (Math.abs(objectPos.x - camera.position.x) >= 2) {
+  //     camera.position.x += theta * (objectPos.x - camera.position.x);
+  //     // console.log("x");
+  //   }
+  //   if (Math.abs(objectPos.y - camera.position.y) >= 5) {
+  //     camera.position.y += theta * (objectPos.y - camera.position.y);
+  //     // console.log("y");
+  //   }
+  //   if (Math.abs(objectPos.z - camera.position.z) >= 2) {
+  //     camera.position.z += theta * (objectPos.z - camera.position.z);
+  //     // console.log("z");  
+  //   } else {
+  //     toZoomBuilding = false;
+  //   }
+  // }
   if(!lighthouseDone) {
     if(lighthouseLoaded && entropyLoaded && bucketLoaded) {
       let result = LH.loadCitySummaryFile(lighthouseData, scene_lighthouse, lighthouse_objects, entropy, first_key_color_dict, first_key_list, select_fixed_point, color_display, light_intensity, bucketData, key_to_buckets);
@@ -1163,7 +1428,7 @@ function render() {
       pathPlanningDone = true;
       // console.log("pathPlanningDone "+pathPlanningDone+", metaLoaded && voronoiLoaded && lighthouseLoaded && bucketLoaded");
       let selected_buildings_list;
-      select_fixed_point.onChange (
+      select_fixed_point.onChange ( // NOTE: it seems this function creats lagging.
         function (key) {
           const intensity = entropy[parseInt(key)];
           color_display.setValue(first_key_color_dict[parseInt(key)]);
@@ -1268,12 +1533,16 @@ function onMouseMove(event) {
       }
       building_params.position = building_params.layer + '_' + building_params.floor;
     }
+    if(shouldArrowBeVisible && global_building.name){      
+      global_building.focusAtHeight = getFloorHeight(global_building.name, building_params.floor);
+    }
   } else // there are no intersections
   {
     INTERSECTED = null;
     building_params.floor = '';
     building_params.layer = '';
     building_params.position = '';
+    delete global_building.focusAtHeight;
   }
 }
 
@@ -1283,7 +1552,7 @@ function onMouseDownLH(event){
   const width = rect.right-rect.left;
   const height = rect.bottom-rect.top;
   mouse.x=(event.clientX/width)*2-1;
-  mouse.y=-((event.clientY-166)/height)*2+1;
+  mouse.y=-((event.clientY-300)/height)*2+1;
   // console.log("onMouseDownLH, event.clientX = ",event.clientX, " event.clientY = ",event.clientY);
   raycaster.setFromCamera(mouse, perspectiveCameraL);
   const intersects=raycaster.intersectObjects(scene_lighthouse.children);
@@ -1313,8 +1582,50 @@ function onMouseDown(event) {
   raycaster.setFromCamera(mouse, camera);
 
   let intersects = raycaster.intersectObjects(objects);
-  if (intersects.length > 0) {
-    console.log("clicked on " + intersects[0].object.name);
+  let selected_building = null;
+  if (intersects.length > 0) {    
+    selected_building = "wavemap_" + intersects[0].object.layer_name; 
+    
+    // if(global_building.name){
+    //   let clickEvent = new Event('mousedown');
+    //   overlay_reset_camera.dispatchEvent(clickEvent);
+    // }
+
+    global_building.name = selected_building;    
+
+    if (selectingBuildingTour) {
+      root_dropdown.setValue(selected_building);
+      document.getElementById('city-buidling-tour-buidling').value = selected_building;
+      addRoadNetwork(selected_building);
+      CM.enableHighLight(city_all.building2BucketPeel, selected_building, true);
+      changeLHHighLight(selected_building);
+      showBuildingArrow(selected_building);
+    } else if (selectingPathNavigation) {
+      if (event.button === 0) {
+        root_dropdown.setValue(selected_building);
+        document.getElementById('city-path-navigation-src').value = selected_building;
+        addRoadNetwork(selected_building);
+        CM.enableHighLight(city_all.building2BucketPeel, selected_building, true);
+        changeLHHighLight(selected_building);
+        showBuildingArrow(selected_building);
+      } else if (event.button === 2) {
+        document.getElementById('city-path-navigation-tgt').value = selected_building;
+      }
+    } else {
+      root_dropdown.setValue(selected_building);
+      updateCityLight([selected_building])
+      addRoadNetwork(selected_building);
+      CM.enableHighLight(city_all.building2BucketPeel, selected_building, true);
+      changeLHHighLight(selected_building);
+      showBuildingArrow(selected_building);
+      zoomAtBuilding(selected_building)
+        .then(() => {            
+          let showBuildingTour_FeatureFlag = false;
+          if(showBuildingTour_FeatureFlag){            
+            buildingTour(selected_building);            
+          }
+      });
+    }
   }
 }
 
@@ -1359,3 +1670,661 @@ function initSlider() {
   slider.style.touchAction = 'none'; // disable touch scroll
   slider.addEventListener('pointerdown', onPointerDown);
 }
+
+function initOverlay(){
+  overlay_slider = document.querySelector('#overlay-slider');
+  overlay_circle_controller = document.querySelector('#overlay-circle-controller');
+  
+  overlay_zoom_in = document.querySelector('#zoom-in');
+  overlay_zoom_in.addEventListener('mousedown', onControllerZoom);
+  overlay_zoom_in.scale = 4;
+
+  overlay_zoom_out = document.querySelector('#zoom-out');
+  overlay_zoom_out.addEventListener('mousedown', onControllerZoom);
+  overlay_zoom_out.scale = 4;
+
+
+  let camera = scene_city.userData.camera;
+  overlay_slider.setAttribute("min", 10);
+  overlay_slider.setAttribute("value", camera.position.y);
+  overlay_slider.setAttribute("max", camera.position.y * 1.1);
+  overlay_slider.addEventListener('input', onSliderInput);
+  
+  overlay_reset_camera = document.querySelector('#reset-camera');
+  overlay_reset_camera.addEventListener('mousedown', onControllerReset);
+
+  let left = document.querySelector('#left');
+  left.addEventListener('mousedown', onControllerDown);
+  left.addEventListener('mouseup', onControllerUp);
+  
+  let up = document.querySelector('#up');
+  up.addEventListener('mousedown', onControllerDown);
+  up.addEventListener('mouseup', onControllerUp);
+
+  let right = document.querySelector('#right');
+  right.addEventListener('mousedown', onControllerDown);
+  right.addEventListener('mouseup', onControllerUp);
+
+  let down = document.querySelector('#down');
+  down.addEventListener('mousedown', onControllerDown);
+  down.addEventListener('mouseup', onControllerUp);
+
+  let north_west = document.querySelector('#north-west');
+  north_west.addEventListener('mousedown', onControllerDown);
+  north_west.addEventListener('mouseup', onControllerUp);
+  
+  let north_east = document.querySelector('#north-east');
+  north_east.addEventListener('mousedown', onControllerDown);
+  north_east.addEventListener('mouseup', onControllerUp);
+
+  let south_east = document.querySelector('#south-east');
+  south_east.addEventListener('mousedown', onControllerDown);
+  south_east.addEventListener('mouseup', onControllerUp);
+
+  let south_west = document.querySelector('#south-west');
+  south_west.addEventListener('mousedown', onControllerDown);
+  south_west.addEventListener('mouseup', onControllerUp);
+}
+
+async function onControllerReset(event){
+  event.preventDefault();  
+  let initialCameraPosition = scene_city.userData.camera.position;
+  let initialTargetPosition = scene_city.userData.controls.target;
+
+  let finalTargetPosition = new THREE.Vector3(0, 10, 0);
+  let finalCameraPosition = new THREE.Vector3(0, 350, 600);  
+
+  await new Promise((resolve) => setTimeout(resolve, transitionCamera(    
+    {camera: initialCameraPosition, target: initialTargetPosition},
+    {camera: finalCameraPosition, target: finalTargetPosition}    
+  )));
+  controls.reset();
+
+  if(global_building.name){
+    delete global_building.name;
+    if(global_building.timmers){
+      for(let i=0; i<global_building.timmers.length ; i++){    
+        clearTimeout(global_building.timmers[i]);
+      }  
+      delete global_building.timmers;
+    }
+    if(global_building.arrowHelper){
+      scene_city.remove(global_building.arrowHelper);
+      delete global_building.arrowHelper;
+    }
+  }  
+  global_building = {};
+  console.log(`Exit: ${JSON.stringify(global_building)}`);
+}
+
+function onControllerZoom(event){
+  event.preventDefault();
+  let wheelEventInit = {
+    'bubbles':    true,
+    'cancelable': false    
+  };
+  if (event.target.id === 'zoom-in'){
+    wheelEventInit.deltaY = -120;
+  }else{
+    wheelEventInit.deltaY = 120;
+  }
+  city_view.dispatchEvent(new WheelEvent('wheel', wheelEventInit));
+}
+
+function onControllerUp(event){
+  event.preventDefault();
+  controllerOnHold = {status: false, target: null};
+}
+
+function onControllerDown(event){
+  event.preventDefault();
+  controllerOnHold = {status: true, target: event.target.id};
+}
+
+function updateOverlaySlider(inputSlider){
+  let camera = scene_city.userData.camera;
+  if (inputSlider !== undefined){
+    inputSlider.value = camera.position.y;
+  }  
+}
+
+function moveCamera(direction, direction_vector, axis, camera, target, speed){
+  
+  direction_vector = getDirectionVector(direction, direction_vector, axis);
+  camera.position.addScaledVector(direction_vector, speed);
+  target.addScaledVector(direction_vector, speed);
+}
+
+function getDirectionVector(direction, direction_vector, axis){
+  if(direction === 'down'){
+    direction_vector.multiplyScalar(-1);
+  }else if(direction === 'left'){    
+    var angle = Math.PI / 2;
+    direction_vector.applyAxisAngle(axis, angle);
+  }else if(direction === 'right'){
+    var angle = -1 * (Math.PI / 2);
+    direction_vector.applyAxisAngle(axis, angle);
+  }else if(direction === 'north-west'){
+    var angle = (Math.PI / 2) - (Math.PI / 4);
+    direction_vector.applyAxisAngle(axis, angle);
+  }else if(direction === 'north-east'){
+    var angle = Math.PI + (Math.PI / 2) + (Math.PI / 4);
+    direction_vector.applyAxisAngle(axis, angle);
+  }else if(direction === 'south-east'){
+    var angle = Math.PI + (Math.PI / 4);
+    direction_vector.applyAxisAngle(axis, angle);
+  }else if(direction === 'south-west'){
+    var angle = Math.PI - (Math.PI / 4);
+    direction_vector.applyAxisAngle(axis, angle);
+  }  
+  return direction_vector
+}
+
+function onSliderInput(event){
+  event.preventDefault();
+  let inputSlider = document.querySelector('#overlay-slider');
+  let camera = scene_city.userData.camera;
+  let target = scene_city.userData.controls.target;
+  
+  let isIncreasing = false;
+  let changeFactor = 0;
+  if (camera.position.y < inputSlider.value){
+    isIncreasing = true;
+    changeFactor = inputSlider.value - camera.position.y;
+  }else{
+    changeFactor = camera.position.y - inputSlider.value;
+  }
+  
+  camera.position.y = inputSlider.value;
+  if (isIncreasing){
+    target.y += changeFactor;
+  }else{
+    target.y -= changeFactor;
+  }
+}
+
+function getFloorHeight(buildingName, floor = undefined){
+  // Take building name and floor as input and return y-coord of floor. If floor is undefined then take building height.
+  let building = city_all[buildingName];
+  if(floor !== undefined && building.shapes.length >= floor){
+    return y_scale * building.shapes[floor].height;
+  }else{
+    return building.coords[3];
+  }
+}
+
+function showArrowFunction(building_name, floorCoords){
+  const dir = new THREE.Vector3(0, 0, -1);
+  // normalize the direction vector (convert to vector of length 1)
+  dir.normalize();
+  const hex = 0xffffff;
+  const length = 50;
+  let building = city_all[building_name];
+  const origin = new THREE.Vector3(building.coords[0], floorCoords, building.coords[1] + (length * 1.1));
+
+  global_building.arrowHelper = new THREE.ArrowHelper(dir, origin, length, hex, length/5);
+  scene_city.add(global_building.arrowHelper);
+  
+}
+
+
+function transitionCamera(initial, final, totalSteps=1000){
+  let camera = scene_city.userData.camera;
+  let cameraX = (final.camera.x - initial.camera.x) / totalSteps;
+  let cameraY = (final.camera.y - initial.camera.y) / totalSteps;
+  let cameraZ = (final.camera.z - initial.camera.z) / totalSteps;
+
+  let targetX = (final.target.x - initial.target.x) / totalSteps;
+  let targetY = (final.target.y - initial.target.y) / totalSteps;
+  let targetZ = (final.target.z - initial.target.z) / totalSteps;
+
+  let clock = 500;
+  global_building.timmers = [];
+
+  for(let i=0; i <= totalSteps; i++){
+    global_building.timmers.push(setTimeout(function() {
+      let currentCameraPosition = camera.position;
+      let currentTargetPosition = scene_city.userData.controls.target;   
+      scene_city.userData.controls.target.set(currentTargetPosition.x + targetX, currentTargetPosition.y + targetY, currentTargetPosition.z + targetZ);
+      camera.position.set(currentCameraPosition.x + cameraX, currentCameraPosition.y + cameraY, currentCameraPosition.z + cameraZ);
+      controls.update();
+    }, clock));
+    clock += 1;
+  } 
+
+  return clock;
+}
+
+async function iterateCameraOverBuilding(selected_building){  
+  let camera = scene_city.userData.camera;
+  let building = city_all[selected_building];
+  let building_position = new THREE.Vector3(building.coords[0], building.coords[3], building.coords[1]);
+
+  let initialCameraPosition = camera.position;
+  let initialTargetPosition = scene_city.userData.controls.target;
+
+  let theta = 30;
+  let radius = 30;
+  let seconds;
+  if(building.shapes.length < 10){
+    seconds = 0.5;
+  } else if(building.shapes.length > 10 && building.shapes.length < 20){
+    seconds = 1;
+  } else {
+    seconds = 2;
+  }
+
+  let a = radius * Math.cos(THREE.MathUtils.degToRad(theta));
+  let o = radius * Math.sin(THREE.MathUtils.degToRad(theta));
+
+  let intermediateTargetPosition = new THREE.Vector3(building_position.x, 0, building_position.z);
+  let intermediateCameraPosition = new THREE.Vector3(building_position.x, 0 + o, building_position.z + a);
+
+  let totalSteps = (seconds * 1000);
+  let finalTargetPosition = new THREE.Vector3(building_position.x, building_position.y, building_position.z);
+  let finalCameraPosition = new THREE.Vector3(building_position.x + o, building_position.y + o, building_position.z + a);  
+
+  await new Promise((resolve) => setTimeout(resolve, transitionCamera(    
+    {camera: initialCameraPosition, target: initialTargetPosition},
+    {camera: intermediateCameraPosition, target: intermediateTargetPosition}    
+  )));
+
+  return new Promise((resolve) => {
+    setTimeout(resolve, transitionCamera(
+      {camera: intermediateCameraPosition, target: intermediateTargetPosition},
+      {camera: finalCameraPosition, target: finalTargetPosition},
+      totalSteps
+    ) + 500);
+  });
+}
+
+function zoomAtBuildingFlag(selected_building){
+  let camera = scene_city.userData.camera;  
+  let initialCameraPosition = camera.position;
+  let initialTargetPosition = scene_city.userData.controls.target;
+
+  let building = city_all[selected_building].coords;
+  let building_position = new THREE.Vector3(building[0], building[3], building[1]);
+  // console.log(flag_objects_new)
+  // console.log(selected_building)
+  let flag_details = flag_objects_new[selected_building];
+  let flag_height = JSON.parse(JSON.stringify(flag_details.flag_rod)).geometries[0].height;
+
+  let observeFlagFor = 2 * 1000;
+  // should be more that observeFlagFor
+  let totalTransitionTime = 3 * 1000;
+
+
+  let totalSteps = totalTransitionTime - observeFlagFor;
+  let finalTargetPosition = new THREE.Vector3(building_position.x, building_position.y + flag_height, building_position.z);
+  let move_away = flag_height / (2 * Math.tan( THREE.MathUtils.degToRad( camera.fov ) / 2 ));  
+  let finalCameraPosition = new THREE.Vector3(building_position.x, building_position.y, building_position.z + move_away);  
+
+  return new Promise((resolve) => {
+    setTimeout(resolve, transitionCamera(
+      {camera: initialCameraPosition, target: initialTargetPosition},
+      {camera: finalCameraPosition, target: finalTargetPosition},
+      totalSteps
+    ) + observeFlagFor);
+  });
+}
+
+async function rotateAtBuilding(selected_building){     
+  let camera = scene_city.userData.camera;
+  let building = city_all[selected_building].coords;
+  let building_position = new THREE.Vector3(building[0], building[3], building[1]);
+  
+  let theta = 45;
+  let radius = 30;  
+  let initialCameraPosition = camera.position;
+  let initialTargetPosition = scene_city.userData.controls.target;
+  let clock = 500;
+  let a = radius * Math.cos(THREE.MathUtils.degToRad(theta));
+  let o = radius * Math.sin(THREE.MathUtils.degToRad(theta));
+
+  let intermediateTargetPosition = new THREE.Vector3(building_position.x, building_position.y, building_position.z);
+  let intermediateCameraPosition = new THREE.Vector3(building_position.x, building_position.y + o, building_position.z + a);
+
+  await new Promise((resolve) => setTimeout(resolve, transitionCamera(    
+    {camera: initialCameraPosition, target: initialTargetPosition},
+    {camera: intermediateCameraPosition, target: intermediateTargetPosition}    
+  )));
+  
+  return new Promise((resolve) => {
+    for(let thetaToRotate=0; thetaToRotate <= 360; thetaToRotate+=0.1){
+      global_building.timmers.push(setTimeout(function() {  
+        camera.position.x = building_position.x + (radius * Math.sin(THREE.MathUtils.degToRad(thetaToRotate)));
+        camera.position.z = building_position.z + (radius * Math.cos(THREE.MathUtils.degToRad(thetaToRotate)));
+        controls.update();      
+      }, clock));  
+      clock += 5;    
+    }
+    setTimeout(resolve, clock + 500);    
+  });
+}
+
+function buildingTour(selected_building){ 
+  console.log(`buildingTour for ${selected_building} Starting.`);
+  
+  return new Promise(resolve => {  
+    zoomAtBuilding(selected_building)
+    .then(() => {      
+      return iterateCameraOverBuilding(selected_building);
+    })  
+    // .then(() => {      
+    //   return zoomAtBuildingFlag(selected_building);
+    // })
+    // .then(() => {
+    //   return rotateAtBuilding(selected_building);
+    // })
+    .then(() => {
+      resolve();      
+    });
+  });
+
+}
+
+function walkOnPath(path){  
+  function takeStep(path, index){
+    if(index == path.length){
+      return;
+    }else if(index == 0 || index == path.length - 1){
+      CM.enableHighLight(city_all.building2BucketPeel, path[index], true);
+      // select_fixed_point.setValue(path[index].split('_')[1]);
+      changeLHHighLight(path[index]);
+      showBuildingArrow(path[index]);
+      buildingTour(path[index])
+        .then(() => {
+          if (index < path.length - 1) {
+            showTempPath(index);
+          }
+          takeStep(path, ++index);
+          if (index < path.length) {
+            console.log(path[index])
+            // console.log(city_all.building2BucketPeel)
+            CM.enableHighLight(city_all.building2BucketPeel, path[index], true);
+            // select_fixed_point.setValue(path[index].split('_')[1]);
+            changeLHHighLight(path[index]);
+            showBuildingArrow(path[index]);
+          }
+        });
+    }else{
+      zoomAtBuilding(path[index])      
+      .then(() => {
+        showTempPath(index);
+        takeStep(path, ++index);
+        console.log(path[index])
+        CM.enableHighLight(city_all.building2BucketPeel, path[index], true);
+        // select_fixed_point.setValue(path[index].split('_')[1]);
+        changeLHHighLight(path[index]);
+        showBuildingArrow(path[index]);
+      });
+    }
+  }
+
+  console.log(`Walk Starting from ${path[0]} to ${path[path.length - 1]}`);
+  let index = 0;
+  takeStep(path, index);
+}
+
+function tourOnPath(path) {
+  function takeTourStep(path, index) {
+    if (index == path.length) {
+      return;
+    } else {
+      CM.enableHighLight(city_all.building2BucketPeel, path[index], true);
+      changeLHHighLight(path[index]);
+      showBuildingArrow(path[index]);
+      buildingTour(path[index])
+        .then(() => {
+          if (index < path.length - 1) {
+            showTempPath(index);
+          }
+          takeTourStep(path, ++index)
+        });
+    };
+  };
+  let index = 0;
+  takeTourStep(path, index);
+};
+
+function showBuildingArrow(buildingName, disableOthers) {
+  if (disableOthers === null || disableOthers === undefined) {
+    disableOthers = true;
+  };
+  if (disableOthers === true) {
+    for (const tempArrow of Object.values(arrow_objects)) {
+      tempArrow.visible = false;
+    };
+  }
+  arrow_objects[buildingName].visible = true;
+}
+
+function changeLHHighLight(buildingName) {
+  // console.log(first_key_list)
+  let highlighter = lighthouse_objects[lighthouse_objects.length-1];
+  const key = buildingName.split('_')[1]
+  let index = first_key_list.indexOf(String(key));
+  let selected = lighthouse_objects[index];
+  highlighter.position.set(0, selected.Y_pos, 0);
+  highlighter.scale.set(selected.maxR*1.1, selected.dY, selected.maxR*1.1);
+}
+
+function clearRoadNetwork() {
+  clearTempPath();
+  path_objects.every(object => scene_city.remove(object));
+  path_objects = [];
+}
+
+function addRoadNetwork(buildingName, disableOthers) {
+  if (disableOthers === null || disableOthers === undefined) {
+    disableOthers = true;
+  };
+  if (disableOthers === true) {
+    clearRoadNetwork();
+  }
+  let result = PATH.pathPlanning(buildingName, scene_city, city_all, light_objects);
+  scene_city = result.scene;
+  path_objects = result.path;
+  light_objects = result.light_objects;
+}
+
+function getBuidlingShortName(buildingName) {
+  const splitName = buildingName.split('_');
+  return `${splitName[1]}_${splitName[2]}`;
+}
+
+function updateCityLight(buildingNameList, disableOthers) {
+  if (disableOthers === null || disableOthers === undefined) {
+    disableOthers = true;
+  };
+  if (disableOthers === true) {
+    light_objects.selectionLights.forEach(object => object.visible=false);
+  };
+  const result = LH.updateSelectionLights(city_all, light_objects, buildingNameList.map(d => getBuidlingShortName(d)));
+  light_objects = result.light_objects;
+}
+
+document.getElementById('city-tour-button').onclick = function goCityTour() {
+  if (city_to_load !== 0) {
+    return;
+  }
+  const path = PATH.getCityTour(city_all.weightedGraph, null);
+  clearRoadNetwork();
+  drawTempPath(path);
+  walkOnPath(path);
+}
+
+function goBestBuilding(statName) {
+  const buildingList = Object.keys(city_all.graph);
+  let buildingStatList = [];
+  if (statName === 'largest') {
+    buildingStatList = buildingList.map(d => [d, city_all[d].E]);
+  } else if (statName === 'tallest') {
+    buildingStatList = buildingList.map(d => [d, city_all[d].coords[3]])
+  } else if (statName === 'densest') {
+    // console.log(city_all.building2BucketPeel)
+    buildingStatList = buildingList.filter(d => city_all.building2BucketPeel[`${d.split('_')[1]}_${d.split('_')[2]}`][0][0] >= 4).map(d => [d, 2 * city_all[d].E / city_all[d].V / (city_all[d].V - 1)])
+  }
+  // console.log(buildingStatList);
+  buildingStatList.sort((a, b) => -(a[1] - b[1]))
+  // console.log(buildingStatList);
+  const bestList = buildingStatList.slice(0, Math.ceil(Math.log2(buildingList.length))).map(d => d[0]);
+  // console.log(bestList);
+  updateCityLight(bestList);
+  clearRoadNetwork();
+  drawTempPath(bestList);
+
+  tourOnPath(bestList);
+}
+
+document.getElementById('city-largest-building-button').onclick = function goLargestBuilding() {
+  if (city_to_load !== 0) {
+    return;
+  }
+  // console.log(flag_objects_new)
+  goBestBuilding('largest')
+}
+
+document.getElementById('city-tallest-building-button').onclick = function goTallestBuilding() {
+  if (city_to_load !== 0) {
+    return;
+  }
+  // console.log(flag_objects_new)
+  goBestBuilding('tallest')
+}
+
+document.getElementById('city-densest-building-button').onclick = function goDensestBuilding() {
+  if (city_to_load !== 0) {
+    return;
+  }
+  // console.log(flag_objects_new)
+  goBestBuilding('densest')
+}
+
+function addDropListOption(element, valueList) {
+  for (const value of valueList) {
+    let option = document.createElement('option');
+    option.value = value;
+    option.innerHTML = value;
+    element.appendChild(option);
+  }
+}
+
+function clearDropListOption(element) {
+  for (let i = element.options.length - 1; i >= 0; i --) {
+    element.remove(i);
+  };
+}
+
+function openBuildingTourMenu() {
+  selectingBuildingTour = true;
+  document.getElementById('city-buidling-tour-menu').style.visibility = 'visible';
+  addDropListOption(document.getElementById('city-buidling-tour-buidling'), Object.keys(city_all.graph));
+}
+
+function closeBuildingTourMenu() {
+  selectingBuildingTour = false;
+  document.getElementById('city-buidling-tour-menu').style.visibility = 'hidden';
+  clearDropListOption(document.getElementById('city-buidling-tour-buidling'));
+}
+
+function openPathNavigationMenu() {
+  selectingPathNavigation = true;
+  document.getElementById('city-path-navigation-menu').style.visibility = 'visible';
+  addDropListOption(document.getElementById('city-path-navigation-src'), Object.keys(city_all.graph));
+  addDropListOption(document.getElementById('city-path-navigation-tgt'), Object.keys(city_all.graph));
+}
+
+function closePathNavigationMenu() {
+  selectingPathNavigation = false;
+  document.getElementById('city-path-navigation-menu').style.visibility = 'hidden';
+  clearDropListOption(document.getElementById('city-path-navigation-src'));
+  clearDropListOption(document.getElementById('city-path-navigation-tgt'));
+}
+
+function pathNavigationPlan() {
+  openPathNavigationMenu();
+  closeBuildingTourMenu();
+}
+
+function buildingTourPlan() {
+  openBuildingTourMenu();
+  closePathNavigationMenu();
+}
+
+function pathNavigationGo() {
+  const src = document.getElementById('city-path-navigation-src').value;
+  const tgt = document.getElementById('city-path-navigation-tgt').value;
+  const path = PATH.getTourPath(city_all.weightedGraph, src, tgt);
+  closePathNavigationMenu();
+  updateCityLight(path);
+  clearRoadNetwork();
+  drawTempPath(path);
+  walkOnPath(path);
+}
+
+function buildingTourGo() {
+  const building = document.getElementById('city-buidling-tour-buidling').value;
+  closeBuildingTourMenu();
+  updateCityLight([building]);
+  CM.enableHighLight(city_all.building2BucketPeel, building, true);
+  changeLHHighLight(building);
+  showBuildingArrow(building);
+  addRoadNetwork(building);
+  buildingTour(building);
+}
+
+document.getElementById('city-path-navigation-button').onclick = function parsePathNavigationButton() {
+  if (city_to_load !== 0) {
+    return;
+  }
+  if (selectingPathNavigation) {
+    pathNavigationGo();
+  } else {
+    pathNavigationPlan();
+  }
+}
+
+document.getElementById('city-buidling-tour-button').onclick = function parseBuildingTourButton() {
+  if (city_to_load !== 0) {
+    return;
+  }
+  if (selectingBuildingTour) {
+    buildingTourGo();
+  } else {
+    buildingTourPlan();
+  }
+}
+
+function clearTempPath() {
+  for (const pathObj of tempCityPathObjList) {
+    scene_city.remove(pathObj);
+  };
+}
+
+function drawTempPath(buildingList, hidden) {
+  if (hidden === null || hidden === undefined) {
+    hidden = true;
+  };
+  clearTempPath();
+  tempCityPathObjList = PATH.drawPath(city_all, buildingList);
+  console.log(tempCityPathObjList)
+  for (const pathObj of tempCityPathObjList) {
+    scene_city.add(pathObj);
+  }
+
+  if (hidden) {
+    hideTempPath();
+  };
+}
+
+function hideTempPath() {
+  for (const pathObj of tempCityPathObjList) {
+    pathObj.visible = false;
+  };
+}
+
+function showTempPath(index) {
+  tempCityPathObjList[index].visible = true;
+} 
