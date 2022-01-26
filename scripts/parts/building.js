@@ -465,7 +465,7 @@ function ifUrlExists(url) {
 
 // check city_tracking, create buildings that are ready to color & move
 // delete colored and moved building from city_tracking
-function createCityMeshes(scene, objects, city_all, city_tracking, ceil_objects, middle_objects, truss_objects, window_objects, flag_objects, flag_objects_new, arrow_objects, city_to_load, y_scale, dataSet, ceilVisible, isNight, oneBuilding=false) {
+function createCityMeshes(scene, objects, city_all, city_tracking, ceil_objects, middle_objects, truss_objects, window_objects, flag_objects, flag_objects_new, arrow_objects, src_objects, tgt_objects, city_to_load, y_scale, dataSet, ceilVisible, isNight, oneBuilding=false) {
   for (let layer in city_tracking) {
     // console.log(city_tracking[layer].ready_to_move)
     // console.log(city_tracking[layer].ready_to_color)
@@ -568,9 +568,11 @@ function createCityMeshes(scene, objects, city_all, city_tracking, ceil_objects,
       scene = result.scene;
       flag_objects_new = result.flag_objects_new;
       let flag_mast_height = result.flag_mast;
-      let result_arrow = createArrows(scene, layer, [X, Z], flag_base_Y, arrow_objects, flag_mast_height)
+      let result_arrow = createArrows(scene, layer, [X, Z], flag_base_Y, arrow_objects, src_objects, tgt_objects, flag_mast_height)
       scene = result_arrow.scene;
       arrow_objects = result_arrow.arrow_objects;
+      src_objects = result_arrow.src_objects;
+      tgt_objects = result_arrow.tgt_objects;
       console.log("createCityMeshes: loaded "+layer+", city to load = "+city_to_load);
       delete city_tracking[layer];
       --city_to_load;
@@ -578,10 +580,10 @@ function createCityMeshes(scene, objects, city_all, city_tracking, ceil_objects,
   }
   return {scene: scene, objects: objects, remain: city_to_load, 
     all: city_all, tracking: city_tracking, ceil: ceil_objects, middle: middle_objects, truss: truss_objects, 
-    window: window_objects, arrow: arrow_objects, flag: flag_objects_new};
+    window: window_objects, arrow: arrow_objects, src_objects: src_objects, tgt_objects: tgt_objects, flag: flag_objects_new};
 }
 
-function createArrows(scene, name, coord, Y, arrow_objects, flag_mast_height) {
+function createArrows(scene, name, coord, Y, arrow_objects, src_objects, tgt_objects, flag_mast_height) {
   const length = 30;
   const color = 0xffffff;
   const headLength = 10;
@@ -597,7 +599,30 @@ function createArrows(scene, name, coord, Y, arrow_objects, flag_mast_height) {
   arrow.visible = false;
   arrow_objects[name] = arrow;
   scene.add(arrow);
-  return {scene: scene, arrow_objects: arrow_objects};
+
+  const loader = new THREE.FontLoader();
+  loader.load( '../textures/helvetiker_regular.typeface.json', function ( font ) {
+    const srcText = new THREE.TextGeometry('SOURCE', {font: font, size: headWidth, height: headWidth});
+    srcText.computeBoundingBox();
+    const srcCenter = srcText.boundingBox.getCenter(new THREE.Vector3());
+    // console.log(srcCenter)
+    srcText.translate(X - srcCenter.x, Y - srcCenter.y, Z - srcCenter.z);
+    const srcMesh = new THREE.Mesh(srcText,new THREE.MeshStandardMaterial( {color: 0xffffff}));
+
+    const tgtText = new THREE.TextGeometry('TARGET', {font: font, size: headWidth, height: headWidth});
+    tgtText.computeBoundingBox();
+    const tgtCenter = tgtText.boundingBox.getCenter(new THREE.Vector3());
+    tgtText.translate(X - tgtCenter.x, Y - length + headLength/2 - tgtCenter.y, Z - tgtCenter.z);
+    const tgtMesh = new THREE.Mesh(tgtText,new THREE.MeshStandardMaterial( {color: 0xffffff}));
+
+    srcMesh.visible = false;
+    tgtMesh.visible = false;
+    src_objects[name] = srcMesh;
+    tgt_objects[name] = tgtMesh;
+    scene.add(srcMesh);
+    scene.add(tgtMesh);
+  })
+  return {scene: scene, arrow_objects: arrow_objects, src_objects: src_objects, tgt_objects: tgt_objects};
 }
 
 export {loadColor, loadSpiral, loadFloor, loadVoronoi, createCityMeshes};
