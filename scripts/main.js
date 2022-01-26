@@ -53,6 +53,8 @@ let bush_objects = [];
 let light_objects = {};
 let key_to_buckets = {};
 let arrow_objects = {};
+let src_objects = {};
+let tgt_objects = {};
 let flag_objects_new = {};
 let metaLoaded = false,
   voronoiLoaded = false,
@@ -87,8 +89,11 @@ let buildingCoordMax = 0;
 
 let selectingBuildingTour = false;
 let selectingPathNavigation = false;
+let selectingTourNavigation = false;
 
 let tempCityPathObjList = [];
+let tempPathNewStartIdx = 0;
+let clearTempPathFlag = true;
 
 const data_list = ['got', 'cit-patents', 'starwars'];
 const V = {'com-friendster':65608366, 'movies':218052, 'cit-Patents':3774768};
@@ -320,26 +325,23 @@ function init() {
     // zoomBuilding();
     // console.log(select_fixed_point);
     // console.log('click')
-    if (selectingBuildingTour) {
-      let selectedBuilding = '';
-      const shortName = data.buildingName[0];
-      for (const buildingName of Object.keys(city_all.graph)) {
-        const splitedName = buildingName.split('_');
-        if (`${splitedName[1]}_${splitedName[2]}` === shortName) {
-          selectedBuilding = buildingName;
-        }
+
+    let selectedBuilding = '';
+    const shortName = data.buildingName[0];
+    for (const buildingName of Object.keys(city_all.graph)) {
+      const splitedName = buildingName.split('_');
+      if (`${splitedName[1]}_${splitedName[2]}` === shortName) {
+        selectedBuilding = buildingName;
       }
+    }
+    CM.enableHighLight(city_all.building2BucketPeel, selectedBuilding);
+
+    if (selectingBuildingTour) {
       document.getElementById('city-buidling-tour-buidling').value = selectedBuilding;
     } else if (selectingPathNavigation) {
-      let selectedBuilding = '';
-      const shortName = data.buildingName[0];
-      for (const buildingName of Object.keys(city_all.graph)) {
-        const splitedName = buildingName.split('_');
-        if (`${splitedName[1]}_${splitedName[2]}` === shortName) {
-          selectedBuilding = buildingName;
-        }
-      }
       document.getElementById('city-path-navigation-src').value = selectedBuilding;
+    } else if (selectingTourNavigation) {
+      document.getElementById('city-tour-navigation-src').value = selectedBuilding;
     }
   };
 
@@ -363,6 +365,8 @@ function init() {
           document.getElementById('city-buidling-tour-buidling').value = selectedBuilding;
         } else if (selectingPathNavigation) {
           document.getElementById('city-path-navigation-src').value = selectedBuilding;
+        } else if (selectingTourNavigation) {
+          document.getElementById('city-tour-navigation-src').value = selectedBuilding;
         }
       });
     };
@@ -532,6 +536,16 @@ function init() {
         scene_city.remove(arrow_objects[key]);
       });
       arrow_objects = {};
+      let src_keys = Object.keys(src_objects);
+      src_keys.forEach(function(key){
+        scene_city.remove(src_objects[key]);
+      });
+      src_objects = {};
+      let tgt_keys = Object.keys(tgt_objects);
+      tgt_keys.forEach(function(key){
+        scene_city.remove(tgt_objects[key]);
+      });
+      tgt_objects = {};
 
       //
       let flag_objects_new_keys = Object.keys(flag_objects_new);
@@ -587,7 +601,7 @@ function init() {
       city_all = {};
       city_list = [];
       objects = [], path_objects = [], ceil_objects = [], middle_objects = [], truss_objects = [];
-      window_objects = [], flag_objects = [], arrow_objects = [];
+      window_objects = [], flag_objects = [], arrow_objects = [], src_objects = [], tgt_objects = [];
       key_to_buckets = {};
       selected_buildings = [];
       lighthouseData = {}, entropy = {}, bucketData = {}, summaryData = {};
@@ -659,7 +673,9 @@ function init() {
       if(addDagViews) {
         setStrataUrl('?data=nodata');
       }
-      clearTempPath();
+      if (clearTempPathFlag) {
+        clearTempPath();
+      }
       path_objects.every(object => scene_city.remove(object));
       // animate(); NOTE: 2022-1-23: seems this line makes the whole page lagging, temp disabled
       path_objects = [];
@@ -1145,7 +1161,7 @@ function animate() {
   // stats.update();
   if (city_to_load > 0 && addBuildings) {
     console.log("animate: run createCityMeshes()");
-    let result = BUILD.createCityMeshes(scene_city, objects, city_all, city_tracking, ceil_objects, middle_objects, truss_objects, window_objects, flag_objects, flag_objects_new, arrow_objects, city_to_load, y_scale, paramsL.dataSet, params.ceilVisible, params.isNight);
+    let result = BUILD.createCityMeshes(scene_city, objects, city_all, city_tracking, ceil_objects, middle_objects, truss_objects, window_objects, flag_objects, flag_objects_new, arrow_objects, src_objects, tgt_objects, city_to_load, y_scale, paramsL.dataSet, params.ceilVisible, params.isNight);
     scene_city = result.scene;
     city_all = result.all;
     city_tracking = result.tracking;
@@ -1156,6 +1172,8 @@ function animate() {
     truss_objects = result.truss;
     window_objects = result.window;
     arrow_objects = result.arrow;
+    src_objects = result.src_objects;
+    tgt_objects = result.tgt_objects;
     flag_objects_new = result.flag;
   } else if (city_to_load == 0 && printTime) {
 
@@ -1221,6 +1239,22 @@ function render() {
   renderer.setScissorTest( true );
 
   let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
+
+  //   // // Not working, need to check document
+  //   // // make src/tgt text toward camera
+  //   // for (const obj of Object.values(src_objects)) {
+  //   //   if (obj.visible) {
+  //   //     obj.setRotationFromQuaternion(camera.quaternion);
+  //   //     obj.updateMatrix();
+  //   //     // obj.lookAt(camera.position);
+  //   //   }
+  //   // }
+  //   // for (const obj of Object.values(tgt_objects)) {
+  //   //   if (obj.visible) {
+  //   //     obj.rotation.y = Math.atan2( ( camera.position.x - obj.position.x ), ( camera.position.z - obj.position.z ) );
+  //   //   }
+  //   // }
+
   scenes.forEach(function (scene) {
     const rect = scene.userData.view.getBoundingClientRect();
 
@@ -1282,9 +1316,6 @@ function render() {
 
   }
 
-  
-  
-
   // always update the slider position wrt to the camera 'y' position
   updateOverlaySlider(overlay_slider);
 
@@ -1328,7 +1359,7 @@ function render() {
       if(origin.dot(direction_vector) > 0){
         allowed = true;
       }
-    }    
+    }
 
   }
   // if (toPanCity) {
@@ -1608,9 +1639,19 @@ function onMouseDown(event) {
         CM.enableHighLight(city_all.building2BucketPeel, selected_building, true);
         changeLHHighLight(selected_building);
         showBuildingArrow(selected_building);
+        showBuildingSrc(selected_building);
       } else if (event.button === 2) {
         document.getElementById('city-path-navigation-tgt').value = selected_building;
+        showBuildingTgt(selected_building);
       }
+    } else if (selectingTourNavigation) {
+      root_dropdown.setValue(selected_building);
+      document.getElementById('city-tour-navigation-src').value = selected_building;
+      addRoadNetwork(selected_building);
+      CM.enableHighLight(city_all.building2BucketPeel, selected_building, true);
+      changeLHHighLight(selected_building);
+      showBuildingArrow(selected_building);
+      showBuildingSrc(selected_building);
     } else {
       root_dropdown.setValue(selected_building);
       updateCityLight([selected_building])
@@ -1950,9 +1991,9 @@ function zoomAtBuildingFlag(selected_building){
   let flag_details = flag_objects_new[selected_building];
   let flag_height = JSON.parse(JSON.stringify(flag_details.flag_rod)).geometries[0].height;
 
-  let observeFlagFor = 2 * 1000;
+  let observeFlagFor = 1 * 1000;
   // should be more that observeFlagFor
-  let totalTransitionTime = 3 * 1000;
+  let totalTransitionTime = 2 * 1000;
 
 
   let totalSteps = totalTransitionTime - observeFlagFor;
@@ -1993,11 +2034,55 @@ async function rotateAtBuilding(selected_building){
   return new Promise((resolve) => {
     for(let thetaToRotate=0; thetaToRotate <= 360; thetaToRotate+=0.1){
       global_building.timmers.push(setTimeout(function() {  
-        camera.position.x = building_position.x + (radius * Math.sin(THREE.MathUtils.degToRad(thetaToRotate)));
-        camera.position.z = building_position.z + (radius * Math.cos(THREE.MathUtils.degToRad(thetaToRotate)));
+        // camera.position.x = building_position.x + (radius * Math.sin(THREE.MathUtils.degToRad(thetaToRotate)));
+        // camera.position.z = building_position.z + (radius * Math.cos(THREE.MathUtils.degToRad(thetaToRotate)));
+        camera.position.x = building_position.x + (a * Math.sin(THREE.MathUtils.degToRad(thetaToRotate)));
+        camera.position.z = building_position.z + (a * Math.cos(THREE.MathUtils.degToRad(thetaToRotate)));
         controls.update();      
       }, clock));  
       clock += 5;    
+    }
+    setTimeout(resolve, clock + 500);    
+  });
+}
+
+async function rotateAtFlag(selected_building){     
+  let camera = scene_city.userData.camera;
+  let building = city_all[selected_building].coords;
+  let building_position = new THREE.Vector3(building[0], building[3], building[1]);
+  
+  let theta = 45;
+  // let radius = 30;  
+  let initialCameraPosition = camera.position;
+  let initialTargetPosition = scene_city.userData.controls.target;
+
+  let flag_details = flag_objects_new[selected_building];
+  let flag_height = JSON.parse(JSON.stringify(flag_details.flag_rod)).geometries[0].height + JSON.parse(JSON.stringify(flag_details.flag_mesh)).geometries[0].height;
+  console.log(flag_height)
+
+  let move_away = flag_height / (2 * Math.tan( THREE.MathUtils.degToRad( camera.fov ) / 2 ));  
+
+  let clock = 500;
+  let a = move_away * Math.cos(THREE.MathUtils.degToRad(theta));
+  let o = move_away * Math.sin(THREE.MathUtils.degToRad(theta));
+
+  let intermediateTargetPosition = new THREE.Vector3(building_position.x, building_position.y + flag_height, building_position.z);
+  let intermediateCameraPosition = new THREE.Vector3(building_position.x, building_position.y + flag_height + o, building_position.z + a);
+
+  await new Promise((resolve) => setTimeout(resolve, transitionCamera(    
+    {camera: initialCameraPosition, target: initialTargetPosition},
+    {camera: intermediateCameraPosition, target: intermediateTargetPosition}    
+  )));
+  
+  return new Promise((resolve) => {
+    for(let thetaToRotate=0; thetaToRotate <= 360; thetaToRotate+=0.1){
+      global_building.timmers.push(setTimeout(function() {  
+        camera.position.x = building_position.x + (a * Math.sin(THREE.MathUtils.degToRad(thetaToRotate)));
+        camera.position.y = building_position.y + flag_height + o;
+        camera.position.z = building_position.z + (a * Math.cos(THREE.MathUtils.degToRad(thetaToRotate)));
+        controls.update();      
+      }, clock));  
+      clock += 2;    
     }
     setTimeout(resolve, clock + 500);    
   });
@@ -2011,12 +2096,13 @@ function buildingTour(selected_building){
     .then(() => {      
       return iterateCameraOverBuilding(selected_building);
     })  
-    // .then(() => {      
-    //   return zoomAtBuildingFlag(selected_building);
-    // })
-    // .then(() => {
-    //   return rotateAtBuilding(selected_building);
-    // })
+    .then(() => {      
+      return zoomAtBuildingFlag(selected_building);
+    })
+    .then(() => {
+      // return rotateAtBuilding(selected_building);
+      return rotateAtFlag(selected_building);
+    })
     .then(() => {
       resolve();      
     });
@@ -2024,9 +2110,40 @@ function buildingTour(selected_building){
 
 }
 
+function toCityResetView(){  
+  let initialCameraPosition = scene_city.userData.camera.position;
+  let initialTargetPosition = scene_city.userData.controls.target;
+
+  let finalTargetPosition = new THREE.Vector3(0, 10, 0);
+  let finalCameraPosition = new THREE.Vector3(0, 350, 600);
+
+  return new Promise((resolve) => setTimeout(resolve, transitionCamera(    
+    {camera: initialCameraPosition, target: initialTargetPosition},
+    {camera: finalCameraPosition, target: finalTargetPosition},
+    500
+  )));
+}
+
+function toCityTopView(){  
+  let initialCameraPosition = scene_city.userData.camera.position;
+  let initialTargetPosition = scene_city.userData.controls.target;
+
+  let finalTargetPosition = initialTargetPosition;
+  // let finalTargetPosition = new THREE.Vector3(0, 10, 0);
+  let finalCameraPosition = new THREE.Vector3(5, 800, 5);    
+
+  return new Promise((resolve) => setTimeout(resolve, transitionCamera(    
+    {camera: initialCameraPosition, target: initialTargetPosition},
+    {camera: finalCameraPosition, target: finalTargetPosition},
+    2000
+  )));
+}
+
 function walkOnPath(path){  
   function takeStep(path, index){
     if(index == path.length){
+      toCityTopView();
+      showTempPathUntil(tempPathNewStartIdx);
       return;
     }else if(index == 0 || index == path.length - 1){
       CM.enableHighLight(city_all.building2BucketPeel, path[index], true);
@@ -2070,6 +2187,7 @@ function walkOnPath(path){
 function tourOnPath(path) {
   function takeTourStep(path, index) {
     if (index == path.length) {
+      toCityTopView();
       return;
     } else {
       CM.enableHighLight(city_all.building2BucketPeel, path[index], true);
@@ -2088,16 +2206,82 @@ function tourOnPath(path) {
   takeTourStep(path, index);
 };
 
+function goInsideBuilding(buildingName){
+  console.log(`Inside goInsideBuilding: ${buildingName}`);
+}
+
+function fakeTransition(selected_building){
+  console.log(`Inside fakeTransition: ${selected_building}`);
+  return new Promise((resolve) => setTimeout(resolve, 3000));
+}
+
+function goToInnerView(selected_building){
+  return new Promise(resolve => {  
+    zoomAtBuilding(selected_building)
+    .then(() => {      
+      return iterateCameraOverBuilding(selected_building);
+    })  
+    .then(() => {      
+      return zoomAtBuildingFlag(selected_building);
+    })
+    .then(() => {
+      return fakeTransition(selected_building);
+    })
+    .then(() => {     
+      // End of fakeTransition
+      goInsideBuilding(selected_building);  
+      resolve();
+    });
+  });
+}
+
+function clearBuildingArrow(arrowName) {
+  if (arrowName === null || arrowName === undefined) {
+    arrowName = arrow_objects;
+  };
+  if (arrowName === arrow_objects || arrowName === src_objects || arrowName === tgt_objects) { // NOTE: this is intended to compare Objects s.t. only these objects are valid.
+    for (const tempArrow of Object.values(arrowName)) {
+      tempArrow.visible = false;
+    };
+  }
+}
+
 function showBuildingArrow(buildingName, disableOthers) {
   if (disableOthers === null || disableOthers === undefined) {
     disableOthers = true;
   };
   if (disableOthers === true) {
-    for (const tempArrow of Object.values(arrow_objects)) {
-      tempArrow.visible = false;
-    };
+    // for (const tempArrow of Object.values(arrow_objects)) {
+    //   tempArrow.visible = false;
+    // };
+    clearBuildingArrow(arrow_objects);
   }
   arrow_objects[buildingName].visible = true;
+}
+
+function showBuildingSrc(buildingName, disableOthers) {
+  if (disableOthers === null || disableOthers === undefined) {
+    disableOthers = true;
+  };
+  if (disableOthers === true) {
+    clearBuildingArrow(src_objects);
+  }
+  src_objects[buildingName].visible = true;
+}
+
+function showBuildingTgt(buildingName, disableOthers) {
+  if (disableOthers === null || disableOthers === undefined) {
+    disableOthers = true;
+  };
+  if (disableOthers === true) {
+    clearBuildingArrow(tgt_objects);
+  }
+  tgt_objects[buildingName].visible = true;
+}
+
+function clearBuildingSrcTgt() {
+  clearBuildingArrow(src_objects);
+  clearBuildingArrow(tgt_objects);
 }
 
 function changeLHHighLight(buildingName) {
@@ -2111,7 +2295,11 @@ function changeLHHighLight(buildingName) {
 }
 
 function clearRoadNetwork() {
-  clearTempPath();
+  if (clearTempPathFlag) {
+    clearTempPath();
+  } else {
+    hideTempPath();
+  }
   path_objects.every(object => scene_city.remove(object));
   path_objects = [];
 }
@@ -2134,15 +2322,77 @@ function getBuidlingShortName(buildingName) {
   return `${splitName[1]}_${splitName[2]}`;
 }
 
+function clearCityLight() {
+  light_objects.selectionLights.forEach(object => object.visible=false);
+}
+
 function updateCityLight(buildingNameList, disableOthers) {
   if (disableOthers === null || disableOthers === undefined) {
     disableOthers = true;
   };
   if (disableOthers === true) {
-    light_objects.selectionLights.forEach(object => object.visible=false);
+    clearCityLight()
   };
   const result = LH.updateSelectionLights(city_all, light_objects, buildingNameList.map(d => getBuidlingShortName(d)));
   light_objects = result.light_objects;
+}
+
+function clearTempPath() {
+  for (const pathObj of tempCityPathObjList) {
+    scene_city.remove(pathObj);
+  };
+  tempCityPathObjList.length = 0;
+  tempPathNewStartIdx = 0;
+}
+
+function drawTempPath(buildingList, hidden, disableOthers) {
+  if (disableOthers === null || disableOthers === undefined) {
+    disableOthers = true;
+  };
+  if (disableOthers === true) {
+    clearTempPath();
+  } else {
+    tempPathNewStartIdx = tempCityPathObjList.length;
+  }
+  if (hidden === null || hidden === undefined) {
+    hidden = true;
+  };
+  tempCityPathObjList.push(... PATH.drawPath(city_all, buildingList));
+  console.log(tempCityPathObjList)
+  for (const pathObj of tempCityPathObjList) {
+    scene_city.add(pathObj);
+  }
+
+  if (hidden) {
+    hideTempPath();
+  };
+}
+
+function hideTempPath() {
+  for (const pathObj of tempCityPathObjList) {
+    pathObj.visible = false;
+  };
+}
+
+function showTempPath(index, newStartIdx) {
+  if (newStartIdx === null || newStartIdx === undefined) {
+    newStartIdx = tempPathNewStartIdx;
+  }
+  tempCityPathObjList[index + newStartIdx].visible = true;
+}
+
+function showTempPathUntil(index) {
+  for (let i = 0; i < index; i ++) {
+    showTempPath(i, 0);
+  };
+};
+
+function goCityTourPath(path) {
+  closePathNavigationMenu();
+  clearCityLight();
+  clearRoadNetwork();
+  drawTempPath(path, true, clearTempPathFlag);
+  walkOnPath(path);
 }
 
 document.getElementById('city-tour-button').onclick = function goCityTour() {
@@ -2150,9 +2400,7 @@ document.getElementById('city-tour-button').onclick = function goCityTour() {
     return;
   }
   const path = PATH.getCityTour(city_all.weightedGraph, null);
-  clearRoadNetwork();
-  drawTempPath(path);
-  walkOnPath(path);
+  goCityTourPath(path);
 }
 
 function goBestBuilding(statName) {
@@ -2165,12 +2413,31 @@ function goBestBuilding(statName) {
   } else if (statName === 'densest') {
     // console.log(city_all.building2BucketPeel)
     buildingStatList = buildingList.filter(d => city_all.building2BucketPeel[`${d.split('_')[1]}_${d.split('_')[2]}`][0][0] >= 4).map(d => [d, 2 * city_all[d].E / city_all[d].V / (city_all[d].V - 1)])
-  }
-  // console.log(buildingStatList);
+  } else if (statName === 'most diverse') {
+    const tempDiversityDict = {}
+    console.log(city_all)
+    console.log(buildingList);
+    for (const [src, tgtDict] of Object.entries(city_all.connections)) {
+      for (const [tgt, diversity] of Object.entries(tgtDict)) {
+        const weight = parseFloat(diversity);
+        if (!tempDiversityDict.hasOwnProperty(src)) {
+          tempDiversityDict[src] = 0;
+        }
+        if (!tempDiversityDict.hasOwnProperty(tgt)) {
+          tempDiversityDict[tgt] = 0;
+        }
+        tempDiversityDict[src] += weight;
+        tempDiversityDict[tgt] += weight;
+      }
+    }
+    console.log(tempDiversityDict)
+    buildingStatList = buildingList.map(d => [d, tempDiversityDict[d]]);
+  };
+  console.log(buildingStatList);
   buildingStatList.sort((a, b) => -(a[1] - b[1]))
   // console.log(buildingStatList);
   const bestList = buildingStatList.slice(0, Math.ceil(Math.log2(buildingList.length))).map(d => d[0]);
-  // console.log(bestList);
+  console.log(bestList);
   updateCityLight(bestList);
   clearRoadNetwork();
   drawTempPath(bestList);
@@ -2202,6 +2469,14 @@ document.getElementById('city-densest-building-button').onclick = function goDen
   goBestBuilding('densest')
 }
 
+document.getElementById('city-diverse-building-button').onclick = function goDiverseBuilding() {
+  if (city_to_load !== 0) {
+    return;
+  }
+  // console.log(flag_objects_new)
+  goBestBuilding('most diverse')
+}
+
 function addDropListOption(element, valueList) {
   for (const value of valueList) {
     let option = document.createElement('option');
@@ -2215,18 +2490,6 @@ function clearDropListOption(element) {
   for (let i = element.options.length - 1; i >= 0; i --) {
     element.remove(i);
   };
-}
-
-function openBuildingTourMenu() {
-  selectingBuildingTour = true;
-  document.getElementById('city-buidling-tour-menu').style.visibility = 'visible';
-  addDropListOption(document.getElementById('city-buidling-tour-buidling'), Object.keys(city_all.graph));
-}
-
-function closeBuildingTourMenu() {
-  selectingBuildingTour = false;
-  document.getElementById('city-buidling-tour-menu').style.visibility = 'hidden';
-  clearDropListOption(document.getElementById('city-buidling-tour-buidling'));
 }
 
 function openPathNavigationMenu() {
@@ -2243,14 +2506,46 @@ function closePathNavigationMenu() {
   clearDropListOption(document.getElementById('city-path-navigation-tgt'));
 }
 
+function openTourNavigationMenu() {
+  selectingTourNavigation = true;
+  document.getElementById('city-tour-navigation-menu').style.visibility = 'visible';
+  addDropListOption(document.getElementById('city-tour-navigation-src'), Object.keys(city_all.graph));
+}
+
+function closeTourNavigationMenu() {
+  selectingTourNavigation = false;
+  document.getElementById('city-tour-navigation-menu').style.visibility = 'hidden';
+  clearDropListOption(document.getElementById('city-tour-navigation-src'));
+}
+
+function openBuildingTourMenu() {
+  selectingBuildingTour = true;
+  document.getElementById('city-buidling-tour-menu').style.visibility = 'visible';
+  addDropListOption(document.getElementById('city-buidling-tour-buidling'), Object.keys(city_all.graph));
+}
+
+function closeBuildingTourMenu() {
+  selectingBuildingTour = false;
+  document.getElementById('city-buidling-tour-menu').style.visibility = 'hidden';
+  clearDropListOption(document.getElementById('city-buidling-tour-buidling'));
+}
+
 function pathNavigationPlan() {
   openPathNavigationMenu();
+  closeTourNavigationMenu()
+  closeBuildingTourMenu();
+}
+
+function tourNavigationPlan() {
+  closePathNavigationMenu();
+  openTourNavigationMenu();
   closeBuildingTourMenu();
 }
 
 function buildingTourPlan() {
-  openBuildingTourMenu();
   closePathNavigationMenu();
+  closeTourNavigationMenu();
+  openBuildingTourMenu();
 }
 
 function pathNavigationGo() {
@@ -2258,10 +2553,18 @@ function pathNavigationGo() {
   const tgt = document.getElementById('city-path-navigation-tgt').value;
   const path = PATH.getTourPath(city_all.weightedGraph, src, tgt);
   closePathNavigationMenu();
+  clearBuildingSrcTgt();
   updateCityLight(path);
   clearRoadNetwork();
-  drawTempPath(path);
+  drawTempPath(path, true, clearTempPathFlag);
   walkOnPath(path);
+}
+
+function tourNavigationGo() {
+  const src = document.getElementById('city-tour-navigation-src').value;
+  const path = PATH.getCityTour(city_all.weightedGraph, src);
+  clearBuildingSrcTgt();
+  goCityTourPath(path);
 }
 
 function buildingTourGo() {
@@ -2286,6 +2589,17 @@ document.getElementById('city-path-navigation-button').onclick = function parseP
   }
 }
 
+document.getElementById('city-tour-navigation-button').onclick = function parseTourNavigationButton() {
+  if (city_to_load !== 0) {
+    return;
+  }
+  if (selectingTourNavigation) {
+    tourNavigationGo();
+  } else {
+    tourNavigationPlan();
+  }
+}
+
 document.getElementById('city-buidling-tour-button').onclick = function parseBuildingTourButton() {
   if (city_to_load !== 0) {
     return;
@@ -2297,34 +2611,24 @@ document.getElementById('city-buidling-tour-button').onclick = function parseBui
   }
 }
 
-function clearTempPath() {
-  for (const pathObj of tempCityPathObjList) {
-    scene_city.remove(pathObj);
-  };
-}
-
-function drawTempPath(buildingList, hidden) {
-  if (hidden === null || hidden === undefined) {
-    hidden = true;
-  };
-  clearTempPath();
-  tempCityPathObjList = PATH.drawPath(city_all, buildingList);
-  console.log(tempCityPathObjList)
-  for (const pathObj of tempCityPathObjList) {
-    scene_city.add(pathObj);
+function parseCumulatePathCheck(value) {
+  if (value === true) {
+    document.getElementById('city-path-navigation-cumulate-path-check').checked = true;
+    document.getElementById('city-tour-navigation-cumulate-path-check').checked = true;
+    clearTempPathFlag = false;
+  } else {
+    document.getElementById('city-path-navigation-cumulate-path-check').checked = false;
+    document.getElementById('city-tour-navigation-cumulate-path-check').checked = false;
+    clearTempPathFlag = true;
   }
-
-  if (hidden) {
-    hideTempPath();
-  };
 }
 
-function hideTempPath() {
-  for (const pathObj of tempCityPathObjList) {
-    pathObj.visible = false;
-  };
+document.getElementById('city-path-navigation-cumulate-path-check').onclick = function parsePathCumulatePathCheck() {
+  const result = document.getElementById('city-path-navigation-cumulate-path-check').checked;
+  parseCumulatePathCheck(result);
 }
 
-function showTempPath(index) {
-  tempCityPathObjList[index].visible = true;
-} 
+document.getElementById('city-tour-navigation-cumulate-path-check').onclick = function parseTourCumulatePathCheck() {
+  const result = document.getElementById('city-tour-navigation-cumulate-path-check').checked;
+  parseCumulatePathCheck(result);
+}

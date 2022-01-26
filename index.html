@@ -42,9 +42,25 @@
 
 		#first-gui-container {
 			position: absolute;
-			top: 32px;
+			top: 31px;
 			left: 0px;
-			z-index: 4;
+			z-index: 6;
+		}
+
+		#first-gui-container table {
+			border-collapse: inherit;
+			box-sizing: inherit;
+			text-indent: inherit;
+			white-space: inherit;
+			line-height: inherit;
+			font-weight: inherit;
+			font-size: inherit;
+			font-style: inherit;
+			color: inherit;
+			text-align: inherit;
+			border-spacing: inherit;
+			border-color: inherit;
+			font-variant: inherit;
 		}
 
 		.col {
@@ -170,9 +186,9 @@
 
 		#city-building-map {
 			position: absolute;
-			top: 100px;
+			top: 105px;
 			right: 0px;
-			height: 200px;
+			height: 195px;
 			width: calc(100vw - 375px - 6px);
 			overflow: scroll;
 		}
@@ -231,6 +247,7 @@
 			position: relative;
 			left: 360px;
 			width: calc(100vw - 375px);
+			height: 105px;
 		}
 
 		#city-description-div {
@@ -238,6 +255,7 @@
 			color: #000;
 			background-color: #ffffff;
 			width: calc(100vw - 375px);
+			height: 105px;
 			/* margin: 0.5em; */
 			text-align: center;
 			/* padding: 10px; */
@@ -322,6 +340,16 @@
 			bottom: 20px;
 			left: 10px;
 			width: 360px;
+		}
+
+		#city-path-navigation-menu {
+			position: fixed;
+			bottom: 45px;
+		}
+
+		#city-tour-navigation-menu {
+			position: fixed;
+			bottom: 45px;
 		}
 
 		#city-path-navigation-button-div {
@@ -416,6 +444,7 @@
 				<button type="button" id="city-largest-building-button">Largest</button>
 				<button type="button" id="city-tallest-building-button">Tallest</button>
 				<button type="button" id="city-densest-building-button">Densest</button>
+				<button type="button" id="city-diverse-building-button">Most Diverse</button>
 			</span>
 		</div>
 	</div>
@@ -450,7 +479,7 @@
 	<div id="city-buidling-tour">
 		<div id="city-buidling-tour-button-div">
 			<span id="city-buidling-tour-button-span">
-				<button type="button" id="city-buidling-tour-button">Building Tour</button>
+				<button type="button" id="city-buidling-tour-button">Building Walk</button>
 			</span>
 		</div>
 		<div id="city-buidling-tour-menu" style="visibility: hidden;">
@@ -468,10 +497,22 @@
 			<div title="Select a target from the city by right click a building.">
 				Target:<span style="left: 65px; top: 1.7em; position: absolute;"><select id="city-path-navigation-tgt"></select></span>
 			</div>
+			<div>
+				<input type="checkbox" id="city-path-navigation-cumulate-path-check"> Cumulate paths
+			</div>
+		</div>
+		<div id="city-tour-navigation-menu" style="visibility: hidden;">
+			<div title="Select a buidling from the map by left click a glyph or from the city by left clicking a building.">
+				Source:<span style="left: 65px; top: 0.1em; position: absolute;"><select id="city-tour-navigation-src"></select></span>
+			</div>
+			<div>
+				<input type="checkbox" id="city-tour-navigation-cumulate-path-check"> Cumulate paths
+			</div>
 		</div>
 		<div id="city-path-navigation-button-div">
 			<span id="city-path-navigation-button-span">
 				<button type="button" id="city-path-navigation-button">Path Navigation</button>
+				<button type="button" id="city-tour-navigation-button">Tour</button>
 			</span>
 		</div>
 	</div>
