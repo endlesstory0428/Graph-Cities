@@ -2093,16 +2093,16 @@ function buildingTour(selected_building){
   
   return new Promise(resolve => {  
     zoomAtBuilding(selected_building)
-    // .then(() => {      
-    //   return iterateCameraOverBuilding(selected_building);
-    // })  
-    // .then(() => {      
-    //   return zoomAtBuildingFlag(selected_building);
-    // })
-    // .then(() => {
-    //   // return rotateAtBuilding(selected_building);
-    //   return rotateAtFlag(selected_building);
-    // })
+    .then(() => {      
+      return iterateCameraOverBuilding(selected_building);
+    })  
+    .then(() => {      
+      return zoomAtBuildingFlag(selected_building);
+    })
+    .then(() => {
+      // return rotateAtBuilding(selected_building);
+      return rotateAtFlag(selected_building);
+    })
     .then(() => {
       resolve();      
     });
