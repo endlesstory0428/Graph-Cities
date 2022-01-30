@@ -20,6 +20,8 @@ import * as PATH from './parts/path.js';
 import * as CM from './parts/cityMap.js';
 import { DataTexture3D } from '../three.js/build/three.module.js';
 
+const hostAddress = 'http://127.0.0.1:6122/'
+
 let addBuildings = true, addDagViews = true, onDagViews = false;
 
 THREE.Cache.enabled = true;
@@ -83,7 +85,8 @@ let allowed;
 let shouldArrowBeVisible;
 let visibleRadius = 50;
 
-let buildingMapControls = {}
+let showingGallery = false;
+let buildingMapControls = {showingGallery: showingGallery}
 
 let buildingCoordMax = 0;
 
@@ -94,6 +97,10 @@ let selectingTourNavigation = false;
 let tempCityPathObjList = [];
 let tempPathNewStartIdx = 0;
 let clearTempPathFlag = true;
+
+let glyphDoneFlag = false;
+let glyphData = {};
+
 
 const data_list = ['got', 'cit-patents', 'starwars'];
 const V = {'com-friendster':65608366, 'movies':218052, 'cit-Patents':3774768};
@@ -254,6 +261,7 @@ let summary_file = data_dir + paramsL.dataSet+'-summary.json';
 let buildingMap_file = map_dir + paramsL.dataSet+'-lccWaves.vBuck.b.p.mm.json';
 let buildingMapBucket_file = map_dir + 'building2bucket-'+paramsL.dataSet+'.json';
 let dagSize_file = map_dir + paramsL.dataSet+'-dagSize.json';
+let patterns_file = map_dir + paramsL.dataSet+'-patterns.txt';
 let building_params = {
   floor: '',
   layer: '',
@@ -293,136 +301,137 @@ function init() {
 
   // city map
   console.log(buildingMap_file);
-  function handleMouseOver(selectedDot, data) {
-    // console.log(data)
-    // console.log(selectedDot);
-    // console.log(buildingMapControls.ignoreHover)
-    // console.log(buildingMapControls)
-    if (!buildingMapControls.ignoreHover) {
-      mapControlHighLight = true;
-      mapControlHighLightBuilding = data['buildingName'];
-      select_fixed_point.setValue(selectedDot['layer']);  // NOTE: 2022-1-22 temp disable
-    }
-    // console.log(select_fixed_point);
-  };
+  // function handleMouseOver(selectedDot, data) {
+  //   // console.log(data)
+  //   // console.log(selectedDot);
+  //   // console.log(buildingMapControls.ignoreHover)
+  //   // console.log(buildingMapControls)
+  //   if (!buildingMapControls.ignoreHover) {
+  //     mapControlHighLight = true;
+  //     mapControlHighLightBuilding = data['buildingName'];
+  //     select_fixed_point.setValue(selectedDot['layer']);  // NOTE: 2022-1-22 temp disable
+  //   }
+  //   // console.log(select_fixed_point);
+  // };
 
-  function handleMouseOut(selectedDot, data) {
-    // console.log(selectedDot);
-    // select_fixed_point.setValue(selectedDot['layer']);
-    // console.log(select_fixed_point);
-    // console.log('out')
-  };
+  // function handleMouseOut(selectedDot, data) {
+  //   // console.log(selectedDot);
+  //   // select_fixed_point.setValue(selectedDot['layer']);
+  //   // console.log(select_fixed_point);
+  //   // console.log('out')
+  // };
 
-  function handleLeftClick(selectedDot, data) {
-    mapControlHighLight = true;
-    mapControlHighLightBuilding = data['buildingName'];
-    select_fixed_point.setValue(selectedDot['layer']); // NOTE: 2022-1-22 temp disable
-    // theta = 0.003;
-    // toZoomBuilding = true;
-    // toPanBuilding = false;
-    // toPanCity = false;
-    // render();
-    // zoomBuilding();
-    // console.log(select_fixed_point);
-    // console.log('click')
+  // function handleLeftClick(selectedDot, data) {
+  //   mapControlHighLight = true;
+  //   mapControlHighLightBuilding = data['buildingName'];
+  //   select_fixed_point.setValue(selectedDot['layer']); // NOTE: 2022-1-22 temp disable
+  //   // theta = 0.003;
+  //   // toZoomBuilding = true;
+  //   // toPanBuilding = false;
+  //   // toPanCity = false;
+  //   // render();
+  //   // zoomBuilding();
+  //   // console.log(select_fixed_point);
+  //   // console.log('click')
 
-    let selectedBuilding = '';
-    const shortName = data.buildingName[0];
-    for (const buildingName of Object.keys(city_all.graph)) {
-      const splitedName = buildingName.split('_');
-      if (`${splitedName[1]}_${splitedName[2]}` === shortName) {
-        selectedBuilding = buildingName;
-      }
-    }
-    CM.enableHighLight(city_all.building2BucketPeel, selectedBuilding);
+  //   let selectedBuilding = '';
+  //   const shortName = data.buildingName[0];
+  //   for (const buildingName of Object.keys(city_all.graph)) {
+  //     const splitedName = buildingName.split('_');
+  //     if (`${splitedName[1]}_${splitedName[2]}` === shortName) {
+  //       selectedBuilding = buildingName;
+  //     }
+  //   }
+  //   CM.enableHighLight(city_all.building2BucketPeel, selectedBuilding);
 
-    if (selectingBuildingTour) {
-      document.getElementById('city-buidling-tour-buidling').value = selectedBuilding;
-    } else if (selectingPathNavigation) {
-      document.getElementById('city-path-navigation-src').value = selectedBuilding;
-    } else if (selectingTourNavigation) {
-      document.getElementById('city-tour-navigation-src').value = selectedBuilding;
-    }
-  };
+  //   if (selectingBuildingTour) {
+  //     document.getElementById('city-buidling-tour-buidling').value = selectedBuilding;
+  //   } else if (selectingPathNavigation) {
+  //     document.getElementById('city-path-navigation-src').value = selectedBuilding;
+  //   } else if (selectingTourNavigation) {
+  //     document.getElementById('city-tour-navigation-src').value = selectedBuilding;
+  //   }
+  // };
 
-  function addMapDropListHandle() {
-    const spiralDropListCollection = document.getElementsByClassName("mapSpiralDropList");
-    // console.log(spiralDropListCollection);
-    for (const spiralDropList of spiralDropListCollection) {
-      spiralDropList.addEventListener('change', function() {
-        // console.log(this.value);
-        // console.log(root_dropdown_highlighted.domElement.children[0].options)
-        // console.log(Array.from(root_dropdown_highlighted.domElement.children[0].options).map(x => x.text))
-        // console.log(Array.from(root_dropdown_highlighted.domElement.children[0].options).map(x => x.text)[this.value])
-        const selectedBuilding = Array.from(root_dropdown_highlighted.domElement.children[0].options).map(x => x.text)[this.value]
-        root_dropdown_highlighted.setValue(selectedBuilding);
-        for (const [tempBuilding, tempArrow] of Object.entries(arrow_objects)) {
-          tempArrow.visible = false;
-        };
-        // console.log(arrow_objects)
-        arrow_objects[selectedBuilding].visible = true;
-        if (selectingBuildingTour) {
-          document.getElementById('city-buidling-tour-buidling').value = selectedBuilding;
-        } else if (selectingPathNavigation) {
-          document.getElementById('city-path-navigation-src').value = selectedBuilding;
-        } else if (selectingTourNavigation) {
-          document.getElementById('city-tour-navigation-src').value = selectedBuilding;
-        }
-      });
-    };
+  // function addMapDropListHandle() {
+  //   const spiralDropListCollection = document.getElementsByClassName("mapSpiralDropList");
+  //   // console.log(spiralDropListCollection);
+  //   for (const spiralDropList of spiralDropListCollection) {
+  //     spiralDropList.addEventListener('change', function() {
+  //       // console.log(this.value);
+  //       // console.log(root_dropdown_highlighted.domElement.children[0].options)
+  //       // console.log(Array.from(root_dropdown_highlighted.domElement.children[0].options).map(x => x.text))
+  //       // console.log(Array.from(root_dropdown_highlighted.domElement.children[0].options).map(x => x.text)[this.value])
+  //       const selectedBuilding = Array.from(root_dropdown_highlighted.domElement.children[0].options).map(x => x.text)[this.value]
+  //       root_dropdown_highlighted.setValue(selectedBuilding);
+  //       for (const [tempBuilding, tempArrow] of Object.entries(arrow_objects)) {
+  //         tempArrow.visible = false;
+  //       };
+  //       // console.log(arrow_objects)
+  //       arrow_objects[selectedBuilding].visible = true;
+  //       if (selectingBuildingTour) {
+  //         document.getElementById('city-buidling-tour-buidling').value = selectedBuilding;
+  //       } else if (selectingPathNavigation) {
+  //         document.getElementById('city-path-navigation-src').value = selectedBuilding;
+  //       } else if (selectingTourNavigation) {
+  //         document.getElementById('city-tour-navigation-src').value = selectedBuilding;
+  //       }
+  //     });
+  //   };
 
-    const buildingDropListCollection = document.getElementsByClassName("mapBuildingDropList");
-    for (const buildingDropList of buildingDropListCollection) {
-      buildingDropList.addEventListener('change', function() {
-        const waveIdx = this.value;
-        // console.log(waveIdx);
-        if (parseInt(waveIdx) === 0) {
-          mapWaveSelection = false;
-        } else {
-          mapWaveSelection = true;
-          // console.log(mapControlHighLightBuilding)
-          mapWaveSelectedName = mapControlHighLightBuilding+'w'+waveIdx;
-          console.log(mapWaveSelectedName);
-          // console.log(this.parentNode);
-        };
-      });
-    };
-  };
+  //   const buildingDropListCollection = document.getElementsByClassName("mapBuildingDropList");
+  //   for (const buildingDropList of buildingDropListCollection) {
+  //     buildingDropList.addEventListener('change', function() {
+  //       const waveIdx = this.value;
+  //       // console.log(waveIdx);
+  //       if (parseInt(waveIdx) === 0) {
+  //         mapWaveSelection = false;
+  //       } else {
+  //         mapWaveSelection = true;
+  //         // console.log(mapControlHighLightBuilding)
+  //         mapWaveSelectedName = mapControlHighLightBuilding+'w'+waveIdx;
+  //         console.log(mapWaveSelectedName);
+  //         // console.log(this.parentNode);
+  //       };
+  //     });
+  //   };
+  // };
 
-  function addZoomButtonHandle() {
-    const spiralZoomButtonCollection = document.getElementsByClassName("mapSpiralZoomButton");
-    for (const spiralZoomButton of spiralZoomButtonCollection) {
-      spiralZoomButton.addEventListener('click', function() {
-        // zoomBuilding();
-        console.log(root_dropdown_highlighted.domElement.children[0].value)
-        const buildingName = root_dropdown_highlighted.domElement.children[0].value;
-        CM.enableHighLight(city_all.building2BucketPeel, buildingName, true);
-        buildingTour(buildingName);
-      });
-    };
-    const buildingZoomButtonCollection = document.getElementsByClassName("mapBuildingZoomButton");
-    for (const buildingZoomButton of buildingZoomButtonCollection) {
-      buildingZoomButton.addEventListener('click', function() {
-        // zoomBuilding();
-        console.log(root_dropdown_highlighted.domElement.children[0].value)
-        const buildingName = root_dropdown_highlighted.domElement.children[0].value;
-        CM.enableHighLight(city_all.building2BucketPeel, buildingName, true);
-        buildingTour(buildingName);
-      });
-    };
-  };
+  // function addZoomButtonHandle() {
+  //   const spiralZoomButtonCollection = document.getElementsByClassName("mapSpiralZoomButton");
+  //   for (const spiralZoomButton of spiralZoomButtonCollection) {
+  //     spiralZoomButton.addEventListener('click', function() {
+  //       // zoomBuilding();
+  //       console.log(root_dropdown_highlighted.domElement.children[0].value)
+  //       const buildingName = root_dropdown_highlighted.domElement.children[0].value;
+  //       CM.enableHighLight(city_all.building2BucketPeel, buildingName, true);
+  //       buildingTour(buildingName);
+  //     });
+  //   };
+  //   const buildingZoomButtonCollection = document.getElementsByClassName("mapBuildingZoomButton");
+  //   for (const buildingZoomButton of buildingZoomButtonCollection) {
+  //     buildingZoomButton.addEventListener('click', function() {
+  //       // zoomBuilding();
+  //       console.log(root_dropdown_highlighted.domElement.children[0].value)
+  //       const buildingName = root_dropdown_highlighted.domElement.children[0].value;
+  //       CM.enableHighLight(city_all.building2BucketPeel, buildingName, true);
+  //       buildingTour(buildingName);
+  //     });
+  //   };
+  // };
 
-  Promise.all([
-    d3.json(buildingMap_file),
-    d3.json(buildingMapBucket_file),
-    d3.json(bucket_file)
-  ]).then(function (datas) {
-    city_all.building2BucketPeel = CM.drawMap(datas, buildingMapControls)
-  }).then(() => CM.addOnMouseOver(handleMouseOver, buildingMapControls))
-    .then(() => CM.addOnMouseOut(handleMouseOut, buildingMapControls))
-    .then(() => CM.addOnLeftClick(handleLeftClick, buildingMapControls))
-    .then(() => addMapDropListHandle())
-    .then(() => addZoomButtonHandle());
+  // Promise.all([
+  //   d3.json(buildingMap_file),
+  //   d3.json(buildingMapBucket_file),
+  //   d3.json(bucket_file)
+  // ]).then(function (datas) {
+  //   city_all.building2BucketPeel = CM.drawMap(datas, buildingMapControls)
+  // }).then(() => CM.addOnMouseOver(handleMouseOver, buildingMapControls))
+  //   .then(() => CM.addOnMouseOut(handleMouseOut, buildingMapControls))
+  //   .then(() => CM.addOnLeftClick(handleLeftClick, buildingMapControls))
+  //   .then(() => addMapDropListHandle())
+  //   .then(() => addZoomButtonHandle());
+  drawMap('city-building-map')
   
   d3.json(dagSize_file).then(data => dagSizeDict = data);
   // city summary
@@ -435,6 +444,22 @@ function init() {
   console.log(city_view);
   console.log(deg_img);
   document.getElementById("city-description-wrap").appendChild(deg_img);
+
+  let largest_dist_img = document.createElement("img");
+  largest_dist_img.src = data_dir+paramsL.dataSet+"_largest_dist.png";
+  document.getElementById("city-largest-building-button-span").appendChild(largest_dist_img);
+
+  let tallest_dist_img = document.createElement("img");
+  tallest_dist_img.src = data_dir+paramsL.dataSet+"_tallest_dist.png";
+  document.getElementById("city-tallest-building-button-span").appendChild(tallest_dist_img);
+
+  let densest_dist_img = document.createElement("img");
+  densest_dist_img.src = data_dir+paramsL.dataSet+"_densest_dist.png";
+  document.getElementById("city-densest-building-button-span").appendChild(densest_dist_img);
+
+  let diverse_dist_img = document.createElement("img");
+  diverse_dist_img.src = data_dir+paramsL.dataSet+"_diverse_dist.png";
+  document.getElementById("city-diverse-building-button-span").appendChild(diverse_dist_img);
   
   perspectiveCamera = new THREE.PerspectiveCamera(60, (window.innerWidth-sliderPos)/window.innerHeight, 1, 4000);
   perspectiveCamera.position.z = 600;
@@ -522,7 +547,11 @@ function init() {
         setStrataUrl('?data=nodata');        
       }
       objects.every(object => scene_city.remove(object));
-      clearTempPath();
+      if (clearTempPathFlag) {
+        clearTempPath();
+      } else {
+        console.log('keep path')
+      }
       path_objects.every(object => scene_city.remove(object));
       window_objects.every(object => scene_city.remove(object));
       flag_objects.every(object => scene_city.remove(object));
@@ -554,6 +583,9 @@ function init() {
       });
       flag_objects_new = {};
       //
+
+      glyphDoneFlag = false;
+      glyphData = {};
 
       // light_objects.spotLight.visible = false;
       light_objects.selectionLights.every(light => light.visible = false);
@@ -675,27 +707,52 @@ function init() {
       }
       if (clearTempPathFlag) {
         clearTempPath();
+        path_objects.every(object => scene_city.remove(object));
+        // animate(); NOTE: 2022-1-23: seems this line makes the whole page lagging, temp disabled
+        path_objects = [];
+        // console.log("394:"+value);
+        let result = PATH.pathPlanning(value, scene_city, city_all, light_objects);
+        scene_city = result.scene;
+        path_objects = result.path;
+        light_objects = result.light_objects;
+        // console.log('addDagViews')
+        // console.log(addDagViews)
+        // if(onDagViews){
+        //   console.log("******** " + value + " *********");
+        //   console.log("******** " + paramsL.dataSet + " *********");
+    
+        //   let wavemap_ID_ID_freq = value.split('_');
+        //   let file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2] + '.json';
+        //   console.log("Loading: ", file);
+        //   loadFile2(file);
+        //   loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);  
+        // }
+        
+      } else if (selectingPathNavigation || selectingTourNavigation) {
+        console.log('no show root path')
+      } else {
+        path_objects.every(object => scene_city.remove(object));
+        // animate(); NOTE: 2022-1-23: seems this line makes the whole page lagging, temp disabled
+        path_objects = [];
+        // console.log("394:"+value);
+        let result = PATH.pathPlanning(value, scene_city, city_all, light_objects);
+        scene_city = result.scene;
+        path_objects = result.path;
+        light_objects = result.light_objects;
+        // console.log('addDagViews')
+        // console.log(addDagViews)
+        // if(onDagViews){
+        //   console.log("******** " + value + " *********");
+        //   console.log("******** " + paramsL.dataSet + " *********");
+    
+        //   let wavemap_ID_ID_freq = value.split('_');
+        //   let file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2] + '.json';
+        //   console.log("Loading: ", file);
+        //   loadFile2(file);
+        //   loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);  
+        // }
+        
       }
-      path_objects.every(object => scene_city.remove(object));
-      // animate(); NOTE: 2022-1-23: seems this line makes the whole page lagging, temp disabled
-      path_objects = [];
-      // console.log("394:"+value);
-      let result = PATH.pathPlanning(value, scene_city, city_all, light_objects);
-      scene_city = result.scene;
-      path_objects = result.path;
-      light_objects = result.light_objects;
-      // console.log('addDagViews')
-      // console.log(addDagViews)
-      // if(onDagViews){
-      //   console.log("******** " + value + " *********");
-      //   console.log("******** " + paramsL.dataSet + " *********");
-  
-      //   let wavemap_ID_ID_freq = value.split('_');
-      //   let file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2] + '.json';
-      //   console.log("Loading: ", file);
-      //   loadFile2(file);
-      //   loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);  
-      // }
     }
   );
   root_dropdown_highlighted = f4.add(params, 'highlighted',['default root']);
@@ -821,7 +878,7 @@ function zoomAtBuilding(selected_building){
     setTimeout(resolve, transitionCamera(    
       {camera: initialCameraPosition, target: initialTargetPosition},
       {camera: finalCameraPosition, target: finalTargetPosition},
-      1000
+      500
     ) + 500)
   });
 }
@@ -1062,7 +1119,7 @@ function loaded(evt) {
   let lines = fileString.split('\n');
   let element_count = (lines[0].split(' ')).length;
   // need to update when SPIRAL.txt updates
-  if (element_count == 10) {
+  if (element_count == 12) {
     // console.log("loaded: SPIRAL file");
     let spiral = BUILD.loadSpiral(scene_city, lines, city_all, grass_objects, bush_objects, city_tracking, x_scale);
     city_all = spiral.all;
@@ -1159,7 +1216,7 @@ function animate() {
   requestAnimationFrame(animate);
   scenes.forEach(scene => scene.userData.controls.update());
   // stats.update();
-  if (city_to_load > 0 && addBuildings) {
+  if (city_to_load > 0 && addBuildings && glyphDoneFlag) { // glyphDoneFlag for adding map glyphs to building flags
     console.log("animate: run createCityMeshes()");
     let result = BUILD.createCityMeshes(scene_city, objects, city_all, city_tracking, ceil_objects, middle_objects, truss_objects, window_objects, flag_objects, flag_objects_new, arrow_objects, src_objects, tgt_objects, city_to_load, y_scale, paramsL.dataSet, params.ceilVisible, params.isNight);
     scene_city = result.scene;
@@ -1635,7 +1692,11 @@ function onMouseDown(event) {
       if (event.button === 0) {
         root_dropdown.setValue(selected_building);
         document.getElementById('city-path-navigation-src').value = selected_building;
-        addRoadNetwork(selected_building);
+        if (clearTempPathFlag) {
+          addRoadNetwork(selected_building);
+        } else {
+          console.log('keep temp Path')
+        }
         CM.enableHighLight(city_all.building2BucketPeel, selected_building, true);
         changeLHHighLight(selected_building);
         showBuildingArrow(selected_building);
@@ -1647,7 +1708,11 @@ function onMouseDown(event) {
     } else if (selectingTourNavigation) {
       root_dropdown.setValue(selected_building);
       document.getElementById('city-tour-navigation-src').value = selected_building;
-      addRoadNetwork(selected_building);
+      if (clearTempPathFlag) {
+        addRoadNetwork(selected_building);
+      } else {
+        console.log('clear temp Path');
+      }
       CM.enableHighLight(city_all.building2BucketPeel, selected_building, true);
       changeLHHighLight(selected_building);
       showBuildingArrow(selected_building);
@@ -2093,16 +2158,16 @@ function buildingTour(selected_building){
   
   return new Promise(resolve => {  
     zoomAtBuilding(selected_building)
-    .then(() => {      
-      return iterateCameraOverBuilding(selected_building);
-    })  
-    .then(() => {      
-      return zoomAtBuildingFlag(selected_building);
-    })
-    .then(() => {
-      // return rotateAtBuilding(selected_building);
-      return rotateAtFlag(selected_building);
-    })
+    // .then(() => {      
+    //   return iterateCameraOverBuilding(selected_building);
+    // })  
+    // .then(() => {      
+    //   return zoomAtBuildingFlag(selected_building);
+    // })
+    // .then(() => {
+    //   // return rotateAtBuilding(selected_building);
+    //   return rotateAtFlag(selected_building);
+    // })
     .then(() => {
       resolve();      
     });
@@ -2139,11 +2204,20 @@ function toCityTopView(){
   )));
 }
 
-function walkOnPath(path){  
+function walkOnPath(path, moveArrowBack){
+  if (moveArrowBack === null || moveArrowBack === undefined) {
+    moveArrowBack = false;
+  };
+
   function takeStep(path, index){
     if(index == path.length){
       toCityTopView();
       showTempPathUntil(tempPathNewStartIdx);
+      if (moveArrowBack) {
+        changeLHHighLight(path[0]);
+        showBuildingArrow(path[0]);
+        CM.enableHighLight(city_all.building2BucketPeel, path[0], true);
+      }
       return;
     }else if(index == 0 || index == path.length - 1){
       CM.enableHighLight(city_all.building2BucketPeel, path[index], true);
@@ -2184,10 +2258,20 @@ function walkOnPath(path){
   takeStep(path, index);
 }
 
-function tourOnPath(path) {
+function tourOnPath(path, moveArrowBack){
+  if (moveArrowBack === null || moveArrowBack === undefined) {
+    moveArrowBack = false;
+  };
+
   function takeTourStep(path, index) {
     if (index == path.length) {
       toCityTopView();
+      // showTempPathUntil(tempPathNewStartIdx);
+      if (moveArrowBack) {
+        changeLHHighLight(path[0]);
+        showBuildingArrow(path[0]);
+        CM.enableHighLight(city_all.building2BucketPeel, path[0], true);
+      }
       return;
     } else {
       CM.enableHighLight(city_all.building2BucketPeel, path[index], true);
@@ -2298,7 +2382,8 @@ function clearRoadNetwork() {
   if (clearTempPathFlag) {
     clearTempPath();
   } else {
-    hideTempPath();
+    console.log('clearTempPath: no hide')
+    // hideTempPath();
   }
   path_objects.every(object => scene_city.remove(object));
   path_objects = [];
@@ -2388,7 +2473,6 @@ function showTempPathUntil(index) {
 };
 
 function goCityTourPath(path) {
-  closePathNavigationMenu();
   clearCityLight();
   clearRoadNetwork();
   drawTempPath(path, true, clearTempPathFlag);
@@ -2399,8 +2483,11 @@ document.getElementById('city-tour-button').onclick = function goCityTour() {
   if (city_to_load !== 0) {
     return;
   }
-  const path = PATH.getCityTour(city_all.weightedGraph, null);
-  goCityTourPath(path);
+  const path = PATH.getCityTour(city_all, null);
+  // goCityTourPath(path);
+  clearCityLight();
+  clearRoadNetwork();
+  drawTempPath(path, false, true);
 }
 
 function goBestBuilding(statName) {
@@ -2412,6 +2499,8 @@ function goBestBuilding(statName) {
     buildingStatList = buildingList.map(d => [d, city_all[d].coords[3]])
   } else if (statName === 'densest') {
     // console.log(city_all.building2BucketPeel)
+    // buildingStatList = buildingList.map(d => [d, 2 * city_all[d].E / city_all[d].V / (city_all[d].V - 1)])
+    console.log(JSON.stringify(buildingList.map(d => [d, 2 * city_all[d].E / city_all[d].V / (city_all[d].V - 1)])))
     buildingStatList = buildingList.filter(d => city_all.building2BucketPeel[`${d.split('_')[1]}_${d.split('_')[2]}`][0][0] >= 4).map(d => [d, 2 * city_all[d].E / city_all[d].V / (city_all[d].V - 1)])
   } else if (statName === 'most diverse') {
     const tempDiversityDict = {}
@@ -2433,6 +2522,7 @@ function goBestBuilding(statName) {
     console.log(tempDiversityDict)
     buildingStatList = buildingList.map(d => [d, tempDiversityDict[d]]);
   };
+  console.log(JSON.stringify(buildingStatList))
   console.log(buildingStatList);
   buildingStatList.sort((a, b) => -(a[1] - b[1]))
   // console.log(buildingStatList);
@@ -2442,7 +2532,7 @@ function goBestBuilding(statName) {
   clearRoadNetwork();
   drawTempPath(bestList);
 
-  tourOnPath(bestList);
+  tourOnPath(bestList, true);
 }
 
 document.getElementById('city-largest-building-button').onclick = function goLargestBuilding() {
@@ -2534,12 +2624,16 @@ function pathNavigationPlan() {
   openPathNavigationMenu();
   closeTourNavigationMenu()
   closeBuildingTourMenu();
+  if (! clearTempPathFlag) {
+    showTempPathUntil(tempPathNewStartIdx);
+  }
 }
 
 function tourNavigationPlan() {
   closePathNavigationMenu();
   openTourNavigationMenu();
   closeBuildingTourMenu();
+  clearTempPath();
 }
 
 function buildingTourPlan() {
@@ -2562,7 +2656,8 @@ function pathNavigationGo() {
 
 function tourNavigationGo() {
   const src = document.getElementById('city-tour-navigation-src').value;
-  const path = PATH.getCityTour(city_all.weightedGraph, src);
+  const path = PATH.getCityTour(city_all, src);
+  closeTourNavigationMenu();
   clearBuildingSrcTgt();
   goCityTourPath(path);
 }
@@ -2614,11 +2709,11 @@ document.getElementById('city-buidling-tour-button').onclick = function parseBui
 function parseCumulatePathCheck(value) {
   if (value === true) {
     document.getElementById('city-path-navigation-cumulate-path-check').checked = true;
-    document.getElementById('city-tour-navigation-cumulate-path-check').checked = true;
+    // document.getElementById('city-tour-navigation-cumulate-path-check').checked = true;
     clearTempPathFlag = false;
   } else {
     document.getElementById('city-path-navigation-cumulate-path-check').checked = false;
-    document.getElementById('city-tour-navigation-cumulate-path-check').checked = false;
+    // document.getElementById('city-tour-navigation-cumulate-path-check').checked = false;
     clearTempPathFlag = true;
   }
 }
@@ -2628,7 +2723,214 @@ document.getElementById('city-path-navigation-cumulate-path-check').onclick = fu
   parseCumulatePathCheck(result);
 }
 
-document.getElementById('city-tour-navigation-cumulate-path-check').onclick = function parseTourCumulatePathCheck() {
-  const result = document.getElementById('city-tour-navigation-cumulate-path-check').checked;
-  parseCumulatePathCheck(result);
+// document.getElementById('city-tour-navigation-cumulate-path-check').onclick = function parseTourCumulatePathCheck() {
+//   const result = document.getElementById('city-tour-navigation-cumulate-path-check').checked;
+//   parseCumulatePathCheck(result);
+// }
+
+
+
+console.log(buildingMap_file);
+function handleMouseOver(selectedDot, data) {
+  // console.log(data)
+  // console.log(selectedDot);
+  // console.log(buildingMapControls.ignoreHover)
+  // console.log(buildingMapControls)
+  if (!buildingMapControls.ignoreHover) {
+    mapControlHighLight = true;
+    mapControlHighLightBuilding = data['buildingName'];
+    select_fixed_point.setValue(selectedDot['layer']);  // NOTE: 2022-1-22 temp disable
+  }
+  // console.log(select_fixed_point);
+};
+
+function handleMouseOut(selectedDot, data) {
+  // console.log(selectedDot);
+  // select_fixed_point.setValue(selectedDot['layer']);
+  // console.log(select_fixed_point);
+  // console.log('out')
+};
+
+function handleLeftClick(selectedDot, data) {
+  mapControlHighLight = true;
+  mapControlHighLightBuilding = data['buildingName'];
+  select_fixed_point.setValue(selectedDot['layer']); // NOTE: 2022-1-22 temp disable
+  // theta = 0.003;
+  // toZoomBuilding = true;
+  // toPanBuilding = false;
+  // toPanCity = false;
+  // render();
+  // zoomBuilding();
+  // console.log(select_fixed_point);
+  // console.log('click')
+
+  let selectedBuilding = '';
+  const shortName = data.buildingName[0];
+  for (const buildingName of Object.keys(city_all.graph)) {
+    const splitedName = buildingName.split('_');
+    if (`${splitedName[1]}_${splitedName[2]}` === shortName) {
+      selectedBuilding = buildingName;
+    }
+  }
+  CM.enableHighLight(city_all.building2BucketPeel, selectedBuilding);
+
+  if (selectingBuildingTour) {
+    document.getElementById('city-buidling-tour-buidling').value = selectedBuilding;
+  } else if (selectingPathNavigation) {
+    document.getElementById('city-path-navigation-src').value = selectedBuilding;
+  } else if (selectingTourNavigation) {
+    document.getElementById('city-tour-navigation-src').value = selectedBuilding;
+  }
+};
+
+function addMapDropListHandle() {
+  const spiralDropListCollection = document.getElementsByClassName("mapSpiralDropList");
+  // console.log(spiralDropListCollection);
+  for (const spiralDropList of spiralDropListCollection) {
+    spiralDropList.addEventListener('change', function() {
+      // console.log(this.value);
+      // console.log(root_dropdown_highlighted.domElement.children[0].options)
+      // console.log(Array.from(root_dropdown_highlighted.domElement.children[0].options).map(x => x.text))
+      // console.log(Array.from(root_dropdown_highlighted.domElement.children[0].options).map(x => x.text)[this.value])
+      const selectedBuilding = Array.from(root_dropdown_highlighted.domElement.children[0].options).map(x => x.text)[this.value]
+      root_dropdown_highlighted.setValue(selectedBuilding);
+      for (const [tempBuilding, tempArrow] of Object.entries(arrow_objects)) {
+        tempArrow.visible = false;
+      };
+      // console.log(arrow_objects)
+      arrow_objects[selectedBuilding].visible = true;
+      if (selectingBuildingTour) {
+        document.getElementById('city-buidling-tour-buidling').value = selectedBuilding;
+      } else if (selectingPathNavigation) {
+        document.getElementById('city-path-navigation-src').value = selectedBuilding;
+      } else if (selectingTourNavigation) {
+        document.getElementById('city-tour-navigation-src').value = selectedBuilding;
+      }
+    });
+  };
+
+  const buildingDropListCollection = document.getElementsByClassName("mapBuildingDropList");
+  for (const buildingDropList of buildingDropListCollection) {
+    buildingDropList.addEventListener('change', function() {
+      const waveIdx = this.value;
+      // console.log(waveIdx);
+      if (parseInt(waveIdx) === 0) {
+        mapWaveSelection = false;
+      } else {
+        mapWaveSelection = true;
+        // console.log(mapControlHighLightBuilding)
+        mapWaveSelectedName = mapControlHighLightBuilding+'w'+waveIdx;
+        console.log(mapWaveSelectedName);
+        // console.log(this.parentNode);
+      };
+    });
+  };
+};
+
+function addZoomButtonHandle() {
+  const spiralZoomButtonCollection = document.getElementsByClassName("mapSpiralZoomButton");
+  for (const spiralZoomButton of spiralZoomButtonCollection) {
+    spiralZoomButton.addEventListener('click', function() {
+      // zoomBuilding();
+      console.log(root_dropdown_highlighted.domElement.children[0].value)
+      const buildingName = root_dropdown_highlighted.domElement.children[0].value;
+      if (showingGallery) {
+        window.open(`${hostAddress}/patterns/patterns.html#${buildingName}`);
+      } else {
+        CM.enableHighLight(city_all.building2BucketPeel, buildingName, true);
+        buildingTour(buildingName);
+      }
+    });
+  };
+  const buildingZoomButtonCollection = document.getElementsByClassName("mapBuildingZoomButton");
+  for (const buildingZoomButton of buildingZoomButtonCollection) {
+    buildingZoomButton.addEventListener('click', function() {
+      // zoomBuilding();
+      console.log(root_dropdown_highlighted.domElement.children[0].value)
+      const buildingName = root_dropdown_highlighted.domElement.children[0].value;
+      if (showingGallery) {
+        window.open(`${hostAddress}/patterns/patterns.html#${buildingName}`);
+      } else {
+        CM.enableHighLight(city_all.building2BucketPeel, buildingName, true);
+        buildingTour(buildingName);
+      }
+    });
+  };
+};
+
+function processGlyph(glyphData) {
+  glyphDoneFlag = true;
+  console.log(glyphData);
+  // console.log(city_all.building2BucketPeel)
+
+  const glyphInfo = {}
+  glyphInfo['factors'] = glyphData.factors;
+
+  // console.log(city_all);
+  const bucketPeel2Building = {}
+  for (const [buildingShort, bucketPeel] of Object.entries(city_all.building2BucketPeel)) {
+    bucketPeel2Building[`${bucketPeel[0][0]}-${bucketPeel[0][1]}`] = buildingShort; // NOTE: if the bucket -> building is not one-on-one mapping, then it will fail;
+  }
+  // console.log(bucketPeel2Building);
+  
+  for (const spiralInfo of glyphData.spiral) {
+    // console.log(spiralInfo);
+    glyphInfo[bucketPeel2Building[`${spiralInfo.bucket}-${spiralInfo.layer}`]] = {spiral: spiralInfo};
+  }
+  for (const buildingInfo of glyphData.building.circle) {
+    // console.log(buildingInfo);
+    glyphInfo[bucketPeel2Building[`${buildingInfo.bucket}-${buildingInfo.layer}`]] = {circle: buildingInfo, dot: []}
+  }
+  for (const buildingWaveInfo of glyphData.building.dot) {
+    // console.log(buildingWaveInfo)
+    glyphInfo[bucketPeel2Building[`${buildingWaveInfo.bucket}-${buildingWaveInfo.layer}`]].dot.push(buildingWaveInfo);
+  }
+  console.log(glyphInfo)
+  city_all.glyphInfo = glyphInfo;
+}
+
+function drawMap(divName) {
+  Promise.all([
+    d3.json(buildingMap_file),
+    d3.json(buildingMapBucket_file),
+    d3.json(bucket_file),
+    d3.text(patterns_file)
+  ]).then(function (datas) {
+    const result = CM.drawMap(datas, buildingMapControls, divName)
+    city_all.building2BucketPeel = result.building2BucketPeel;
+    if (!glyphDoneFlag) {
+      glyphData = result.glyphData;
+      processGlyph(glyphData);
+    }
+  }).then(() => CM.addOnMouseOver(handleMouseOver, buildingMapControls))
+    .then(() => CM.addOnMouseOut(handleMouseOut, buildingMapControls))
+    .then(() => CM.addOnLeftClick(handleLeftClick, buildingMapControls))
+    .then(() => addMapDropListHandle())
+    .then(() => addZoomButtonHandle());
+}
+
+window.addEventListener('resize', function(event){
+  drawMap('city-building-map');
+});
+
+function showCityGallery() {
+  showingGallery = true;
+  buildingMapControls.showingGallery = showingGallery;
+  document.getElementById('city-building-map').style.height = `${window.innerHeight - 105}px`;
+  drawMap('city-building-map');
+}
+
+function hideCityGallery() {
+  showingGallery = false;
+  buildingMapControls.showingGallery = showingGallery;
+  document.getElementById('city-building-map').style.height = "195px";
+  drawMap('city-building-map');
+}
+
+document.getElementById('city-gallery-button').onclick = function parseGalleryButton() {
+  if (showingGallery) {
+    hideCityGallery();
+  } else {
+    showCityGallery();
+  }
 }

@@ -287,15 +287,20 @@ function breakX(xList) {
 }
 
 // // main function to draw the map
-function drawMap(datas, buildingMapControls) {
+function drawMap(datas, buildingMapControls, divName) {
     buildingMapControls.ignoreHover = false;
     buildingMapControls.isOpen = false;
+    buildingMapControls.divName = divName;
+
+    document.getElementById(divName).innerHTML = '';
 
     const bucketPeel2Building = getBucketPeel2Building(datas[1], datas[2]);
     console.log(bucketPeel2Building)
     const data = datas[0];
-    const board = d3.select("#city-building-map");
-    document.getElementById('city-building-map').onwheel = function(){ return false; } // disable mouse scrolling to avoid zooming confliction
+    const patterns = datas[3];
+
+    const board = d3.select(`#${divName}`);
+    document.getElementById(divName).onwheel = function(){ return false; } // disable mouse scrolling to avoid zooming confliction
 
     // // set the dimensions and margins of the graph
     const padMargin = { top: 0, right: 0, bottom: 0, left: 0 };
@@ -336,6 +341,7 @@ function drawMap(datas, buildingMapControls) {
     let spiralDot;
     let spiralCircle;
     let spiralHighLight;
+    let patternIcon;
 
     // Add X axis
     // Add Y axis
@@ -410,6 +416,28 @@ function drawMap(datas, buildingMapControls) {
     // // get color factor
     const aveBuildingDensity = buildingWaveList.map(d => density(d['info'])).reduce((prev, current) => prev + current) / buildingWaveList.length;
     // console.log(aveBuildingDensity)
+
+
+    if (buildingMapControls.showingGallery) {
+        const patternList = []
+        for (const [bucket, peel] of d3.csvParseRows(patterns)) {
+            patternList.push({bucket: parseInt(bucket), layer: parseInt(peel)});
+        };
+        console.log(patternList);
+        console.log(patterns);
+
+        patternIcon = svg.selectAll(".patternIcon")
+            .data(patternList)
+        
+        const patternIconEnter = patternIcon.enter().append('g');
+        patternIconEnter.append('svg:image')
+            .attr("xlink:href", './data_maps/light.png')
+            .attr("x", d => x(brokenX[d['layer']]) + cellSize * 3 / 4)
+            .attr("y", d => y(d['bucket']) - cellSize)
+            .attr("width", cellSize / 2)
+            .attr("height", cellSize / 2)
+    }
+
 
     // Add dots
     // // add building dots
@@ -543,7 +571,7 @@ function drawMap(datas, buildingMapControls) {
                 self.append("xhtml:option").attr("value", name).text(`wave: ${name} V: ${info['vertices']} E: ${info['edges']} aveDeg: ${aveDeg(info).toFixed(2)}, density: ${density(info).toExponential(2)}`);
             }})
     
-    const buildingCircleEnterButton = buildingCircleEnterDiv.append("xhtml:button").attr("class", "mapBuildingZoomButton").text("zoom in");
+    const buildingCircleEnterButton = buildingCircleEnterDiv.append("xhtml:button").attr("class", "mapBuildingZoomButton").text("Go");
 
     // const buildingEnterModal = attachModal(buildingEnter);
     // buildingEnterModal.append("xhtml:div")
@@ -592,7 +620,7 @@ function drawMap(datas, buildingMapControls) {
         // .attr("value", d => d['buildingName'])
         // .text(d => d['buildingName'])
     
-    const spiralCircleEnterButton = spiralCircleEnterDiv.append("xhtml:button").attr("class", "mapSpiralZoomButton").text("zoom in");
+    const spiralCircleEnterButton = spiralCircleEnterDiv.append("xhtml:button").attr("class", "mapSpiralZoomButton").text("Go");
             
     // const spiralEnterModal = attachModal(spiralEnter);
     // spiralEnterModal.append("xhtml:div")
@@ -715,7 +743,17 @@ function drawMap(datas, buildingMapControls) {
             .translateExtent([[0, 0], [width + margin.left + margin.right + padMargin.left + padMargin.right, height + margin.top + margin.bottom + padMargin.top + padMargin.bottom]])
             .on('zoom', zoomed))
 
-    return getBuilding2BucketPeel(bucketPeel2Building)
+    
+    let glyphData = {}
+    glyphData['factors'] = {}
+    glyphData['factors']['size'] = {building: {circle: 1 / Math.sqrt(Math.log(1 + maxBuildingESize)), dot: 1 / maxBuildingVLengthSize}, spiral: 1 / maxSpiralSize}
+    glyphData['factors']['color'] = aveBuildingDensity
+    glyphData['spiral'] = spiralList;
+    glyphData['building'] = {};
+    glyphData['building']['circle'] = buildingList;
+    glyphData['building']['dot'] = buildingWaveList;
+
+    return {building2BucketPeel: getBuilding2BucketPeel(bucketPeel2Building), glyphData: glyphData};
 };
 
 // function readAndDrawMap(name) {
@@ -723,7 +761,7 @@ function drawMap(datas, buildingMapControls) {
 // };
 function updateSize(buildingMapControls) {        
     //const scale = d3.zoomTransform(parent).k;
-    const board = d3.select("#city-building-map");
+    const board = d3.select(`#${buildingMapControls.divName}`);
 
     const margin = { top: 10, right: 30, bottom: 30, left: 60 },
         width = board.node().clientWidth - margin.left - margin.right,
@@ -864,7 +902,7 @@ function processSelection(event, data, handleSelectionFnc, buildingMapControls, 
 
 // // add event handlers
 function addOnMouseOver(APIFunc, buildingMapControls) {
-    const svg = d3.select("#city-building-map svg g g");
+    const svg = d3.select(`#${buildingMapControls.divName} svg g g`);
     const buildingDot = svg.selectAll(".buildingDot");
     const spiralDot = svg.selectAll(".spiralDot");
     const builidngCircle = svg.selectAll(".buildingCircle");
@@ -878,7 +916,7 @@ function addOnMouseOver(APIFunc, buildingMapControls) {
 }
 
 function addOnMouseOut(APIFunc, buildingMapControls) {
-    const svg = d3.select("#city-building-map svg g g");
+    const svg = d3.select(`#${buildingMapControls.divName} svg g g`);
     const buildingDot = svg.selectAll(".buildingDot");
     const spiralDot = svg.selectAll(".spiralDot");
     const builidngCircle = svg.selectAll(".buildingCircle");
@@ -892,7 +930,7 @@ function addOnMouseOut(APIFunc, buildingMapControls) {
 }
 
 function addOnLeftClick(APIFunc, buildingMapControls) {
-    const svg = d3.select("#city-building-map svg g g");
+    const svg = d3.select(`#${buildingMapControls.divName} svg g g`);
     const buildingDot = svg.selectAll(".buildingDot");
     const spiralDot = svg.selectAll(".spiralDot");
     const builidngCircle = svg.selectAll(".buildingCircle");
@@ -908,7 +946,7 @@ function addOnLeftClick(APIFunc, buildingMapControls) {
 
 function getBucketPeel2Building(bucket2Building, building2Peel) {
     const bucketPeel2Building = {}
-    // console.log(bucket2Building, building2Peel);
+    console.log(bucket2Building, building2Peel);
     for (const [bucket, subBucket2Building] of Object.entries(bucket2Building)) {
         for (const [subBucket, building] of Object.entries(subBucket2Building)) {
             const peelList = building2Peel[building];

@@ -45,7 +45,7 @@ function loadMeta(city_all, lines, filename='') {
     let layers = Object.keys(city_all);
     // console.log(layers);
     for(let i=0; i<lines.length-1; i++) {
-        let elements = lines[i].split(', ');
+        let elements = lines[i].split(',');
         let layer_1 = elements[0]+'_'+elements[1], layer_2 = elements[2]+'_'+elements[3], value = elements[4];
         layer_1 = matchLayerName(layers,layer_1);
         layer_2 = matchLayerName(layers,layer_2);
@@ -320,11 +320,11 @@ function getTourPath(triangulationGraph, src, tgt) {
     return path;
 }
 
-function getMST(graph) {
+function getMST(graph, root) {
     const prevDict = {};
     const queue = new PriorityQueue({ comparator: function(a, b) { return -(b[1] - a[1]); }});
     const vertexList = Object.keys(graph)
-    queue.queue([vertexList[0], 0, null]);
+    queue.queue([root, 0, null]);
 
     let leftVerticesNum = vertexList.length;
     while(leftVerticesNum > 0) {
@@ -342,7 +342,7 @@ function getMST(graph) {
             queue.queue([nextNode, dist, tempNode])
         };
     };
-    // console.log(prevDict, vertexList[0]);
+    // console.log(prevDict, root);
 
     const childDict = {};
     for (const [child, parent] of Object.entries(prevDict)) {
@@ -355,20 +355,61 @@ function getMST(graph) {
         childDict[parent].push(child)
     };
 
-    // console.log(childDict, vertexList[0])
-    return [childDict, vertexList[0]]
+    // console.log(childDict, root)
+    return [childDict, prevDict]
 }
 
-function getPreOrder(tree, root) {
-    const queue = [root];
-    const retval = [];
+function getPreOrder(tree, prevDict, root, city_all) {
+    console.log(prevDict)
+    console.log(root);
+    console.log(tree[root]);
+
+    function getSize(v) {
+        const [x, y] = v;
+        return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+    }
+    function getUnit(v) {
+        const [x, y] = v;
+        const size = getSize(v);
+        return [x/size, y/size];
+    };
+    function getAngleUnit(v1, v2) {
+        function getAngleSizeUnit(v1, v2) {
+            const [x1, y1] = v1;
+            const [x2, y2] = v2;
+            return Math.acos(x1 * x2 + y1 * y2);
+        };
+        function getAngleDirectionUnit(v1, v2) {
+            const [x1, y1] = v1;
+            const [x2, y2] = v2;
+            return x1 * y2 - x2 * y1 >= 0 ? 1 : -1;
+        }
+        return getAngleDirectionUnit(v1, v2) * getAngleSizeUnit(v1, v2);
+    };
+
+    function getUnitDirection(building1, building2) {
+        const p1 = [city_all[building1].coords[0], city_all[building1].coords[1]];
+        const p2 = [city_all[building2].coords[0], city_all[building2].coords[1]];
+        const v = [p2[0] - p1[0], p2[1] - p1[1]];
+        return getUnit(v);
+    };
+
+    let initQueue = tree[root].map(d => [d, getAngleUnit([1, 0], getUnitDirection(root, d))])
+    console.log(initQueue);
+    initQueue.sort((a, b) => (a[1] - b[1]));
+    
+
+    const queue = initQueue.map(d => d[0]);
+    const retval = [root];
 
     while (queue.length !== 0) {
         const tempNode = queue.shift();
         retval.push(tempNode);
         if (tree.hasOwnProperty(tempNode)) {
             // console.log(tree[tempNode])
-            queue.unshift(...tree[tempNode])
+            const prevNode = prevDict[tempNode];
+            const tempChildren = tree[tempNode].map(d => [d, getAngleUnit(getUnitDirection(prevNode, tempNode), getUnitDirection(tempNode, d))]).sort((a, b) => (a[1] - b[1])).map(d => d[0]);
+            queue.unshift(...tempChildren)
         }
     }
     return retval;
@@ -471,9 +512,11 @@ function getPreOrder(tree, root) {
 // }
 // // // TSP-MST by Rajath end
 
-function getCityTour(triangulationGraph, startBuilding) {
-    const [MST, root] = getMST(triangulationGraph);
-    const tourArray = getPreOrder(MST, root);
+function getCityTour(city_all, startBuilding) {
+    const triangulationGraph = city_all.weightedGraph;
+    let root =  Object.keys(triangulationGraph).map(d => [d, city_all[d].spiralIdx]).sort((a, b) => (a[1] - b[1]))[0][0];
+    const [MST, prevDict] = getMST(triangulationGraph, root);
+    const tourArray = getPreOrder(MST, prevDict, root, city_all);
     // console.log(tourArray)
     if (startBuilding === null || startBuilding === undefined) {
         return [...tourArray, tourArray[0]];
@@ -490,27 +533,50 @@ function drawPath(city_all, buildingList) {
     const path_objects = [];
     const width = 1;
     const path = buildingList.map(d => [city_all[d].coords[0], city_all[d].coords[1]])
+    const connections = city_all.connections;
     for (let i = 0; i < path.length-1; i++) {
+        const srcName = buildingList[i]
+        const tgtName = buildingList[i+1]
+        // console.log(city_all.connections)
+        
         let height = getDistance(path[i],path[i+1]);
-        if(width > 0){
-            let geometry = new THREE.PlaneBufferGeometry(width+1, height);
-            let material = new THREE.MeshStandardMaterial( {color: 0xffffff, side: THREE.DoubleSide} );
-            let path_segment = new THREE.Mesh( geometry, material );
-            let position = getMiddlePoint(path[i],path[i+1]);
-            let rotation = getRotation(path[i],path[i+1]);
-            path_segment.rotateX(90*Math.PI/180);
-            let path_segment_tmp_1 = new THREE.Object3D(); 
-            path_segment_tmp_1.add(path_segment);
-            path_segment_tmp_1.rotateY(rotation); 
-            let path_segment_tmp_2 = new THREE.Object3D();
-            path_segment_tmp_2.add(path_segment_tmp_1);
-            path_segment_tmp_2.position.set(position[0],0,position[1]);
-            // console.log("connectNeighbors: "+height+" "+position+" "+rotation);
-            path_objects.push(path_segment_tmp_2);
+
+        let geometry = new THREE.PlaneBufferGeometry(width+1, height);
+        let material;
+        if ( (connections.hasOwnProperty(srcName) && connections[srcName].hasOwnProperty(tgtName)) || (connections.hasOwnProperty(tgtName) && connections[tgtName].hasOwnProperty(srcName)) ) {
+            material = new THREE.MeshStandardMaterial( {color: 0xffffff, side: THREE.DoubleSide} );
+        } else {
+            material = new THREE.MeshStandardMaterial( {color: 0xffffff, side: THREE.DoubleSide, wireframe: true, opacity: 0.25, transparent: true} );
         }
+        let path_segment = new THREE.Mesh( geometry, material );
+        let position = getMiddlePoint(path[i],path[i+1]);
+        let rotation = getRotation(path[i],path[i+1]);
+        path_segment.rotateX(90*Math.PI/180);
+        let path_segment_tmp_1 = new THREE.Object3D(); 
+        path_segment_tmp_1.add(path_segment);
+        path_segment_tmp_1.rotateY(rotation); 
+        let path_segment_tmp_2 = new THREE.Object3D();
+        path_segment_tmp_2.add(path_segment_tmp_1);
+        path_segment_tmp_2.position.set(position[0],0,position[1]);
+        // console.log("connectNeighbors: "+height+" "+position+" "+rotation);
+
+        // let wireframe = new THREE.WireframeGeometry( path_segment_tmp_2.geometry );
+        // let line = new THREE.LineSegments( wireframe, new THREE.LineDashedMaterial( {
+        //     color: 0xffffff,
+        //     linewidth: 10,
+        //     scale: 1,
+        //     dashSize: 10,
+        //     gapSize: 1,
+        // } ));
+
+        // console.log(line)
+
+        path_objects.push(path_segment_tmp_2);
+        // path_objects.push(line);
+
     }
     return path_objects;
 }
 
 
-export {updateDropdown, loadNeighbors, loadMeta, pathPlanning, getTourPath, getCityTour, getMST, drawPath};
+export {updateDropdown, loadNeighbors, loadMeta, pathPlanning, getTourPath, getCityTour, drawPath};
