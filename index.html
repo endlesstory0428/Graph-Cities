@@ -185,6 +185,7 @@
 		/* end */
 
 		#city-building-map {
+			z-index: 6;
 			position: absolute;
 			top: 105px;
 			right: 0px;
@@ -194,7 +195,7 @@
 		}
 
 		.map-tooltip {
-			z-index: 5;
+			z-index: 7;
 			font-size: smaller;
 			max-height: 100px;
 		}
@@ -247,7 +248,7 @@
 			position: relative;
 			left: 360px;
 			width: calc(100vw - 375px);
-			height: 75px;
+			height: 105px;
 		}
 
 		#city-description-div {
@@ -255,7 +256,6 @@
 			color: #000;
 			background-color: #ffffff;
 			width: calc(100vw - 375px);
-			height: 75px;
 			/* margin: 0.5em; */
 			text-align: center;
 			/* padding: 10px; */
@@ -266,14 +266,15 @@
 		#city-description {
 			padding: 1em;
 			font-family: sans-serif;
-			font-size: 1.2em;
+			font-size: 1.1em;
 			font-weight: 1000;
 			display: table-cell;
-			vertical-align: middle;
+			top: 2px;
+			vertical-align: top;
 		}
 
 		#city-description-wrap {
-			z-index: 5;
+			z-index: 8;
 			position: absolute;
 			bottom: 0px;
 			right: 0px;
@@ -287,14 +288,14 @@
 		#city-description-wrap:hover img {
 			display: block;
 			padding: 20px;
-			z-index: 3;
+			z-index: 8;
 			position: absolute;
 			width: 33vw;
 			right: 0px;
 		}
 
 		#city-tour-button-div {
-			position:absolute;
+			position: absolute;
 			bottom: 0px;
 			left: 0px;
 			z-index: 5;
@@ -304,7 +305,7 @@
 			display: table;
 			width: calc(100vw - 375px);
 			text-align: center;
-			z-index: 4;
+			z-index: 7;
 			position: absolute;
 			bottom: 0px;
 			right: 0px;
@@ -313,6 +314,42 @@
 		#city-best-building-button-span {
 			display: table-cell;
 			vertical-align: middle;
+		}
+
+		#city-largest-building-button-span:hover img {
+			display: block;
+			padding: 20px;
+			z-index: 7;
+			position: absolute;
+			width: 33vw;
+			right: calc((50vw - 375px) / 2);
+		}
+
+		#city-tallest-building-button-span:hover img {
+			display: block;
+			padding: 20px;
+			z-index: 7;
+			position: absolute;
+			width: 33vw;
+			right: calc((50vw - 375px) / 2);
+		}
+
+		#city-densest-building-button-span:hover img {
+			display: block;
+			padding: 20px;
+			z-index: 7;
+			position: absolute;
+			width: 33vw;
+			right: calc((50vw - 375px) / 2);
+		}
+
+		#city-diverse-building-button-span:hover img {
+			display: block;
+			padding: 20px;
+			z-index: 7;
+			position: absolute;
+			width: 33vw;
+			right: calc((50vw - 375px) / 2);
 		}
 
 		#city-buidling-tour {
@@ -440,11 +477,23 @@
 			<button type="button" id="city-tour-button">City Tour</button>
 		</div>
 		<div id="city-best-building-button-div">
+			<span id="city-gallery-button-span">
+				<button type="button" id="city-gallery-button">Gallery</button>
+			</span>
+			<br>
 			<span id="city-best-buidling-button-span">
-				<button type="button" id="city-largest-building-button">Largest</button>
-				<button type="button" id="city-tallest-building-button">Tallest</button>
-				<button type="button" id="city-densest-building-button">Densest</button>
-				<button type="button" id="city-diverse-building-button">Most Diverse</button>
+				<span id="city-largest-building-button-span">
+					<button type="button" id="city-largest-building-button">Largest</button>
+				</span>
+				<span id="city-tallest-building-button-span">
+					<button type="button" id="city-tallest-building-button">Tallest</button>
+				</span>
+				<span id="city-densest-building-button-span">
+					<button type="button" id="city-densest-building-button">Densest</button>
+				</span>
+				<span id="city-diverse-building-button-span">
+					<button type="button" id="city-diverse-building-button">Most Diverse</button>
+				</span>
 			</span>
 		</div>
 	</div>
@@ -483,7 +532,8 @@
 			</span>
 		</div>
 		<div id="city-buidling-tour-menu" style="visibility: hidden;">
-			<div title="Select a buidling from the map by left click a glyph or from the city by left clicking a building.">
+			<div
+				title="Select a buidling from the map by left click a glyph or from the city by left clicking a building.">
 				Building: <select id="city-buidling-tour-buidling"></select>
 			</div>
 		</div>
@@ -491,23 +541,28 @@
 
 	<div id="city-path-navigation">
 		<div id="city-path-navigation-menu" style="visibility: hidden;">
-			<div title="Select a buidling from the map by left click a glyph or from the city by left clicking a building.">
-				Source:<span style="left: 65px; top: 0.1em; position: absolute;"><select id="city-path-navigation-src"></select></span>
+			<div
+				title="Select a buidling from the map by left click a glyph or from the city by left clicking a building.">
+				Source:<span style="left: 65px; top: 0.1em; position: absolute;"><select
+						id="city-path-navigation-src"></select></span>
 			</div>
 			<div title="Select a target from the city by right click a building.">
-				Target:<span style="left: 65px; top: 1.7em; position: absolute;"><select id="city-path-navigation-tgt"></select></span>
+				Target:<span style="left: 65px; top: 1.7em; position: absolute;"><select
+						id="city-path-navigation-tgt"></select></span>
 			</div>
 			<div>
 				<input type="checkbox" id="city-path-navigation-cumulate-path-check"> Cumulate paths
 			</div>
 		</div>
 		<div id="city-tour-navigation-menu" style="visibility: hidden;">
-			<div title="Select a buidling from the map by left click a glyph or from the city by left clicking a building.">
-				Source:<span style="left: 65px; top: 0.1em; position: absolute;"><select id="city-tour-navigation-src"></select></span>
+			<div
+				title="Select a buidling from the map by left click a glyph or from the city by left clicking a building.">
+				Source:<span style="left: 65px; top: 0.1em; position: absolute;"><select
+						id="city-tour-navigation-src"></select></span>
 			</div>
-			<div>
+			<!-- <div>
 				<input type="checkbox" id="city-tour-navigation-cumulate-path-check"> Cumulate paths
-			</div>
+			</div> -->
 		</div>
 		<div id="city-path-navigation-button-div">
 			<span id="city-path-navigation-button-span">
@@ -528,9 +583,9 @@
 		<div id="graph" style="float: left; width: 49.5%; height: 100%"></div>
 		<div id="peelCC-warp"
 			style="border-style:solid; position: absolute; bottom: 4px; left: 4px; width: 49%; height: 45%; visibility: hidden;">
-			<div id="peelCC-close"
-				style="position: absolute; top: 2px; right: 4px; font-family: sans-serif; font-size: 20px; z-index: 2;">
-				x</div>
+			<div id="peelCC-close" style="position: absolute; top: 2px; right: 4px; font-family: sans-serif; font-size: 20px; z-index: 2;">
+				x
+			</div>
 			<div id="peelCC" style="width: 100%; height: 100%"></div>
 			<div id="peelCC-menu" style="position: absolute; top: 0px; left: 4px;"></div>
 		</div>
