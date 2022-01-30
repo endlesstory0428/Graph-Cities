@@ -2,8 +2,9 @@
   "dataset": "cit-Patents",
   "vertices": 3774768,
   "edges": 16518947,
-  "connected_components": 3627,
+  "buckets": 8,
+  "con_comp": 3627,
   "peel_values": 42,
-  "buckets": 88,
-  "displayed_buildings": 88
+  "con_fixpoints": 544024,
+  "displayed_con_fixpoints(buildings)": 88
 }
