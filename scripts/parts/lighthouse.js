@@ -18,7 +18,7 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
     const max_peel_meanDegree = Math.max(...peel_meanDegree);
     const mean_peel_meanDegree = peel_meanDegree.reduce((x, y) => x + y, 0) / peel_meanDegree.length;
     const color_factor = Math.pow((mean_peel_meanDegree / max_peel_meanDegree) / ((mean_peel_meanDegree / max_peel_meanDegree) - 1), 2);
-    // console.log(color_factor)
+    console.log(color_factor)
     // console.log("peel_value_min",Math.min(...peel_vals));
     // console.log("peel_value_max",Math.max(...peel_vals));
     // console.log("peel_value_range",peel_value_range);
@@ -52,7 +52,8 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
     for(let key in info) {
         // const peel_value_color = 1.0-(1.0/(Math.log2(parseFloat(info[key]['meanDegree'])+1.0)));
         const peel_value_color = 1 - Math.log((info[key]['meanDegree'] / max_peel_meanDegree) * (1 - color_factor) + color_factor) / Math.log(color_factor);
-        // console.log("key "+key+"peel_value_color "+peel_value_color);
+        console.log("key "+key+"peel_value_color "+peel_value_color);
+        // console.log((1 - color_factor) + color_factor)
         if(info.hasOwnProperty(key)) {
             // console.log(key+' -> '+info[key]);
             // let color = interpolateLinearly(peel_value_color,jet); //jet colormap [0=blue, 1=red]
