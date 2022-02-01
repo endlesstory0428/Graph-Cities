@@ -1,0 +1,10 @@
+{
+  "dataset": "cit-Patents-12-3",
+  "vertices": 1165,
+  "edges": 10313,
+  "buckets": 2,
+  "con_comp": 13,
+  "peel_values": 1,
+  "con_fixpoints": 13,
+  "displayed_con_fixpoints(buildings)": 2
+}

@@ -381,6 +381,7 @@ function drawMap(datas, buildingMapControls, divName) {
     // console.log()
 
     // process data into buildings and spirals
+    console.log(bucketPeel2Building)
     const [buildingList, spiralList] = splitSpiral(data, bucketPeel2Building);
     // console.log(buildingList)
     // console.log(spiralList)
@@ -414,7 +415,7 @@ function drawMap(datas, buildingMapControls, divName) {
     // console.log(spiralSizeFactor);
 
     // // get color factor
-    const aveBuildingDensity = buildingWaveList.map(d => density(d['info'])).reduce((prev, current) => prev + current) / buildingWaveList.length;
+    const aveBuildingDensity = buildingWaveList.length === 0 ? 0.5 : buildingWaveList.map(d => density(d['info'])).reduce((prev, current) => prev + current) / buildingWaveList.length;
     // console.log(aveBuildingDensity)
 
 
@@ -520,6 +521,7 @@ function drawMap(datas, buildingMapControls, divName) {
     const spiralEnter = spiralDot.enter().append('g');
     spiralEnter.append("path")
         .attr("class", "spiralDot")
+        .attr("id", d => `spiralDot_${d['layer']}_${d['bucket']}`)
         .attr("fill", "none")
         .attr("stroke-width", Math.min(2, x(1) / 8))
         .attr("stroke", d => d3.rgb(...interpolateLinearly(curve(density(d), aveBuildingDensity), grey2red).map(x => x * 255)).darker(1.25))

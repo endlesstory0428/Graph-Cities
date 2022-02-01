@@ -190,7 +190,8 @@ function connectNeighbors(scene, building_1, building_2, building_name_1, buildi
     let end_vor = building_2.voronoi;
     let shared_edge = findSharedEdge(start_vor, end_vor);
     if(shared_edge === 0){
-        return scene;
+        // console.log(scene)
+        return {scene: scene, path: path_objects};
     }
     let path = [start_coord, end_coord];
     let width;
@@ -221,6 +222,7 @@ function connectNeighbors(scene, building_1, building_2, building_name_1, buildi
             scene.add(path_segment_tmp_2);
         }
     }
+    // console.log(scene)
     return {scene: scene, path: path_objects};
 }
 
@@ -228,7 +230,7 @@ function makeSpanningTreeDebug(graph, root){
     let queue = [[root]];
     let visited = [];
     let visited_neighbors = [root];
-    console.log(graph);
+    // console.log(graph);
     let count = 0;
     
     while(queue.length > 0 && count < 50){

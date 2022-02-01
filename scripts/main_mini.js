@@ -104,7 +104,7 @@ let glyphDoneFlag = false;
 let glyphData = {};
 let mouseOnGlyph = false;
 
-const data_list = ['got', 'cit-Patents', 'starwars'];
+const data_list = ['got', 'cit-Patents-12-3', 'starwars'];
 const V = {'com-friendster':65608366, 'movies':218052, 'cit-Patents':3774768};
 const E = {'com-friendster':1806067135, 'movies':115050370, 'cit-Patents':16518947};
 const connected = {'com-friendster':true, 'movies':false, 'cit-Patents':false};
@@ -1050,12 +1050,14 @@ function loadedVoronoi(evt) {
   if (element_count > 3) {
     result = BUILD.loadVoronoi(city_all, lines, filename);
   } else {
+    console.log('neighbors')
+    console.log(lines)
     result = PATH.loadNeighbors(city_all, lines, filename);
     city_all = result.all;
     voronoiLoaded = true;
   }
   city_all = result.all;
-  // console.log(city_all)
+  console.log(city_all)
 }
 
 function loadedMeta(evt) {
@@ -1125,14 +1127,13 @@ function loaded(evt) {
   let element_count = (lines[0].split(' ')).length;
   // need to update when SPIRAL.txt updates
   if (element_count == 12) {
-    console.log("loaded: SPIRAL file");
+    // console.log("loaded: SPIRAL file");
     let spiral = BUILD.loadSpiral(scene_city, lines, city_all, grass_objects, bush_objects, city_tracking, x_scale);
     city_all = spiral.all;
     city_tracking = spiral.tracking;
     grass_objects = spiral.grass;
     bush_objects = spiral.bush;
     city_to_load = spiral.city_count;
-    console.log(city_to_load)
     for (const [key, value] of Object.entries(city_all)) {
       if (key.slice(0, 8) !== 'wavemap_') {
         continue;
@@ -1222,7 +1223,6 @@ function animate() {
   requestAnimationFrame(animate);
   scenes.forEach(scene => scene.userData.controls.update());
   // stats.update();
-  // console.log(city_to_load)
   if (city_to_load > 0 && addBuildings && glyphDoneFlag) { // glyphDoneFlag for adding map glyphs to building flags
     console.log("animate: run createCityMeshes()");
     let result = BUILD.createCityMeshes(scene_city, objects, city_all, city_tracking, ceil_objects, middle_objects, truss_objects, window_objects, flag_objects, flag_objects_new, arrow_objects, src_objects, tgt_objects, glyph_objects, glyphBack_objects, city_to_load, y_scale, paramsL.dataSet, params.ceilVisible, params.isNight);
@@ -1760,8 +1760,7 @@ function onMouseDown(event) {
   // console.log('glyph intersection', glyphIntersects)
   if (glyphBackIntersects.length > 0) {
     selected_glyphBack = glyphBackIntersects[0].object.layerName;
-    // console.log(selected_glyphBack);
-    window.open(`${hostAddress}/minicity.html`);
+    console.log(selected_glyphBack);
   }
 }
 
