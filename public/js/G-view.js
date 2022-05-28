@@ -1,7 +1,7 @@
-var starMap = new THREE.ImageUtils.loadTexture('images/star.png');
-var glowMap = new THREE.ImageUtils.loadTexture('images/glow.png');
-var particleMap = new THREE.ImageUtils.loadTexture('images/particle.png');
-var dotMap = new THREE.ImageUtils.loadTexture('images/dot.png');
+var starMap = new THREE.TextureLoader().load('images/star.png');
+var glowMap = new THREE.TextureLoader().load('images/glow.png');
+var particleMap = new THREE.TextureLoader().load('images/particle.png');
+var dotMap = new THREE.TextureLoader().load('images/dot.png');
 
 var redColor=new THREE.Color(1,0,0);
 var greenColor=new THREE.Color(0,1,0);
