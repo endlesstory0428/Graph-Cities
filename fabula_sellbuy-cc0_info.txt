@@ -1,0 +1,1 @@
+|dataset:fabula-cc_0|vertices:18337|edges:27295|connected_fixpoints:1381|peel_values:6|buckets:6|

@@ -1,0 +1,31 @@
+#mapBoard{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+.axis line {
+    stroke: white;
+}
+
+.axis path {
+    stroke: white;
+}
+
+.axis text {
+    fill: white;
+}
+
+.grid line {
+    stroke: grey;
+    opacity: 0.4;
+}
+
+.grid path {
+    stroke: grey;
+    opacity: 0;
+}
+
+.axis-label {
+    fill: white;
+}
