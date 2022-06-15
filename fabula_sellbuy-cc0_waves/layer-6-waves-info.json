@@ -1,0 +1,24 @@
+{
+	"1": {
+		"1": {
+			"vertices": 15,
+			"edges": 50,
+			"fragments": {
+				"0": {
+					"sources": 7,
+					"vertices": 15,
+					"edges": 38
+				},
+				"1": {
+					"sources": 6,
+					"vertices": 8,
+					"edges": 12
+				}
+			},
+			"layer-cc": 123
+		},
+		"vertices": 15,
+		"edges": 50
+	},
+	"0": {}
+}
