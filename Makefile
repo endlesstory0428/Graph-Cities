@@ -192,7 +192,7 @@ geom:
 	$(PYTHON) scripts/freqUsed/cityMesh.py $(DIR)/ $(GRAPH) $$COLOR > $(DIR)/cityMesh.sh; \
 	chmod +x $(DIR)/cityMesh.sh; \
 	$(DIR)/cityMesh.sh;
-	truncate -s-3 $(DIR)/$(GRAPH)/cityMesh/bushes.json
+	truncate -s-2 $(DIR)/$(GRAPH)/cityMesh/bushes.json
 	sed -i -e "1 i \{" -e"$$ a\}" $(DIR)/$(GRAPH)/cityMesh/bushes.json
 .PHONY: geom
 
