@@ -28,9 +28,9 @@ struct edge {
 
 struct graph {
 	unsigned int NODENUM;
-	unsigned int EDGENUM;
-	unsigned int *start_indices;
-	unsigned int *end_indices;
+	unsigned long long EDGENUM;
+	unsigned long long *start_indices;
+	unsigned long long *end_indices;
 	edge *edgeList;
 } g;
 
@@ -64,7 +64,7 @@ long long getTimeElapsed()
 {
 	long long newTime = currentTimeStamp();
 	long long timeElapsed = newTime - currentTimeMilliS;
-	currentTimeMilliS = newTime;
+	// currentTimeMilliS = newTime;
 	return timeElapsed;
 }
 
@@ -95,7 +95,7 @@ void createInMemoryEdgeList(const char *fileName)
 	is.open(fileName, std::ios::in | std::ios::binary);
 	unsigned int src, tgt;
 	/* unsigned int updatedEdgeNum = g.EDGENUM; */
-	for (unsigned int i = 0; i < g.EDGENUM; i++) {
+	for (unsigned long long i = 0; i < g.EDGENUM; i++) {
 		is.read((char *)(&src), sizeof(unsigned int));
 		is.read((char *)(&tgt), sizeof(unsigned int));
 		assert(src != ENULL && src <= g.NODENUM);
@@ -113,8 +113,8 @@ void readGraph(char *inputFile, const char *outputFile, unsigned int *label2node
 	std::ofstream os;
 	os.open(outputFile, std::ios::out | std::ios::binary | std::ios::app);
 	unsigned int src, tgt;
-	unsigned int updatedEdgeNum = g.EDGENUM;
-	for (unsigned int i = 0; i < g.EDGENUM; i++) {
+	unsigned long long updatedEdgeNum = g.EDGENUM;
+	for (unsigned long long i = 0; i < g.EDGENUM; i++) {
 		is.read((char *)(&src), sizeof(unsigned int));
 		is.read((char *)(&tgt), sizeof(unsigned int));
 		src = label2node[htonl(src)];
@@ -163,20 +163,20 @@ bool compareEdges(const edge &a, const edge &b)
 // Compares indices according to their corresponding edges
 int compareByEdges(const void *a, const void *b)
 {
-	if ((g.edgeList + *(unsigned int *)a)->src < (g.edgeList + *(unsigned int *)b)->src)
+	if ((g.edgeList + *(unsigned long long *)a)->src < (g.edgeList + *(unsigned long long *)b)->src)
 		return -1;
-	if ((g.edgeList + *(unsigned int *)a)->src == (g.edgeList + *(unsigned int *)b)->src) {
-		if ((g.edgeList + *(unsigned int *)a)->tgt <
-		    (g.edgeList + *(unsigned int *)b)->tgt)
+	if ((g.edgeList + *(unsigned long long *)a)->src == (g.edgeList + *(unsigned long long *)b)->src) {
+		if ((g.edgeList + *(unsigned long long *)a)->tgt <
+		    (g.edgeList + *(unsigned long long *)b)->tgt)
 			return -1;
-		if ((g.edgeList + *(unsigned int *)a)->tgt ==
-		    (g.edgeList + *(unsigned int *)b)->tgt)
+		if ((g.edgeList + *(unsigned long long *)a)->tgt ==
+		    (g.edgeList + *(unsigned long long *)b)->tgt)
 			return 0;
-		if ((g.edgeList + *(unsigned int *)a)->tgt >
-		    (g.edgeList + *(unsigned int *)b)->tgt)
+		if ((g.edgeList + *(unsigned long long *)a)->tgt >
+		    (g.edgeList + *(unsigned long long *)b)->tgt)
 			return 1;
 	}
-	if ((g.edgeList + *(unsigned int *)a)->src > (g.edgeList + *(unsigned int *)b)->src)
+	if ((g.edgeList + *(unsigned long long *)a)->src > (g.edgeList + *(unsigned long long *)b)->src)
 		return 1;
 	return 0;
 }
@@ -184,11 +184,11 @@ int compareByEdges(const void *a, const void *b)
 // Finds the start and end indices of each node in the graph
 void findStartAndEndIndices()
 {
-	g.start_indices = new unsigned int[g.NODENUM + 1];
-	g.end_indices = new unsigned int[g.NODENUM + 1];
-	std::fill_n(g.start_indices, g.NODENUM + 1, 0);
-	std::fill_n(g.end_indices, g.NODENUM + 1, 0);
-	unsigned int i;
+	g.start_indices = new unsigned long long[g.NODENUM + 1];
+	g.end_indices = new unsigned long long[g.NODENUM + 1];
+	std::fill_n(g.start_indices, g.NODENUM + 1, ENULL);
+	std::fill_n(g.end_indices, g.NODENUM + 1, ENULL);
+	unsigned long long i;
 	unsigned int old = g.edgeList->src;
 	g.start_indices[old] = 0;
 	for (i = 0; i < g.EDGENUM; i++) {
@@ -203,7 +203,7 @@ void findStartAndEndIndices()
 
 bool isGraphEmpty(unsigned int *edgeLabels)
 {
-	for (unsigned int i = 0; i < g.EDGENUM; i++) {
+	for (unsigned long long i = 0; i < g.EDGENUM; i++) {
 		if (edgeLabels[i] == ENULL)
 			return false;
 	}
@@ -215,7 +215,7 @@ unsigned int findDegree(unsigned int *edgeLabels, unsigned int *degree)
 {
 	std::fill_n(degree, g.NODENUM + 1, 0);
 	unsigned int max = 0;
-	for (unsigned int i = 0; i < g.EDGENUM; i++) {
+	for (unsigned long long i = 0; i < g.EDGENUM; i++) {
 		// If edge hasn't been deleted yet. An edge is considered deleted
 		// when it has been labeled.
 		if (edgeLabels[i] == ENULL) {
@@ -282,11 +282,11 @@ void processSubLevel(unsigned int *curr, long currTail, unsigned int *deg,
 	for (long i = 0; i < currTail; i++) {
 		unsigned int v = curr[i];
 		// Do nothing if node doesn't exist in the graph
-		if (g.start_indices[v] == 0 && g.end_indices[v] == 0) {
+		if (g.start_indices[v] == ENULL && g.end_indices[v] == ENULL) {
 			;
 		} else {
 			// For all neighbors of vertex v
-			for (unsigned int j = g.start_indices[v]; j <= g.end_indices[v]; j++) {
+			for (unsigned long long j = g.start_indices[v]; j <= g.end_indices[v]; j++) {
 				if (edgeLabels[j] == ENULL) {
 					unsigned int u = (g.edgeList + j)->tgt;
 					if (deg[u] > level) {
@@ -370,6 +370,9 @@ void parKCore(unsigned int *deg, unsigned int *edgeLabels)
 			}
 
 			level = level + 1;
+			// if (level % 1000 == 0) {
+			// 	printf("core level: %u, time: %lld\n", level, getTimeElapsed());
+			// }
 #pragma omp barrier
 		}
 	}
@@ -377,11 +380,11 @@ void parKCore(unsigned int *deg, unsigned int *edgeLabels)
 	delete[] next;
 }
 
-unsigned int labelEdgesAndUpdateDegree(unsigned int peel, boost::dynamic_bitset<> *isFinalNode,
+unsigned long long labelEdgesAndUpdateDegree(unsigned int peel, boost::dynamic_bitset<> *isFinalNode,
                                        unsigned int *degree, unsigned int *edgeLabels)
 {
-	unsigned int numEdges = 0;
-	for (unsigned int i = 0; i < g.EDGENUM; i++) {
+	unsigned long long numEdges = 0;
+	for (unsigned long long i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + i)->src;
 		unsigned int tgt = (g.edgeList + i)->tgt;
 		if ((*isFinalNode)[src] && (*isFinalNode)[tgt] && edgeLabels[i] == ENULL) {
@@ -398,7 +401,7 @@ void labelAndDeletePeelOneEdges(float *degree, unsigned int *edgeLabels)
 {
 	float *tmp = new float[g.NODENUM + 1];
 	std::copy(degree, degree + g.NODENUM + 1, tmp);
-	for (unsigned int i = 0; i < g.EDGENUM; i++) {
+	for (unsigned long long i = 0; i < g.EDGENUM; i++) {
 		unsigned int src = (g.edgeList + i)->src;
 		unsigned int tgt = (g.edgeList + i)->tgt;
 		if (edgeLabels[i] == ENULL) {
@@ -412,11 +415,11 @@ void labelAndDeletePeelOneEdges(float *degree, unsigned int *edgeLabels)
 	delete[] tmp;
 }
 
-void writeToFile(unsigned int *edgeIndices, unsigned int *edgeLabels)
+void writeToFile(unsigned long long *edgeIndices, unsigned int *edgeLabels)
 {
 	std::ofstream outputFile;
 	outputFile.open("graph-decomposition.csv");
-	for (unsigned int i = 0; i < g.EDGENUM; i++) {
+	for (unsigned long long i = 0; i < g.EDGENUM; i++) {
 		outputFile << (g.edgeList + edgeIndices[i])->src << ","
 		           << (g.edgeList + edgeIndices[i])->tgt << "," << edgeLabels[i]
 		           << "\n";
@@ -424,7 +427,7 @@ void writeToFile(unsigned int *edgeIndices, unsigned int *edgeLabels)
 	outputFile.close();
 }
 
-void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned int EDGENUM,
+void writeMetaData(std::string prefix, unsigned int NODENUM, unsigned long long EDGENUM,
                    unsigned int maxdeg, long long preprocessingTime, long long algorithmTime)
 {
 	std::ofstream outputFile;
@@ -466,7 +469,7 @@ void writeLayerToFile(const std::string &prefix, unsigned int topLayer, unsigned
 	}
 	outputFile.open(prefixx + ".csv");
 	/* outputFile<<"# source_vertex,target_vertex,layer\n"; */
-	for (unsigned int i = 0; i < g.EDGENUM; i++) {
+	for (unsigned long long i = 0; i < g.EDGENUM; i++) {
 		unsigned int label = edgeLabels[i];
 		if (label >= layer && label <= (topLayer))
 			outputFile << node2label[(g.edgeList + i)->src] << ","
@@ -481,7 +484,7 @@ void writeLayerToFile(const std::string &prefix, unsigned int topLayer, unsigned
 }
 
 void writeLayerMetaData(std::ofstream &outputFile, unsigned int layer, unsigned int prev,
-                        unsigned int NODENUM, unsigned int EDGENUM)
+                        unsigned int NODENUM, unsigned long long EDGENUM)
 {
 	outputFile << '"' << layer << '"' << ": {\n";
 	outputFile << "\t\"vertices\":" << NODENUM << ",\n";
@@ -509,7 +512,7 @@ int main(int argc, char *argv[])
 	}
 	// std::string tmpFile = prefix.substr(0,prefix.length()-4)+"-reindexed.bin";
 	// remove(tmpFile);
-	g.EDGENUM = atol(argv[2]);
+	g.EDGENUM = atoll(argv[2]);
 	std::cerr << "Edges: " << g.EDGENUM << "\n";
 	g.NODENUM = atol(argv[3]);
 	std::cerr << "Nodes: " << g.NODENUM << "\n";
@@ -539,15 +542,27 @@ int main(int argc, char *argv[])
 	unsigned int maxdeg = findDegree(edgeLabels, degree);
 	unsigned int *core = new unsigned int[g.NODENUM + 1];
 	std::thread t = std::thread(std::printf, "TEST\n");
-	unsigned int numEdges = 0;
-	unsigned int numtaEdges = 0;
+	unsigned long long numEdges = 0;
+	unsigned long long numtaEdges = 0;
 	unsigned int numVerts = 0;
 	unsigned int topLayer = 0;
 	unsigned int mc;
+
+	unsigned long long totalEdges = 0;
+
 	while (!isGraphEmpty(edgeLabels)) {
 		std::copy(degree, degree + g.NODENUM + 1, core);
+		std::cout << "Prepared Degrees: " << getTimeElapsed() << "\n";
 		parKCore(core, edgeLabels);
 		mc = *std::max_element(core, core + g.NODENUM + 1);
+
+		/* debug */
+		
+		// for (uint32_t v = 1; v <= g.NODENUM; v++) {
+		// 	std::cout << node2label[v] << "," << core[v] << "," << mc << "\n";
+		// }
+		/* debug end */
+
 		if (topLayer == 0)
 			topLayer = mc;
 		if (DEBUG)
@@ -563,6 +578,8 @@ int main(int argc, char *argv[])
 			}
 		}
 		numtaEdges = labelEdgesAndUpdateDegree(mc, isFinalNode, degree, edgeLabels);
+		totalEdges += numtaEdges;
+		std::cout << "Labeled edges: " << numtaEdges << "," << totalEdges << "," << getTimeElapsed() << "\n";
 		// delete [] isFinalNode;
 		writeLayerMetaData(outputFile, mc, topLayer, numVerts, numtaEdges / 2);
 		numEdges += numtaEdges;
