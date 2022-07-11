@@ -58,7 +58,7 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
             // console.log(key+' -> '+info[key]);
             // let color = interpolateLinearly(peel_value_color,jet); //jet colormap [0=blue, 1=red]
             let color = interpolateLinearly(peel_value_color,grey2red); //grey2red colormap [0=grey, 1=red]
-            const entropy_intensity = entropy[parseInt(key)];
+            const entropy_intensity = 0.25 + 0.75 * entropy[parseInt(key)];
             let color_hex = rgbToHex(Math.round(color[0]*255),Math.round(color[1]*255),Math.round(color[2]*255));
             // const material = new THREE.MeshBasicMaterial({color:color_string}); //black color
             

@@ -74,6 +74,7 @@
 			width: 362px;
 			height: calc(100vh - 300px);
 			top: 300px;
+			background-color: #ffffff;
 		}
 
 		#dataset-gui-container {
@@ -185,13 +186,15 @@
 		/* end */
 
 		#city-building-map {
-			z-index: 6;
+			z-index: 2;
 			position: absolute;
-			top: 105px;
-			right: 0px;
-			height: 195px;
-			width: calc(100vw - 375px - 6px);
-			overflow: scroll;
+			top: 400px;
+			left: 10px;
+			height: calc(100vh - 550px);
+			width: 345;
+			overflow: hidden;
+			/* border: white;
+			border-width: 10px; */
 		}
 
 		.map-tooltip {
@@ -229,8 +232,8 @@
 		} */
 
 		#city-view {
-			height: calc(100vh - 300px);
-			top: 300px;
+			height: calc(100vh - 75px);
+			top: 75px;
 			right: 0;
 			width: calc(100vw - 380px);
 			z-index: 0;
@@ -248,7 +251,7 @@
 			position: relative;
 			left: 360px;
 			width: calc(100vw - 375px);
-			height: 105px;
+			height: 75px;
 		}
 
 		#city-description-div {
@@ -309,6 +312,7 @@
 			position: absolute;
 			bottom: 0px;
 			right: 0px;
+			visibility: hidden;
 		}
 
 		#city-best-building-button-span {

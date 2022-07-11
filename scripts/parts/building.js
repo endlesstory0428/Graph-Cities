@@ -53,7 +53,7 @@ const curve = (val, factor) => 1 - Math.log(val * (1 - factor) + factor) / Math.
 
 
 const speedometerLine = (srcPos, vPos, xPos, yPos, sizeSacle) => d3.line()([srcPos, [0, 0], vPos].map(pos => [pos[0] * sizeSacle + xPos, pos[1] * sizeSacle + yPos]));
-const spiralLine = (posList, xPos, yPos, sizeSacle) => d3.line().curve(d3.curveBasis)(posList.map(pos => [pos[0] * sizeSacle + xPos, pos[1] * sizeSacle + yPos]));
+const spiralLine = (posList, xPos, yPos, sizeSacle) => d3.line().curve(d3.curveBasisOpen)(posList.map(pos => [pos[0] * sizeSacle + xPos, pos[1] * sizeSacle + yPos]));
 ////////
 
 function getLayerAllObj(layer_name) {
@@ -404,7 +404,8 @@ function createFlags(scene, height, coord, base_Y, layer, V, E, fragNum, fragNeg
 
   if (loadFlagTexture) {
     // add text to flag
-    if (bushSize == 1) {
+    // if (bushSize == 1) {
+    if (glyphInfo.hasOwnProperty('circle')) {
       flag_mesh = new THREE.Mesh(new THREE.BoxBufferGeometry(flag_width, flag_height, flag_thickness), new THREE.MeshStandardMaterial({ color: 0xffffff }));
       let loader = new THREE.FontLoader();
       loader.load('../textures/helvetiker_regular.typeface.json', function (font) {
@@ -472,6 +473,7 @@ function createFlags(scene, height, coord, base_Y, layer, V, E, fragNum, fragNeg
 
         // const glyphPath = spiralLine(glyphInfo.spiral.pos, 0, 0, flag_width / 6 * glyphFactors.size.spiral)
         const colorFactor = glyphFactors.color;
+        // console.log(glyphInfo, layer)
         const glyphColor = d3.rgb(...interpolateLinearly(curve(density(glyphInfo.circle['lccList'][0]), colorFactor), grey2red).map(x => x * 255)).darker(1.25)
         const glyphCircleR = flag_width / 12 * glyphFactors.size.building.circle * Math.sqrt(Math.log(1 + glyphInfo.circle['lccList'][0]['edges']))
 
@@ -481,6 +483,14 @@ function createFlags(scene, height, coord, base_Y, layer, V, E, fragNum, fragNeg
         const glyphCircleMesh = new THREE.Mesh(glyphCircleGeo, new THREE.MeshStandardMaterial({ color: glyphColor.formatHex() }))
         glyphGroup.add(glyphCircleMesh);
 
+
+        // console.log(glyphInfo.dot)
+        // for (const spikeInfo of Object.values(glyphInfo.dot)) {
+        //   console.log(spikeInfo)
+        //   const spikePath = speedometerLine(spikeInfo.info.srcPos, spikeInfo.info.vPos, 0, 0, flag_width / 2 * glyphFactors.size.building.dot)
+        //   console.log(spikePath)
+        // }
+
         // const $d3g = {};
 			  // d3threeD( $d3g );
 
@@ -489,6 +499,7 @@ function createFlags(scene, height, coord, base_Y, layer, V, E, fragNum, fragNeg
         // const tempShapes = tempPath.toShapes( true )
 
         // // const points = tempPath.getPoints();
+
 
         // // const geometry = new THREE.BufferGeometry().setFromPoints( points );
         // // const material = new THREE.LineBasicMaterial( { color: 0xffffff } );
@@ -513,7 +524,8 @@ function createFlags(scene, height, coord, base_Y, layer, V, E, fragNum, fragNeg
         glyph_objects.push(glyphCircleMesh);
       });
     }
-    else if (bushSize > 1) {
+    // else if (bushSize > 1) {
+    else if (glyphInfo.hasOwnProperty('spiral')) {
       // let texture_url = "../../textures/plots/"+dataSet+'_'+layer.slice(layer.indexOf('_')+1,layer.lastIndexOf('_'))+'.png';
       // // console.log(texture_url);
       // let url_exists = ifUrlExists(texture_url);
@@ -591,8 +603,10 @@ function createFlags(scene, height, coord, base_Y, layer, V, E, fragNum, fragNeg
         // console.log(glyphInfo);
         // console.log(glyphFactors)
         const glyphPath = spiralLine(glyphInfo.spiral.pos, 0, 0, flag_width / 6 * glyphFactors.size.spiral)
+        // const glyphPath = spiralLine(glyphInfo.spiral.pos, 0, 0, 1)
         const colorFactor = glyphFactors.color;
         const glyphColor = d3.rgb(...interpolateLinearly(curve(density(glyphInfo.spiral), colorFactor), grey2red).map(x => x * 255)).darker(1.25)
+
 
         // console.log(glyphPath)
         // const svgLoader = new SVGLoader()
@@ -655,10 +669,16 @@ function createFlags(scene, height, coord, base_Y, layer, V, E, fragNum, fragNeg
         // console.log(svgData.paths[0])
 
         const backPath = spiralLine(glyphInfo.spiral.pos, 0, 0, flag_width / 2 * glyphFactors.size.spiral)
+        // const backPath = spiralLine(glyphInfo.spiral.pos, 0, 0, 1)
 
         const tempBackPath = $d3g.transformSVGPath(backPath)
         // console.log(tempPath)
         const tempBackShapes = tempBackPath.toShapes( true )
+
+        // if (layer === 'wavemap_3_47317_1') {
+        //   console.log(backPath)
+        //   console.log(tempBackShapes.length)
+        // }
 
         for (let shapeIdx = 0; shapeIdx < tempBackShapes.length; shapeIdx ++) {
           const tempBackShape = tempBackShapes[shapeIdx];
@@ -830,6 +850,7 @@ function createCityMeshes(scene, objects, city_all, city_tracking, ceil_objects,
       }
       let flag_base_Y = y_scale * layer_shape[height - 1].height;
       city_all[layer].coords[3] = flag_base_Y; // 2021-10-18: I am not sure what coords[2] is, so I just append after it.
+      city_all[layer].floorSize = height - 1;
       let lcc = parseInt(layer.slice(layer.lastIndexOf('_') + 1)); // last
       let sliced = layer.slice(0, layer.lastIndexOf('_'));
       sliced = sliced.slice(0, sliced.lastIndexOf('_'));
@@ -838,7 +859,7 @@ function createCityMeshes(scene, objects, city_all, city_tracking, ceil_objects,
       // let mast_length = mast_scale * height;
       let splitLayerName = layer.split('_');
       let layerShortName = `${splitLayerName[1]}_${splitLayerName[2]}`
-      // console.log(city_all.glyphInfo)
+      // console.log(city_all.glyphInfo, layerShortName, city_all[layer].bushSize)
       let result = createFlags(scene, height - 1, [X, Z], flag_base_Y, layer, city_all[layer].V, city_all[layer].E, city_all[layer].fragNum, city_all[layer].fragNeg, city_all[layer].fragPos, city_all[layer].fragBucket, city_all[layer].duplicate, flag_objects, lcc, fixed, mast_scale, dataSet, flag_objects_new, city_all.glyphInfo[layerShortName], city_all.glyphInfo.factors, city_all[layer].bushSize, glyph_objects, glyphBack_objects);
       scene = result.scene;
       flag_objects_new = result.flag_objects_new;
@@ -903,8 +924,6 @@ function createArrows(scene, name, coord, Y, arrow_objects, src_objects, tgt_obj
   })
   return { scene: scene, arrow_objects: arrow_objects, src_objects: src_objects, tgt_objects: tgt_objects };
 }
-
-
 
 // From d3-threeD.js
 /* This Source Code Form is subject to the terms of the Mozilla Public
@@ -974,6 +993,8 @@ function d3threeD(exports) {
 
           idx++;
           isFloat = true;
+        } else if (c === MINUS) {
+          idx++;
         }
 
         s = pathStr.substring(sidx, idx);

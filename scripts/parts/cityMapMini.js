@@ -146,6 +146,7 @@ function splitSpiral(data, bucketPeel2Building) {
             } else {
                 const lccCount = lccList.length;
                 if (lccCount === 1) {
+                    console.log(bucketPeel2Building)
                     buildingList.push({ 'bucket': parseInt(bucket), 'layer': parseInt(peel), 'lccList': lccList, 'buildingName': bucketPeel2Building[bucket][peel] });
                 } else {
                     spiralList.push({ 'bucket': parseInt(bucket), 'layer': parseInt(peel), 'count': lccCount, 'lccList': lccList, 'subBucket': logBucket(lccList), 'buildingName': bucketPeel2Building[bucket][peel], 'minCC': lccInfo['minSize'], 'maxCC': lccInfo['maxSize'] });
@@ -264,23 +265,26 @@ function getSpiral(spiralList) {
 };
 
 // // break x axis by xList
-function breakX(xList) {
+function breakX(xList, translateVal) {
+    if (translateVal === null || translateVal === undefined) {
+        translateVal = 0
+    }
     xList.sort((x, y) => x - y)
     // console.log(xList);
 
-    let sumX = 0;
+    let sumX = 0 - translateVal;
     let brokenX = {};
     let revBrokenX = {}
     let prevPeel = 0;
 
     for (const peel of xList) {
-        const tempX = 1 + Math.log10(1 + Math.log10(peel - prevPeel));
+        const tempX = 1 + Math.log10(1 + Math.log10(peel + translateVal - prevPeel));
         // const tempX = Math.cbrt(peel - prevPeel);
         // const tempX = Math.sqrt(1 + Math.log10(peel - prevPeel));
         sumX += tempX
         brokenX[peel] = sumX;
         revBrokenX[sumX] = peel;
-        prevPeel = peel;
+        prevPeel = peel + translateVal;
     }
     // console.log(brokenX);
     return [sumX, brokenX, revBrokenX];
@@ -294,6 +298,8 @@ function drawMap(datas, buildingMapControls, divName) {
 
     document.getElementById(divName).innerHTML = '';
 
+    console.log(datas)
+
     const bucketPeel2Building = getBucketPeel2Building(datas[1], datas[2]);
     console.log(bucketPeel2Building)
     const data = datas[0];
@@ -304,7 +310,7 @@ function drawMap(datas, buildingMapControls, divName) {
 
     // // set the dimensions and margins of the graph
     const padMargin = { top: 0, right: 0, bottom: 0, left: 0 };
-    const margin = { top: 10, right: 30, bottom: 45, left: 60 },
+    const margin = { top: 10, right: 30, bottom: 30, left: 60 },
         width = board.node().clientWidth - margin.left - margin.right,
         height = board.node().clientHeight - margin.top - margin.bottom;
 
@@ -315,8 +321,7 @@ function drawMap(datas, buildingMapControls, divName) {
         .attr("class", "drawingBoard")
         .attr("width", width + margin.left + margin.right + padMargin.left + padMargin.right)
         .attr("height", height + margin.top + margin.bottom + padMargin.top + padMargin.bottom)
-        // .style("background-color", "#dddddd");
-        .style("background-color", "#ffffff");
+        .style("background-color", "#dddddd");
 
     // console.log(height + margin.top + margin.bottom + padMargin.top + padMargin.bottom)
 
@@ -333,7 +338,12 @@ function drawMap(datas, buildingMapControls, divName) {
     delete data['layers'];
     delete data['buckets'];
 
+    console.log(data)
+    const bucketIdxList = [...buckets.keys()].slice(0, buckets.length - 1).filter(d => data.hasOwnProperty(d) && data[d]['count'] > 0);
+    console.log(bucketIdxList)
+
     const [sumX, brokenX, revBrokenX] = breakX(layers);
+    const [sumY, brokenY, revBrokenY] = breakX(bucketIdxList, 1);
 
     let buildingWaveList = [];
     let buildingDot;
@@ -344,30 +354,13 @@ function drawMap(datas, buildingMapControls, divName) {
     let spiralHighLight;
     let patternIcon;
 
-    // // x, y labels
-    svg.append("text")
-        .attr("class", "axis-label")
-        .attr("transform", `translate(${width / 2}, ${height + margin.top + 30})`)
-        .style("text-anchor", "middle")
-        .style("font-size", "0.8em")
-        .text("Peel Value");
-
-    svg.append("text")
-        .attr("class", "axis-label")
-        .attr("transform", `rotate(-90)`)
-        .attr("x", -height / 2)
-        .attr("y", -30)
-        .style("text-anchor", "middle")
-        .style("font-size", "0.8em")
-        .text("Bucket Size Indicator");
-
     // Add X axis
     // Add Y axis
     const x = d3.scaleLinear()
-        .domain([0, sumX])
+        .domain([0, sumX + 1])
         .range([0, width]);
     const y = d3.scaleLinear()
-        .domain([0, buckets.length - 1])
+        .domain([0, sumY + 1])
         .range([height, 0]);
 
     // // x, y grids
@@ -378,7 +371,7 @@ function drawMap(datas, buildingMapControls, divName) {
 
     svg.append("g")
         .attr("class", "grid")
-        .call(d3.axisLeft(y).ticks(buckets.length - 1).tickSize(-width).tickFormat(""));
+        .call(d3.axisLeft(y).tickValues(bucketIdxList.map(d => brokenY[d])).tickSize(-height).tickFormat(""));
 
     // // x, y axis
     svg.append("g")
@@ -393,7 +386,7 @@ function drawMap(datas, buildingMapControls, divName) {
 
     svg.append("g")
         .attr("class", 'axis')
-        .call(d3.axisLeft(y).ticks(buckets.length - 1));
+        .call(d3.axisLeft(y).tickValues(bucketIdxList.map(d => brokenY[d])).tickFormat(d => revBrokenY[d]))
 
     // console.log(Math.max(...layers))
     // console.log()
@@ -452,7 +445,7 @@ function drawMap(datas, buildingMapControls, divName) {
         patternIconEnter.append('svg:image')
             .attr("xlink:href", './data_maps/light.png')
             .attr("x", d => x(brokenX[d['layer']]) + cellSize * 1 / 4)
-            .attr("y", d => y(d['bucket']) - cellSize)
+            .attr("y", d => y(brokenY[d['bucket']]) - cellSize)
             .attr("width", cellSize / 2)
             .attr("height", cellSize / 2)
     }
@@ -475,7 +468,7 @@ function drawMap(datas, buildingMapControls, divName) {
     buildingHighLightEnter.append("circle")
         .attr("class", "buildingHighLight")
         .attr("cx", d => x(brokenX[d['layer']]))
-        .attr("cy", d => y(d['bucket']))
+        .attr("cy", d => y(brokenY[d['bucket']]))
         .attr("r", d => 2 * buildingCircleSize * Math.sqrt(Math.log(1 + d['lccList'][0]['edges'])))
         .attr("fill", "#cc99a2")
         .attr("id", d => `mapHighLight_${d['layer']}_${d['bucket']}`)
@@ -491,7 +484,7 @@ function drawMap(datas, buildingMapControls, divName) {
         .attr("stroke-width", 0.01)
         .attr("stroke", "grey")
         .attr("opacity", 0.8)
-        .attr("d", d => speedometerLine(d['info']['srcPos'], d['info']['vPos'], x(brokenX[d['layer']]), y(d['bucket']), buildingDotSize));
+        .attr("d", d => speedometerLine(d['info']['srcPos'], d['info']['vPos'], x(brokenX[d['layer']]), y(brokenY[d['bucket']]), buildingDotSize));
         // .append("title")
         // .text(d => `${buildingWaveTooltip(d)}\n\n${buildingFixpointTooltip(d)}`);
     
@@ -500,7 +493,7 @@ function drawMap(datas, buildingMapControls, divName) {
     buildingCircleEnter.append("circle")
         .attr("class", "buildingCircle")        
         .attr("cx", d => x(brokenX[d['layer']]))
-        .attr("cy", d => y(d['bucket']))
+        .attr("cy", d => y(brokenY[d['bucket']]))
         .attr("r", d => buildingCircleSize * Math.sqrt(Math.log(1 + d['lccList'][0]['edges'])))
         .attr("fill", "#000000")
         .attr("fill-opacity", 0)
@@ -528,7 +521,7 @@ function drawMap(datas, buildingMapControls, divName) {
     spiralHighLightEnter.append("circle")
         .attr("class", "spiralHighLight")
         .attr("cx", d => x(brokenX[d['layer']]))
-        .attr("cy", d => y(d['bucket']))
+        .attr("cy", d => y(brokenY[d['bucket']]))
         .attr("r", d => 2 * spiralDotSize * d['radius'])
         .attr("fill", "#cc99a2")
         .attr("id", d => `mapHighLight_${d['layer']}_${d['bucket']}`)
@@ -539,12 +532,12 @@ function drawMap(datas, buildingMapControls, divName) {
     const spiralEnter = spiralDot.enter().append('g');
     spiralEnter.append("path")
         .attr("class", "spiralDot")
-        .attr("id", d => `spiralDot_${d['layer']}_${d['bucket']}`)
+        .attr("id", d => `spiralDot_${d['layer']}_${brokenY[d['bucket']]}`)
         .attr("fill", "none")
         .attr("stroke-width", Math.min(2, x(1) / 8))
         .attr("stroke", d => d3.rgb(...interpolateLinearly(curve(density(d), aveBuildingDensity), grey2red).map(x => x * 255)).darker(1.25))
         .attr("opacity", 0.8)
-        .attr("d", d => spiralLine(d['pos'], x(brokenX[d['layer']]), y(d['bucket']), spiralDotSize));
+        .attr("d", d => spiralLine(d['pos'], x(brokenX[d['layer']]), y(brokenY[d['bucket']]), spiralDotSize));
         // .append("title")
         // .text(d => `${spiralCCTooltip(d)}\n\n${spiralFixpointTooltip(d)}`);
 
@@ -553,7 +546,7 @@ function drawMap(datas, buildingMapControls, divName) {
     spiralCircleEnter.append("circle")
         .attr("class", "spiralCircle")
         .attr("cx", d => x(brokenX[d['layer']]))
-        .attr("cy", d => y(d['bucket']))
+        .attr("cy", d => y(brokenY[d['bucket']]))
         .attr("r", d => spiralDotSize * d['radius'])
         .attr("fill", "#000000")
         .attr("fill-opacity", 0)
@@ -666,7 +659,7 @@ function drawMap(datas, buildingMapControls, divName) {
                 return xVal;
             })
             .attr("y", d => {
-                let yVal = y(d['bucket']);
+                let yVal = y(brokenY[d['bucket']]);
                 if (yVal + 100 > height){
                     yVal = yVal - 100;
                 }
@@ -689,7 +682,7 @@ function drawMap(datas, buildingMapControls, divName) {
                 return xVal;
             })
             .attr("y", d => {
-                let yVal = y(d['bucket']) + 5;
+                let yVal = y(brokenY[d['bucket']]) + 5;
                 if (yVal + 95 > height){
                     yVal = yVal - 100;
                 }
@@ -759,8 +752,7 @@ function drawMap(datas, buildingMapControls, divName) {
     // Set up d3-zoom and callbacks.
     board.on('scroll', scrolled)
         .call(d3.zoom()
-            // .scaleExtent([1, 10])
-            .scaleExtent([1, 120])
+            .scaleExtent([1, 10])
             .translateExtent([[0, 0], [width + margin.left + margin.right + padMargin.left + padMargin.right, height + margin.top + margin.bottom + padMargin.top + padMargin.bottom]])
             .on('zoom', zoomed))
 
