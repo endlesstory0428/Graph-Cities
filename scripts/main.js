@@ -20,7 +20,7 @@ import * as PATH from './parts/path.js';
 import * as CM from './parts/cityMap.js';
 import { DataTexture3D } from '../three.js/build/three.module.js';
 
-const hostAddress = 'http://127.0.0.1:6122/'
+const hostAddress = 'http://addressSample:8080'
 
 let addBuildings = true, addDagViews = true, onDagViews = false;
 
@@ -34,7 +34,7 @@ let aspect = window.innerWidth / window.innerHeight;
 let scene_city = new THREE.Scene();
 let scene_lighthouse = new THREE.Scene();
 let sliderPos = 365;
-let mapPos = 300; // top building map
+let mapPos = 270; // top building map
 
 const raycaster = new THREE.Raycaster();
 let mouse = new THREE.Vector2();
@@ -82,6 +82,8 @@ let mapWaveSelection = false;
 let mapWaveSelectedName;
 let dagSizeDict;
 
+let bucketNum = 0;
+
 let global_building = {};
 let allowed;
 let shouldArrowBeVisible;
@@ -103,6 +105,8 @@ let clearTempPathFlag = true;
 let glyphDoneFlag = false;
 let glyphData = {};
 let mouseOnGlyph = false;
+
+let transitionContinueFlag = true;
 
 const data_list = ['got', 'cit-Patents', 'starwars'];
 const V = {'com-friendster':65608366, 'movies':218052, 'cit-Patents':3774768};
@@ -256,6 +260,7 @@ let voronoi_file = python_dir + paramsL.dataSet + "/voronoi.txt";
 // let neighbors_file = python_dir + paramsL.dataSet + "/neighbors.txt";
 let neighbors_file = python_dir + paramsL.dataSet + "/neighbors_weighted.txt";
 let meta_file = python_dir + paramsL.dataSet + "/metagraph_normalized.txt";
+let meta_span_file = python_dir + paramsL.dataSet + "/metagraph_normalized.span.txt";
 let lighthouse_file = lighthouse_dir+paramsL.dataSet+'-layers-dists.json';
 let entropy_file = lighthouse_dir+paramsL.dataSet+'_entropy.json';
 let bucket_file = lighthouse_dir+paramsL.dataSet+'-bucket2peels.json';
@@ -455,6 +460,10 @@ function init() {
   tallest_dist_img.src = data_dir+paramsL.dataSet+"_tallest_dist.png";
   document.getElementById("city-tallest-building-button-span").appendChild(tallest_dist_img);
 
+  let floor_dist_img = document.createElement("img");
+  floor_dist_img.src = data_dir+paramsL.dataSet+"_floor_dist.png";
+  document.getElementById("city-floor-building-button-span").appendChild(floor_dist_img);
+
   let densest_dist_img = document.createElement("img");
   densest_dist_img.src = data_dir+paramsL.dataSet+"_densest_dist.png";
   document.getElementById("city-densest-building-button-span").appendChild(densest_dist_img);
@@ -622,6 +631,7 @@ function init() {
       voronoi_file = python_dir + dataSet + "/voronoi.txt";
       neighbors_file = python_dir + dataSet + "/neighbors.txt";
       meta_file = python_dir + dataSet + "/metagraph_normalized.txt";
+      meta_span_file = python_dir + dataSet + "/metagraph_normalized.span.txt";
       lighthouse_file = lighthouse_dir+dataSet+'-layers-dists.json';
       entropy_file = lighthouse_dir+dataSet+'_entropy.json';
       bucket_file = lighthouse_dir+dataSet+'-bucket2peels.json';
@@ -882,8 +892,8 @@ function zoomAtBuilding(selected_building){
     setTimeout(resolve, transitionCamera(    
       {camera: initialCameraPosition, target: initialTargetPosition},
       {camera: finalCameraPosition, target: finalTargetPosition},
-      500
-    ) + 500)
+      300
+    ) + 200)
   });
 }
 
@@ -903,7 +913,7 @@ function groundObjLoader(obj_url, obj_material) {
         object.scale.set(0.4, 0.1, 0.3);
         object.position.set(-60, -10, 20);
       } else if (paramsL.dataSet === data_list[1]) {
-        object.scale.set(0.4, 0.1, 0.3);
+        object.scale.set(0.5, 0.1, 0.4);
         object.position.set(0, -9, 0);
       } else if (paramsL.dataSet === data_list[2]) {
         object.scale.set(0.4, 0.1, 0.3);
@@ -927,6 +937,7 @@ function loadFile(file, manager) {
   loader.responseType = "blob";
   loader.load(file,
     function(data) {
+      console.log(`loading ${file}`);
       getAsText(data, file);
     },
     function(xhr) {
@@ -1090,6 +1101,7 @@ function loadedJSON(evt) {
   }else if(filename.includes("summary")){
     summaryData = JSON.parse(fileString);
     scene_city_description.innerText = objToString(summaryData);
+    bucketNum = summaryData.buckets;
   }
 }
 
@@ -1124,6 +1136,8 @@ function loaded(evt) {
   let lines = fileString.split('\n');
   let element_count = (lines[0].split(' ')).length;
   // need to update when SPIRAL.txt updates
+  // console.log(`loaded file with ${element_count} elements`)
+  // console.log(lines[0].split(' '))
   if (element_count == 12) {
     console.log("loaded: SPIRAL file");
     let spiral = BUILD.loadSpiral(scene_city, lines, city_all, grass_objects, bush_objects, city_tracking, x_scale);
@@ -1167,11 +1181,12 @@ function loaded(evt) {
 }
 
 function dayAndNight(isNight, light_objects, window_objects) {
+  console.log(light_objects);
   if (isNight) {
     scene_city.background = new THREE.Color('midnightblue');
     light_objects.dayLights.forEach(object => object.visible = false);
     light_objects.nightLight.visible = true;
-    light_objects.spotLight.visible = false;
+    // light_objects.spotLight.visible = false; #TODO: check where the spotLight is defined
     light_objects.selectionLights.forEach(object => object.visible = false);
     window_objects.forEach(object => object.visible = true);
     animate();
@@ -1180,7 +1195,7 @@ function dayAndNight(isNight, light_objects, window_objects) {
     light_objects.dayLights.forEach(object => object.visible = true);
     light_objects.selectionLights.forEach(object => object.visible = true);
     light_objects.nightLight.visible = false;
-    light_objects.spotLight.visible = true;
+    // light_objects.spotLight.visible = true;
     window_objects.forEach(object => object.visible = false);
     animate();
   }
@@ -1545,6 +1560,9 @@ function render() {
           let result = LH.updateSelectionLights(city_all, light_objects, selected_buildings);
           light_objects = result.light_objects;
           selected_buildings_list = result.selected_buildings;
+          // console.log(selected_buildings_list);
+          selected_buildings_list.sort((a, b) => -(city_all[a].E - city_all[b].E))
+          // console.log(selected_buildings_list);
           LH.updateDropdown(root_dropdown_highlighted, selected_buildings_list);
           root_dropdown_highlighted.setValue(selected_buildings_list[0]);
           let highlighter = lighthouse_objects[lighthouse_objects.length-1];
@@ -1761,7 +1779,16 @@ function onMouseDown(event) {
   if (glyphBackIntersects.length > 0) {
     selected_glyphBack = glyphBackIntersects[0].object.layerName;
     // console.log(selected_glyphBack);
-    window.open(`${hostAddress}/minicity.html`);
+    // if (selected_glyphBack === 'wavemap_10_68576_10') {
+    //   window.open(`${hostAddress}/minicity_movies.html`);
+    // }
+    // if (selected_glyphBack === 'wavemap_12_3156442_13') {
+    //   window.open(`${hostAddress}/minicity_cit-Patents.html`);
+    // }
+    // if (selected_glyphBack === 'wavemap_9_25816_107') {
+    //   window.open(`${hostAddress}/minicity_com-friendster.html`);
+    // }
+    window.open(`${hostAddress}/minicity_${selected_glyphBack}.html`);
   }
 }
 
@@ -2018,16 +2045,19 @@ function transitionCamera(initial, final, totalSteps=1000){
   let clock = 500;
   global_building.timmers = [];
 
-  for(let i=0; i <= totalSteps; i++){
-    global_building.timmers.push(setTimeout(function() {
-      let currentCameraPosition = camera.position;
-      let currentTargetPosition = scene_city.userData.controls.target;   
-      scene_city.userData.controls.target.set(currentTargetPosition.x + targetX, currentTargetPosition.y + targetY, currentTargetPosition.z + targetZ);
-      camera.position.set(currentCameraPosition.x + cameraX, currentCameraPosition.y + cameraY, currentCameraPosition.z + cameraZ);
-      controls.update();
-    }, clock));
-    clock += 1;
-  } 
+  if (transitionContinueFlag)
+  {
+    for(let i=0; i <= totalSteps; i++){
+      global_building.timmers.push(setTimeout(function() {
+        let currentCameraPosition = camera.position;
+        let currentTargetPosition = scene_city.userData.controls.target;   
+        scene_city.userData.controls.target.set(currentTargetPosition.x + targetX, currentTargetPosition.y + targetY, currentTargetPosition.z + targetZ);
+        camera.position.set(currentCameraPosition.x + cameraX, currentCameraPosition.y + cameraY, currentCameraPosition.z + cameraZ);
+        controls.update();
+      }, clock));
+      clock += 1;
+    }
+  }
 
   return clock;
 }
@@ -2087,9 +2117,9 @@ function zoomAtBuildingFlag(selected_building){
   let flag_details = flag_objects_new[selected_building];
   let flag_height = JSON.parse(JSON.stringify(flag_details.flag_rod)).geometries[0].height;
 
-  let observeFlagFor = 1 * 1000;
+  let observeFlagFor = 0.5 * 1000;
   // should be more that observeFlagFor
-  let totalTransitionTime = 2 * 1000;
+  let totalTransitionTime = 1 * 1000;
 
 
   let totalSteps = totalTransitionTime - observeFlagFor;
@@ -2171,14 +2201,16 @@ async function rotateAtFlag(selected_building){
   )));
   
   return new Promise((resolve) => {
-    for(let thetaToRotate=0; thetaToRotate <= 360; thetaToRotate+=0.1){
-      global_building.timmers.push(setTimeout(function() {  
-        camera.position.x = building_position.x + (a * Math.sin(THREE.MathUtils.degToRad(thetaToRotate)));
-        camera.position.y = building_position.y + flag_height + o;
-        camera.position.z = building_position.z + (a * Math.cos(THREE.MathUtils.degToRad(thetaToRotate)));
-        controls.update();      
-      }, clock));  
-      clock += 2;    
+    if (transitionContinueFlag) {
+      for(let thetaToRotate=0; thetaToRotate <= 360; thetaToRotate+=0.2){
+        global_building.timmers.push(setTimeout(function() {  
+          camera.position.x = building_position.x + (a * Math.sin(THREE.MathUtils.degToRad(thetaToRotate)));
+          camera.position.y = building_position.y + flag_height + o;
+          camera.position.z = building_position.z + (a * Math.cos(THREE.MathUtils.degToRad(thetaToRotate)));
+          controls.update();      
+        }, clock));  
+        clock += 2;    
+      }
     }
     setTimeout(resolve, clock + 500);    
   });
@@ -2226,16 +2258,17 @@ function toCityTopView(){
 
   let finalTargetPosition = initialTargetPosition;
   // let finalTargetPosition = new THREE.Vector3(0, 10, 0);
-  let finalCameraPosition = new THREE.Vector3(5, 800, 5);    
+  let finalCameraPosition = new THREE.Vector3(5, 1000, 5);    
 
   return new Promise((resolve) => setTimeout(resolve, transitionCamera(    
     {camera: initialCameraPosition, target: initialTargetPosition},
     {camera: finalCameraPosition, target: finalTargetPosition},
-    2000
+    1500
   )));
 }
 
 function walkOnPath(path, moveArrowBack){
+  transitionContinueFlag = true;
   if (moveArrowBack === null || moveArrowBack === undefined) {
     moveArrowBack = false;
   };
@@ -2290,6 +2323,7 @@ function walkOnPath(path, moveArrowBack){
 }
 
 function tourOnPath(path, moveArrowBack){
+  transitionContinueFlag = true;
   if (moveArrowBack === null || moveArrowBack === undefined) {
     moveArrowBack = false;
   };
@@ -2333,15 +2367,15 @@ function fakeTransition(selected_building){
 function goToInnerView(selected_building){
   return new Promise(resolve => {  
     zoomAtBuilding(selected_building)
-    .then(() => {      
-      return iterateCameraOverBuilding(selected_building);
-    })  
+    // .then(() => {      
+    //   return iterateCameraOverBuilding(selected_building);
+    // })  
     .then(() => {      
       return zoomAtBuildingFlag(selected_building);
     })
-    .then(() => {
-      return fakeTransition(selected_building);
-    })
+    // .then(() => {
+    //   return fakeTransition(selected_building);
+    // })
     .then(() => {     
       // End of fakeTransition
       goInsideBuilding(selected_building);  
@@ -2528,11 +2562,13 @@ function goBestBuilding(statName) {
     buildingStatList = buildingList.map(d => [d, city_all[d].E]);
   } else if (statName === 'tallest') {
     buildingStatList = buildingList.map(d => [d, city_all[d].coords[3]])
+  } else if (statName === 'floor') {
+    buildingStatList = buildingList.map(d => [d, city_all[d].floorSize])
   } else if (statName === 'densest') {
     // console.log(city_all.building2BucketPeel)
     // buildingStatList = buildingList.map(d => [d, 2 * city_all[d].E / city_all[d].V / (city_all[d].V - 1)])
     console.log(JSON.stringify(buildingList.map(d => [d, 2 * city_all[d].E / city_all[d].V / (city_all[d].V - 1)])))
-    buildingStatList = buildingList.filter(d => city_all.building2BucketPeel[`${d.split('_')[1]}_${d.split('_')[2]}`][0][0] >= 4).map(d => [d, 2 * city_all[d].E / city_all[d].V / (city_all[d].V - 1)])
+    buildingStatList = buildingList.filter(d => city_all.building2BucketPeel[`${d.split('_')[1]}_${d.split('_')[2]}`][0][0] >= bucketNum/2).map(d => [d, 2 * city_all[d].E / city_all[d].V / (city_all[d].V - 1)])
   } else if (statName === 'most diverse') {
     const tempDiversityDict = {}
     console.log(city_all)
@@ -2557,7 +2593,7 @@ function goBestBuilding(statName) {
   console.log(buildingStatList);
   buildingStatList.sort((a, b) => -(a[1] - b[1]))
   // console.log(buildingStatList);
-  const bestList = buildingStatList.slice(0, Math.ceil(Math.log2(buildingList.length))).map(d => d[0]);
+  const bestList = buildingStatList.slice(0, parseInt(Math.ceil(Math.log2(buildingList.length)) / 2)).map(d => d[0]);
   console.log(bestList);
   updateCityLight(bestList);
   clearRoadNetwork();
@@ -2580,6 +2616,14 @@ document.getElementById('city-tallest-building-button').onclick = function goTal
   }
   // console.log(flag_objects_new)
   goBestBuilding('tallest')
+}
+
+document.getElementById('city-floor-building-button').onclick = function goFloorBuilding() {
+  if (city_to_load !== 0) {
+    return;
+  }
+  // console.log(flag_objects_new)
+  goBestBuilding('floor')
 }
 
 document.getElementById('city-densest-building-button').onclick = function goDensestBuilding() {
@@ -2892,7 +2936,7 @@ function addZoomButtonHandle() {
 function processGlyph(glyphData) {
   glyphDoneFlag = true;
   console.log(glyphData);
-  // console.log(city_all.building2BucketPeel)
+  console.log(city_all.building2BucketPeel)
 
   const glyphInfo = {}
   glyphInfo['factors'] = glyphData.factors;
@@ -2900,21 +2944,30 @@ function processGlyph(glyphData) {
   // console.log(city_all);
   const bucketPeel2Building = {}
   for (const [buildingShort, bucketPeel] of Object.entries(city_all.building2BucketPeel)) {
-    bucketPeel2Building[`${bucketPeel[0][0]}-${bucketPeel[0][1]}`] = buildingShort; // NOTE: if the bucket -> building is not one-on-one mapping, then it will fail;
+    if (!bucketPeel2Building.hasOwnProperty(`${bucketPeel[0][0]}-${bucketPeel[0][1]}`)) {
+      bucketPeel2Building[`${bucketPeel[0][0]}-${bucketPeel[0][1]}`] = [];
+    }
+    bucketPeel2Building[`${bucketPeel[0][0]}-${bucketPeel[0][1]}`].push(buildingShort); // NOTE: if the bucket -> building is not one-on-one mapping, then it will fail;
   }
   // console.log(bucketPeel2Building);
   
   for (const spiralInfo of glyphData.spiral) {
     // console.log(spiralInfo);
-    glyphInfo[bucketPeel2Building[`${spiralInfo.bucket}-${spiralInfo.layer}`]] = {spiral: spiralInfo};
+    for (const buildingShort of bucketPeel2Building[`${spiralInfo.bucket}-${spiralInfo.layer}`]) {
+      glyphInfo[buildingShort] = {spiral: spiralInfo};
+    }
   }
   for (const buildingInfo of glyphData.building.circle) {
     // console.log(buildingInfo);
-    glyphInfo[bucketPeel2Building[`${buildingInfo.bucket}-${buildingInfo.layer}`]] = {circle: buildingInfo, dot: []}
+    for (const buildingShort of bucketPeel2Building[`${buildingInfo.bucket}-${buildingInfo.layer}`]) {
+      glyphInfo[buildingShort] = {circle: buildingInfo, dot: []}
+    }
   }
   for (const buildingWaveInfo of glyphData.building.dot) {
     // console.log(buildingWaveInfo)
-    glyphInfo[bucketPeel2Building[`${buildingWaveInfo.bucket}-${buildingWaveInfo.layer}`]].dot.push(buildingWaveInfo);
+    for (const buildingShort of bucketPeel2Building[`${buildingWaveInfo.bucket}-${buildingWaveInfo.layer}`]) {
+      glyphInfo[buildingShort].dot.push(buildingWaveInfo);
+    }
   }
   console.log(glyphInfo)
   city_all.glyphInfo = glyphInfo;
@@ -2947,7 +3000,7 @@ window.addEventListener('resize', function(event){
 function showCityGallery() {
   showingGallery = true;
   buildingMapControls.showingGallery = showingGallery;
-  document.getElementById('city-building-map').style.height = `${window.innerHeight - 105}px`;
+  document.getElementById('city-building-map').style.height = `${window.innerHeight - 75}px`;
   drawMap('city-building-map');
 }
 
@@ -3019,4 +3072,10 @@ function goInsideBuilding(buildingName) {
     loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
   }
   onDagViews = false;
+}
+
+
+document.getElementById('stop-transition').onclick = function stopTransition() {
+  transitionContinueFlag = false;
+  // setTimeout(() => transitionContinueFlag = true, 1000);
 }

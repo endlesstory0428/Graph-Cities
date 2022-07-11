@@ -17,10 +17,10 @@ import {
 import * as LH from './parts/lighthouse.js'
 import * as BUILD from './parts/building.js';
 import * as PATH from './parts/path.js';
-import * as CM from './parts/cityMap.js';
+import * as CM from './parts/cityMapMini.js';
 import { DataTexture3D } from '../three.js/build/three.module.js';
 
-const hostAddress = 'http://127.0.0.1:6122/'
+const hostAddress = 'http://127.0.0.1:16134/'
 
 let addBuildings = true, addDagViews = true, onDagViews = false;
 
@@ -34,7 +34,7 @@ let aspect = window.innerWidth / window.innerHeight;
 let scene_city = new THREE.Scene();
 let scene_lighthouse = new THREE.Scene();
 let sliderPos = 365;
-let mapPos = 300; // top building map
+let mapPos = 75; // top building map
 
 const raycaster = new THREE.Raycaster();
 let mouse = new THREE.Vector2();
@@ -82,6 +82,8 @@ let mapWaveSelection = false;
 let mapWaveSelectedName;
 let dagSizeDict;
 
+let bucketNum = 0;
+
 let global_building = {};
 let allowed;
 let shouldArrowBeVisible;
@@ -104,7 +106,7 @@ let glyphDoneFlag = false;
 let glyphData = {};
 let mouseOnGlyph = false;
 
-const data_list = ['got', 'cit-Patents-12-3', 'starwars'];
+const data_list = ['got', 'com-friendster-9-2', 'starwars'];
 const V = {'com-friendster':65608366, 'movies':218052, 'cit-Patents':3774768};
 const E = {'com-friendster':1806067135, 'movies':115050370, 'cit-Patents':16518947};
 const connected = {'com-friendster':true, 'movies':false, 'cit-Patents':false};
@@ -299,7 +301,7 @@ function init() {
   canvas2.height = 128;
 
   scene_city.userData.view = views[1];
-  scene_city.background = new THREE.Color('skyblue');
+  scene_city.background = new THREE.Color('#cdecc6');
 
   // city map
   console.log(buildingMap_file);
@@ -797,6 +799,7 @@ function init() {
   waterMat.opacity = 0.7;
   let waterMesh = new THREE.Mesh(waterGeo, waterMat);
   waterMesh.position.y = -50;
+  waterMesh.visible = false;
   scene_city.add(waterMesh);
 
   city_view.addEventListener('mousemove',onMouseMove);
@@ -882,8 +885,8 @@ function zoomAtBuilding(selected_building){
     setTimeout(resolve, transitionCamera(    
       {camera: initialCameraPosition, target: initialTargetPosition},
       {camera: finalCameraPosition, target: finalTargetPosition},
-      500
-    ) + 500)
+      300
+    ) + 200)
   });
 }
 
@@ -910,6 +913,7 @@ function groundObjLoader(obj_url, obj_material) {
         object.position.set(-30, -9, 0);
       }
       ground_object = object;
+      ground_object.visible = false;
       scene_city.add(object);
     },
     function(xhr) {
@@ -1050,14 +1054,12 @@ function loadedVoronoi(evt) {
   if (element_count > 3) {
     result = BUILD.loadVoronoi(city_all, lines, filename);
   } else {
-    console.log('neighbors')
-    console.log(lines)
     result = PATH.loadNeighbors(city_all, lines, filename);
     city_all = result.all;
     voronoiLoaded = true;
   }
   city_all = result.all;
-  console.log(city_all)
+  // console.log(city_all)
 }
 
 function loadedMeta(evt) {
@@ -1092,6 +1094,7 @@ function loadedJSON(evt) {
   }else if(filename.includes("summary")){
     summaryData = JSON.parse(fileString);
     scene_city_description.innerText = objToString(summaryData);
+    bucketNum = summaryData.buckets;
   }
 }
 
@@ -1127,13 +1130,14 @@ function loaded(evt) {
   let element_count = (lines[0].split(' ')).length;
   // need to update when SPIRAL.txt updates
   if (element_count == 12) {
-    // console.log("loaded: SPIRAL file");
+    console.log("loaded: SPIRAL file");
     let spiral = BUILD.loadSpiral(scene_city, lines, city_all, grass_objects, bush_objects, city_tracking, x_scale);
     city_all = spiral.all;
     city_tracking = spiral.tracking;
     grass_objects = spiral.grass;
     bush_objects = spiral.bush;
     city_to_load = spiral.city_count;
+    console.log(city_to_load)
     for (const [key, value] of Object.entries(city_all)) {
       if (key.slice(0, 8) !== 'wavemap_') {
         continue;
@@ -1223,6 +1227,7 @@ function animate() {
   requestAnimationFrame(animate);
   scenes.forEach(scene => scene.userData.controls.update());
   // stats.update();
+  // console.log(city_to_load)
   if (city_to_load > 0 && addBuildings && glyphDoneFlag) { // glyphDoneFlag for adding map glyphs to building flags
     console.log("animate: run createCityMeshes()");
     let result = BUILD.createCityMeshes(scene_city, objects, city_all, city_tracking, ceil_objects, middle_objects, truss_objects, window_objects, flag_objects, flag_objects_new, arrow_objects, src_objects, tgt_objects, glyph_objects, glyphBack_objects, city_to_load, y_scale, paramsL.dataSet, params.ceilVisible, params.isNight);
@@ -1760,7 +1765,8 @@ function onMouseDown(event) {
   // console.log('glyph intersection', glyphIntersects)
   if (glyphBackIntersects.length > 0) {
     selected_glyphBack = glyphBackIntersects[0].object.layerName;
-    console.log(selected_glyphBack);
+    // console.log(selected_glyphBack);
+    window.open(`${hostAddress}/minicity.html`);
   }
 }
 
@@ -2086,9 +2092,9 @@ function zoomAtBuildingFlag(selected_building){
   let flag_details = flag_objects_new[selected_building];
   let flag_height = JSON.parse(JSON.stringify(flag_details.flag_rod)).geometries[0].height;
 
-  let observeFlagFor = 1 * 1000;
+  let observeFlagFor = 0.5 * 1000;
   // should be more that observeFlagFor
-  let totalTransitionTime = 2 * 1000;
+  let totalTransitionTime = 1 * 1000;
 
 
   let totalSteps = totalTransitionTime - observeFlagFor;
@@ -2170,7 +2176,7 @@ async function rotateAtFlag(selected_building){
   )));
   
   return new Promise((resolve) => {
-    for(let thetaToRotate=0; thetaToRotate <= 360; thetaToRotate+=0.1){
+    for(let thetaToRotate=0; thetaToRotate <= 360; thetaToRotate+=0.2){
       global_building.timmers.push(setTimeout(function() {  
         camera.position.x = building_position.x + (a * Math.sin(THREE.MathUtils.degToRad(thetaToRotate)));
         camera.position.y = building_position.y + flag_height + o;
@@ -2225,12 +2231,12 @@ function toCityTopView(){
 
   let finalTargetPosition = initialTargetPosition;
   // let finalTargetPosition = new THREE.Vector3(0, 10, 0);
-  let finalCameraPosition = new THREE.Vector3(5, 800, 5);    
+  let finalCameraPosition = new THREE.Vector3(5, 1000, 5);    
 
   return new Promise((resolve) => setTimeout(resolve, transitionCamera(    
     {camera: initialCameraPosition, target: initialTargetPosition},
     {camera: finalCameraPosition, target: finalTargetPosition},
-    2000
+    1500
   )));
 }
 
@@ -2332,15 +2338,15 @@ function fakeTransition(selected_building){
 function goToInnerView(selected_building){
   return new Promise(resolve => {  
     zoomAtBuilding(selected_building)
-    .then(() => {      
-      return iterateCameraOverBuilding(selected_building);
-    })  
+    // .then(() => {      
+    //   return iterateCameraOverBuilding(selected_building);
+    // })  
     .then(() => {      
       return zoomAtBuildingFlag(selected_building);
     })
-    .then(() => {
-      return fakeTransition(selected_building);
-    })
+    // .then(() => {
+    //   return fakeTransition(selected_building);
+    // })
     .then(() => {     
       // End of fakeTransition
       goInsideBuilding(selected_building);  
@@ -2531,7 +2537,7 @@ function goBestBuilding(statName) {
     // console.log(city_all.building2BucketPeel)
     // buildingStatList = buildingList.map(d => [d, 2 * city_all[d].E / city_all[d].V / (city_all[d].V - 1)])
     console.log(JSON.stringify(buildingList.map(d => [d, 2 * city_all[d].E / city_all[d].V / (city_all[d].V - 1)])))
-    buildingStatList = buildingList.filter(d => city_all.building2BucketPeel[`${d.split('_')[1]}_${d.split('_')[2]}`][0][0] >= 4).map(d => [d, 2 * city_all[d].E / city_all[d].V / (city_all[d].V - 1)])
+    buildingStatList = buildingList.filter(d => city_all.building2BucketPeel[`${d.split('_')[1]}_${d.split('_')[2]}`][0][0] >= bucketNum/2).map(d => [d, 2 * city_all[d].E / city_all[d].V / (city_all[d].V - 1)])
   } else if (statName === 'most diverse') {
     const tempDiversityDict = {}
     console.log(city_all)
@@ -2946,7 +2952,7 @@ window.addEventListener('resize', function(event){
 function showCityGallery() {
   showingGallery = true;
   buildingMapControls.showingGallery = showingGallery;
-  document.getElementById('city-building-map').style.height = `${window.innerHeight - 105}px`;
+  document.getElementById('city-building-map').style.height = `${window.innerHeight - 75}px`;
   drawMap('city-building-map');
 }
 
