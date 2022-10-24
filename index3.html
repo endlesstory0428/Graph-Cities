@@ -25,6 +25,8 @@
   <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
   <script src="https://code.jquery.com/ui/1.13.1/jquery-ui.js"></script>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
+
   <script type="module" src="index_copy7.js"></script>
 
   <link rel="stylesheet" href="./style/ui.css">
@@ -40,10 +42,26 @@
   </div>
   <div id="map-container">
     <div id="mini-map-container">
-      <div id="mini-graph"></div>
+      <div id="mini-graph-desc-container"></div>
+      <div id="mini-graph-container">
+        <div id="mini-graph">
+          <!-- <img src="fabula_city.png" width="120" height="100"> -->
+        </div>
+      </div>
+      <div id="mini-meta-desc-container"></div>
+      <div id="mini-meta-container">
+        <div id="mini-meta">
+        </div>
+      </div>
+      <div id="mini-building-desc-container"></div>
+      <div id="mini-building-container">
+        <div id="mini-building">
+        </div>
+      </div>
     </div>
     <div id="global-graph-show-hide-button-container">
-      <button id="global-grpah-show-hide-button">hide meta-DAG</button>
+      <button id="global-help-button">information</button>
+      <button id="global-grpah-show-hide-button">intersection graph</button>
       <button id="global-reset-button">reset</button>
     </div>
     <div id="grid-map-container">
@@ -60,23 +78,33 @@
       <div id="global-graph"></div>
       <div id="global-graph-navigation-info-container" class="navigation-info-container">
         <div id="global-graph-navigation-info" class="navigation-info">
-          <div id="global-grpah-descritpion">
-            spanning intersection meta-DAG.
-          </div>
-          <div id="global-grpah-action">
-            <span id="global-graph-action-basic">Left-click: rotate, Mouse-wheel/middle-click: zoom, Right-click:
-              pan.</span>
-            <span id="global-graph-action-extra">Left-click Node: open wave-fragment information in fork map</span>
+          <div id="global-graph-navagation-hide-button" class="navigation-hide-button">x</div>
+          <div id="global-graph-navigation-body" class="navigation-body">
+            <div id="global-grpah-descritpion">
+              spanning intersection meta-DAG.
+            </div>
+            <div id="global-grpah-action">
+              <span id="global-graph-action-basic">Left-click: rotate, Mouse-wheel/middle-click: zoom, Right-click:
+                pan.</span>
+              <span id="global-graph-action-extra">Left-click Node: open wave-fragment information in fork map</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
     <div id="fork-view-container" class="main-graph-separater">
       <div id="fork-selection-box-container">
-        <input type="checkbox" id="fork-selection-box" name="fork-selection-box">
-        <label for="fork-selection-box">single</label>
+        <input type="radio" id="fork-selection-box-single" name="fork-selection-box" value="single">
+        <label for="fork-selection-box">single wave</label>
+        <input type="radio" id="fork-selection-box-multiple" name="fork-selection-box" value="multiple" checked>
+        <label for="fork-selection-box">multiple waves</label>
+      </div>
+      <div id="fork-title-container">
+        <span>wave</span>&nbsp;<span>frag</span>
       </div>
       <div id="fork-view-canvas"></div>
+      <div id="fork-loading-info">
+      </div>
     </div>
     <div id="local-graph-container">
       <div id="local-graph"></div>
@@ -91,19 +119,22 @@
       </div>
       <div id="local-graph-navigation-info-container" class="navigation-info-container">
         <div id="local-graph-navigation-info" class="navigation-info">
-          <div id="local-grpah-descritpion">
-            <span id="local-graph-description-filter">filtered</span>
-            <span id="local-graph-description-span">spanning</span>
-            <span id="local-graph-description-meta">meta graph</span>
-            <span id="local-graph-description-raw">raw graph</span>
-            <span id="local-graph-description-connect">with jumping edges connecting disconnected spanning
-              components.</span>
-          </div>
-          <div id="local-grpah-action">
-            <span id="local-graph-action-basic">Left-click: rotate, Mouse-wheel/middle-click: zoom, Right-click:
-              pan.</span>
-            <span id="local-graph-action-extra">Left-click Node: highlight corresponding fragment in the fork map. (Ctrl
-              +) Right-click Node: show its neighbors.</span>
+          <div id="local-graph-navagation-hide-button" class="navigation-hide-button">x</div>
+          <div id="local-graph-navigation-body" class="navigation-body">
+            <div id="local-grpah-descritpion">
+              <span id="local-graph-description-filter">filtered</span>
+              <span id="local-graph-description-span">spanning</span>
+              <span id="local-graph-description-meta">meta graph</span>
+              <span id="local-graph-description-raw">raw graph</span>
+              <span id="local-graph-description-connect">with jumping edges connecting disconnected spanning
+                components.</span>
+            </div>
+            <div id="local-grpah-action">
+              <span id="local-graph-action-basic">Left-click: rotate, Mouse-wheel/middle-click: zoom, Right-click:
+                pan.</span>
+              <span id="local-graph-action-extra">Left-click Node: highlight corresponding fragment in the fork map. (Ctrl
+                +) Right-click Node: show its neighbors.</span>
+            </div>
           </div>
         </div>
       </div>
@@ -115,13 +146,16 @@
       <div id="local-subgraph"></div>
       <div id="local-subgraph-navigation-info-container" class="navigation-info-container">
         <div id="local-subgraph-navigation-info" class="navigation-info">
-          <div id="local-subgrpah-descritpion">
-            extracted graph
-          </div>
-          <div id="local-subgrpah-action">
-            <span id="local-subgraph-action-basic">Left-click: rotate, Mouse-wheel/middle-click: zoom, Right-click:
-              pan.</span>
-            <span id="local-subgraph-action-extra">Left-click Node: highlight corresponding fragment in the fork map.</span>
+          <div id="local-subgraph-navagation-hide-button" class="navigation-hide-button">x</div>
+          <div id="local-subgraph-navigation-body" class="navigation-body">
+            <div id="local-subgrpah-descritpion">
+              extracted graph
+            </div>
+            <div id="local-subgrpah-action">
+              <span id="local-subgraph-action-basic">Left-click: rotate, Mouse-wheel/middle-click: zoom, Right-click:
+                pan.</span>
+              <span id="local-subgraph-action-extra">Left-click Node: highlight corresponding fragment in the fork map.</span>
+            </div>
           </div>
         </div>
       </div>
@@ -510,7 +544,7 @@
     </div>
   </div>
   <div id="version-container">
-    v1.1.220615
+    v1.1.220712
   </div>
   <div id="strata-container">
     <iframe id="strata" src=http://euler.dimacs.rutgers.edu:8888/?data=nodatasimplegraph width="100%"

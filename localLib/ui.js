@@ -180,6 +180,18 @@ export function addTitle() {
     .tooltip({
       track: true
     })
+
+  $('#global-grpah-show-hide-button')
+    .attr('title', 'show/hide local fixed points intersection graph on the grid map')
+    .tooltip({
+      track: true
+    })
+
+  $('#global-help-button')
+    .attr('title', '"the highlighted meta-node" consists of a collection of connected fixed points whose size and fixed point value distribution is shown in the grid map to the right.')
+    .tooltip({
+      track: true
+    })
 }
 
 export function disableExpand() {
