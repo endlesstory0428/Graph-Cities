@@ -55,14 +55,11 @@ with open(f'{path}{graph}/{graph}-lccWaves.vBuck.b.p.mm.json') as f:
             continue
         for peel, peelInfo in bucketInfo['peel'].items():
             peel = int(peel)
-            if peel == 1:
-                lcc = peelInfo['lccList'][0]
-                if lcc['single']:
-                    buckSizeDict[(bucket, peel)] = 1
-                else:
-                    buckSizeDict[(bucket, peel)] = lcc['count']
+            lcc = peelInfo['lccList'][0]
+            if lcc['single']:
+                buckSizeDict[(bucket, peel)] = 1
             else:
-                buckSizeDict[(bucket, peel)] = len(peelInfo['lccList'])
+                buckSizeDict[(bucket, peel)] = lcc['count']
 
 
 ########
