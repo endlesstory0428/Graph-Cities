@@ -1,5 +1,5 @@
 # Graph-Cities
-This repository stores code for *Graph Cities*, which contians four parts: `wave-decomposition`, `Graph_City_Web`, `fpViewer` and `graph-strata`.
+This repository stores code for *Graph Cities*, which contians four sub-modules: `wave-decomposition`, `Graph_City_Web`, `fpViewer` and `graph-strata`.
 
 If you use our code, please consider citing our paper.
 ```bibtex
@@ -56,6 +56,46 @@ Detailed subfolder structures and comments refer to corresponding sections.
     └── temp2/
 ```
 ## Quick Start
+### Clone Graph City Infrastructure
+You may clone this repo just by
+```bash
+git clone https://github.com/endlesstory0428/Graph-Cities.git
+```
+This will create a Graph City work space folder `Graph-Cities`. We refer this folder as work space `./`.
+
+### Compile Graph City Infrastructure
+Before you start create your own Graph City, you should first compile Graph Cities Infrastructure.
+#### Compile `wave-decomposition`
+Under your work space './', type following commands to compile `.cpp` files.
+```bash
+cd wave-decomposition
+make
+```
+#### Link sub-modules
+Udner your work space './', type follwoiong commands to create soft links among four sub-modules
+```bash
+ln -s $(pwd)/wave-decomposition $(pwd)/Graph_City_Web/
+ln -s $(pwd)/wave-decomposition $(pwd)/fpViewer/
+ln -s $(pwd)/fpViewer $(pwd)/Graph_City_Web/
+```
+#### Set Up Server
+Under your work space `./`, type the following commands to set up Graph Strata server.
+```bash
+cd ./graph-strata/
+mkdir data
+npm ci
+./run.sh
+```
+
+Under your work space `./`, type the following commands to set up web application server.
+```bash
+cd ./Graph_City_Web/
+ln -s $(pwd) $(pwd)/public
+npm ci
+export NODE_OPTIONS="--max-old-space-size=65536"
+node app_addon.js
+```
+
 ### Build Your Own Graph City
 #### Input Graph
 Input your graph at `wave-decomposition/${DATASET}/`, we accept two files: 
@@ -84,14 +124,6 @@ cd ../Graph_City_Web/
 make GRAPH=${DATASET} retrive
 ```
 A detailed explanation can be found in [wave-decomposition section](#wave-decomposition) and [Graph_City_Web section](#graph_city_web).
-
-#### Set Up Server
-Under your work space `./`, type the following commands will set up web application server.
-```bash
-cd ../Graph_City_Web/
-export NODE_OPTIONS="--max-old-space-size=65536"
-node app_addon.js
-```
 
 #### Browse Graph City
 Using your web browser to access the following webpage will bring your Graph City.
