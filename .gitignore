@@ -26,7 +26,6 @@ com-friendster/
 *.png
 *.html
 *.xcf
-*.cpp
 *.json
 *.sh
 *.pdf
