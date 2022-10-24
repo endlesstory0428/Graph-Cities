@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Graph Strata</title>
+
+		<link rel="stylesheet" type="text/css" href="lib/dat.gui.css" />
+
+		<link id="style-main" rel="stylesheet" type="text/css" href="css/main.css" />
+		<link id="style-light" rel="stylesheet" type="text/css" href="lib/light.css"  />
+		<link id="style-dark" rel="stylesheet" type="text/css" href="lib/dark.css" disabled="true"/>
+		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+        <!-- jQuery library -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+
+        <!-- Latest compiled JavaScript -->
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+		<script data-require="jquery@*" data-semver="2.2.0" src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+		<link rel="stylesheet" href="https://code.jquery.com/ui/1.11.3/themes/smoothness/jquery-ui.css" />
+		<script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+		<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+		<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+		<script type="text/javascript" src="lib/socket.io.js"></script>
+		<script type="text/javascript" src="lib/stats.js"></script>
+		<script type="text/javascript" src="lib/dat.gui.js"></script>
+		<script type="text/javascript" src="lib/d3-v5.js"></script>
+		<script type="text/javascript" src="lib/d3-tip.js"></script>
+		<script type="text/javascript" src="lib/d3-scale-chromatic.js"></script>
+		<script type="text/javascript" src="lib/union-find.js"></script>
+		<script src="https://unpkg.com/3d-force-graph@1.56.0/dist/3d-force-graph.min.js"></script>
+        <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.12.0/css/all.css" integrity="sha384-ekOryaXPbeCpWQNxMwSWVvQ0+1VrStoPJq54shlYhR8HzQgig1v5fas6YgOqLoKz" crossorigin="anonymous">
+		<script type="text/javascript" src="lib/three.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+        <script src="//unpkg.com/three@0.128"></script>
+        <script src="//unpkg.com/three-spritetext"></script>
+
+        <script src="//unpkg.com/3d-force-graph"></script>
+
+		<script type="text/javascript" src="lib/util.js"></script>
+		<script type="text/javascript" src="lib/controls.js"></script>
+
+		<script type="text/javascript" src="js/simulation.js"></script>
+
+		<script type="text/javascript" src="lib/graph.js"></script>
+		<script type="text/javascript" src="lib/graph-algorithms.js"></script>
+		<script type="text/javascript" src="js/G.js"></script>
+		<script type="text/javascript" src="js/G-controls.js"></script>
+		<script type="text/javascript" src="js/G-algorithms.js"></script>
+		<script type="text/javascript" src="js/G-loading.js"></script>
+		<script type="text/javascript" src="js/G-preprocessing.js"></script>
+		<script type="text/javascript" src="js/G-analytics.js"></script>
+		<script type="text/javascript" src="js/G-view.js"></script>
+		<script type="text/javascript" src="js/G-ui.js"></script>
+		<script type="text/javascript" src="js/G-subview.js"></script>
+		<script type="text/javascript" src="js/G-scene.js"></script>
+		<script type="text/javascript" src="js/G-messaging.js"></script>
+		<script type="text/javascript" src="js/G-animation.js"></script>
+
+
+
+
+	</head>
+
+	<body>
+        <div id="canvas" ></div>
+		<div id="label-container" class="simple fixed" style="background:transparent;width:100%;height:100%;pointer-events:none;"></div>
+
+		<!-- grid-like controls -->
+		<div class="simple fixed" style="top:0;height: 10%;margin:10px;left:10%;right:10%;color:white;font-size:smaller;text-align:center;z-index:2;margin-top: 25px;margin-left: 145px;">
+			<p id="minimal-graph-title"  class="simple" style="width:100%;text-transform: uppercase;text-align:center;"></p>
+			<p id="minimal-graph-desc" class="simple" style="font-size:x-small;width:100%;text-align:center;"></p>
+		</div>
+
+
+		<div id="top-bar" class="simple fixed" style="position:absolute;top:0;height:10%;width:100%;box-sizing: border-box;">
+
+			<div id="top-left-corner" class="simple centering" style="width:10%;height:100%;background:#37474F;color:white;" >
+			<!-- #122933; -->
+				<!--div id="graph-buttons-area"></div-->
+                <img id="overview-image" class="simple" style="display:none;border:1px solid #37474F;width:100%;height:100%;" src="images/blank.png"></img>
+                <a href="#" class="btn btn-circle" id="dataset-bar-show" style="z-index: 2;margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;">
+                    <i class="fas fa-database"></i>
+                </a>
+                <a href="#" class="btn btn-circle" id="plot-bar-show" style="margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;z-index: 3;">
+                    <i class="fas fa-chart-scatter"></i>
+                </a>
+                <a href="#" class="btn  btn-circle" id="info-bar-show" style="margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;" >
+                    <i class="fas fa-info-circle"></i>
+                </a>
+                <a href="#" class="btn btn-circle" id="fork-bar-show" style="margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;z-index:3;">
+                    <i class="fas fa-align-left"></i>
+                </a>
+                <a href="#" class="btn btn-circle" id="search-bar-show" style="z-index: 2;margin-left: 3%;color: #fff;background-color:darkgrey;border-color:darkgrey;">
+                    <i class="fas fa-cog"></i>
+                </a>
+			</div>
+
+			<div id="top-middle-area" class="simple fixed" style="display: flex;flex-flow: column;top:0;height: 100%;left:10%;right:0%;background: #37474F;color:white;font-size:larger;">
+
+                <div id="top-level-summary-area" class="simple" style="display:flex;flex-flow:column;text-align:center;height:62%;">
+					<div  class="simple">
+
+						<span id="top-level-graph-name" class="simple" style="font-size:smaller;font-weight: bold;">
+                        </span>
+						<span id="top-level-summary" class="simple" style="font-size:x-small"> </span>
+					</div>
+
+					<div id="top-level-plots-area" class="simple" style="display:none;flex-flow:row;">
+						<svg id="top-level-cc-plot" width="180" height="50" style="background-color:transparent;width:170px;height:50px;"></svg>
+						<svg id="top-level-cc-plot2" width="180" height="50" style="background-color:transparent;width:170px;height:50px;"></svg>
+						<!--svg id="top-level-peel-value-plot" width="180" height="100" style="background-color:grey;width:180px;height:70px;"></svg-->
+					</div>
+
+
+				</div>
+				<div id="top-level-cc-buckets-area" class="simple flex row" style="height:5px;width:100%;display: flex;font-size:x-small"></div>
+				<div id="current-graph-summary-area" class="simple flex row centering" style="display:none;width: 100%;z-index: 2;background: linear-gradient(rgba(0, 62, 62, 0.1),transparent);position: absolute;top: 88%;color: black;flex-flow: column;flex: 1 0 auto;">
+					<p id="graph-name" class="simple" style="display:none;width:100%;text-align: center;"></p>
+					<div id="hierarchy-path" class="simple" style="display: inline;margin-top: 10px;text-align: center;font-size:smaller"></div>
+
+					<p id="graph-desc" class="simple" style="font-size:x-small;text-align: center;"> </p>
+					<p id="graph-info" class="simple" style="display:none;font-size:x-small;text-align: center;"> </p>
+					<p id="graph-metagraph-list" class="simple" style="font-size:x-small;text-align: center;"> </p>
+				</div>
+
+			</div>
+			<div id="top-right-corner" class="simple flex fixed column centering"  style="text-transform:uppercase;font-size: xx-small;width:10%;top:0;height:100%;left:90%;background: #37474F;color:white;" ><!-- background:#385a6b;-->
+				<!--div id="graph-strata-buttons-area"></div-->
+                <p>Graph Strata</p>
+                <p>Version 1</p>
+
+			</div>
+
+		</div>
+
+
+
+
+		<div id="right-panel" class="simple column fixed" style="z-index: 3;position:absolute;top:10%;height:80%;right:0;width:10%;min-width:170px;box-sizing: border-box;margin-right:1px;">
+
+            <div id="controls-menu" class="simple column scrolling-y" style="width:100%;font-family: monospace;">
+
+			</div>
+
+		</div>
+
+
+		<div id="bottom-bar" class="simple fixed" style="position:absolute;bottom:0;height:11%;width:100%;box-sizing: border-box;background-color:rgba(0,0,0,0.05)">
+
+			<div id="bottom-left-corner" class="simple centering wrap" style="width:10%;height:100%;background-color:transparent;" >
+				<div id="view-buttons-area" class="simple column" ></div>
+			</div>
+			<div id="bottom-middle-area" class="simple fixed" style="display: flex;flex-flow: column;bottom:0;height: 100%;left:10%;right:10%;">
+				<div id="style-controls-area">
+				</div>
+<!--				<p class="simple" style="width:100%;font-size:small;text-align:center;">DESIGN: James Abello, NSF Project</p>-->
+			</div>
+
+            <div id="parent-image" class="simple fixed centering"  style="left: 70%;bottom: 100%;background-color: transparent;z-index: 1;" >
+            </div>
+			<div id="bottom-right-corner" class="simple fixed centering"  style="width:10%;bottom:0;height:100%;left:90%;background-color:transparent;" >
+				<div id="graph-semantics-buttons-area" class="simple column"></div>
+			</div>
+
+		</div>
+
+
+		<div id="minimal-bar" class="simple fixed" style="display:none;position:absolute;bottom:0;height:8%;min-height:55px;width:100%;box-sizing: border-box;background-color:rgba(0,0,0,0.05);font-family: monospace;"> <!-- alternative minimal UI -->
+
+			<div id="minimal-style-controls-area" class="simple fixed minimal" style="display: flex;flex-flow: column wrap;
+		justify-self: center;
+		align-self: flex-end;
+        bottom: 0;
+        height: 100%;
+        left: 10%;
+        right: 10%;">
+
+			</div>
+
+		</div>
+
+
+		<!-- other stuff -->
+		<img id="minimap" class="simple fixed" style="display:none;top:15%;left:15%;width:15%;"src="images/blank.png"></img>
+		<div id="exploration-area" class="simple column fixed" style="top:10%;right:10%;width:10%;" ></div>
+
+
+		<div id="new-graph-menu" class="panel" style="display:none;">
+
+
+			<div id="graph-tools-area" style="display:none;">
+
+
+			</div>
+
+
+		</div>
+
+
+        <div id="graph-info-bar" class="panel" style="width:20%;height: 655px;min-width:170px;overflow-y: scroll;">
+            <div id="info-menu">
+            </div>
+
+            <div id="sparsenet-info-menu">
+            </div>
+            <div>
+                <p id="showing-paths"></p>
+                <p id="num-vertices"></p>
+                <p id="num-worms"></p>
+                <p id="num-edges"></p>
+                <p id="num-worms-edges"></p>
+                <p id="num-edges-vertices"></p>
+
+            </div>
+            <div id="layer-1-info">
+
+            </div>
+
+        </div>
+        <div id="graph-fork-bar" class="panel" style="width:20%;height: 655px;min-width:170px;overflow-y: scroll;">
+                <div id="ribbon-menu" class="simple column" style="overflow-x:visible;overflow-y:auto;border:none;width:100%;height: 100%;">
+                    <div style="width:100%;">
+                        <p style="float:left;font-size:x-small;">Fixed Point</p>
+                    </div>
+<!--                    <svg id="ribbon-scale" width="100" height="30" style="width:100%;height:30px;"/>-->
+                    <div id="ribbon-menu-contents" class="menu-content" style="overflow-x:visible;overflow-y:auto;padding-bottom: 55px;">
+                    </div>
+                    <div id="wrapper" style="display: flex; padding-top: 5%">
+                        <div id="top-level-cc-ribbon-area" class="simple" style="display:flex;flex-flow:column;align-items:flex-start;justify-content: space-between;">
+                        </div>
+                        <div id="top-level-waves-ribbon-area" class="simple" style="display:flex;flex-flow:column;align-items:flex-start;justify-content: space-between;">
+                        </div>
+                    </div>
+
+                </div>
+        </div>
+        <div id="graph-plot-bar" class="panel" style="width:20%;height: 655px;min-width:170px;overflow-y: scroll;">
+            <div id="cc-plot" style="padding-top: 20px;padding-bottom: 20px;">
+            </div>
+            <div id="degree-plot" style="padding-top: 20px;padding-bottom: 20px;">
+            </div>
+            <div id="log-degree-plot" style="padding-top: 20px;padding-bottom: 20px;">
+            </div>
+
+        </div>
+        <div id="graph-menu" class="panel" style="width:20%;height: 655px;min-width:170px;overflow-y: scroll;background: white;">
+                <div>
+                    <p id="selected-vertices">selected vertices</p>
+                    <input type="text" id="select-vertex-input" value=""></input>
+                    <div id="selection-buttons-area"></div>
+
+                </div>
+
+
+            <div id="auto_explore" style="margin-top: 30px;">
+                <p id="auto-explore-graph" >Auto Explore Options</p>
+                <div class="custom-control custom-checkbox" style="padding-right: 85px;" >
+                        <input type="checkbox" class="custom-control-input" id="auto_explore_option">
+                        <label class="custom-control-label" for="auto_explore_option">Auto Explore Path</label><br>
+                </div>
+                <div>
+                    <input type="radio" id="auto_explore_option_1" name="auto-explore" value="option_1">
+                    <label for="auto_explore_option_1" style="padding-right: 53px;font-size: small;">Start from the middle</label><br>
+                    <input type="radio" id="auto_explore_option_2" name="auto-explore" value="option_2">
+                    <label for="auto_explore_option_2" style="padding-right: 8px;font-size: small;">Start from one extreme point</label><br>
+                    <input type="radio" id="auto_explore_option_3" name="auto-explore" value="option_3">
+                    <label for="auto_explore_option_3" style="font-size: small;">Start from two extreme points</label><br>
+                </div>
+            </div>
+            <div id="auto-buttons-area" style="margin-top: 30px;margin-right: 100px;">
+            </div>
+            <div id="color_code_nodes" style="margin-top: 30px;">
+                <div class="custom-control custom-checkbox" style="padding-right: 45px;" >
+                    <input type="checkbox" class="custom-control-input" id="color_code_nodes_option_1">
+                    <label class="custom-control-label" for="color_code_nodes_option_1">Color Nodes By Label</label><br>
+                </div>
+                <div style="display: none" id="labels_color-mapping">
+                    <table style="margin-left: 21px; text-align: left;" >
+                        <tr>
+                            <td>
+                                <span class="dot" style="background-color: red;  display: inline-block" id="red"></span>
+                            </td>
+                            <td>Story Id (ETK)</td>
+                        </tr>
+                        <tr>
+                            <td><span class="dot" style="background-color: lightskyblue; display: inline-block"
+                                      id="blue"></span></td>
+                            <td><label for="blue" style="display:inline">Story Topic (ATU)</label></td>
+                        </tr>
+                        <tr>
+                            <td><span class="dot" style="background-color: #ff9500; display: inline-block" id="yellow"></span></td>
+                            <td><label for="yellow" style="display:inline">Story Motif (TMI)</label></td>
+                        </tr>
+                        <tr>
+                            <td><span class="dot" style="background-color: mediumspringgreen; display: inline-block"
+                                      id="green"></span></td>
+                            <td><label for="green" style="display:inline">PLACES (one-word)</label><br>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span class="dot" style="background-color: mediumpurple; display: inline-block"
+                                      id="purple"></span></td>
+                            <td><label for="purple" style="display:inline">PEOPLE (at least two names)</label></td>
+                        </tr>
+                    </table>
+                    <div class="custom-control custom-checkbox" style="padding-left: 50px;" >
+                        <input type="checkbox" class="custom-control-input" id="highlight_color_node_path">
+                        <label class="custom-control-label" for="highlight_color_node_path" style="font-size: medium;padding-right: 25px;"> Highlight consecutive TMI, ATU, ETK nodes</label><br>
+                    </div>
+                </div>
+
+                <div class="custom-control custom-checkbox" style="padding-right: 11px;" >
+                    <input type="checkbox" class="custom-control-input" id="color_code_nodes_option_2">
+                    <label class="custom-control-label" for="color_code_nodes_option_2">Color Nodes By Hot Spots</label><br>
+                </div>
+
+                <div style="display: none" id="spots_color-mapping">
+                    <div id="labels-area"  style="padding-left: 22px; width: 235px" ></div>
+                    <table style="margin-left: 21px; text-align: left;" >
+                        <tr>
+                            <td>
+                                <span class="dot" style="background-color: red;  display: inline-block" id="red_1"></span>
+                            </td>
+                            <td>above average</td>
+                        </tr>
+                        <tr>
+                            <td><span class="dot" style="background-color: lightskyblue; display: inline-block"
+                                      id="blue_1"></span></td>
+                            <td><label for="blue" style="display:inline">around the average</label></td>
+                        </tr>
+                        <tr>
+                            <td><span class="dot" style="background-color: #ff9500; display: inline-block" id="yellow_1"></span></td>
+                            <td><label for="yellow" style="display:inline">below the average</label></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div id="sparsenet_paths_filter"></div>
+            <div class="row align-items-center">
+                <div class="col-sm-2"><p id="value-range"></p></div>
+                <div class="col-sm"><div id="slider-range"></div></div>
+            </div>
+                <div id="rotate-buttons-area" style="margin-top: 30px;">
+                    <p id="rotate-graph">Rotation Options</p>
+                </div>
+
+                <div id="rotate_speed">
+                    <div class="custom-control custom-checkbox" style="padding-right: 10rem;">
+                        <input type="checkbox" class="custom-control-input" id="rotate_option">
+                        <label class="custom-control-label" for="rotate_option">Rotate</label>
+                    </div>
+                </div>
+            <div id="language-buttons-area" style="margin-top: 10px;">
+                <p id="language-graph">Language Options</p>
+            </div>
+
+            <div id="language">
+                <div class="custom-control custom-checkbox" style="padding-right: 10rem;">
+                    <input type="radio" id="english" name="language" value="en">
+                    <label for="english">English</label><br>
+                    <input type="radio" id="danish" name="language" value="da">
+                    <label for="danish">Danish</label><br>
+                    <input type="radio" id="dutch" name="language" value="du">
+                    <label for="dutch">Dutch</label><br>
+                </div>
+            </div>
+        </div>
+
+        <div id="style-menu" class="panel" style="min-width:300px;height: 655px;overflow-y: scroll;font-size: x-small;">
+
+		</div>
+        <div id="graph-dataset-bar" class="panel" style="min-width:300px;height: 655px;overflow-y: scroll;font-size: x-small;display:block;">
+                <div id="dataset-menu-1">
+                </div>
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" id="drawing_option_2">
+                    <label class="custom-control-label" for="drawing_option_2" style="font-size: medium;padding-right: 7.8rem;">Using Fixed Points</label>
+                </div>
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" id="drawing_option_3">
+                    <label class="custom-control-label" for="drawing_option_3" style="font-size: medium;" >Show Vertices and Edges on Hover</label>
+                </div>
+
+        </div>
+
+
+		<div id="ribbon-tooltip" class="tooltip">
+			<p id="ribbon-description"></p>
+			<div id="ribbon-histogram"></div>
+			<svg id="ribbon-vertex-dist" width="180" height="90"style="background-color:grey;width:180px;height:90px;"></svg>
+			<svg id="ribbon-edge-dist" width="180" height="90" style="background-color:grey;width:180px;height:90px;"></svg>
+
+		</div>
+
+		<div id="selecting-region" style="display:none"></div>
+
+
+		<div id="layer-menu" class="panel menu" >
+			<p style="font-size: 24px;padding:10px;">Choose Layer</p>
+			<button class="close-button material small" onclick="selectE('layer-menu').style('display','none');">×</button>
+			<div id="layer-menu-content" class="dialog-content">
+
+				<table id="menu-layers">
+					<thead>
+						<tr id="title"></tr>
+						<tr id="columns"></tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+			</div>
+
+		</div>
+
+		<div id="X-ray-menu" class="panel menu fixed" style="top:10%;left:0;height:80%;width:10%;z-index:5;background-color:white;">
+			<button class="close-button material small" onclick="getE('X-ray-menu').style.display='none';">×</button>
+			<p style="">Wave levels</p>
+			<div id="X-ray-menu-content" class="dialog-content" style="text-align:center;overflow-x:hidden;font-size:x-small;">
+
+			</div>
+		</div>
+
+		<div id="trapezoid-menu" class="panel menu" style="overflow: visible;">
+			<button class="close-button material small" onclick="getE('trapezoid-menu').style.display='none';">×</button>
+			<p style="">trapezoids</p>
+			<div id="trapezoid-menu-content" class="dialog-content" style="overflow: visible;text-align:center;font-size:x-small;">
+
+			</div>
+		</div>
+		<div id="trapezoid-input-menu" class="panel menu" >
+			<button class="close-button material small" onclick="getE('trapezoid-input-menu').style.display='none';">×</button>
+			<p style="">Input trapezoids data</p>
+			<textarea id="trapezoid-input-menu-content" class="dialog-content" style="height:80%;width:90%;font-size:x-small;">{"sets": {"0": [98397538], "1": [25022977, 16198754, 58507971, 91606375, 15258316, 67065236, 10092057, 80606654, 19774751]}, "adj": {"0": {"1": 9}, "1": {"0": 9}}}</textarea>
+
+			<button style="" onclick="let data=JSON.parse(getE('trapezoid-input-menu-content').value.trim());G.ui.showTrapezoids(data);">Go</button>
+			<input type="file" id="wave-metadata-file">upload file</>
+			<button style="" onclick="let fr = new FileReader();fr.onload = function(){let data=JSON.parse(fr.result);G.ui.showTrapezoids(data);};fr.readAsText(document.getElementById('wave-metadata-file').files[0]);">Use file</button>
+		</div>
+
+
+		<div id="edge-list-menu" class="panel menu">
+			<button class="close-button material small" onclick="getE('edge-list-menu').style.display='none';">×</button>
+			<p style="">Edgelist</p>
+			<textarea id="edge-list-menu-content" class="dialog-content" style="height:70%;width:90%;"></textarea>
+			<button style="" onclick="getE('edge-list-menu').style.display='none';let g=buildGraphFromText(null,getE('edge-list-menu-content').value.trim());g.name='Custom graph';G.display(g);">Go!</button>
+			<input type="file" id="edge-list-file">upload file</input>
+			<button style="" onclick="let fr = new FileReader();fr.onload = function(){getE('edge-list-menu').style.display='none';let g=buildGraphFromText(null,fr.result);g.name='Custom graph';G.display(g);};fr.readAsText(document.getElementById('edge-list-file').files[0]);">Use file</button>
+
+			<button style="" onclick="let fr = new FileReader();fr.onload = function(){
+			getE('edge-list-menu').style.display='none';let obj;
+			let result=buildSubgraphsFromText(fr.result);
+			if(result.subgraphs.length>0){
+				let first=result.subgraphs[0];
+				first.heightProperty=null;first.nodeColorProperty='subgraph';
+				first.modifiers={subgraphRange:{min:first.subgraphID,max:first.subgraphID,IP:32768}};
+				G.display(result.subgraphs[0]);
+				let totalSize=arraySum(result.subgraphs.map(x=>x.edges.length));
+
+			}
+			else{G.addLog('no subgraphs found');}
+			};fr.readAsText(document.getElementById('edge-list-file').files[0]);">Use file with multiple graphs</button>
+
+			<button style="" onclick="let fr = new FileReader();fr.onload = function(){
+			getE('edge-list-menu').style.display='none';let obj;
+			let result=buildSubgraphsFromText(fr.result);
+			if(result.subgraphs.length>0){
+				let first=result.subgraphs[0];
+				let last=result.subgraphs[result.subgraphs.length-1];
+				first.heightProperty=null;first.nodeColorProperty='subgraph';
+				first.modifiers={subgraphRange:{min:first.subgraphID,max:first.subgraphID,IP:32768}};
+				G.display(result.subgraphs[0]);
+				let totalSize=arraySum(result.subgraphs.map(x=>x.edges.length));
+				if(totalSize<32768){setTimeout(()=>{
+					first.modifiers.subgraphRange.min=first.subgraphID;
+					console.log(first.subgraphID,last.subgraphID);
+					first.modifiers.subgraphRange.max=last.subgraphID;
+					G.subview.onModifiersChanged('subgraphRange');},0)}
+			}
+			else{G.addLog('no subgraphs found');}
+			};fr.readAsText(document.getElementById('edge-list-file').files[0]);">Draw DAG Cover</button>
+
+			<button style="" onclick="let fr = new FileReader();fr.onload = function(){
+				getE('edge-list-menu').style.display='none';
+				let g=G.graph;if(!g.vertices.isNew)g.vertices.addProperty('isNew','int');
+				if(!g.edges.isNew)g.edges.addProperty('isNew','int');
+				g.loadEdges(fr.result,{vertices:(vID,graph)=>{graph.vertices.isNew[vID]=1;},edges:(eID,graph)=>{graph.edges.isNew[eID]=1;}});
+				if(!g.modifiers)g.modifiers={};g.modifiers.highlight={property:'isNew',operator:'==',propertyValue:1,thicknessFactor:0.5};
+				G.display(g);
+			};fr.readAsText(document.getElementById('edge-list-file').files[0]);">Add edgelist to current graph</button>
+		</div>
+
+
+        <div id="selected-vertices-ids" class="panel menu" style="display:none">
+            <p style="font-size: 24px;padding:10px;">Generated Stories</p>
+            <button style="float:right" onclick="G.analytics.downloadVertexIDs()">Download</button>
+            <div id="selected-vertices-ids-content" style="font-size: larger;width:90%;height:80%;background-color:rgba(255,255,255,0.6);" class="dialog-content"></div>
+        </div>
+        <div id="annotations-box" class="panel menu" style="z-index:99999;display: none;background: white;">
+            <div  id="sampleeditor" style="z-index:99999;">
+            </div>
+        </div>
+
+		<div id="wavemap-menu" class="panel menu opaque" style="z-index: 4;" >
+            <p style="font-size: 24px;padding:10px;">Wave Map</p>
+			<button class="close-button material small" onclick="selectE('wavemap-menu').style('display','none');">×</button>
+			<div id="wavemap-menu-content" class="dialog-content">
+			<svg id="wavemap" width="300" height="300"></svg>
+			</div>
+		</div>
+		<div class="modal fade right" id="egonet" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+			 aria-hidden="true" style="overflow-y: hidden">
+			<div id="egonet-modal-dialog" class="modal-dialog modal-side modal-top-right" role="document">
+				<div class="modal-content">
+					<div class="modal-header" style="display: block !important;">
+                        <h5 class="modal-title w-100" id="egonet_id"></h5>
+
+                        <button id="egonet-close" type="button" class="close" data-dismiss="modal" aria-label="Close">
+							<span aria-hidden="true">&times;</span>
+						</button>
+                        <h6 class="modal-title w-100" id="egonet_layers"></h6>
+					</div>
+					<div class="modal-body" style="overflow-y: auto">
+                        <div id="vertices-list" ></div>
+                        <div style="padding-right:20%" id="subgraph_canvas" ></div>
+                        <div id="sett" style="padding-left: 150px"></div>
+                    </div>
+				</div>
+			</div>
+		</div>
+	</body>
+	<script src="https://code.jquery.com/ui/1.11.3/jquery-ui.min.js"></script>
+    <script>
+        function openBox(evt, cityName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tablinks");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+
+            document.getElementById(cityName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+
+        $(function(){
+            $("#sampleeditor").load("textEditor.html");
+        });
+
+    </script>
+
+</html>

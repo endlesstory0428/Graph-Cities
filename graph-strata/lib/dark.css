@@ -1,0 +1,51 @@
+
+html , body {
+	background: #eee; 
+	color: #999; 
+}
+
+#canvas {
+	background: #000; 
+}
+
+div#top-title,div#top-title>p {
+	background-color:white;
+	color:black;
+}
+
+div.panel{
+	color:rgba(255,255,255,0.8);
+	/*background:rgba(1,2,30,0.65);*/
+	background:rgb(1,2,18);
+	box-shadow:
+	inset rgba(230,240,255,0.95) 0 0px 0px 1px, inset rgba(100,230,255,0.4) 0 0px 5px 3px,hsla(200,100%,50%,0.5) 0  0px 0px 1px ,
+	inset hsla(0,1%,15%, .1) 0 -1px 2px 1px, /* soft SD */
+    inset hsla(0,0%,0%, .1) 0 -1px 0px 2px, /* bottom SD */
+    inset hsla(0,0%,0%,.05) 0  1px 1px 2px;
+	
+}
+div.graph-logs{
+	
+	color: lavender;
+	background-color:rgba(1,2,30,0.65);
+}
+
+div.world-template,div.dataset{
+	border:1px grey solid;
+	
+}
+.dg .cr.function:hover, .dg .cr.boolean:hover {
+    background: #111; }
+.dg li.title {
+background: #000 url(data:image/gif;base64,R0lGODlhBQAFAJEAAP////Pz8////////yH5BAEAAAIALAAAAAAFAAUAAAIIlI+hKgFxoCgAOw==) 6px 10px no-repeat;
+}
+.dg {
+	color: #eee;
+	text-shadow: 0 -1px 0 #111;
+}
+.dg.main .close-button {
+background-color: #000; 
+}
+.dg.main .close-button:hover {
+background-color: #111;
+}

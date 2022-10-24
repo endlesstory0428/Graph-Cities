@@ -1,0 +1,586 @@
+html , body {
+	margin: 0;
+	padding: 0;
+	width:100%;
+	height:100%;
+	font-family: 'Roboto', sans-serif;
+	overflow:hidden;
+}
+
+#canvas2 {
+	position: absolute;
+	left: 0; right: 0; top: 0; bottom: 0;
+	margin: 0;
+	padding:0;
+	overflow:hidden;
+}
+
+div.dialog-content::-webkit-scrollbar,div.menu-content::-webkit-scrollbar {
+position:absolute;right:0;
+width: 5px;
+background: #1a1a1a; }
+div.dialog-content::-webkit-scrollbar-corner,div.menu-content::-webkit-scrollbar-corner {
+height: 0;
+display: none; }
+div.dialog-content::-webkit-scrollbar-thumb,div.menu-content::-webkit-scrollbar-thumb {
+border-radius: 5px;
+background: #676767; }
+
+p.world-name,p.dataset-name{
+	font-size: 18px;
+}
+
+
+
+div.context-menu {
+    position: absolute;
+    text-align: left;
+    color: slategrey;
+	background-color:black;
+    opacity: 0.7;
+    font-size: 16px;
+}
+
+div.graph-nav-info {
+    position: absolute;
+    bottom: 5px;
+    width: 100%;
+    text-align: center;
+    color: slategrey;
+    opacity: 0.7;
+    font-size: 10px;
+}
+
+.graph-info-msg {
+    position: absolute;
+    top: 50%;
+    width: 100%;
+    text-align: center;
+    color: lavender;
+    opacity: 0.7;
+    font-size: 22px;
+}
+
+.graph-tooltip {
+	background-color:black;
+    position: absolute;
+    color: lavender;
+    font-size: 18px;
+	max-width:20%;
+	pointer-events:none;
+	opacity:0.7;
+}
+div.graph-logs {
+    position: absolute;
+    bottom: 10%;
+	left:17%;
+    width: 67%;
+	padding:0;
+	margin:0;
+    text-align: center;
+
+    opacity: 0.7;
+    font-size: 16px;
+}
+.exit-button {
+    position: absolute;
+    top: 0px;
+    left:0px;
+	width: 50px;
+	height: 50px;
+    text-align: center;
+    color: lavender;
+    opacity: 0.7;
+    font-size: 16px;
+}
+div#selecting-region{
+	position: absolute;
+    top: 0px;
+	left:0px;
+	bottom: 0px;
+	right:0px;
+	opacity:0.2;
+	background-color:black;
+	border:2px lightblue solid;
+	z-index: 4;
+	pointer-events:none;
+}
+
+
+
+div.menu.panel{
+	display:none;
+	position: absolute;top:10%;right:25%;height: 60%;width:50%;text-align: center;font-size: 14px;overflow:hidden;
+}
+div.menu-content{
+	position:relative;
+	overflow-y:auto;height:100%;
+}
+
+div.dialog-content,div.menu-content{
+	position:relative;
+	overflow-y:auto;height:87%;bottom:0;
+}
+
+div#top-title{
+	position:absolute;
+	top:0;
+	height:10%;
+	width:100%;
+	box-sizing: border-box;
+	/*left:15%;
+	right:15%;*/
+
+}
+#graph-name
+{
+	display:block;
+    height:100%;
+	padding-top: 10px;
+    text-align: center;
+
+}
+
+ul.hierarchy-path{
+	padding-left: 15px;
+}
+
+div#X-ray-menu{
+	background-color:white;
+	top:10%;left:0;height:90%;width:10%;z-index:5;
+
+}
+div#X-ray-menu-content{
+	text-align:center;
+	overflow-x:hidden;
+	font-size:smaller;
+}
+div.x-ray-layer{
+	margin: auto;
+	text-align:center;
+}
+.interlayer-info{
+	margin: auto;
+	margin-top:0;
+	margin-bottom:0;
+	padding:0;
+	display:block;
+	border-top:3px solid grey;
+	border-bottom:3px solid grey;
+	text-align: center;
+	color:white;
+	text-shadow: 2px 2px #000049;
+	position:relative;
+	/*box-sizing:border-box;*/
+}
+.interlayer-info:hover{
+	border-top-width:6px;
+	border-bottom-width:6px;
+	margin-top:-3px;
+	margin-bottom:-7px;
+}
+.interlayer-info p{
+	margin:0;
+	height:40px;
+	width:100%;
+	pointer-events:none;
+	text-align: center;
+}
+p.interlayer-info-extra{
+    border: 1px grey solid;
+    height: 0;
+    margin: auto;
+    padding: 0;
+    margin-top: -4px;
+}
+.interlayer-trapezoid{
+	margin: auto;
+	display:block;
+	border-bottom: 10px solid red;
+	border-top: 10px solid red;
+    border-left: 50px solid transparent;
+    border-right: 50px solid transparent;
+	text-align: center;
+    height: 0;
+    width: 100px;
+	color:white;
+	text-shadow: 2px 2px #000049;
+	position:relative;
+	overflow:visible;
+	/*box-sizing: border-box;*/
+}
+.interlayer-trapezoid p{
+	margin:0;
+	height:40px;
+	width:100%;
+	text-align: center;
+	pointer-events:none;
+}
+
+div#selected-vertices-ids{
+    width: 30%;
+    height: 70%;
+    left: 70%;
+    z-index: 5;
+}
+
+div#new-graph-menu{
+	display:block;
+	position: absolute;
+	left:10%;
+	width:10%;
+	border:none;
+	top:10%;
+	z-index: 4;
+	font-size:smaller;
+	font-weight: bolder;
+
+	background:transparent;
+}
+div#controls-menu{
+	display:flex;
+	position: absolute;
+	right:0;
+	width:10%;
+	border:none;
+	top:10%;
+	z-index: 4;
+	font-size:smaller;
+	font-weight: bolder;
+	height:auto;
+
+	background:transparent;
+}
+
+div#graph-menu{
+	display:none;
+	width:20%;
+	position: absolute;
+	top:10%;
+	bottom:0;
+    text-align: center;
+	z-index: 4;
+	left:0%;
+	background:white !important;
+}
+
+div#graph-info-bar, div#graph-fork-bar, div#graph-plot-bar, div#graph-dataset-bar{
+    display:none;
+    width:20%;
+    position: absolute;
+    top:10%;
+    bottom:0;
+    text-align: center;
+    z-index: 4;
+    left:0%;
+    background:white;
+}
+
+div#style-menu{
+	display:none;
+	width:20%;
+	position: absolute;
+	top:10%;
+	bottom:0;
+    text-align: center;
+	z-index: 4;
+	right:0%;overflow:hidden;
+	background:white;
+}
+
+div#ribbon-menu{
+	width:10%;
+	position: absolute;
+	top:10%;
+	bottom:0;
+	left:0;
+	z-index: 3;
+	margin: 0;
+    padding: 0;
+    border: none;
+}
+div#ribbon-menu-contents{
+}
+
+div.ribbon{
+	position:relative;
+	display: flex;
+}
+span.selector{
+	margin:0;padding:0;
+}
+.layer-number,.layer-cc-count{
+	margin-left:4px;
+	margin-right:4px;
+	font-size:smaller;
+	flex: 0 1 auto;
+	width:10%;
+	box-sizing:border-box;
+}
+.layer-bar-container{
+	display:inline;
+	width:40%;
+	height:15px;
+	padding:0;
+	margin:0;
+	position:relative;
+}
+.layer-edge-bar{
+	background:rgb(47, 59, 65);
+	display: inline-block;
+	height:100%;left:0;
+	position:absolute;
+}
+.layer-vertex-bar{
+	background:lightgrey;
+	display: inline-block;
+	top:40%;
+	height:20%;left:0;
+	position:absolute;
+}
+.layer-clones-bar{
+	background:red;
+	display: inline-block;
+	height:50%;top:25%;width:3px;
+	box-sizing:border-box;
+	position:absolute;
+}
+img#minimap{
+	position: absolute;
+	left:20%;
+	width:10%;
+	border:none;
+	top:10%;
+}
+div.tooltip{
+	width:200px;
+	padding:5px;
+	background-color:rgba(0,0,0,0.75);
+	color:white;
+	position:absolute;
+	z-index:5;
+	display:none;
+}
+
+
+div#ribbon-histogram{
+	border-top:1px solid grey;
+	width:100%;
+	display:flex;
+    align-content: space-between;
+    position: relative;
+	align-items: flex-end;
+}
+p.histogram{
+	display:inline-block;
+	background-color:white;
+	width: 10px;
+	margin:1px;
+	margin-left: auto;
+	margin-right: auto;
+	padding:0;
+	color:black;
+	flex:auto;
+	max-width:30px;
+	overflow:hidden;
+}
+
+div#graph-info-area{
+	height:70%;
+	overflow-y:auto;
+}
+table#graph-layers{
+	    width: 100%;
+	border-top:1px solid white;
+
+}
+table#graph-layers tr.selected{
+	background-color:rgba(10,65,240,0.3);
+}
+table#graph-layers tr.xray-shown{
+	background-color:rgba(180,65,230,0.3);
+}
+table#graph-layers tr.active-layer{
+	box-shadow:inset rgba(230,240,255,0.95) 0 0px 0px 1px, inset rgba(100,230,255,0.4) 0 0px 5px 3px,hsla(200,100%,50%,0.5) 0  0px 0px 1px ,
+	inset hsla(0,1%,15%, .1) 0 -1px 2px 1px, /* soft SD */
+    inset hsla(0,0%,0%, .1) 0 -1px 0px 2px, /* bottom SD */
+    inset hsla(0,0%,0%,.05) 0  1px 1px 2px;
+}
+
+div#item-bar-container {
+	display:flex;flex-flow:column;height:50%;width:100%;
+}
+div#item-bar-title{
+	flex-grow:0;padding:4px;
+}
+div#item-bar-title p{
+	display:inline;
+}
+div#item-bar {
+	flex-grow:1;
+	overflow-y:scroll;
+	height: 100%;position:relative;
+	border:1px solid lightgray;
+    color: slategrey;
+    opacity: 0.7;
+}
+div#item-bar div{
+	padding:2px;
+	border:1px solid lightgray;
+	background:rgba(1,1,19,0.3);
+	font-size:x-small;
+}
+div#item-bar div#new-item-button{
+	border:1px solid white;
+	padding:5px;
+	font-size:large;
+}
+
+div.panel{
+	box-sizing: border-box;
+	display: flex;
+    flex-flow: column;
+    align-items: stretch;
+	border-radius: 2px;
+	padding: 5px;
+}
+div.panel>p{
+	/*background-color: rgba(40,80,100,0.5);*/
+	border-top-left-radius: 2px;
+	border-top-right-radius: 2px;
+	padding:3px;
+	margin:0;
+	margin-bottom:3px;
+	border-bottom:1px grey solid;
+	/*
+	box-shadow:
+    inset hsla(0,0%,15%, .3) 0 -1px 2px 1px,
+    inset hsla(0,0%,0%, .25) 0 -1px 0px 2px,
+    inset hsla(0,0%,0%,.1) 0  1px 1px 2px,
+
+    inset hsla(200,100%,50%,0.15) 0 0px 0px 2px,
+    hsla(200,100%,50%,0.5) 0  1px 1px 1px  ;
+	*/
+}
+
+
+
+button.material {
+    letter-spacing: .8px;
+	box-sizing:border-box;
+    border: none;
+    background: none;
+    height: 32px;
+	/*min-width:90%;*/
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    border-radius: 2px;
+    transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: 0.2s;
+    box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
+    /* width: 120px;  */
+    /* width: 32px; */
+    text-align: center;
+    justify-content: center;
+    text-transform: uppercase;
+    color: var(--darker);
+    font-weight: 500;
+    font-size: xx-small;/*12px;*/
+    /*line-height: 32px;*/
+    padding-top: 0px;
+    padding-bottom: 0px;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+button.material:hover {
+    /* background-color: var(--lighter); */
+    cursor: pointer;
+    box-shadow: 0 3px 10px 0 rgba(0, 0, 0, 0.3);
+}
+
+button.material:focus {
+    outline: 0;
+}
+
+button.material:active {
+    box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
+    transition-delay: 0s;
+}
+
+
+
+.axis text{
+	fill: #fff;
+}
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #fff;
+  shape-rendering: crispEdges;
+}
+
+circle.dot {
+  stroke: #fff;
+}
+
+
+.a ,
+.first,
+.second {
+	position: absolute;
+}
+
+a {
+	margin: auto;
+	top: 0;
+	bottom: 0;
+	right: 0;
+	left: 0;
+	width: 170px;
+	height: 50px;
+	transition: all 0.3s ease;
+}
+
+.wrap {
+	width: 100%;
+	height: 50px;
+	transition: all 0.3s ease;
+}
+
+.first,
+.second {
+	width: 100%;
+	height: 50px;
+	transition: all 0.2s ease-in-out;
+	font-size: 17px;
+	text-transform: uppercase;
+	color: #FFF;
+	letter-spacing: 2px;
+	text-align: center;
+	vertical-align: middle;
+	line-height: 50px;
+}
+
+.second {
+	opacity: 0;
+}
+
+.a:hover {
+	width: 280px;
+}
+
+.wrap {
+	padding-bottom: 17px;
+}
+.first {
+	transform: translateY(-8px);
+	padding-top: 5px;
+}
+.second {
+	transform: translateY(20px);
+	opacity: 1;
+}
+
+

@@ -1,0 +1,66 @@
+dev/
+findings/
+node_modules/
+testing/
+test/
+public-*/
+public/files/
+report/
+
+run*.sh
+run*.cmd
+package-lock.json
+
+# Windows thumbnail cache files
+
+Thumbs.db
+
+ehthumbs.db
+
+ehthumbs_vista.db
+
+.DS_Store
+.idea/workspace.xml
+
+# Dump file
+
+*.stackdump
+
+
+
+# Folder config file
+
+[Dd]esktop.ini
+
+
+
+# Recycle Bin used on file shares
+
+$RECYCLE.BIN/
+
+
+
+# Windows Installer files
+
+*.cab
+
+*.msi
+
+*.msix
+
+*.msm
+
+*.msp
+
+
+
+# Windows shortcuts
+
+*.lnk
+.idea/workspace.xml
+.DS_Store
+
+
+#Batch files
+
+*.bat
