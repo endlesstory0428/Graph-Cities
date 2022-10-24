@@ -1,0 +1,627 @@
+{
+	"3114": {
+		"vertices": 5524,
+		"edges": 11727864,
+		"file_suffix": 3114,
+		"num_fixedpoints": 1,
+		"num_waves": 3,
+		"num_frags": 57
+	},
+	"2070": {
+		"vertices": 11159,
+		"edges": 17594261,
+		"file_suffix": 2070,
+		"num_fixedpoints": 1,
+		"num_waves": 4,
+		"num_frags": 79
+	},
+	"1246": {
+		"vertices": 18297,
+		"edges": 18175592,
+		"file_suffix": 1246,
+		"num_fixedpoints": 1,
+		"num_waves": 2,
+		"num_frags": 61
+	},
+	"757": {
+		"vertices": 18044,
+		"edges": 10623566,
+		"file_suffix": 757,
+		"num_fixedpoints": 1,
+		"num_waves": 2,
+		"num_frags": 62
+	},
+	"527": {
+		"vertices": 18539,
+		"edges": 7521314,
+		"file_suffix": 527,
+		"num_fixedpoints": 1,
+		"num_waves": 7,
+		"num_frags": 80
+	},
+	"414": {
+		"vertices": 39985,
+		"edges": 13926713,
+		"file_suffix": 414,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 82
+	},
+	"283": {
+		"vertices": 51433,
+		"edges": 11917662,
+		"file_suffix": 283,
+		"num_fixedpoints": 1,
+		"num_waves": 2,
+		"num_frags": 130
+	},
+	"185": {
+		"vertices": 61354,
+		"edges": 9771973,
+		"file_suffix": 185,
+		"num_fixedpoints": 1,
+		"num_waves": 37,
+		"num_frags": 282
+	},
+	"123": {
+		"vertices": 294,
+		"edges": 22092,
+		"file_suffix": 123,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"119": {
+		"vertices": 329,
+		"edges": 25797,
+		"file_suffix": 123,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"105": {
+		"vertices": 201,
+		"edges": 11177,
+		"file_suffix": 123,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"101": {
+		"vertices": 17493,
+		"edges": 1558138,
+		"file_suffix": 123,
+		"num_fixedpoints": 1,
+		"num_waves": 3,
+		"num_frags": 100
+	},
+	"98": {
+		"vertices": 100,
+		"edges": 4949,
+		"file_suffix": 123,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"88": {
+		"vertices": 186,
+		"edges": 9280,
+		"file_suffix": 123,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"87": {
+		"vertices": 182,
+		"edges": 9114,
+		"file_suffix": 123,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"86": {
+		"vertices": 160,
+		"edges": 7567,
+		"file_suffix": 123,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"84": {
+		"vertices": 65894,
+		"edges": 4896921,
+		"file_suffix": 123,
+		"num_fixedpoints": 1,
+		"num_waves": 4,
+		"num_frags": 84
+	},
+	"76": {
+		"vertices": 317,
+		"edges": 13373,
+		"file_suffix": 76,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"66": {
+		"vertices": 135,
+		"edges": 4554,
+		"file_suffix": 76,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 1
+	},
+	"62": {
+		"vertices": 649,
+		"edges": 22812,
+		"file_suffix": 76,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"61": {
+		"vertices": 172,
+		"edges": 7208,
+		"file_suffix": 76,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"60": {
+		"vertices": 428,
+		"edges": 15716,
+		"file_suffix": 76,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"58": {
+		"vertices": 282,
+		"edges": 10375,
+		"file_suffix": 76,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"57": {
+		"vertices": 327,
+		"edges": 11216,
+		"file_suffix": 76,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 5
+	},
+	"56": {
+		"vertices": 214,
+		"edges": 6810,
+		"file_suffix": 76,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"55": {
+		"vertices": 113,
+		"edges": 3598,
+		"file_suffix": 76,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"54": {
+		"vertices": 433,
+		"edges": 13386,
+		"file_suffix": 76,
+		"num_fixedpoints": 1,
+		"num_waves": 2,
+		"num_frags": 4
+	},
+	"53": {
+		"vertices": 753,
+		"edges": 23111,
+		"file_suffix": 76,
+		"num_fixedpoints": 1,
+		"num_waves": 3,
+		"num_frags": 9
+	},
+	"52": {
+		"vertices": 462,
+		"edges": 13794,
+		"file_suffix": 76,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"51": {
+		"vertices": 215,
+		"edges": 6500,
+		"file_suffix": 76,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"50": {
+		"vertices": 608,
+		"edges": 17406,
+		"file_suffix": 76,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"48": {
+		"vertices": 507,
+		"edges": 13698,
+		"file_suffix": 76,
+		"num_fixedpoints": 1,
+		"num_waves": 3,
+		"num_frags": 7
+	},
+	"47": {
+		"vertices": 75533,
+		"edges": 2949516,
+		"file_suffix": 76,
+		"num_fixedpoints": 1,
+		"num_waves": 2,
+		"num_frags": 60
+	},
+	"46": {
+		"vertices": 92,
+		"edges": 2175,
+		"file_suffix": 46,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"44": {
+		"vertices": 385,
+		"edges": 9419,
+		"file_suffix": 46,
+		"num_fixedpoints": 4,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"43": {
+		"vertices": 304,
+		"edges": 7569,
+		"file_suffix": 46,
+		"num_fixedpoints": 3,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"42": {
+		"vertices": 349,
+		"edges": 7683,
+		"file_suffix": 46,
+		"num_fixedpoints": 2,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"41": {
+		"vertices": 774,
+		"edges": 18750,
+		"file_suffix": 46,
+		"num_fixedpoints": 3,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"40": {
+		"vertices": 205,
+		"edges": 5046,
+		"file_suffix": 46,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"39": {
+		"vertices": 443,
+		"edges": 9889,
+		"file_suffix": 46,
+		"num_fixedpoints": 4,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"38": {
+		"vertices": 919,
+		"edges": 20914,
+		"file_suffix": 46,
+		"num_fixedpoints": 5,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"37": {
+		"vertices": 573,
+		"edges": 11926,
+		"file_suffix": 46,
+		"num_fixedpoints": 5,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"36": {
+		"vertices": 936,
+		"edges": 19885,
+		"file_suffix": 46,
+		"num_fixedpoints": 2,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"35": {
+		"vertices": 1085,
+		"edges": 24051,
+		"file_suffix": 46,
+		"num_fixedpoints": 2,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"34": {
+		"vertices": 1336,
+		"edges": 27879,
+		"file_suffix": 46,
+		"num_fixedpoints": 1,
+		"num_waves": 2,
+		"num_frags": 5
+	},
+	"33": {
+		"vertices": 1119,
+		"edges": 22619,
+		"file_suffix": 46,
+		"num_fixedpoints": 3,
+		"num_waves": 2,
+		"num_frags": 5
+	},
+	"32": {
+		"vertices": 1283,
+		"edges": 24943,
+		"file_suffix": 46,
+		"num_fixedpoints": 2,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"31": {
+		"vertices": 987,
+		"edges": 18705,
+		"file_suffix": 46,
+		"num_fixedpoints": 2,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"30": {
+		"vertices": 1249,
+		"edges": 23028,
+		"file_suffix": 46,
+		"num_fixedpoints": 1,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"29": {
+		"vertices": 1974,
+		"edges": 36322,
+		"file_suffix": 46,
+		"num_fixedpoints": 3,
+		"num_waves": 2,
+		"num_frags": 9
+	},
+	"28": {
+		"vertices": 1570,
+		"edges": 27339,
+		"file_suffix": 46,
+		"num_fixedpoints": 3,
+		"num_waves": 2,
+		"num_frags": 6
+	},
+	"27": {
+		"vertices": 3303,
+		"edges": 58480,
+		"file_suffix": 46,
+		"num_fixedpoints": 2,
+		"num_waves": 3,
+		"num_frags": 18
+	},
+	"26": {
+		"vertices": 85715,
+		"edges": 1898463,
+		"file_suffix": 46,
+		"num_fixedpoints": 1,
+		"num_waves": 7,
+		"num_frags": 204
+	},
+	"25": {
+		"vertices": 1203,
+		"edges": 19231,
+		"file_suffix": 25,
+		"num_fixedpoints": 9,
+		"num_waves": 1,
+		"num_frags": 2
+	},
+	"24": {
+		"vertices": 1309,
+		"edges": 20821,
+		"file_suffix": 25,
+		"num_fixedpoints": 12,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"23": {
+		"vertices": 1186,
+		"edges": 18154,
+		"file_suffix": 25,
+		"num_fixedpoints": 7,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"22": {
+		"vertices": 1063,
+		"edges": 13626,
+		"file_suffix": 25,
+		"num_fixedpoints": 12,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"21": {
+		"vertices": 1195,
+		"edges": 17161,
+		"file_suffix": 25,
+		"num_fixedpoints": 6,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"20": {
+		"vertices": 880,
+		"edges": 10905,
+		"file_suffix": 25,
+		"num_fixedpoints": 11,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"19": {
+		"vertices": 1217,
+		"edges": 14324,
+		"file_suffix": 25,
+		"num_fixedpoints": 8,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"18": {
+		"vertices": 1682,
+		"edges": 19010,
+		"file_suffix": 25,
+		"num_fixedpoints": 17,
+		"num_waves": 2,
+		"num_frags": 5
+	},
+	"17": {
+		"vertices": 1383,
+		"edges": 14722,
+		"file_suffix": 25,
+		"num_fixedpoints": 20,
+		"num_waves": 2,
+		"num_frags": 7
+	},
+	"16": {
+		"vertices": 2434,
+		"edges": 24095,
+		"file_suffix": 25,
+		"num_fixedpoints": 7,
+		"num_waves": 2,
+		"num_frags": 9
+	},
+	"15": {
+		"vertices": 2373,
+		"edges": 22033,
+		"file_suffix": 25,
+		"num_fixedpoints": 9,
+		"num_waves": 3,
+		"num_frags": 10
+	},
+	"14": {
+		"vertices": 3529,
+		"edges": 30889,
+		"file_suffix": 25,
+		"num_fixedpoints": 5,
+		"num_waves": 4,
+		"num_frags": 17
+	},
+	"13": {
+		"vertices": 4414,
+		"edges": 36189,
+		"file_suffix": 25,
+		"num_fixedpoints": 1,
+		"num_waves": 3,
+		"num_frags": 18
+	},
+	"12": {
+		"vertices": 83190,
+		"edges": 864103,
+		"file_suffix": 25,
+		"num_fixedpoints": 1,
+		"num_waves": 16,
+		"num_frags": 282
+	},
+	"11": {
+		"vertices": 1479,
+		"edges": 9845,
+		"file_suffix": 25,
+		"num_fixedpoints": 50,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"10": {
+		"vertices": 2212,
+		"edges": 13131,
+		"file_suffix": 25,
+		"num_fixedpoints": 75,
+		"num_waves": 1,
+		"num_frags": 3
+	},
+	"9": {
+		"vertices": 2813,
+		"edges": 15154,
+		"file_suffix": 25,
+		"num_fixedpoints": 90,
+		"num_waves": 3,
+		"num_frags": 6
+	},
+	"8": {
+		"vertices": 4534,
+		"edges": 22578,
+		"file_suffix": 25,
+		"num_fixedpoints": 79,
+		"num_waves": 3,
+		"num_frags": 8
+	},
+	"7": {
+		"vertices": 6772,
+		"edges": 29780,
+		"file_suffix": 25,
+		"num_fixedpoints": 75,
+		"num_waves": 3,
+		"num_frags": 12
+	},
+	"6": {
+		"vertices": 49679,
+		"edges": 225399,
+		"file_suffix": 25,
+		"num_fixedpoints": 1,
+		"num_waves": 6,
+		"num_frags": 59
+	},
+	"5": {
+		"vertices": 6179,
+		"edges": 19705,
+		"file_suffix": 25,
+		"num_fixedpoints": 346,
+		"num_waves": 2,
+		"num_frags": 5
+	},
+	"4": {
+		"vertices": 60519,
+		"edges": 179734,
+		"file_suffix": 25,
+		"num_fixedpoints": 3,
+		"num_waves": 5,
+		"num_frags": 71
+	},
+	"3": {
+		"vertices": 12784,
+		"edges": 24937,
+		"file_suffix": 25,
+		"num_fixedpoints": 910,
+		"num_waves": 2,
+		"num_frags": 10
+	},
+	"2": {
+		"vertices": 80004,
+		"edges": 128118,
+		"file_suffix": 25,
+		"num_fixedpoints": 147,
+		"num_waves": 11,
+		"num_frags": 63
+	},
+	"1": {
+		"vertices": 65436,
+		"edges": 44588,
+		"file_suffix": 25,
+		"num_fixedpoints": 20848,
+		"num_waves": 5,
+		"num_frags": 5
+	},
+	"0": {}
+}

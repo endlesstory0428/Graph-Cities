@@ -1,0 +1,12 @@
+wavemap_9_0_2 wavemap_5_2_1
+wavemap_9_0_2 wavemap_2_2_3
+wavemap_9_0_2 wavemap_1_40_2
+wavemap_1_207_16 wavemap_5_2_1
+wavemap_1_207_16 wavemap_1_40_2
+wavemap_1_207_16 wavemap_6_3_9
+wavemap_1_40_2 wavemap_5_2_1
+wavemap_4_35_1 wavemap_2_2_3
+wavemap_4_35_1 wavemap_6_3_9
+wavemap_4_35_1 wavemap_5_2_1
+wavemap_2_2_3 wavemap_5_2_1
+wavemap_6_3_9 wavemap_5_2_1
