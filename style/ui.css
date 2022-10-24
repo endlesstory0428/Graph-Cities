@@ -18,6 +18,10 @@
 
 /* top info end */
 
+#global-graph-show-hide-button-container button {
+    z-index: 10;
+}
+
 /* top end */
 
 /* map start */
@@ -25,7 +29,7 @@
     position: absolute;
     top: 50px;
     right: 200px;
-    height: 150px;
+    height: 290px;
     width: calc(100% - 200px);
 }
 
@@ -33,28 +37,82 @@
 #mini-map-container {
     position: absolute;
     left: 6px;
-    top: 6px;
-    width: 120px;
-    height: 100px;
+    top: 2px;
+    width: 250px;
+    height: 280px;
+    color: #ffffff;
+    font-size: smaller;
+}
+#mini-graph-desc-container {
+    position: absolute;
+    top: 160px;
+    left: 80px;
+}
+#mini-graph-container {
+    position: absolute;
+    top: 180px;
+    left: 80px;
+    width: 80px;
+    height: 80px;
     outline: #dddddd;
     outline-width: 2px;
     outline-style: solid;
+    z-index: 2;
+}
+#mini-meta-desc-container {
+    position: absolute;
+    top: 70px;
+    left: 40px;
+}
+#mini-meta-container {
+    position: absolute;
+    top: 90px;
+    left: 40px;
+    width: 60px;
+    height: 60px;
+    outline: #dddddd;
+    outline-width: 2px;
+    outline-style: solid;
+    z-index: 2;
+}
+#mini-building-desc-container {
+    position: absolute;
+    top: 0px;
+    left: 65px;
+}
+#mini-building-container {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 60px;
+    height: 60px;
+    outline: #dddddd;
+    outline-width: 2px;
+    outline-style: solid;
+    z-index: 2;
 }
 /* minimap end */
 
 /* show-hide-button start */
+#global-help-button {
+    position: absolute;
+    left: 205px;
+    top: 160px;
+    width: 130px;
+    text-align: center;
+}
 #global-grpah-show-hide-button {
     position: absolute;
-    left: 6px;
-    top: 108px;
-    width: 120px;
+    left: 205px;
+    top: 190px;
+    width: 130px;
     text-align: center;
 }
 #global-reset-button {
     position: absolute;
-    left: 6px;
-    top: 130px;
-    width: 120px;
+    left: 205px;
+    top: 220px;
+    width: 130px;
     text-align: center;
 }
 /* show-hide-button end */
@@ -64,7 +122,7 @@
     position: absolute;
     right: 0%;
     width: calc(100% - 150px);
-    height: 100%;
+    height: 150px;
     display: flex;
 }
 /* grid map end, details are in gridMap.css */
@@ -121,13 +179,30 @@
     font-size: small;
     text-align: center;
 }
+.navigation-hide-button {
+    position: absolute;
+    top: 0;
+    right: 0%;
+    width: 20px;
+    pointer-events: auto;
+    background: rgb(255, 255, 255);
+    background: rgba(255, 255, 255, 1);
+    cursor: pointer;
+}
+/* navigation-body {
+    position: absolute;
+    top: 0%;
+    right: 0%;
+    width: 20px;
+} */
 
 /* global graph start */
 #global-graph-container {
     width: 47%;
-    height: 100%;
+    height: 60%;
     display: grid;
     grid-template-columns: 1fr;
+    align-self: end;
 }
 #global-graph-container div {
     grid-row-start: 1;
@@ -137,15 +212,34 @@
 
 /* fork start */
 #fork-selection-box-container {
+    width: 200px;
+    height: 20px;
+    font-size: x-small;
+    color: #dddddd;
+    transform: rotate(-90deg) translate(-40vh, -5.5vw);
+    text-anchor: middle;
+}
+#fork-title-container {
+    position: relative;
     width: 100%;
     height: 20px;
+    left: 20px;
     font-size: x-small;
     color: #dddddd;
 }
 #fork-view-canvas {
     top: 20px;
     width: 100%;
-    height: calc(100% - 22px);
+    height: calc(100% - 42px);
+}
+#fork-loading-info {
+    width: 500px;
+    height: 20px;
+    font-size: x-small;
+    color: #dddddd;
+    transform: rotate(-90deg) translate(40vh, -11vw);
+    text-anchor: middle;
+    pointer-events: none;
 }
 /* fork end */
 
