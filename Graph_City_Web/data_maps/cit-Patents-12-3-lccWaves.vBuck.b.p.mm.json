@@ -1,0 +1,337 @@
+{
+  "0": {
+    "threshold": 0,
+    "count": 0,
+    "peel": {}
+  },
+  "1": {
+    "threshold": 3,
+    "count": 0,
+    "peel": {}
+  },
+  "2": {
+    "threshold": 12,
+    "count": 0,
+    "peel": {}
+  },
+  "3": {
+    "threshold": 43,
+    "count": 0,
+    "peel": {}
+  },
+  "4": {
+    "threshold": 155,
+    "count": 0,
+    "peel": {}
+  },
+  "5": {
+    "threshold": 548,
+    "count": 10,
+    "peel": {
+      "12": {
+        "lccList": [
+          {
+            "lcc": 126547,
+            "vertices": 259,
+            "edges": 1872,
+            "waves": {
+              "1": {
+                "vertices": 120,
+                "edges": 394,
+                "source": 26
+              },
+              "2": {
+                "vertices": 146,
+                "edges": 1070,
+                "source": 10
+              },
+              "3": {
+                "vertices": 56,
+                "edges": 408,
+                "source": 8
+              }
+            }
+          },
+          {
+            "lcc": 991246,
+            "vertices": 98,
+            "edges": 894,
+            "waves": {
+              "1": {
+                "vertices": 98,
+                "edges": 894,
+                "source": 64
+              }
+            }
+          },
+          {
+            "lcc": 2055006,
+            "vertices": 114,
+            "edges": 952,
+            "waves": {
+              "1": {
+                "vertices": 114,
+                "edges": 952,
+                "source": 24
+              }
+            }
+          },
+          {
+            "lcc": 2057758,
+            "vertices": 214,
+            "edges": 1768,
+            "waves": {
+              "1": {
+                "vertices": 214,
+                "edges": 1768,
+                "source": 46
+              }
+            }
+          },
+          {
+            "lcc": 2144841,
+            "vertices": 180,
+            "edges": 1096,
+            "waves": {
+              "1": {
+                "vertices": 140,
+                "edges": 710,
+                "source": 50
+              },
+              "2": {
+                "vertices": 26,
+                "edges": 24,
+                "source": 2
+              },
+              "3": {
+                "vertices": 54,
+                "edges": 362,
+                "source": 10
+              }
+            }
+          },
+          {
+            "lcc": 2254532,
+            "vertices": 223,
+            "edges": 1146,
+            "waves": {
+              "1": {
+                "vertices": 114,
+                "edges": 342,
+                "source": 22
+              },
+              "2": {
+                "vertices": 40,
+                "edges": 86,
+                "source": 8
+              },
+              "3": {
+                "vertices": 68,
+                "edges": 196,
+                "source": 4
+              },
+              "4": {
+                "vertices": 58,
+                "edges": 160,
+                "source": 10
+              },
+              "5": {
+                "vertices": 48,
+                "edges": 362,
+                "source": 8
+              }
+            }
+          },
+          {
+            "lcc": 2443437,
+            "vertices": 200,
+            "edges": 1586,
+            "waves": {
+              "1": {
+                "vertices": 200,
+                "edges": 1586,
+                "source": 50
+              }
+            }
+          },
+          {
+            "lcc": 2631929,
+            "vertices": 132,
+            "edges": 1080,
+            "waves": {
+              "1": {
+                "vertices": 132,
+                "edges": 1080,
+                "source": 46
+              }
+            }
+          },
+          {
+            "lcc": 3848962,
+            "vertices": 108,
+            "edges": 970,
+            "waves": {
+              "1": {
+                "vertices": 108,
+                "edges": 970,
+                "source": 18
+              }
+            }
+          },
+          {
+            "lcc": 4423871,
+            "vertices": 172,
+            "edges": 1544,
+            "waves": {
+              "1": {
+                "vertices": 172,
+                "edges": 1544,
+                "source": 12
+              }
+            }
+          }
+        ],
+        "maxSize": [
+          1872,
+          259
+        ],
+        "minSize": [
+          894,
+          98
+        ]
+      }
+    }
+  },
+  "6": {
+    "threshold": 1935,
+    "count": 3,
+    "peel": {
+      "12": {
+        "lccList": [
+          {
+            "lcc": 2741782,
+            "vertices": 288,
+            "edges": 2470,
+            "waves": {
+              "1": {
+                "vertices": 288,
+                "edges": 2470,
+                "source": 82
+              }
+            }
+          },
+          {
+            "lcc": 3156655,
+            "vertices": 541,
+            "edges": 2832,
+            "waves": {
+              "1": {
+                "vertices": 274,
+                "edges": 1070,
+                "source": 46
+              },
+              "2": {
+                "vertices": 48,
+                "edges": 48,
+                "source": 4
+              },
+              "3": {
+                "vertices": 72,
+                "edges": 112,
+                "source": 6
+              },
+              "4": {
+                "vertices": 84,
+                "edges": 94,
+                "source": 6
+              },
+              "5": {
+                "vertices": 136,
+                "edges": 396,
+                "source": 10
+              },
+              "6": {
+                "vertices": 126,
+                "edges": 782,
+                "source": 22
+              },
+              "7": {
+                "vertices": 44,
+                "edges": 330,
+                "source": 6
+              }
+            }
+          },
+          {
+            "lcc": 3610939,
+            "vertices": 463,
+            "edges": 2416,
+            "waves": {
+              "1": {
+                "vertices": 184,
+                "edges": 536,
+                "source": 40
+              },
+              "2": {
+                "vertices": 126,
+                "edges": 282,
+                "source": 20
+              },
+              "3": {
+                "vertices": 136,
+                "edges": 454,
+                "source": 18
+              },
+              "4": {
+                "vertices": 104,
+                "edges": 736,
+                "source": 8
+              },
+              "5": {
+                "vertices": 26,
+                "edges": 24,
+                "source": 2
+              },
+              "6": {
+                "vertices": 26,
+                "edges": 24,
+                "source": 2
+              },
+              "7": {
+                "vertices": 26,
+                "edges": 24,
+                "source": 2
+              },
+              "8": {
+                "vertices": 46,
+                "edges": 336,
+                "source": 6
+              }
+            }
+          }
+        ],
+        "maxSize": [
+          2832,
+          541
+        ],
+        "minSize": [
+          2416,
+          463
+        ]
+      }
+    }
+  },
+  "layers": [
+    12
+  ],
+  "buckets": [
+    0,
+    3,
+    12,
+    43,
+    155,
+    548,
+    1935,
+    6833
+  ]
+}

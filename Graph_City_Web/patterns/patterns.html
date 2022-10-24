@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<head>
+    <title>City Gallery</title>
+    <style>
+        h3{
+            text-align: center;
+        }
+
+        .gallery{
+            display: flex;
+            flex-wrap: wrap;
+            flex-direction: row;
+            margin: 4px;
+            padding: 4px;
+        }
+        
+        .gallery-item{
+            border: 1px solid #ccc;
+            margin: 8px;
+            height: 330px;
+            width: 330px;
+            padding: 8px;
+            box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.2);
+
+            display: flex;
+            flex-direction: column;            
+        }
+
+        .gallery-item:hover{
+            box-shadow: 6px 6px 6px rgba(0, 0, 0, 0.4);
+        }
+        
+        .gallery-item p{            
+            /* width: 100%; */
+            margin: 4px;
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #ccc;
+            flex-grow: 2;
+        }
+
+        .gallery-item img{
+            height: 85%;
+            width: 100%;
+            flex-grow: 1;
+        }
+
+        .gallery-modal{
+            z-index: 3;
+            display: none;
+            /* padding-top: 100px; */
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            /* background-color: rgb(0,0,0); */
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .gallery-close-btn{
+            border: 1px solid #000;
+            background-color: #df4759;
+            position: fixed;
+            right: 0;
+            padding: 15px 28px 15px 30px;
+            font-weight: 100;
+            font-size: 40px;
+        }
+
+        .gallery-modal-body{
+            position: fixed;            
+            top: 80px;
+            left: 15%;
+            /* top: 20%; */
+        }
+
+        .gallery-modal-img{
+            border: 1px solid #ccc;
+            height: 750px;
+            width: 1000px;           
+            padding: 4px;
+            box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <h3>Cit-Patents</h3>
+    <div class="gallery">        
+        <div class="gallery-item" id='wavemap_25_3804978_1'>
+            <img src="./topo-generalized_star_glued_with_matchings-Moriah.png">
+            <p>description can be added here</p>
+        </div>
+        <div class="gallery-item" id='wavemap_53_524219_1'>
+            <img src="./topo-generalized_stars_glued_together-Moriah.png">
+            <p>description can be added here</p>
+        </div>
+
+        <!-- Extra Below -->
+
+        <div class="gallery-item" id='wavemap_25_3804978_1'>
+            <img src="./topo-generalized_star_glued_with_matchings-Moriah.png">
+            <p>description can be added here</p>
+        </div>
+        <div class="gallery-item" id='wavemap_53_524219_1'>
+            <img src="./topo-generalized_stars_glued_together-Moriah.png">
+            <p>description can be added here</p>
+        </div>
+        <div class="gallery-item" id='wavemap_25_3804978_1'>
+            <img src="./topo-generalized_star_glued_with_matchings-Moriah.png">
+            <p>description can be added here</p>
+        </div>
+        <div class="gallery-item" id='wavemap_53_524219_1'>
+            <img src="./topo-generalized_stars_glued_together-Moriah.png">
+            <p>description can be added here</p>
+        </div>
+        <div class="gallery-item" id='wavemap_25_3804978_1'>
+            <img src="./topo-generalized_star_glued_with_matchings-Moriah.png">
+            <p>description can be added here</p>
+        </div>
+        <div class="gallery-item" id='wavemap_53_524219_1'>
+            <img src="./topo-generalized_stars_glued_together-Moriah.png">
+            <p>description can be added here</p>
+        </div>
+    </div>
+        
+    <h3>Movies</h3>
+    <div class="gallery">        
+        <div class="gallery-item" id='movies_4_101'>
+            <img src="./topo-biclique(9,16)_glued_with_clique(16)-Moriah.png">
+            <p>description can be added here</p>
+        </div>
+    </div>
+
+
+
+
+    <div id="myModal" class="gallery-modal">
+        <span class="gallery-close-btn">&times;</span>
+        <div class="gallery-modal-body">
+          <img class="gallery-modal-img" id="modal-image">
+        </div>
+    </div>
+
+
+
+    <script type="module" src="./patterns.js"></script>
+</body>

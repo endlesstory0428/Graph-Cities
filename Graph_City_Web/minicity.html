@@ -1,0 +1,606 @@
+<html>
+
+<head>
+	<title>Mini City Building</title>
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<!-- <link type="text/css" rel="stylesheet" href="./three.js/editor/css/main.css"> -->
+	<!-- <script src="lib/jquery-3.5.1.min.js"> </script> -->
+	<style>
+		body {
+			margin: 0;
+			background-color: #fff;
+			color: #444;
+		}
+
+		#c {
+			position: absolute;
+			left: 0;
+			width: 100%;
+			height: 100%;
+		}
+
+		.custom_slider {
+			position: absolute;
+			cursor: ew-resize;
+
+			width: 40px;
+			height: 40px;
+			background-color: #F32196;
+			opacity: 0.7;
+			border-radius: 50%;
+
+			top: calc(50% - 20px);
+			left: calc(50% - 20px);
+		}
+
+		#bottom-gui-container {
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			z-index: 5;
+		}
+
+		#first-gui-container {
+			position: absolute;
+			top: 31px;
+			left: 0px;
+			z-index: 6;
+		}
+
+		#first-gui-container table {
+			border-collapse: inherit;
+			box-sizing: inherit;
+			text-indent: inherit;
+			white-space: inherit;
+			line-height: inherit;
+			font-weight: inherit;
+			font-size: inherit;
+			font-style: inherit;
+			color: inherit;
+			text-align: inherit;
+			border-spacing: inherit;
+			border-color: inherit;
+			font-variant: inherit;
+		}
+
+		.col {
+			position: fixed;
+			overflow-x: hidden;
+		}
+
+		#lighthouse-view {
+			/* position: absolute; */
+			left: 0;
+			width: 362px;
+			height: calc(100vh - 300px);
+			top: 300px;
+			background-color: #ffffff;
+		}
+
+		#dataset-gui-container {
+			position: absolute;
+			top: 0px;
+			z-index: 5;
+		}
+
+		#city-gui-container {
+			position: absolute;
+			bottom: 20px;
+			/* height: 330px; */
+			/* max-height: 330px; */
+			z-index: 6;
+		}
+
+		/* start controller css */
+
+		#city-overlay-container {
+			position: relative;
+			display: inline-flex;
+			left: 80px;
+			top: 5px;
+			cursor: pointer;
+		}
+
+		#reset-camera {
+			position: relative;
+			right: 180px;
+			top: -25px;
+			height: 20px;
+		}
+
+		#zoom-in {
+			position: relative;
+			right: 151px;
+			top: 50px;
+			z-index: 4;
+			height: 20px;
+		}
+
+		#zoom-out {
+			position: relative;
+			right: 220px;
+			top: 70px;
+			z-index: 4;
+			height: 20px;
+		}
+
+		#overlay-slider {
+			writing-mode: bt-lr;
+			/* IE */
+			-webkit-appearance: slider-vertical;
+			width: 30px;
+		}
+
+		#overlay-circle-controller {
+			border-radius: 50%;
+			background-color: rgba(0, 0, 0, 0.10);
+			z-index: 4;
+			/* cursor: pointer; */
+		}
+
+		#left {
+			position: relative;
+			top: 55px;
+		}
+
+		#up {
+			position: relative;
+			left: 45px;
+		}
+
+		#right {
+			position: relative;
+			top: 55px;
+			left: 95px;
+		}
+
+		#down {
+			position: relative;
+			top: 110px;
+			left: 10px;
+		}
+
+		#north-west {
+			position: relative;
+			top: 15px;
+			right: 45px;
+		}
+
+		#north-east {
+			position: relative;
+			top: 15px;
+			left: 20px;
+		}
+
+		#south-east {
+			position: relative;
+			top: 95px;
+		}
+
+		#south-west {
+			position: relative;
+			top: 95px;
+			right: 105px;
+		}
+
+		/* end */
+
+		#city-building-map {
+			z-index: 2;
+			position: absolute;
+			top: 400px;
+			left: 10px;
+			height: calc(100vh - 550px);
+			width: 345;
+			overflow: hidden;
+			/* border: white;
+			border-width: 10px; */
+		}
+
+		.map-tooltip {
+			z-index: 7;
+			font-size: smaller;
+			max-height: 100px;
+		}
+
+		.axis line {
+			stroke: #000;
+		}
+
+		.axis path {
+			stroke: #000;
+		}
+
+		.axis text {
+			fill: #000;
+		}
+
+		.grid line {
+			stroke: grey;
+			opacity: 0;
+		}
+
+		.grid path {
+			stroke: grey;
+			opacity: 0;
+		}
+
+		/* #cityGUI{
+			right: 0px;
+			top: 300px;
+			z-index: 3;
+		} */
+
+		#city-view {
+			height: calc(100vh - 75px);
+			top: 75px;
+			right: 0;
+			width: calc(100vw - 380px);
+			z-index: 0;
+		}
+
+		.element-container {
+			display: inline-block;
+		}
+
+		.element-container:after {
+			clear: both;
+		}
+
+		#city-description-container {
+			position: relative;
+			left: 360px;
+			width: calc(100vw - 375px);
+			height: 75px;
+		}
+
+		#city-description-div {
+			display: table;
+			color: #000;
+			background-color: #ffffff;
+			width: calc(100vw - 375px);
+			/* margin: 0.5em; */
+			text-align: center;
+			/* padding: 10px; */
+			z-index: 2;
+			position: absolute;
+		}
+
+		#city-description {
+			padding: 1em;
+			font-family: sans-serif;
+			font-size: 1.1em;
+			font-weight: 1000;
+			display: table-cell;
+			top: 2px;
+			vertical-align: top;
+		}
+
+		#city-description-wrap {
+			z-index: 8;
+			position: absolute;
+			bottom: 0px;
+			right: 0px;
+		}
+
+		/* #city-description-deg-dist {
+			height: 1.5em;
+			width: 20em;
+		} */
+
+		#city-description-wrap:hover img {
+			display: block;
+			padding: 20px;
+			z-index: 8;
+			position: absolute;
+			width: 33vw;
+			right: 0px;
+		}
+
+		#city-tour-button-div {
+			position: absolute;
+			bottom: 0px;
+			left: 0px;
+			z-index: 8;
+		}
+
+		#city-best-building-button-div {
+			display: table;
+			width: calc(100vw - 375px);
+			text-align: center;
+			z-index: 7;
+			position: absolute;
+			bottom: 0px;
+			right: 0px;
+			visibility: hidden;
+		}
+
+		#city-best-building-button-span {
+			display: table-cell;
+			vertical-align: middle;
+		}
+
+		#city-largest-building-button-span:hover img {
+			display: block;
+			padding: 20px;
+			z-index: 7;
+			position: absolute;
+			width: 33vw;
+			right: calc((50vw - 375px) / 2);
+		}
+
+		#city-tallest-building-button-span:hover img {
+			display: block;
+			padding: 20px;
+			z-index: 7;
+			position: absolute;
+			width: 33vw;
+			right: calc((50vw - 375px) / 2);
+		}
+
+		#city-densest-building-button-span:hover img {
+			display: block;
+			padding: 20px;
+			z-index: 7;
+			position: absolute;
+			width: 33vw;
+			right: calc((50vw - 375px) / 2);
+		}
+
+		#city-diverse-building-button-span:hover img {
+			display: block;
+			padding: 20px;
+			z-index: 7;
+			position: absolute;
+			width: 33vw;
+			right: calc((50vw - 375px) / 2);
+		}
+
+		#city-buidling-tour {
+			position: absolute;
+			z-index: 4;
+			top: 250px;
+			left: 10px;
+			width: 360px;
+		}
+
+		#city-buidling-tour-button-div {
+			display: table;
+			width: 360px;
+			text-align: center;
+		}
+
+		#city-buidling-tour-button-span {
+			display: table-cell;
+			vertical-align: middle;
+		}
+
+		#city-path-navigation {
+			position: absolute;
+			z-index: 4;
+			bottom: 20px;
+			left: 10px;
+			width: 360px;
+		}
+
+		#city-path-navigation-menu {
+			position: fixed;
+			bottom: 45px;
+		}
+
+		#city-tour-navigation-menu {
+			position: fixed;
+			bottom: 45px;
+		}
+
+		#city-path-navigation-button-div {
+			display: table;
+			width: 360px;
+			text-align: center;
+		}
+
+		#city-path-navigation-button-span {
+			display: table-cell;
+			vertical-align: middle;
+		}
+
+		#graph {
+			float: left;
+			width: 49.5%;
+			display: block;
+		}
+
+		#graph-right {
+			float: right;
+			width: 50%;
+			border-left: 5px solid black;
+			display: block;
+		}
+
+		#strata {
+			width: 100%;
+			height: 100%;
+		}
+
+		#inner-view {
+			display: block;
+			position: relative;
+			top: 100%;
+			width: 100%;
+			height: 100%;
+		}
+
+		img {
+			display: none;
+		}
+	</style>
+	<script>
+		function locationreload() {
+			location.reload();
+		}
+	</script>
+	<script src="//unpkg.com/d3-dsv"></script>
+	<script src="//unpkg.com/d3-fetch"></script>
+	<script src="https://d3js.org/d3.v6.js"></script>
+
+	<script src="//unpkg.com/d3-octree"></script>
+	<script src="//unpkg.com/d3-force-3d"></script>
+	<script src="//unpkg.com/d3-color"></script>
+	<script src="//unpkg.com/d3-interpolate"></script>
+
+	<script src="//unpkg.com/force-graph"></script>
+
+	<script src="//unpkg.com/3d-force-graph@1.66"></script>
+	<script src="//unpkg.com/three@0.124"></script>
+
+	<script src="//unpkg.com/dat.gui@0.7.6"></script>
+	<script src="DisjointSet.js"></script>
+	<script src="js-colormaps.js"></script>
+	<script src="http://code.jquery.com/jquery-3.5.1.min.js"></script>
+	<script src="scripts/parts/priority-queue.min.js"></script>
+</head>
+
+<body>
+	<canvas id="c"></canvas>
+	<div id="dataset-gui-container"></div>
+	<div id="first-gui-container"></div>
+	<div class="col" id="lighthouse-view">
+		<div id="custom_slider"></div>
+	</div>
+	<div id="city-gui-container"></div>
+	<div id="city-description-container">
+		<div id="city-description-div">
+			<span id="city-description"></span>
+		</div>
+		<div id="city-description-wrap">
+			<div id="city-description-deg-dist-div">
+				<span id="city-description-deg-dist">degree distribution</span>
+			</div>
+		</div>
+		<div id="city-tour-button-div">
+			<button type="button" id="city-tour-button">City Tour</button>
+		</div>
+		<div id="city-best-building-button-div">
+			<span id="city-best-buidling-button-span">
+				<span id="city-largest-building-button-span">
+					<button type="button" id="city-largest-building-button">Largest</button>
+				</span>
+				<span id="city-tallest-building-button-span">
+					<button type="button" id="city-tallest-building-button">Tallest</button>
+				</span>
+				<span id="city-densest-building-button-span">
+					<button type="button" id="city-densest-building-button">Densest</button>
+				</span>
+				<span id="city-diverse-building-button-span">
+					<button type="button" id="city-diverse-building-button">Most Diverse</button>
+				</span>
+				<span id="city-gallery-button-span">
+					<button type="button" id="city-gallery-button">Gallery</button>
+				</span>
+			</span>
+		</div>
+	</div>
+	<div id="city-building-map"></div>
+	<div class="col" id="city-view"></div>
+
+	<div id="city-overlay-container">
+		<input type="range" orient="vertical" id="overlay-slider">
+		<div id="overlay-circle-controller">
+			<!-- left -->
+			<span id="left">&#8592;</span>
+			<!-- up -->
+			<span id="up">&#8593;</span>
+			<!-- right -->
+			<span id="right">&#8594;</span>
+			<!-- down -->
+			<span id="down">&#8595;</span>
+			<!-- north west -->
+			<span id="north-west">&#8598;</span>
+			<!-- north east -->
+			<span id="north-east">&#8599;</span>
+			<!-- south east -->
+			<span id="south-east">&#8600;</span>
+			<!-- south west -->
+			<span id="south-west">&#8601;</span>
+		</div>
+		<input type="button" value="Reset" id="reset-camera">
+		<input type="button" value="Zoom-In" id="zoom-in">
+		<input type="button" value="Zoom-Out" id="zoom-out">
+	</div>
+
+	<div id="city-buidling-tour">
+		<div id="city-buidling-tour-button-div">
+			<span id="city-buidling-tour-button-span">
+				<button type="button" id="city-buidling-tour-button">Building Walk</button>
+			</span>
+		</div>
+		<div id="city-buidling-tour-menu" style="visibility: hidden;">
+			<div
+				title="Select a buidling from the map by left click a glyph or from the city by left clicking a building.">
+				Building: <select id="city-buidling-tour-buidling"></select>
+			</div>
+		</div>
+	</div>
+
+	<div id="city-path-navigation">
+		<div id="city-path-navigation-menu" style="visibility: hidden;">
+			<div
+				title="Select a buidling from the map by left click a glyph or from the city by left clicking a building.">
+				Source:<span style="left: 65px; top: 0.1em; position: absolute;"><select
+						id="city-path-navigation-src"></select></span>
+			</div>
+			<div title="Select a target from the city by right click a building.">
+				Target:<span style="left: 65px; top: 1.7em; position: absolute;"><select
+						id="city-path-navigation-tgt"></select></span>
+			</div>
+			<div>
+				<input type="checkbox" id="city-path-navigation-cumulate-path-check"> Cumulate paths
+			</div>
+		</div>
+		<div id="city-tour-navigation-menu" style="visibility: hidden;">
+			<div
+				title="Select a buidling from the map by left click a glyph or from the city by left clicking a building.">
+				Source:<span style="left: 65px; top: 0.1em; position: absolute;"><select
+						id="city-tour-navigation-src"></select></span>
+			</div>
+			<!-- <div>
+				<input type="checkbox" id="city-tour-navigation-cumulate-path-check"> Cumulate paths
+			</div> -->
+		</div>
+		<div id="city-path-navigation-button-div">
+			<span id="city-path-navigation-button-span">
+				<button type="button" id="city-path-navigation-button">Path Navigation</button>
+				<button type="button" id="city-tour-navigation-button">Tour</button>
+			</span>
+		</div>
+	</div>
+
+
+	<div id="inner-view" class="element-container">
+		<!-- <div id="bottom-gui-container"></div>                                         -->
+		<!-- <div id="graph"></div>                                                        -->
+		<!-- <div id="graph-right">                                                        -->
+		<!--         <iframe id="strata" src=http://localhost:8080/?data=nodata"></iframe> -->
+		<!-- </div>                                                                        -->
+		<div id="bottom-gui-container"></div>
+		<div id="graph" style="float: left; width: 49.5%; height: 100%"></div>
+		<div id="peelCC-warp"
+			style="border-style:solid; position: absolute; bottom: 4px; left: 4px; width: 49%; height: 45%; visibility: hidden;">
+			<div id="peelCC-close" style="position: absolute; top: 2px; right: 4px; font-family: sans-serif; font-size: 20px; z-index: 2;">
+				x
+			</div>
+			<div id="peelCC" style="width: 100%; height: 100%"></div>
+			<div id="peelCC-menu" style="position: absolute; top: 0px; left: 4px;"></div>
+		</div>
+		<div style="float: right; width: 50%; height: 100%; border-left: 5px solid black; ">
+			<iframe id="strata" src=http://addressSample:8080/?data=nodatasimplegraph width="100%"
+				height="100%"></iframe>
+		</div>
+	</div>
+
+	<script src="scripts/dag_view.js"></script>
+	<script type="module" src="scripts/main_mini.js"></script>
+	<!-- <script src="scripts/dag_view.js"></script> -->
+</body>
+
+</html>

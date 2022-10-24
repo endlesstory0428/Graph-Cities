@@ -1,0 +1,9 @@
+{
+  "dataset": "movies",
+  "vertices": 218052,
+  "edges": 115050370,
+  "connected_components": 38,
+  "peel_values": 79,
+  "buckets": 56,
+  "displayed_buildings": 56
+}
