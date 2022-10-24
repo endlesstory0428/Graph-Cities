@@ -1,0 +1,5 @@
+-pthread
+-fopenmp
+-lboost_system
+-Wall
+-Wextra
