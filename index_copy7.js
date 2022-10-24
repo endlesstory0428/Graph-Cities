@@ -30,8 +30,24 @@ const address = "http://127.0.0.1:15984";
 const forkTH = 8192;
 
 // // dataset related
-const datasetName = 'Fabula_sellbuy';
+const datasetName = 'fabula_sellbuy';
 const ccName = '-cc0';
+const localMiniMapHighLightID = -1;
+const miniMapHighLightID = -1;
+const buildingHighLightIDSet = new Set();
+const buildingName = '';
+const metaDagName = '';
+const localMetaDagName = '';
+const buildingDesc = 'BLDG';
+const metaDagDesc = 'WCC MetaDAG'
+const localMetaDagDesc = 'fragCC MetaDAG'
+const singleMiniBuildingFlag = false;
+// const buildingName = 'wavemap_10_5286538_1';
+// const metaDagName = 'test1';
+// const localMetaDagName = 'test2';
+// const localMiniMapHighLightID = 55628;
+// const miniMapHighLightID = 55628;
+// const buildingHighLightIDSet = new Set([22,23,24]);
 
 // // dataset Container
 const dataSet = {};
@@ -48,7 +64,9 @@ const localDataSetCache = {
 }
 
 // // graph force-directed
+let miniBuilding;
 let miniGraph;
+let localMiniGraph;
 let dagGraph;
 let localGraph;
 let localSubGraph;
@@ -428,10 +446,10 @@ const SUB_GUI = {
 
 // // mini map graph related
 function nodeMiniGeom(node) {
-  let rad = Math.cbrt(node.relVal * 20);
+  let rad = Math.cbrt(node.esize * 20);
 
   const sphere = new THREE.Mesh(new THREE.SphereGeometry(rad), new THREE.MeshLambertMaterial({
-    color: d3.rgb(node.color.r, node.color.g, node.color.b).toString(),
+    color: node.isOpened ? '#ff00ff' : node.color,
     transparent: true,
     opacity: 0.75
   }));
@@ -440,17 +458,17 @@ function nodeMiniGeom(node) {
     return sphere;
   } else {
     const ring1 = new THREE.Mesh(new THREE.TorusGeometry(rad + 20, 10, 4, 16), new THREE.MeshLambertMaterial({
-      color: '#ffffff',
+      color: '#ff00ff',
       transparent: true,
       opacity: 0.75
     }));
     const ring2 = new THREE.Mesh(new THREE.TorusGeometry(rad + 20, 10, 4, 16).rotateX(Math.PI / 2), new THREE.MeshLambertMaterial({
-      color: '#ffffff',
+      color: '#ff00ff',
       transparent: true,
       opacity: 0.75
     }));
     const ring3 = new THREE.Mesh(new THREE.TorusGeometry(rad + 20, 10, 4, 16).rotateY(Math.PI / 2), new THREE.MeshLambertMaterial({
-      color: '#ffffff',
+      color: '#ff00ff',
       transparent: true,
       opacity: 0.75
     }));
@@ -464,37 +482,305 @@ function nodeMiniGeom(node) {
   }
 };
 
-function drawMiniGraph(datas) {
-  const miniGraphData = datas[0];
-  console.log(miniGraphData)
+function drawFloor(floor, heightFactor = 1) {
+  // console.log(floor.bottom, floor.up, floor.height, floor.color)
+  const retval = new THREE.Group()
+  const geo = new THREE.CylinderGeometry(floor.up, floor.bottom, floor.height * heightFactor, 32);
+  const floorMesh = new THREE.Mesh(geo, [
+    new THREE.MeshLambertMaterial({
+      color: floor.color,
+      transparent: true,
+      opacity: 0.8
+    }),
+    new THREE.MeshLambertMaterial({
+      color: floor.color,
+      transparent: true,
+      opacity: 0.8
+    }),
+    new THREE.MeshLambertMaterial({
+      color: floor.color,
+      transparent: true,
+      opacity: 0.8
+    }),
+  ]);
+  retval.add(floorMesh);
+  if (floor.isOpened) {
+    const geo = new THREE.CylinderGeometry(floor.up + 2, floor.bottom + 2, floor.height * heightFactor, 32);
+    const floorMesh = new THREE.Mesh(geo, [
+      new THREE.MeshLambertMaterial({
+        color: `#ff00ff`,
+        transparent: true,
+        opacity: 0.5
+      }),
+      new THREE.MeshLambertMaterial({
+        color: `#ff00ff`,
+        transparent: true,
+        opacity: 0.5
+      }),
+      new THREE.MeshLambertMaterial({
+        color: `#ff00ff`,
+        transparent: true,
+        opacity: 0.5
+      }),
+    ]);
+    retval.add(floorMesh)
+  }
+  return retval
+}
 
-  for (const node of miniGraphData.nodes) {
-    if (node.buck === 4) {
+function drawSingleMiniBuilding(datas) {
+  const heightFactor = 43.89896759832934; // y_scale in main.js
+  function parseFloor(data) {
+    const floorInfo = {};
+    const dsv = d3.dsvFormat(" ");
+    let prevHeight = 0;
+    for (const [floor, height, radius, type] of dsv.parseRows(data)) {
+      // console.log(floor, type);
+      const idx = parseInt(floor)
+      if (type === 'ground') {
+        prevHeight = parseFloat(height);
+        floorInfo[idx] = {};
+        floorInfo[idx].bottom = parseFloat(radius);
+      } else if (type === 'inner') {
+        floorInfo[idx - 1].pos = parseFloat(height);
+        floorInfo[idx - 1].height = floorInfo[idx - 1].pos - prevHeight;
+        floorInfo[idx - 1].up = parseFloat(radius);
+      } else {
+        continue;
+      }
+    }
+    return floorInfo;
+  }
+  
+  function parseColor(data) {
+    const colorInfo = {};
+    const dsv = d3.dsvFormat(" ");
+    for (const [bottom, up, type, r, g, b] of dsv.parseRows(data)) {
+      // console.log(bottom, type);
+      if (type === 'inner') {
+        colorInfo[bottom] = d3.rgb(255 * parseFloat(r), 255 * parseFloat(g), 255 * parseFloat(b));
+      } else {
+        continue;
+      }
+    }
+    return colorInfo;
+  }
+
+  function prepareFloor(floorInfo, colorInfo) {
+    // console.log(floorInfo, colorInfo)
+    const nodes = []
+    let maxHeight = 0;
+    let maxWidth = 0;
+    for (const [idx, color] of Object.entries(colorInfo)) {
+      const floor = floorInfo[idx];
+      const node = {
+        id: parseInt(idx) + 1,
+        color: color.darker(1.5).formatHex(),
+        bottom: floor.bottom,
+        up: floor.up,
+        height: floor.height,
+        pos: floor.pos,
+        fy: (floor.pos - floor.height / 2) * heightFactor,
+        fx: 0,
+        fz: 0
+      };
+      nodes.push(node);
+      maxHeight += floor.height;
+      maxWidth = Math.max(maxWidth, floor.bottom, floor.up);
+    }
+    console.log(nodes)
+    return [nodes, maxHeight, maxWidth];
+  }
+
+  function drawBuilding(nodes, maxHeight, maxWidth) {
+    const miniBuilding = ForceGraph3D()
+      (document.getElementById(`mini-building`))
+      .width(document.getElementById('mini-building-container').offsetWidth)
+      .height(document.getElementById('mini-building-container').offsetHeight)
+      .showNavInfo(false)
+      // .cameraPosition({ x: 50, y: 50, z: 1000 })
+      .graphData({nodes: nodes, links: []})
+      .backgroundColor('#222222')
+      .nodeThreeObject(node => drawFloor(node, heightFactor))
+    // .nodeRelSize(20)
+    // .nodeVal(node => node.esize)
+    // .linkWidth(link => 0)
+    // // .linkDirectionalArrowLength(10)
+    // .nodeColor('color')
+    // .nodeThreeObject(node => nodeMiniGeom(node));
+
+    // setTimeout(() => miniGraph.zoomToFit(250, 10, node => node.isOpened), 1000);
+    miniBuilding
+      .cooldownTime(0)
+      .d3Force('center', null)
+      .d3Force('charge', null);
+
+    // miniBuilding.enableNodeDrag(false);
+    const camera = miniBuilding.camera();
+    const controls = miniBuilding.controls()
+    const maxSize = Math.max(maxWidth, maxHeight * heightFactor);
+    const cameraZ = Math.abs(Math.max(maxSize, 10) / 2 * Math.tan(camera.fov * 2));
+    camera.position.set(0, maxHeight * heightFactor / 2, cameraZ * 5);
+    controls.target.set(0, maxHeight * heightFactor / 2, 0);
+    camera.updateProjectionMatrix();
+
+    miniBuilding.enablePointerInteraction(false)
+
+    return miniBuilding;
+  }
+
+  const floorFile = datas[0];
+  const colorFile = datas[1];
+  const floorInfo = parseFloor(floorFile);
+  const colorInfo = parseColor(colorFile);
+  const [floorNodes, maxHeight, maxWidth] = prepareFloor(floorInfo, colorInfo);
+
+  const buildingDescContainerElem = document.getElementById(`mini-building-desc-container`);
+  const buildingContainerElem = document.getElementById(`mini-building-container`);
+  buildingDescContainerElem.innerHTML = buildingDesc;
+  buildingDescContainerElem.style.top = '260px'
+  buildingContainerElem.style.width = '160px'
+  buildingContainerElem.style.height = '260px'
+  document.getElementById(`mini-building`).innerHTML = '';
+
+  const miniBuilding =  drawBuilding(floorNodes, maxHeight, maxWidth)
+}
+
+function drawMiniGraph(datas) {
+  document.getElementById(`mini-graph-desc-container`).innerHTML = localMetaDagDesc;
+  document.getElementById(`mini-meta-desc-container`).innerHTML = metaDagDesc;
+  document.getElementById(`mini-building-desc-container`).innerHTML = buildingDesc;
+  document.getElementById(`mini-graph`).innerHTML = '';
+  document.getElementById(`mini-meta`).innerHTML = '';
+  document.getElementById(`mini-building`).innerHTML = '';
+  const localMiniGraphData = datas[0];
+  const miniGraphData = datas[1];
+  const buidlingData = datas[2];
+  // console.log(miniGraphData)
+
+  // for (const node of miniGraphData.nodes) {
+  //   if (node.buck === 4) {
+  //     node.isOpened = true;
+  //   } else {
+  //     node.isOpened = false;
+  //   }
+  // }
+
+  // // local mini graph
+  for (const node of localMiniGraphData.nodes) {
+    if (node.id === localMiniMapHighLightID) {
       node.isOpened = true;
     } else {
       node.isOpened = false;
     }
   }
 
-  console.log(document.getElementById('mini-map-container').offsetWidth)
-  console.log(document.getElementById('mini-map-container').offsetHeight)
+  console.log(document.getElementById('mini-graph-container').offsetWidth)
+  console.log(document.getElementById('mini-graph-container').offsetHeight)
+
+  localMiniGraph = ForceGraph3D()
+    (document.getElementById(`mini-graph`))
+    .width(document.getElementById('mini-graph-container').offsetWidth)
+    .height(document.getElementById('mini-graph-container').offsetHeight)
+    .showNavInfo(false)
+    // .cameraPosition({ x: 50, y: 50, z: 1000 })
+    .graphData(localMiniGraphData)
+    .backgroundColor('#222222')
+    .nodeRelSize(20)
+    .nodeVal(node => node.esize)
+    .linkWidth(link => 0)
+    // .linkDirectionalArrowLength(10)
+    .nodeColor('color')
+    .nodeThreeObject(node => nodeMiniGeom(node));
+
+  setTimeout(() => localMiniGraph.zoomToFit(250, 10, node => node.isOpened), 1000);
+  localMiniGraph.enablePointerInteraction(false)
+
+  // // mini graph
+  for (const node of miniGraphData.nodes) {
+    if (node.id === miniMapHighLightID) {
+      node.isOpened = true;
+    } else {
+      node.isOpened = false;
+    }
+  }
+  
+
+  console.log(document.getElementById('mini-meta-container').offsetWidth)
+  console.log(document.getElementById('mini-meta-container').offsetHeight)
 
   miniGraph = ForceGraph3D()
-    (document.getElementById(`mini-graph`))
-    .width(document.getElementById('mini-map-container').offsetWidth)
-    .height(document.getElementById('mini-map-container').offsetHeight)
+    (document.getElementById(`mini-meta`))
+    .width(document.getElementById('mini-meta-container').offsetWidth)
+    .height(document.getElementById('mini-meta-container').offsetHeight)
     .showNavInfo(false)
     // .cameraPosition({ x: 50, y: 50, z: 1000 })
     .graphData(miniGraphData)
     .backgroundColor('#222222')
     .nodeRelSize(20)
-    .nodeVal(node => node.relVal)
-    .linkWidth(link => link.relVal)
-    .linkDirectionalArrowLength(10)
-    .nodeColor(node => d3.rgb(node.color.r, node.color.g, node.color.b).toString())
+    .nodeVal(node => node.esize)
+    .linkWidth(link => 0)
+    // .linkDirectionalArrowLength(10)
+    .nodeColor('color')
     .nodeThreeObject(node => nodeMiniGeom(node));
 
-  setTimeout(() => miniGraph.zoomToFit(250, 10, node => true), 1000);
+  setTimeout(() => {
+    miniGraph.zoomToFit(250, 10, node => node.isOpened)}, 1000);
+  miniGraph.enablePointerInteraction(false)
+
+  // // mini building
+  const heightFactor = 43.89896759832934; // y_scale in main.js
+  let tempHeight = 0;
+  let tempWidth = 0;
+  for (const node of buidlingData.nodes) {
+    tempHeight += node.height;
+    if (buildingHighLightIDSet.has(node.id)) {
+      node.isOpened = true;
+    } else {
+      node.isOpened = false;
+    }
+    tempWidth = Math.max(tempWidth, node.bottom, node.up);
+  }
+  const maxHeight = tempHeight;
+  const maxWidth = tempWidth;
+  console.log(maxHeight)
+  // console.log(buidlingData)
+
+  console.log(document.getElementById('mini-building-container').offsetWidth)
+  console.log(document.getElementById('mini-building-container').offsetHeight)
+
+  miniBuilding = ForceGraph3D()
+    (document.getElementById(`mini-building`))
+    .width(document.getElementById('mini-building-container').offsetWidth)
+    .height(document.getElementById('mini-building-container').offsetHeight)
+    .showNavInfo(false)
+    // .cameraPosition({ x: 50, y: 50, z: 1000 })
+    .graphData(buidlingData)
+    .backgroundColor('#222222')
+    .nodeThreeObject(node => drawFloor(node, heightFactor))
+    // .nodeRelSize(20)
+    // .nodeVal(node => node.esize)
+    // .linkWidth(link => 0)
+    // // .linkDirectionalArrowLength(10)
+    // .nodeColor('color')
+    // .nodeThreeObject(node => nodeMiniGeom(node));
+
+  // setTimeout(() => miniGraph.zoomToFit(250, 10, node => node.isOpened), 1000);
+  miniBuilding
+    .cooldownTime(0)
+    .d3Force('center', null)
+    .d3Force('charge', null);
+
+  // miniBuilding.enableNodeDrag(false);
+  const camera = miniBuilding.camera();
+  const controls = miniBuilding.controls()
+  const maxSize = Math.max(maxWidth, maxHeight * heightFactor);
+  const cameraZ = Math.abs( Math.max(maxSize, 10) / 2 * Math.tan( camera.fov * 2 ) );
+  camera.position.set(0, maxHeight * heightFactor / 2, cameraZ * 5);
+  controls.target.set(0, maxHeight * heightFactor / 2, 0);
+  camera.updateProjectionMatrix();
+
+  miniBuilding.enablePointerInteraction(false)
 }
 
 
@@ -706,6 +992,8 @@ function drawMap() {
     .attr("x2", d => x(dataSet.brokenLayer[d.tgt.layer]))
     .attr("y2", d => y(dataSet.brokenBucket[d.tgt.bucket + 1]))
     .attr("visibility", UIInfo.layout.leftVis.dagGraph ? "hidden" : "visible")
+    // .attr("class", d => `spanningLine_layer_${d.src.layer}`)
+    // .attr("class", d => `spanningLine_${d.src.layer}_${d.src.bucket}`)
 
   const colorFactor = dataSet.buckNodes.map(d => d['density']).reduce((prev, current) => prev + current) / dataSet.buckNodes.length;
 
@@ -731,7 +1019,8 @@ function drawMap() {
   // // multiple spirals
   const spiralHighLightEnter = spiralHighLight.enter().append('g');
   spiralHighLightEnter.append("circle")
-    .attr("class", "spiralHighLight")
+    .attr("class", d => `mapHighLight_layer_${d['layer']}`)
+    .classed("spiralHighLight", true)
     .attr("cx", d => x(dataSet.brokenLayer[d['layer']]))
     .attr("cy", d => y(dataSet.brokenBucket[d['bucket'] + 1]))
     .attr("r", d => 1.5 * spiralDotSize * d['radius'] + 2)
@@ -782,7 +1071,8 @@ function drawMap() {
   // // single arcs
   const arcHighLightEnter = arcHighLight.enter().append('g');
   arcHighLightEnter.append("circle")
-    .attr("class", "arcHighLight")
+    .attr("class", d => `mapHighLight_layer_${d['layer']}`)
+    .classed("arcHighLight", true)
     .attr("cx", d => x(dataSet.brokenLayer[d['layer']]))
     .attr("cy", d => y(dataSet.brokenBucket[d['bucket'] + 1]))
     .attr("r", d => 1.5 * arcDotSize * d['radius'] + 2)
@@ -1335,7 +1625,7 @@ function drawGraph(nodes, links, idx2nodeDict) {
   // console.log('count:', nodeCountSum.toLocaleString());
 
   for (const node of nodes) {
-    node.relVal = Math.cbrt(curve(node['edges'] / nodeSizeMax, nodeSizeFactor) * nodeSizeMax);
+    node.relVal = Math.sqrt(curve(node['edges'] / nodeSizeMax, nodeSizeFactor) * nodeSizeMax);
     node.color = d3.rgb(...interpolateLinearly(curve(node.density, nodeColorFactor), grey2red).map(x => x * 255));
   };
   for (const link of links) {
@@ -1372,9 +1662,28 @@ function drawGraph(nodes, links, idx2nodeDict) {
 
   // $('#global-graph .scene-nav-info').text('Left-click: rotate, Mouse-wheel/middle-click: zoom, Right-click: pan, Left-click Nodes: open')
 
+  dagGraph.onNodeHover((node, prevNode) => showFP(node, prevNode))
   dagGraph.onNodeClick(node => openBuckNode(node));
 }
 
+function showFP(node, prevNode) {
+  if (prevNode != null) {
+    d3.selectAll(`.mapHighLight_layer_${prevNode.layer}`).attr("visibility", "hidden");
+  }
+  if (node == null) {
+    // clean
+    // d3.selectAll(".spiralHighLight").attr("visibility", "hidden");
+    // d3.selectAll(".arcHighLight").attr("visibility", "hidden");
+    // console.log('clean')
+  } else {
+    d3.selectAll(`.mapHighLight_layer_${node.layer}`).attr("visibility", "visible");
+  }
+  if (dagControl.clicked == null) {
+    // nothing to do
+  } else {
+    d3.select(`#mapHighLight_${dagControl.clicked.layer}_${dagControl.clicked.bucket}`).attr("visibility", "visible");
+  }
+}
 
 function openBuckNode(node) {
   // console.log(node);
@@ -1447,7 +1756,7 @@ function initForkDrawing() {
 
   // // set the dimensions and margins of the graph
   const padMargin = { top: 0, right: 0, bottom: 0, left: 0 };
-  const margin = { top: 5, right: 5, bottom: 5, left: 5 },
+  const margin = { top: 5, right: 0, bottom: 5, left: 25 },
     width = board.node().clientWidth - margin.left - margin.right,
     height = board.node().clientHeight - margin.top - margin.bottom;
 
@@ -1473,6 +1782,7 @@ function initForkDrawing() {
 }
 
 function drawFork(datas, layer, lccSet, bucket, nodeEdges) {
+  $('#fork-loading-info').html('');
   const waveInfoFile = datas[0];
   delete waveInfoFile[0];
   console.log(waveInfoFile)
@@ -1674,6 +1984,7 @@ function drawFork(datas, layer, lccSet, bucket, nodeEdges) {
 
       if (d.edges >= forkTH) {
         drawForkFrag(w2fragInfo, maxFragEdges, layer, w2wccDict, d.y);
+        $('#fork-loading-info').html('cannot show all fragment at the same time, please select fragments to show')
       } else {
         // drawForkFrag(d.frag, d.maxFragEdges, layer, d.wave, w2wccDict, d.y, d.height);
         let waveMax = d.wave + 1;
@@ -1697,6 +2008,8 @@ function drawFork(datas, layer, lccSet, bucket, nodeEdges) {
         d3.selectAll(`.forkFragHighLight`).attr("visibility", "visible");
         d3.selectAll(`.forkFragHighLightExtra`).attr("visibility", "visible");
         preDrawLocalGraph(layer, d.wave, waveMax, -Infinity, Infinity, w2wccDict, bucket);
+
+        $('#fork-loading-info').html('showing all fragments (of selected fixed point(s))')
       }
     })
 
@@ -5250,7 +5563,8 @@ function showGlobalLocal() {
 
   UIInfo.layout.leftVis.dagGraph = 1;
   UIInfo.layout.leftVis.localSub = 0;
-  $('#global-grpah-show-hide-button').html('hide meta-DAG')
+  // $('#global-grpah-show-hide-button').html('show intersection')
+  $('#global-grpah-show-hide-button').html('intersection graph')
   d3.selectAll(".spanningLine").attr("visibility", "hidden");
 };
 
@@ -5265,7 +5579,8 @@ function showLocalLocalSub() {
 
   UIInfo.layout.leftVis.dagGraph = 0;
   UIInfo.layout.leftVis.localSub = 1;
-  $('#global-grpah-show-hide-button').html('show meta-DAG')
+  // $('#global-grpah-show-hide-button').html('hide intersection')
+  $('#global-grpah-show-hide-button').html('intersection graph')
   d3.selectAll(".spanningLine").attr("visibility", "visible");
 
   $('#right-test-button-container').css('display', 'block')
@@ -5281,7 +5596,8 @@ function showLocalOnly() {
 
   UIInfo.layout.leftVis.dagGraph = 0;
   UIInfo.layout.leftVis.localSub = 1;
-  $('#global-grpah-show-hide-button').html('show meta-DAG')
+  // $('#global-grpah-show-hide-button').html('hide intersection')
+  $('#global-grpah-show-hide-button').html('intersection graph')
   d3.selectAll(".spanningLine").attr("visibility", "visible");
 };
 
@@ -5292,6 +5608,23 @@ function resetAll() {
 
   drawMap();
   preDraw();
+
+  if (singleMiniBuildingFlag) {
+    Promise.all([
+      d3.text(buildingName + '_floor.txt'),
+      d3.text(buildingName + '_color.txt')
+    ]).then(function (datas) {
+      drawSingleMiniBuilding(datas)
+    })
+  } else {
+    Promise.all([
+      d3.json(localMetaDagName + '-localMetaDag.json'),
+      d3.json(metaDagName + '-metaDag.json'),
+      d3.json(buildingName + '-building.json')
+    ]).then(function (datas) {
+      drawMiniGraph(datas)
+    })
+  }
 
 
   d3.selectAll(".spiralHighLight").attr("visibility", "hidden");
@@ -5382,12 +5715,29 @@ $(function () {
   initUI();
   addTitle();
 
-  // // init miniGraph
-  Promise.all([
-    d3.json(datasetName + '_miniGraph.json')
-  ]).then(function (datas) {
-    drawMiniGraph(datas)
-  })
+  // init miniGraph
+  if (singleMiniBuildingFlag) {
+    Promise.all([
+      d3.text(buildingName + '_floor.txt'),
+      d3.text(buildingName + '_color.txt')
+    ]).then(function (datas) {
+      drawSingleMiniBuilding(datas)
+    })
+  } else {
+    Promise.all([
+      d3.json(localMetaDagName + '-localMetaDag.json'),
+      d3.json(metaDagName + '-metaDag.json'),
+      d3.json(buildingName + '-building.json')
+    ]).then(function (datas) {
+      drawMiniGraph(datas)
+    })
+  }
+
+  // Promise.all([
+  //   d3.json(datasetName + '_miniGraph.json')
+  // ]).then(function (datas) {
+  //   drawMiniGraph(datas)
+  // })
 
   Promise.all([
     d3.text(datasetName + ccName + '_info.txt')
@@ -5855,27 +6205,89 @@ $(function () {
     getLayeredPos()
   });
 
-  $('#fork-selection-box').change(function (e) {
-    const key = $(this).prop('checked');
-    // console.log(key)
-    UIInfo.fork.forkSelectedOnly = key;
-  })
+  // $('#fork-selection-box-single').change(function (e) {
+  //   const key = $(this).prop('checked');
+  //   // console.log(key)
+  //   UIInfo.fork.forkSelectedOnly = key;
+  // })
+
+  // $('#fork-selection-box-multiple').change(function (e) {
+  //   const key = $(this).prop('checked');
+  //   // console.log(key)
+  //   UIInfo.fork.forkSelectedOnly = key;
+  // })
+
+  $('input[type=radio][name=fork-selection-box]').change(function() {
+    if (this.value == 'single') {
+      UIInfo.fork.forkSelectedOnly = true;
+    }
+    else if (this.value == 'multiple') {
+      UIInfo.fork.forkSelectedOnly = false;
+    }
+});
 
   $('#buttom-save-labels-button').click(function (e) {
     const labels = $('#right-labels').text()
-    console.log(labels)
+    // console.log(labels)
+    // if (labels) {
+    //   navigator.clipboard.writeText(labels)
+    //   alert('lables are copied')
+    // }
     if (labels) {
-      navigator.clipboard.writeText(labels)
-      alert('lables are copied')
+      var blob = new Blob([labels], {type: "text/plain;charset=utf-8"});
+      saveAs(blob, `${localDataSet.strataName}-labels.txt`);
+      // console.log(localDataSet);
     }
   })
 
   $('#buttom-label-summaries-button').click(function (e) {
     const summaries = Object.entries(dataSet.highNaturalWeightLabels).map(d => `${d[0]}\n${d[1]}`).join('\n\n')
-    console.log(summaries)
+    // console.log(summaries)
+    // if (summaries) {
+    //   navigator.clipboard.writeText(summaries)
+    //   alert('summaries are copied')
+    // }
     if (summaries) {
-      navigator.clipboard.writeText(summaries)
-      alert('summaries are copied')
+      var blob = new Blob([summaries], {type: "text/plain;charset=utf-8"});
+      saveAs(blob, `labels-summaries.txt`);
+      // console.log(localDataSet);
+    }
+  })
+
+
+  $('#global-graph-navagation-hide-button').click(function(e) {
+    if ($(this).text() === 'x') {
+      $('#global-graph-navigation-body').hide()
+      $(this).css('top', '-1.5em')
+      $(this).html('^')
+    } else {
+      $('#global-graph-navigation-body').show()
+      $(this).css('top', '0px')
+      $(this).html('x')
+    }
+  })
+
+  $('#local-graph-navagation-hide-button').click(function(e) {
+    if ($(this).text() === 'x') {
+      $('#local-graph-navigation-body').hide()
+      $(this).css('top', '-1.5em')
+      $(this).html('^')
+    } else {
+      $('#local-graph-navigation-body').show()
+      $(this).css('top', '0px')
+      $(this).html('x')
+    }
+  })
+
+  $('#local-subgraph-navagation-hide-button').click(function(e) {
+    if ($(this).text() === 'x') {
+      $('#local-subgraph-navigation-body').hide()
+      $(this).css('top', '-1.5em')
+      $(this).html('^')
+    } else {
+      $('#local-subgraph-navigation-body').show()
+      $(this).css('top', '0px')
+      $(this).html('x')
     }
   })
 })
