@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+
+  <link rel="stylesheet" href="//code.jquery.com/ui/1.13.1/themes/base/jquery-ui.css">
+  <link rel="stylesheet" href="/resources/demos/style.css">
+
+  <style>
+    body {
+      margin: 0;
+      background-color: #222222;
+    }
+  </style>
+
+  <!-- <script src="https://unpkg.com/3d-force-graph"></script> -->
+  <script src="./lib/3d-force-graph.min.js"></script>
+  <script src="https://unpkg.com/force-graph"></script>
+  <script src="https://d3js.org/d3.v6.js" charset="utf-8"></script>
+  <!-- <script src="//unpkg.com/dat.gui"></script> -->
+  <script src="./lib/dat.gui.js"></script>
+  <!-- <script src="//unpkg.com/three"></script> -->
+  <script src="./lib/three.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
+  <script src="https://code.jquery.com/ui/1.13.1/jquery-ui.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
+
+  <script type="module" src="index_copy7.js"></script>
+
+  <link rel="stylesheet" href="./style/ui.css">
+  <link rel="stylesheet" href="./style/gridMap.css">
+  <link rel="stylesheet" href="./style/remoteOverwrite.css">
+</head>
+
+<body>
+  <div id="top-container">
+    <div id="top-info-container">
+      |dataset:cit-Patent-cc0|vertices:3764117|edges:16511740|connected_fixpoints:540320|peel_values:41|buckets:7|
+    </div>
+  </div>
+  <div id="map-container">
+    <div id="mini-map-container">
+      <div id="mini-graph-desc-container"></div>
+      <div id="mini-graph-container">
+        <div id="mini-graph">
+          <!-- <img src="fabula_city.png" width="120" height="100"> -->
+        </div>
+      </div>
+      <div id="mini-meta-desc-container"></div>
+      <div id="mini-meta-container">
+        <div id="mini-meta">
+        </div>
+      </div>
+      <div id="mini-building-desc-container"></div>
+      <div id="mini-building-container">
+        <div id="mini-building">
+        </div>
+      </div>
+    </div>
+    <div id="global-graph-show-hide-button-container">
+      <button id="global-help-button">information</button>
+      <button id="global-grpah-show-hide-button">intersection graph</button>
+      <button id="global-reset-button">reset</button>
+    </div>
+    <div id="grid-map-container">
+      <div id="mapBoard">grid map</div>
+    </div>
+  </div>
+  <div id="main-menu-container">
+    <div id="menu-container"></div>
+    <div id="local-menu-container"></div>
+    <div id="local-sub-menu-container"></div>
+  </div>
+  <div id="main-graph-container">
+    <div id="global-graph-container">
+      <div id="global-graph"></div>
+      <div id="global-graph-navigation-info-container" class="navigation-info-container">
+        <div id="global-graph-navigation-info" class="navigation-info">
+          <div id="global-graph-navagation-hide-button" class="navigation-hide-button">x</div>
+          <div id="global-graph-navigation-body" class="navigation-body">
+            <div id="global-grpah-descritpion">
+              spanning intersection meta-DAG.
+            </div>
+            <div id="global-grpah-action">
+              <span id="global-graph-action-basic">Left-click: rotate, Mouse-wheel/middle-click: zoom, Right-click:
+                pan.</span>
+              <span id="global-graph-action-extra">Left-click Node: open wave-fragment information in fork map</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="fork-view-container" class="main-graph-separater">
+      <div id="fork-selection-box-container">
+        <input type="radio" id="fork-selection-box-single" name="fork-selection-box" value="single">
+        <label for="fork-selection-box">single wave</label>
+        <input type="radio" id="fork-selection-box-multiple" name="fork-selection-box" value="multiple" checked>
+        <label for="fork-selection-box">multiple waves</label>
+      </div>
+      <div id="fork-title-container">
+        <span>wave</span>&nbsp;<span>frag</span>
+      </div>
+      <div id="fork-view-canvas"></div>
+      <div id="fork-loading-info">
+      </div>
+    </div>
+    <div id="local-graph-container">
+      <div id="local-graph"></div>
+      <div id="local-info-container">
+        <div id="local-info"></div>
+        <button id="down-degree-list-cumulative-button">cumulative influencers</button>
+        <button id="down-degree-list-noncumulative-button">noncumulative influencers</button>
+        <button id="local-label-button">label expansion</button>
+        <div id="down-degree-list-cumulative"></div>
+        <div id="down-degree-list-noncumulative"></div>
+        <div id="local-label-container"></div>
+      </div>
+      <div id="local-graph-navigation-info-container" class="navigation-info-container">
+        <div id="local-graph-navigation-info" class="navigation-info">
+          <div id="local-graph-navagation-hide-button" class="navigation-hide-button">x</div>
+          <div id="local-graph-navigation-body" class="navigation-body">
+            <div id="local-grpah-descritpion">
+              <span id="local-graph-description-filter">filtered</span>
+              <span id="local-graph-description-span">spanning</span>
+              <span id="local-graph-description-meta">meta graph</span>
+              <span id="local-graph-description-raw">raw graph</span>
+              <span id="local-graph-description-connect">with jumping edges connecting disconnected spanning
+                components.</span>
+            </div>
+            <div id="local-grpah-action">
+              <span id="local-graph-action-basic">Left-click: rotate, Mouse-wheel/middle-click: zoom, Right-click:
+                pan.</span>
+              <span id="local-graph-action-extra">Left-click Node: highlight corresponding fragment in the fork map. (Ctrl
+                +) Right-click Node: show its neighbors.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="local-subgraph-separater" class="main-graph-separater">
+      <div id="separater-view-canvas"></div>
+    </div>
+    <div id="local-subgraph-container">
+      <div id="local-subgraph"></div>
+      <div id="local-subgraph-navigation-info-container" class="navigation-info-container">
+        <div id="local-subgraph-navigation-info" class="navigation-info">
+          <div id="local-subgraph-navagation-hide-button" class="navigation-hide-button">x</div>
+          <div id="local-subgraph-navigation-body" class="navigation-body">
+            <div id="local-subgrpah-descritpion">
+              extracted graph
+            </div>
+            <div id="local-subgrpah-action">
+              <span id="local-subgraph-action-basic">Left-click: rotate, Mouse-wheel/middle-click: zoom, Right-click:
+                pan.</span>
+              <span id="local-subgraph-action-extra">Left-click Node: highlight corresponding fragment in the fork map.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="right-container">
+    <div id="right-button-container">
+      <div class="right-button" id="right-search-button-container">
+        <div class="right-button-main-container">
+          <div class="right-button-main-button" id="right-search-button-main-button">
+            <div class="right-button-title">
+              <label for="right-search-button-input">Search</label>
+              <span id="cumulative-search-checkbox-container" class="right-button-title-info">
+                <input type="checkbox" name="cumulative-search-checkbox" id="cumulative-search-checkbox">
+                <label for="cumulative-search-checkbox">cumulative</label>
+              </span>
+            </div>
+            <div class="right-button-button" id="right-search-button-button">
+              <span id="search-type-select-container">
+                <select name="search-type" id="search-type">
+                  <option value="0" selected="selected">#</option>
+                  <option value="1">&</option>
+                  <option value="2">|</option>
+                </select>
+              </span>
+              <input id="right-search-button-input" name="right-search-button-input" class="right-button-input">
+            </div>
+          </div>
+          <div class="right-button-expand">▼</div>
+        </div>
+        <div class="right-button-detail-container" id="right-search-detail-container">
+          <button id="cumulative-influencers-button">cumulative influencers</button>
+          <button id="longest-dag-path-button">longest DAG path</button>
+          <button id="widest-level">widest level</button>
+        </div>
+      </div>
+      <div class="right-button" id="right-filter-button-container">
+        <div class="right-button-main-container">
+          <div class="right-button-main-button" id="right-filter-button-main-button">
+            <div class="right-button-title">
+              Filter
+              <span id="meta-filter-checkbox-container" class="right-button-title-info">
+                <input type="checkbox" name="meta-filter-checkbox" id="meta-filter-checkbox" checked="checked">
+                <label for="meta-filter-checkbox">meta</label>
+              </span>
+            </div>
+            <div class="right-button-button">
+              <span class="right-button-slider">
+                <div id="right-filter-slider"></div>
+              </span>
+            </div>
+          </div>
+          <div class="right-button-expand">▼</div>
+        </div>
+        <div class="right-button-detail-container" id="right-filter-detail-container">
+          <div class="right-filter-detail-slider" id="right-filter-induce-detail-slider">
+            <span class="right-button-slider-name">
+              <input type="checkbox" name="right-filter-induce-slider-checkbox" id="right-filter-induce-slider-checkbox"
+                checked="checked">
+              <label for="right-filter-induce-slider-checkbox">induce</label>
+            </span>
+            <span class="right-button-slider">
+              <div id="right-filter-induce-slider"></div>
+            </span>
+          </div>
+          <div class="right-filter-detail-slider" id="right-filter-span-detail-slider">
+            <span class="right-button-slider-name">
+              <input type="checkbox" name="right-filter-span-slider-checkbox" id="right-filter-span-slider-checkbox"
+                checked="checked">
+              <label for="right-filter-span-slider-checkbox">span</label>
+            </span>
+            <span class="right-button-slider">
+              <div id="right-filter-span-slider"></div>
+            </span>
+          </div>
+          <div class="right-filter-detail-slider" id="right-filter-jump-detail-slider">
+            <span class="right-button-slider-name">
+              <input type="checkbox" name="right-filter-jump-slider-checkbox" id="right-filter-jump-slider-checkbox">
+              <label for="right-filter-jump-slider-checkbox">jump</label>
+            </span>
+            <span class="right-button-slider">
+              <div id="right-filter-jump-slider"></div>
+            </span>
+          </div>
+          <div class="right-filter-detail-slider" id="right-filter-back-detail-slider">
+            <span class="right-button-slider-name">
+              <input type="checkbox" name="right-filter-back-slider-checkbox" id="right-filter-back-slider-checkbox">
+              <label for="right-filter-back-slider-checkbox">back</label>
+            </span>
+            <span class="right-button-slider">
+              <div id="right-filter-back-slider"></div>
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="right-button" id="right-extract-button-container">
+        <div class="right-button-main-container">
+          <div class="right-button-main-button">
+            <div class="right-button-title">Extract</div>
+            <div class="right-button-button">
+              <button id="extract-new-window">new window</button>
+            </div>
+          </div>
+          <div class="right-button-expand">▼</div>
+        </div>
+        <div class="right-button-detail-container" id="right-extract-detail-container">
+          <!-- <button>locally</button> -->
+          <button id="extract-strata">Graph Strata</button>
+        </div>
+      </div>
+      <div class="right-button" id="right-expand-button-container">
+        <div class="right-button-main-container">
+          <div class="right-button-main-button">
+            <div class="right-button-title">
+              Expand
+              <span id="expand-step-container" class="right-button-title-info">
+                step <span id="expand-step">0<span>
+                  </span>
+            </div>
+            <div class="right-button-button">
+              <button id="expand-new-neighbor">new neighbors</button>
+            </div>
+            <span class="right-button-slider">
+              <div id="right-extend-step-slider"></div>
+            </span>
+          </div>
+          <!-- <div class="right-button-expand">▼</div> -->
+        </div>
+      </div>
+      <div class="right-button" id="right-play-button-container">
+        <div class="right-button-main-container">
+          <div class="right-button-main-button">
+            <div class="right-button-title">
+              Play
+              <!-- <span id="play-reverse-checkbox-container" class="right-button-title-info">
+                <input type="checkbox" name="play-reverse-checkbox" id="play-reverse-checkbox">
+                <label for="play-reverse-checkbox">reverse</label>
+              </span> -->
+              <span id="play-speed-selector-container" class="right-button-title-info">
+                <select name="play-speed-selector" id="play-speed-selector">
+                  <option value="250">fast</option>
+                  <option value="500" selected="selected">normal</option>
+                  <option value="1000">slow</option>
+                </select>
+              </span>
+            </div>
+            <span class="right-button-slider">
+              <div id="right-paly-step-slider"></div>
+            </span>
+            <div class="right-button-button" id="right-paly-button">
+              <button id="play-back-button">⏮</button>
+              <button id="play-play-button">▶</button>
+              <button id="play-pause-button">⏯</button>
+              <!-- <button id="play-stop-button">⏹</button> -->
+              <button id="play-forward-button">⏭</button>
+            </div>
+          </div>
+          <!-- <div class="right-button-expand">▼</div> -->
+        </div>
+        <!-- <div class="right-button-detail-container" id="right-play-detail-container">
+          <div id="right-play-detail-tab">
+            <ul>
+              <li><a href="#tabs-1">1</a></li>
+              <li><a href="#tabs-2">2</a></li>
+              <li><a href="#tabs-3">3</a></li>
+            </ul>
+            <div id="tabs-1">
+              <div class="right-play-previous-level-select">
+                <label for="previous-play-select">prev:</label>
+                <select name="previous-play-select" id="previous-play-select-1">
+                  <option selected="selected">span</option>
+                  <option>none</option>
+                  <option>upward</option>
+                  <option>downward</option>
+                </select>
+              </div>
+              <div class="right-play-current-level-select-name">current:</div>
+              <div class="right-play-current-level-select">
+                <input type="checkbox" name="right-play-induced-checkbox" id="right-play-induced-checkbox-1"
+                  checked="checked">
+                <label for="right-play-induced-checkbox-1">induced</label>
+                <br>
+                <input type="checkbox" name="right-play-span-checkbox" id="right-play-span-checkbox-1"
+                  checked="checked">
+                <label for="right-play-span-checkbox-1">span</label>
+                <br>
+                <input type="checkbox" name="right-play-jump-checkbox" id="right-play-jump-checkbox-1"
+                  checked="checked">
+                <label for="right-play-jump-checkbox-1">jump</label>
+                <br>
+                <input type="checkbox" name="right-play-back-checkbox" id="right-play-back-checkbox-1">
+                <label for="right-play-back-checkbox-1">back</label>
+              </div>
+            </div>
+            <div id="tabs-2">
+              <div class="right-play-previous-level-select">
+                <label for="previous-play-select">prev:</label>
+                <select name="previous-play-select" id="previous-play-select-2">
+                  <option selected="selected">span</option>
+                  <option>none</option>
+                  <option>upward</option>
+                  <option>downward</option>
+                </select>
+              </div>
+              <div class="right-play-current-level-select-name">current:</div>
+              <div class="right-play-current-level-select">
+                <input type="checkbox" name="right-play-induced-checkbox" id="right-play-induced-checkbox-2"
+                  checked="checked">
+                <label for="right-play-induced-checkbox-2">induced</label>
+                <br>
+                <input type="checkbox" name="right-play-span-checkbox" id="right-play-span-checkbox-2"
+                  checked="checked">
+                <label for="right-play-span-checkbox-2">span</label>
+                <br>
+                <input type="checkbox" name="right-play-jump-checkbox" id="right-play-jump-checkbox-2"
+                  checked="checked">
+                <label for="right-play-jump-checkbox-2">jump</label>
+                <br>
+                <input type="checkbox" name="right-play-back-checkbox" id="right-play-back-checkbox-2"
+                  checked="checked">
+                <label for="right-play-back-checkbox-2">back</label>
+              </div>
+            </div>
+            <div id="tabs-3">
+              <div class="right-play-previous-level-select">
+                <label for="previous-play-select">prev:</label>
+                <select name="previous-play-select" id="previous-play-select-3">
+                  <option selected="selected">span</option>
+                  <option>none</option>
+                  <option>upward</option>
+                  <option>downward</option>
+                </select>
+              </div>
+              <div class="right-play-current-level-select-name">current:</div>
+              <div class="right-play-current-level-select">
+                <input type="checkbox" name="right-play-induced-checkbox" id="right-play-induced-checkbox-3"
+                  checked="checked">
+                <label for="right-play-induced-checkbox-3">induced</label>
+                <br>
+                <input type="checkbox" name="right-play-span-checkbox" id="right-play-span-checkbox-3"
+                  checked="checked">
+                <label for="right-play-span-checkbox-3">span</label>
+                <br>
+                <input type="checkbox" name="right-play-jump-checkbox" id="right-play-jump-checkbox-3">
+                <label for="right-play-jump-checkbox-3">jump</label>
+                <br>
+                <input type="checkbox" name="right-play-back-checkbox" id="right-play-back-checkbox-3">
+                <label for="right-play-back-checkbox-3">back</label>
+              </div>
+            </div>
+          </div>
+        </div> -->
+      </div>
+      <div class="right-button" id="right-test-button-container">
+        <!-- <button id="test1">test1</button>
+        <button id="test2">test2</button>
+        <button id="test3">test3</button>
+        <button id="test4">test4</button>
+        <button id="test5">test5</button>
+        <button id="test6">test6</button>
+        <button id="test7">test7</button>
+        <button id="test8">test8</button>
+        <button id="test9">test9</button> -->
+        <button id="test10">LocalPos</button>
+        <br>
+        <button id="test11">ForceDirected</button>
+        <br>
+        <button id="test12">Layered</button>
+      </div>
+    </div>
+    <div class="right-button" id="right-labels-container">
+      <div class="right-button-title">
+        Labels
+      </div>
+      <div id="right-labels-title">
+        
+      </div>
+      <div id="right-labels">
+      </div>
+    </div>
+  </div>
+  <div id="bottom-container">
+    <div id="bottom-slider-container">
+      <div id="bottom-slider-button-container">
+        <div id="node-size-slider-button-container" class="bottom-main-slider-button-container">
+          <div id="node-size-slider-button">
+            <button id="node-size-slider-button-up">∧</button>
+            <br>
+            <button id="node-size-slider-button-down">∨</button>
+          </div>
+          <div id="node-size-slider-button-name">
+            V<br>size
+          </div>
+        </div>
+        <div id="link-size-slider-button-container" class="bottom-main-slider-button-container">
+          <div id="link-size-slider-button">
+            <button id="link-size-slider-button-up">∧</button>
+            <br>
+            <button id="link-size-slider-button-down">∨</button>
+          </div>
+          <div id="link-size-slider-button-name">
+            E<br>size
+          </div>
+        </div>
+        <div id="node-opacity-slider-button-container" class="bottom-main-slider-button-container">
+          <div id="node-opacity-slider-button">
+            <button id="node-opacity-slider-button-up">∧</button>
+            <br>
+            <button id="node-opacity-slider-button-down">∨</button>
+          </div>
+          <div id="node-opacity-slider-button-name">
+            V<br>opacity
+          </div>
+        </div>
+        <div id="link-opacity-slider-button-container" class="bottom-main-slider-button-container">
+          <div id="link-opacity-slider-button">
+            <button id="link-opacity-slider-button-up">∧</button>
+            <br>
+            <button id="link-opacity-slider-button-down">∨</button>
+          </div>
+          <div id="link-opacity-slider-button-name">
+            E<br>opacity
+          </div>
+        </div>
+      </div>
+      <div id="bottom-main-slider-container">
+        <div class="bottom-main-slider" id="node-size-slider-container">
+          <span class="bottom-slider-name">node size</span>
+          <span class="bottom-slider-slider">
+            <div id="node-size-slider"></div>
+          </span>
+        </div>
+        <div class="bottom-main-slider" id="link-size-slider-container">
+          <span class="bottom-slider-name">link size</span>
+          <span class="bottom-slider-slider">
+            <div id="link-size-slider"></div>
+          </span>
+        </div>
+        <div class="bottom-main-slider" id="node-opacity-slider-container">
+          <span class="bottom-slider-name">node opacity</span>
+          <span class="bottom-slider-slider">
+            <div id="node-opacity-slider"></div>
+          </span>
+        </div>
+        <div class="bottom-main-slider" id="link-opacity-slider-container">
+          <span class="bottom-slider-name">link opacity</span>
+          <span class="bottom-slider-slider">
+            <div id="link-opacity-slider"></div>
+          </span>
+        </div>
+      </div>
+      <div id="bottom-separate-slider-container">
+        <div class="bottom-separate-slider" id="horizontal-stretch-slider">
+          <span class="bottom-slider-name">horizontal stretch</span>
+          <span class="bottom-slider-slider">
+            <span class="global-graph-slider">
+              <div id="global-horizontal-stretch-slider"></div>
+            </span>
+            <span class="local-graph-slider">
+              <div id="local-horizontal-stretch-slider"></div>
+            </span>
+            <span class="local-sub-graph-slider">
+              <div id="local-sub-horizontal-stretch-slider"></div>
+            </span>
+          </span>
+        </div>
+        <div class="bottom-separate-slider" id="vertical-stretch-slider">
+          <span class="bottom-slider-name">vertical stretch</span>
+          <span class="bottom-slider-slider">
+            <span class="global-graph-slider">
+              <div id="global-vertical-stretch-slider"></div>
+            </span>
+            <span class="local-graph-slider">
+              <div id="local-vertical-stretch-slider"></div>
+            </span>
+            <span class="local-sub-graph-slider">
+              <div id="local-sub-vertical-stretch-slider"></div>
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+    <div id="buttom-save-container">
+      <button id="buttom-save-labels-button">Save Labels</button>
+      <button id="buttom-label-summaries-button">Label Summaries</button>
+    </div>
+  </div>
+  <div id="version-container">
+    v1.1.220712
+  </div>
+  <div id="strata-container">
+    <iframe id="strata" src=http://euler.dimacs.rutgers.edu:8888/?data=nodatasimplegraph width="100%"
+      height="100%"></iframe>
+  </div>
+  <div id="user-info-dialog" title="User Information">
+    <p>The specially marked sphere in the minimap corresponds to a bucket of connected components. <em>The grid map next to it depicts glyphs that can be used to access connected fixed points of specific range of sizes. </em> Each column corresponds to a fixed point value, and each row corresponds to a range of sizes.</p>
+
+    <p>The directed meta graph under the minimap encodes a spanning subgraph of the intersection graph of the buckets of connected fixed points. <em> The number of nodes in this meta graph is equal to the number of glyphs in the grid map.</em> The direction of edges is from lower fixed points to higher fixed points. </p>
+    
+    <p><em><u>A particular fixed point can be chosen by click-selecting a glyph in the grid map or the corresponding node in the meta DAG.</u></em></p>
+  </div>
+</body>
+
+</html>
