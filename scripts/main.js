@@ -1,13 +1,13 @@
-import * as THREE from '../node_modules/three/build/three.module.js';
+import * as THREE from '../lib/three/build/three.module.js';
 import {
   TrackballControls
-} from '../node_modules/three/examples/jsm/controls/TrackballControls.js';
+} from '../lib/three/examples/jsm/controls/TrackballControls.js';
 import {
   OrbitControls
-} from "../node_modules/three/examples/jsm/controls/OrbitControls.js";
+} from "../lib/three/examples/jsm/controls/OrbitControls.js";
 import {
   GUI
-} from '../node_modules/three/examples/jsm/libs/dat.gui.module.js';
+} from '../lib/three/examples/jsm/libs/dat.gui.module.js';
 import {
   OBJLoader
 } from '../three.js/examples/jsm/loaders/OBJLoader.js';
@@ -17,12 +17,18 @@ import {
 import * as LH from './parts/lighthouse.js'
 import * as BUILD from './parts/building.js';
 import * as PATH from './parts/path.js';
-import * as CM from './parts/cityMap.js';
+import * as CM from './parts/cityMap_min.js';
 import { DataTexture3D } from '../three.js/build/three.module.js';
+import { SVGLoader } from '../../lib/three/examples/jsm/loaders/SVGLoader.js'
 
-const hostAddress = 'http://addressSample:8080'
+const hostAddress = 'http://addressSample:18000'
+const localHost = `http://addressSample:18000/`;
+let demoModeFlag = false;
 
 let addBuildings = true, addDagViews = true, onDagViews = false;
+let vicinityFlag = false;
+let mallVicinityFlag = false;
+let vicinitySize = 1;
 
 THREE.Cache.enabled = true;
 const scenes = [];
@@ -108,13 +114,38 @@ let mouseOnGlyph = false;
 
 let transitionContinueFlag = true;
 
-const data_list = ['got', 'cit-Patents', 'starwars'];
+let animateStartFlag = false;
+
+const data_list = ['got', 'Fabula', 'starwars'];
 const V = {'com-friendster':65608366, 'movies':218052, 'cit-Patents':3774768};
 const E = {'com-friendster':1806067135, 'movies':115050370, 'cit-Patents':16518947};
 const connected = {'com-friendster':true, 'movies':false, 'cit-Patents':false};
 let land_obj = "../models/flat_island.obj";
 let ground_texture_file = "../textures/ground_2.jpg";
 let water_texture_file = "../textures/waternormals.jpg";
+
+let bird_texture_file = "../textures/bird.jpg";
+let horse_texture_file = "../textures/horse.jpg";
+let gorilla_texture_file = "../textures/gorilla.jpg";
+let danger_texture_file = "../textures/danger.jpg";
+let mall_texture_file = "../textures/mall.jpg"; 
+let strata_texture_file = "../textures/strata.jpg"; 
+let fpviewer_texture_file = "../textures/fpviewer.jpg"; 
+let vicinity_texture_file = "../textures/vicinity.jpg"; // after change, need to update textureNum in buildingTextureLoader
+let rawDag_texture_file = "../textures/raw.svg";
+let edgeCutDag_texture_file = "../textures/edgeCut.svg";
+let waveDag_texture_file = "../textures/wave.svg";
+let font_file = "../textures/helvetiker_regular.typeface.json";
+let buildingTextureLoadedFlag = false;
+let buildingTexture = {};
+
+const TH_DAG = 32768;
+const TH_SUBDAG = 16384;
+let TH_STRATA = 8192;
+const TH_STRATA_FULL = 16384
+const TH_FPVIEWER = 131072;
+const TH_FPVIEWER_BUILDING = 65536;
+
 let manager = new THREE.LoadingManager();
 // let y_scale = 50; // scale up the height of building
 let last = [-187.86920742571192, -69.84011743155536]
@@ -168,56 +199,57 @@ let params = {
   goInnerView: function() {
     let bottom = document.getElementById("inner-view").offsetTop;
     let selected_building = root_dropdown.getValue();
+    goInsideBuilding(selected_building);
 
-    let wavemap_ID_ID_freq = selected_building.split('_');
-    let file;
-    let validCheck = true;
-    let forkView = false;
-    let nameSuffix = '';
-    const validSize = 262144;
-    if (!mapWaveSelection) {
-      // console.log(dagSizeDict)
-      const key = 'dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2]
-      if (dagSizeDict.hasOwnProperty(key)) {
-        console.log(dagSizeDict[key])
-        if (parseInt(dagSizeDict[key]) > parseInt(validSize)) {
-          validCheck = false;
-          alert('Please select a wave');
-        }
-      }
-      file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2] + '.json';
-    } else {
-      // console.log(dagSizeDict)
-      console.log(dagSizeDict['dagmeta_' + mapWaveSelectedName])
-      if (parseInt(dagSizeDict['dagmeta_' + mapWaveSelectedName]) > parseInt(validSize)) {
-        console.log('frag fork')
-        // validCheck = false;
-        forkView = true;
-        nameSuffix = 'f'+mapWaveSelectedName.split('w')[1];
-        file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + mapWaveSelectedName.replace('w', 'f') + '.json'
-      } else {
-        nameSuffix = 'w'+mapWaveSelectedName.split('w')[1];
-        file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + mapWaveSelectedName + '.json';
-      }
-    }
-    mapWaveSelection = false;
-    if (validCheck) {
-      onDagViews = true;
-      inner_view_history.push(selected_building);
-      window.scrollTo(0,bottom);
-      console.log(inner_view_history);
-      LH.updateDropdown(visited_inner_views, inner_view_history);
-      visited_inner_views.setValue(inner_view_history[inner_view_history.length-1]);
-      arrow_objects[selected_building].visible = true;
+    // let wavemap_ID_ID_freq = selected_building.split('_');
+    // let file;
+    // let validCheck = true;
+    // let forkView = false;
+    // let nameSuffix = '';
+    // const validSize = 262144;
+    // if (!mapWaveSelection) {
+    //   // console.log(dagSizeDict)
+    //   const key = 'dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2]
+    //   if (dagSizeDict.hasOwnProperty(key)) {
+    //     console.log(dagSizeDict[key])
+    //     if (parseInt(dagSizeDict[key]) > parseInt(validSize)) {
+    //       validCheck = false;
+    //       alert('Please select a wave');
+    //     }
+    //   }
+    //   file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2] + '.json';
+    // } else {
+    //   // console.log(dagSizeDict)
+    //   console.log(dagSizeDict['dagmeta_' + mapWaveSelectedName])
+    //   if (parseInt(dagSizeDict['dagmeta_' + mapWaveSelectedName]) > parseInt(validSize)) {
+    //     console.log('frag fork')
+    //     // validCheck = false;
+    //     forkView = true;
+    //     nameSuffix = 'f'+mapWaveSelectedName.split('w')[1];
+    //     file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + mapWaveSelectedName.replace('w', 'f') + '.json'
+    //   } else {
+    //     nameSuffix = 'w'+mapWaveSelectedName.split('w')[1];
+    //     file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + mapWaveSelectedName + '.json';
+    //   }
+    // }
+    // mapWaveSelection = false;
+    // if (validCheck) {
+    //   onDagViews = true;
+    //   inner_view_history.push(selected_building);
+    //   window.scrollTo(0,bottom);
+    //   console.log(inner_view_history);
+    //   LH.updateDropdown(visited_inner_views, inner_view_history);
+    //   visited_inner_views.setValue(inner_view_history[inner_view_history.length-1]);
+    //   arrow_objects[selected_building].visible = true;
       
-      console.log("******** " + selected_building + " *********");
-      console.log("******** " + paramsL.dataSet + " *********");
+    //   console.log("******** " + selected_building + " *********");
+    //   console.log("******** " + paramsL.dataSet + " *********");
 
-      console.log("Loading: ", file);
-      loadFile2(file, forkView, nameSuffix);
-      loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
-    }
-    onDagViews = false;
+    //   console.log("Loading: ", file);
+    //   loadFile2(file, forkView, nameSuffix);
+    //   loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
+    // }
+    // onDagViews = false;
   },
   goOuterView: function() {
     let top = document.getElementById("city-view".offsetTop);
@@ -276,7 +308,7 @@ let building_params = {
 };
 let water;
 const scene_city_element = document.getElementById("city-element");
-const scene_city_description = document.getElementById("city-description");
+const scene_city_description = document.getElementById("city-description-text");
 let views, lighthouse_view, city_view;
 
 let overlay_slider, overlay_circle_controller, overlay_reset_camera, overlay_zoom_in, overlay_zoom_out;
@@ -304,7 +336,15 @@ function init() {
   canvas2.height = 128;
 
   scene_city.userData.view = views[1];
-  scene_city.background = new THREE.Color('skyblue');
+  if(vicinityFlag) {
+    if (mallVicinityFlag) {
+      scene_city.background = new THREE.Color('skyblue');
+    } else {
+      scene_city.background = new THREE.Color(0xdaf7be);
+    }
+  } else {
+    scene_city.background = new THREE.Color('skyblue');
+  }
 
   // city map
   console.log(buildingMap_file);
@@ -495,7 +535,8 @@ function init() {
   // environment lights
   light_objects = {
     ambientLight: new THREE.AmbientLight(0x404040),
-    dayLights: [new THREE.DirectionalLight(0xffffff, 0.8), new THREE.DirectionalLight(0xffffff, 0.5)],
+    // dayLights: [new THREE.DirectionalLight(0xffffff, 0.8), new THREE.DirectionalLight(0xffffff, 0.5)],
+    dayLights: [new THREE.DirectionalLight(0xffffff, 0.8), new THREE.DirectionalLight(0xffffff, 0.5), new THREE.DirectionalLight(0xffffff, 0.5), new THREE.DirectionalLight(0xffffff, 0.5), new THREE.DirectionalLight(0xffffff, 0.5)],
     nightLight: new THREE.DirectionalLight(0xffffff, 0.01),
     // spotLight: new THREE.SpotLight(0xffffff, 0.6, 0, Math.PI / 2, 1, 1),
     selectionLights:[]
@@ -503,6 +544,9 @@ function init() {
   scene_city.add(light_objects['ambientLight']);
   light_objects.dayLights[0].position.set(1000, 1000, 1000);
   light_objects.dayLights[1].position.set(-500, 500, 0);
+  light_objects.dayLights[2].position.set(500, 500, 0);
+  light_objects.dayLights[3].position.set(500, -500, 0);
+  light_objects.dayLights[4].position.set(-500, -500, 0);
   light_objects.dayLights.forEach(object => scene_city.add(object));
   // light_objects.spotLight.position.set(0, 30, 0);
   // scene_city.add(light_objects.spotLight);
@@ -792,6 +836,7 @@ function init() {
     map: groundNormal
   });
   groundObjLoader(land_obj, groundMat);
+  buildingTextureLoader()
 
   // water
   let waterGeo = new THREE.BoxBufferGeometry(5000, 50, 5000);
@@ -808,6 +853,14 @@ function init() {
   let waterMesh = new THREE.Mesh(waterGeo, waterMat);
   waterMesh.position.y = -50;
   scene_city.add(waterMesh);
+
+  if (vicinityFlag) {
+    if (mallVicinityFlag) {
+      waterMesh.visible = true;
+    } else {
+      waterMesh.visible = false;
+    }
+  }
 
   city_view.addEventListener('mousemove',onMouseMove);
   city_view.addEventListener('mousedown',onMouseDown);
@@ -875,7 +928,9 @@ function init() {
   guiL.close();
 }
 
-function zoomAtBuilding(selected_building){  
+function zoomAtBuilding(selected_building){
+  transitionContinueFlag = true;
+
   let camera = scene_city.userData.camera;  
   let initialCameraPosition = camera.position;
   let initialTargetPosition = scene_city.userData.controls.target;
@@ -920,6 +975,9 @@ function groundObjLoader(obj_url, obj_material) {
         object.position.set(-30, -9, 0);
       }
       ground_object = object;
+      if (vicinityFlag) {
+        ground_object.visible = false;
+      }
       scene_city.add(object);
     },
     function(xhr) {
@@ -930,6 +988,129 @@ function groundObjLoader(obj_url, obj_material) {
     }
   );
 }
+
+function buildingTextureLoader() {
+  let loader = new THREE.FontLoader();
+  let textureCnt = 0;
+  const textureNum = 12;
+  loader.load(font_file, function (font) {
+    buildingTexture.font = font;
+    textureCnt++;
+    if (textureCnt === textureNum) {
+      buildingTextureLoadedFlag = true;
+    }
+  })
+
+  loader = new SVGLoader();
+  loader.load(rawDag_texture_file, function (svg) {
+    const paths = svg.paths;
+    buildingTexture.rawDag = paths;
+    textureCnt++;
+    if (textureCnt === textureNum) {
+      buildingTextureLoadedFlag = true;
+    }
+  })
+  loader.load(edgeCutDag_texture_file, function (svg) {
+    const paths = svg.paths;
+    buildingTexture.edgeCutDag = paths;
+    textureCnt++;
+    if (textureCnt === textureNum) {
+      buildingTextureLoadedFlag = true;
+    }
+  })
+  loader.load(waveDag_texture_file, function (svg) {
+    const paths = svg.paths;
+    buildingTexture.waveDag = paths;
+    textureCnt++;
+    if (textureCnt === textureNum) {
+      buildingTextureLoadedFlag = true;
+    }
+  })
+
+  new THREE.TextureLoader().load(gorilla_texture_file, function (img) {
+    buildingTexture.gorilla = new THREE.MeshBasicMaterial({ map: img });
+    textureCnt++;
+    if (textureCnt === textureNum) {
+      buildingTextureLoadedFlag = true;
+    }
+  });
+  new THREE.TextureLoader().load(horse_texture_file, function (img) {
+    buildingTexture.horse = new THREE.MeshBasicMaterial({ map: img });
+    textureCnt++;
+    if (textureCnt === textureNum) {
+      buildingTextureLoadedFlag = true;
+    }
+  });
+  new THREE.TextureLoader().load(bird_texture_file, function (img) {
+    buildingTexture.bird = new THREE.MeshBasicMaterial({ map: img });
+    textureCnt++;
+    if (textureCnt === textureNum) {
+      buildingTextureLoadedFlag = true;
+    }
+  });
+
+  new THREE.TextureLoader().load(strata_texture_file, function (img) {
+    buildingTexture.strata = new THREE.MeshBasicMaterial({ map: img });
+    textureCnt++;
+    if (textureCnt === textureNum) {
+      buildingTextureLoadedFlag = true;
+    }
+  });
+
+  new THREE.TextureLoader().load(fpviewer_texture_file, function (img) {
+    buildingTexture.fpviewer = new THREE.MeshBasicMaterial({ map: img });
+    textureCnt++;
+    if (textureCnt === textureNum) {
+      buildingTextureLoadedFlag = true;
+    }
+  });
+
+  new THREE.TextureLoader().load(vicinity_texture_file, function (img) {
+    buildingTexture.vicinity = new THREE.MeshBasicMaterial({ map: img });
+    textureCnt++;
+    if (textureCnt === textureNum) {
+      buildingTextureLoadedFlag = true;
+    }
+  });
+
+  new THREE.TextureLoader().load(mall_texture_file, function (img) {
+    buildingTexture.mall = new THREE.MeshBasicMaterial({ map: img });
+    textureCnt++;
+    if (textureCnt === textureNum) {
+      buildingTextureLoadedFlag = true;
+    }
+  });
+
+  new THREE.TextureLoader().load(danger_texture_file, function (img) {
+    buildingTexture.danger = new THREE.MeshBasicMaterial({ map: img });
+    textureCnt++;
+    if (textureCnt === textureNum) {
+      buildingTextureLoadedFlag = true;
+    }
+  });
+}
+
+// function extrudeSVG(paths) {
+//   const svgGroup = new THREE.Group();
+//   paths.forEach((path, i) => {
+//     const shapes = SVGLoader.createShapes(path);
+//     // Each path has array of shapes
+//     shapes.forEach((shape, j) => {
+//       // Finally we can take each shape and extrude it
+//       const geometry = new THREE.ExtrudeGeometry(shape, {
+//         depth: 20,
+//         bevelEnabled: false
+//       });
+
+//       geometry.computeVertexNormals();
+
+//       // Create a mesh and add it to the group
+//       const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: 0x000000 }));
+
+//       svgGroup.add(mesh);
+//     });
+//   })
+// }
 
 function loadFile(file, manager) {
   let loader = new THREE.FileLoader(manager);
@@ -1100,9 +1281,77 @@ function loadedJSON(evt) {
     let sum = sum_obj(lighthouseData);
   }else if(filename.includes("summary")){
     summaryData = JSON.parse(fileString);
-    scene_city_description.innerText = objToString(summaryData);
+    scene_city_description.appendChild(summaryFormat(summaryData));
     bucketNum = summaryData.buckets;
+    console.log(scene_city_description.offsetTop)
+    console.log(scene_city_description.offsetLeft)
+    const cityTourButton =  document.getElementById('city-tour-button-div');
+    cityTourButton.style.top = scene_city_description.offsetTop + 4;
+    cityTourButton.style.left = (scene_city_description.offsetLeft - cityTourButton.offsetWidth) / 2;
   }
+}
+
+function summaryFormat(summaryData) {
+  function createTextSpan(text) {
+    const tempSpan = document.createElement('span');
+    tempSpan.innerText = text
+    return tempSpan;
+  }
+  const retval = document.createElement('span');
+  retval.appendChild(createTextSpan('| '));
+  for (const [key, val] of Object.entries(summaryData)) {
+    if (key === 'vertices') {
+      retval.appendChild(createTextSpan(`V: ${val} | `));
+    } else if (key === 'edges') {
+      retval.appendChild(createTextSpan(`E: ${val} | `));
+    } else if (key === 'dataset') {
+      retval.appendChild(createTextSpan(`data: ${val} | `));
+      const vicinityInfo = document.getElementById('vicinity-info');
+      vicinityInfo.innerHTML = '';
+      if (vicinityFlag) {
+        if (mallVicinityFlag) {
+          vicinityInfo.innerText = 'Mini City Room\n';
+          const splitName = val.split('-');
+          const buildingName = splitName.slice(0, splitName.length - 1).join('-');
+          const roomName = splitName[splitName.length - 1];
+          const buildingNameElem = document.createElement('span');
+          buildingNameElem.innerText = `BLDG ${buildingName}\n`;
+          buildingNameElem.style.fontSize = 'large';
+          const roomNameElem = document.createElement('span');
+          roomNameElem.innerText = `Room ${roomName}\n |V|: ${summaryData.vertices} |E|: ${summaryData.edges}`;
+          roomNameElem.style.fontSize = 'large';
+          vicinityInfo.appendChild(buildingNameElem);
+          vicinityInfo.appendChild(roomNameElem);
+        } else {
+          vicinityInfo.innerText = 'Vicinity Park\n';
+          const splitName = val.split('-');
+          const buildingName = splitName.slice(0, splitName.length - 2).join('-');
+          const parkName = splitName.slice(splitName.length - 2).join('-');
+          const buildingNameElem = document.createElement('span');
+          buildingNameElem.innerText = `BLDG ${buildingName}\n`;
+          buildingNameElem.style.fontSize = 'large';
+          const parkNameElem = document.createElement('span');
+          parkNameElem.innerText = `Park ${parkName} |V|: ${summaryData.vertices} |E|: ${summaryData.edges}`;
+          parkNameElem.style.fontSize = 'large';
+          vicinityInfo.appendChild(buildingNameElem);
+          vicinityInfo.appendChild(parkNameElem);
+        }
+      }
+    } else if (key === 'displayed_con_fixpoints(buildings)') {
+      retval.append(createTextSpan(`displayed_con_buildings: ${val} | `))
+      vicinitySize = parseInt(val);
+    } else if (key === 'con_fixpoints') {
+      const lccSpan = createTextSpan(`${key}: ${val} | `);
+      lccSpan.style.zIndex = 8;
+      let lcc_dist_img = document.createElement("img");
+      lcc_dist_img.src = data_dir+paramsL.dataSet+"_lcc_dist.png";
+      lccSpan.appendChild(lcc_dist_img);
+      retval.append(lccSpan)
+    } else {
+      retval.appendChild(createTextSpan(`${key}: ${val} | `));
+    }
+  }
+  return retval;
 }
 
 function objToString (obj) {
@@ -1136,16 +1385,45 @@ function loaded(evt) {
   let lines = fileString.split('\n');
   let element_count = (lines[0].split(' ')).length;
   // need to update when SPIRAL.txt updates
-  // console.log(`loaded file with ${element_count} elements`)
+  console.log(`loaded file with ${element_count} elements`)
   // console.log(lines[0].split(' '))
   if (element_count == 12) {
     console.log("loaded: SPIRAL file");
-    let spiral = BUILD.loadSpiral(scene_city, lines, city_all, grass_objects, bush_objects, city_tracking, x_scale);
+    let spiral = BUILD.loadSpiral(scene_city, lines, city_all, grass_objects, bush_objects, city_tracking, x_scale, glyphBack_objects, buildingTexture);
     city_all = spiral.all;
     city_tracking = spiral.tracking;
     grass_objects = spiral.grass;
     bush_objects = spiral.bush;
     city_to_load = spiral.city_count;
+    glyphBack_objects = spiral.glyphBack_objects;
+    console.log(city_to_load)
+    for (const [key, value] of Object.entries(city_all)) {
+      if (key.slice(0, 8) !== 'wavemap_') {
+        continue;
+      }
+      let layer_name = key;
+      city_list.push(layer_name);
+      if (addBuildings) {
+        let color_file = source_dir + layer_name + "_color.txt";
+        let floor_file = source_dir + layer_name + "_floor.txt";
+        loadFile(color_file, manager);
+        loadFile(floor_file, manager);
+      }
+    }
+    // scene_city_description.innerText = scene_city_description.innerText.concat(", # buildings: "+city_to_load);
+    loadVoronoiFile(voronoi_file, manager);
+    loadVoronoiFile(neighbors_file, manager);
+    loadMetaFile(meta_file, manager);
+
+  } else if (element_count >= 13 && element_count <= 16) {
+    console.log("loaded: SPIRAL file");
+    let spiral = BUILD.loadSpiral_dagType(scene_city, lines, city_all, grass_objects, bush_objects, city_tracking, x_scale, glyphBack_objects, buildingTexture, [TH_STRATA_FULL, TH_FPVIEWER]);
+    city_all = spiral.all;
+    city_tracking = spiral.tracking;
+    grass_objects = spiral.grass;
+    bush_objects = spiral.bush;
+    city_to_load = spiral.city_count;
+    glyphBack_objects = spiral.glyphBack_objects;
     console.log(city_to_load)
     for (const [key, value] of Object.entries(city_all)) {
       if (key.slice(0, 8) !== 'wavemap_') {
@@ -1193,7 +1471,7 @@ function dayAndNight(isNight, light_objects, window_objects) {
   } else {
     scene_city.background = new THREE.Color('skyblue');
     light_objects.dayLights.forEach(object => object.visible = true);
-    light_objects.selectionLights.forEach(object => object.visible = true);
+    light_objects.selectionLights.forEach(object => object.visible = false);
     light_objects.nightLight.visible = false;
     // light_objects.spotLight.visible = true;
     window_objects.forEach(object => object.visible = false);
@@ -1230,17 +1508,37 @@ function updateSize() {
     renderer.setSize( width, height, false );
   }
   // scenes.forEach(scene => scene.userData.controls.handleResize());
+
+  const cityTourButton =  document.getElementById('city-tour-button-div');
+  cityTourButton.style.top = scene_city_description.offsetTop + 4;
+  cityTourButton.style.left = (scene_city_description.offsetLeft - cityTourButton.offsetWidth) / 2;
 }
 
 function animate() {
+  if (!animateStartFlag) {
+    animateStartFlag = true;
+    animate_core();
+  }
+}
+
+function animate_core() {
+  if (!animateStartFlag) {
+    // console.log(animateStartFlag)
+    return;
+  }
   updateSize();
-  requestAnimationFrame(animate);
+  const fpsLimit = 30;
+  setTimeout(() => {
+    requestAnimationFrame(animate_core);
+  }, 1000 / fpsLimit);
+  
   scenes.forEach(scene => scene.userData.controls.update());
   // stats.update();
   // console.log(city_to_load)
-  if (city_to_load > 0 && addBuildings && glyphDoneFlag) { // glyphDoneFlag for adding map glyphs to building flags
+  if (city_to_load > 0 && addBuildings && glyphDoneFlag && lighthouseDone && buildingTextureLoadedFlag) { // glyphDoneFlag for adding map glyphs to building flags // lighthouseDone for peelvalue // buildingTextureLoadedFlag for fonts and icons
     console.log("animate: run createCityMeshes()");
-    let result = BUILD.createCityMeshes(scene_city, objects, city_all, city_tracking, ceil_objects, middle_objects, truss_objects, window_objects, flag_objects, flag_objects_new, arrow_objects, src_objects, tgt_objects, glyph_objects, glyphBack_objects, city_to_load, y_scale, paramsL.dataSet, params.ceilVisible, params.isNight);
+    console.log(first_key_color_dict)
+    let result = BUILD.createCityMeshes(scene_city, objects, city_all, city_tracking, ceil_objects, middle_objects, truss_objects, window_objects, flag_objects, flag_objects_new, arrow_objects, src_objects, tgt_objects, glyph_objects, glyphBack_objects, city_to_load, y_scale, paramsL.dataSet, params.ceilVisible, params.isNight, false, first_key_color_dict, buildingTexture);
     scene_city = result.scene;
     city_all = result.all;
     city_tracking = result.tracking;
@@ -1270,9 +1568,177 @@ function animate() {
         buildingCoordMax = Math.abs(city_all[buildingName].coords[1])
       }
     }
+    let birdNum = 0;
+    let horseNum = 0
+    let gorillaNum = 0;
+    for (const buildingName in city_all.graph) {
+      if (city_all[buildingName].dagType === 0) {
+        birdNum ++;
+      } else if (city_all[buildingName].dagType === 1) {
+        horseNum ++;
+      } else if (city_all[buildingName].dagType === 2) {
+        gorillaNum ++;
+      }
+    }
+    document.getElementById('bird-number').innerText = birdNum;
+    document.getElementById('horse-number').innerText = horseNum;
+    document.getElementById('gorilla-number').innerText = gorillaNum;
+
+    document.getElementById('bird-container').onclick = () => {
+      d3.selectAll(".spiralHighLight").attr("visibility", "hidden");
+      d3.selectAll(".buildingHighLight").attr("visibility", "hidden");
+      clearBuildingArrow(arrow_objects)
+      const buildingList = Object.keys(city_all.weightedGraph).filter(d => city_all[d].dagType == 0);
+      if (buildingList.length === 0) {
+        return;
+      }
+
+      const largestBuilding = buildingList.sort((a, b) => -(city_all[a].E - city_all[b].E))[0];
+      root_dropdown.setValue(largestBuilding);
+      changeLHHighLight(largestBuilding);
+
+      updateCityLight([largestBuilding])
+
+      buildingList.forEach(buildingName => {
+        // addRoadNetwork(buildingName);
+        CM.enableHighLight(city_all.building2BucketPeel, buildingName, false);
+        showBuildingArrow(buildingName, false);
+      })
+    }
+
+    document.getElementById('horse-container').onclick = () => {
+      d3.selectAll(".spiralHighLight").attr("visibility", "hidden");
+      d3.selectAll(".buildingHighLight").attr("visibility", "hidden");
+      clearBuildingArrow(arrow_objects)
+      const buildingList = Object.keys(city_all.weightedGraph).filter(d => city_all[d].dagType == 1);
+      if (buildingList.length === 0) {
+        return;
+      }
+
+      const largestBuilding = buildingList.sort((a, b) => -(city_all[a].E - city_all[b].E))[0];
+      root_dropdown.setValue(largestBuilding);
+      changeLHHighLight(largestBuilding);
+
+      updateCityLight([largestBuilding])
+
+      buildingList.forEach(buildingName => {
+        // addRoadNetwork(buildingName);
+        CM.enableHighLight(city_all.building2BucketPeel, buildingName, false);
+        showBuildingArrow(buildingName, false);
+      })
+    }
+
+    document.getElementById('gorilla-container').onclick = () => {
+      d3.selectAll(".spiralHighLight").attr("visibility", "hidden");
+      d3.selectAll(".buildingHighLight").attr("visibility", "hidden");
+      clearBuildingArrow(arrow_objects)
+      const buildingList = Object.keys(city_all.weightedGraph).filter(d => city_all[d].dagType == 2);
+      if (buildingList.length === 0) {
+        return;
+      }
+
+      const largestBuilding = buildingList.sort((a, b) => -(city_all[a].E - city_all[b].E))[0];
+      root_dropdown.setValue(largestBuilding);
+      changeLHHighLight(largestBuilding);
+
+      updateCityLight([largestBuilding])
+
+      buildingList.forEach(buildingName => {
+        // addRoadNetwork(buildingName);
+        CM.enableHighLight(city_all.building2BucketPeel, buildingName, false);
+        showBuildingArrow(buildingName, false);
+      })
+    }
+
+
     // console.log(buildingCoordMax)
     let groundScale = (buildingCoordMax + 100) / 1750 * 1.25;
-    ground_object.scale.set(groundScale, 0.1, groundScale);
+    if (vicinityFlag) {
+      const grassRadius = groundScale * 1750;
+      ground_object.visible = false;
+      if (mallVicinityFlag) {
+        let grassFace = 4;
+        let grassGeo = new THREE.CylinderBufferGeometry(grassRadius, grassRadius, 50, grassFace);
+        grassGeo.translate(0, -26, 0);
+        let groundNormal = new THREE.TextureLoader().load(ground_texture_file);
+        groundNormal.wrapS = THREE.RepeatWrapping;
+        groundNormal.wrapT = THREE.RepeatWrapping;
+        groundNormal.repeat.set(10, 10);
+        groundNormal.rotation = 10;
+        let groundMat = new THREE.MeshStandardMaterial({
+          map: groundNormal
+        });
+        let wallMat = new THREE.MeshStandardMaterial({ color: 0xcccccc });
+        ground_object = new THREE.Mesh(grassGeo, [wallMat, groundMat]);
+        console.log(ground_object)
+        // ground_object.visible = true;
+        ground_object.position.set(0, 0, 0);
+        scene_city.add(ground_object);
+
+        const line_mat = new THREE.LineBasicMaterial({
+          color: 0x000000
+        });
+        const line_geo1 = new THREE.BufferGeometry().setFromPoints( [new THREE.Vector3( grassRadius, 0, 0 ), new THREE.Vector3( grassRadius, 1000, 0 )] );
+        const line_geo2 = new THREE.BufferGeometry().setFromPoints( [new THREE.Vector3( -grassRadius, 0, 0 ), new THREE.Vector3( -grassRadius, 1000, 0 )] );
+        const line_geo3 = new THREE.BufferGeometry().setFromPoints( [new THREE.Vector3( 0, 0, grassRadius ), new THREE.Vector3( 0, 1000, grassRadius )] );
+        const line_geo4 = new THREE.BufferGeometry().setFromPoints( [new THREE.Vector3( 0, 0, -grassRadius ), new THREE.Vector3( 0, 1000, -grassRadius )] );
+        const line1 = new THREE.Line( line_geo1, line_mat );
+        const line2 = new THREE.Line( line_geo2, line_mat );
+        const line3 = new THREE.Line( line_geo3, line_mat );
+        const line4 = new THREE.Line( line_geo4, line_mat );
+        scene_city.add( line1 );
+        scene_city.add( line2 );
+        scene_city.add( line3 );
+        scene_city.add( line4 );
+      } else {
+        let grassFace = Math.log2(8 * (vicinitySize - 1));
+        let grassGeo = new THREE.CylinderBufferGeometry(grassRadius, grassRadius, 0.2, grassFace);
+        grassGeo.translate(0, -1, 0);
+        let grassMat = new THREE.MeshStandardMaterial({ color: 0x7cfc00 });
+        ground_object = new THREE.Mesh(grassGeo, grassMat);
+        console.log(ground_object)
+        // ground_object.visible = true;
+        ground_object.position.set(0, 0, 0);
+        scene_city.add(ground_object);
+        
+        let groundGeo = new THREE.CylinderBufferGeometry(grassRadius * 1.5, grassRadius * 1.5, 0.2, 32);
+        groundGeo.translate(0, -2, 0);
+        let groundNormal = new THREE.TextureLoader().load(ground_texture_file);
+        groundNormal.wrapS = THREE.RepeatWrapping;
+        groundNormal.wrapT = THREE.RepeatWrapping;
+        groundNormal.repeat.set(10, 10);
+        groundNormal.rotation = 10;
+        let groundMat = new THREE.MeshStandardMaterial({
+          map: groundNormal
+        });
+        let base_obj = new THREE.Mesh(groundGeo, groundMat);
+        console.log(base_obj)
+        // base_obj.visible = true;
+        base_obj.position.set(0, 0, 0);
+        scene_city.add(base_obj);
+
+        const roadMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+        const roadGeo1 = new THREE.BoxGeometry(grassRadius * 1.5, 0.2, 20);
+        roadGeo1.rotateY(-Math.PI / 4);
+        roadGeo1.translate(Math.sqrt(2) * 0.375 * grassRadius, -1.5, Math.sqrt(2) * 0.375 * grassRadius);
+        const roadObj1 = new THREE.Mesh(roadGeo1, roadMat);
+        scene_city.add(roadObj1);
+        const roadGeo2 = new THREE.BoxGeometry(grassRadius * 1.5, 0.2, 20);
+        roadGeo2.rotateY(Math.PI);
+        roadGeo2.translate(-0.75 * grassRadius, -1.5, 0);
+        const roadObj2 = new THREE.Mesh(roadGeo2, roadMat);
+        scene_city.add(roadObj2);
+        const roadGeo3 = new THREE.BoxGeometry(grassRadius * 1.5, 0.2, 20);
+        roadGeo3.rotateY(Math.PI / 2);
+        roadGeo3.translate(0, -1.5, -0.75 * grassRadius);
+        const roadObj3 = new THREE.Mesh(roadGeo3, roadMat);
+        scene_city.add(roadObj3);
+
+        
+      }
+    } else {
+      ground_object.scale.set(groundScale, 0.1, groundScale);
+    }
     
     let end_time = new Date();
     let end_time_string = end_time.getMinutes() + ':' + end_time.getSeconds() + '.' + end_time.getMilliseconds();
@@ -1281,6 +1747,8 @@ function animate() {
     printTime = false;
 
     initOverlay();
+
+    checkServerCache();
     
     // let allowToWalkOnPath_FeatureFlag = false;
     // if(allowToWalkOnPath_FeatureFlag){       
@@ -1436,8 +1904,12 @@ function render() {
         origin = new THREE.Vector3( 0, 0, -1 );
       }else if(camera.position.z < (1.5 * min_coord.z)){
         origin = new THREE.Vector3( 0, 0, 1 );
+      } else {
+        origin = null;
       }
-      if(origin.dot(direction_vector) > 0){
+      // console.log(camera.position, max_coord, min_coord)
+      // console.log(origin)
+      if(origin == null || origin.dot(direction_vector) > 0){
         allowed = true;
       }
     }
@@ -1778,6 +2250,19 @@ function onMouseDown(event) {
   // console.log('glyph intersection', glyphIntersects)
   if (glyphBackIntersects.length > 0) {
     selected_glyphBack = glyphBackIntersects[0].object.layerName;
+    const wavemap_ID_ID_freq = selected_glyphBack.split('_')
+    httpPostAsync(JSON.stringify({
+      graphName: paramsL.dataSet,
+      layer: parseInt(wavemap_ID_ID_freq[1]),
+      lcc: parseInt(wavemap_ID_ID_freq[2]),
+      bucket: parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]),
+    }), localHost + 'city-vicinity', function(res) {
+      // console.log(res);
+      if (res.success) {
+        window.open(`${hostAddress}/?city=${res.name}`);
+      }
+      // window.open(res);
+    }, 'json')
     // console.log(selected_glyphBack);
     // if (selected_glyphBack === 'wavemap_10_68576_10') {
     //   window.open(`${hostAddress}/minicity_movies.html`);
@@ -1788,7 +2273,7 @@ function onMouseDown(event) {
     // if (selected_glyphBack === 'wavemap_9_25816_107') {
     //   window.open(`${hostAddress}/minicity_com-friendster.html`);
     // }
-    window.open(`${hostAddress}/minicity_${selected_glyphBack}.html`);
+    // window.open(`${hostAddress}/minicity_${selected_glyphBack}.html`);
   }
 }
 
@@ -2218,18 +2703,31 @@ async function rotateAtFlag(selected_building){
 
 function buildingTour(selected_building){ 
   console.log(`buildingTour for ${selected_building} Starting.`);
+  transitionContinueFlag = true;
   
-  return new Promise(resolve => {  
+  return new Promise(resolve => {
     zoomAtBuilding(selected_building)
-    .then(() => {      
-      return iterateCameraOverBuilding(selected_building);
+    .then(() => {
+      if (transitionContinueFlag) {
+        return iterateCameraOverBuilding(selected_building);
+      } else {
+        resolve();
+      }
     })  
-    .then(() => {      
-      return zoomAtBuildingFlag(selected_building);
+    .then(() => {
+      if (transitionContinueFlag) {
+        return zoomAtBuildingFlag(selected_building);
+      } else {
+        resolve();
+      }
     })
     .then(() => {
-      // return rotateAtBuilding(selected_building);
-      return rotateAtFlag(selected_building);
+      if (transitionCamera) {
+        // return rotateAtBuilding(selected_building);
+        return rotateAtFlag(selected_building);
+      } else {
+        resolve();
+      }
     })
     .then(() => {
       resolve();      
@@ -2274,6 +2772,15 @@ function walkOnPath(path, moveArrowBack){
   };
 
   function takeStep(path, index){
+    if (!transitionContinueFlag) {
+      drawTempPath(path, false, true);
+      if (moveArrowBack) {
+        changeLHHighLight(path[0]);
+        showBuildingArrow(path[0]);
+        CM.enableHighLight(city_all.building2BucketPeel, path[0], true);
+      }
+      return;
+    }
     if(index == path.length){
       toCityTopView();
       showTempPathUntil(tempPathNewStartIdx);
@@ -2322,13 +2829,33 @@ function walkOnPath(path, moveArrowBack){
   takeStep(path, index);
 }
 
-function tourOnPath(path, moveArrowBack){
+function tourOnPath(path, moveArrowBack, updateBestBuilding = false){
   transitionContinueFlag = true;
   if (moveArrowBack === null || moveArrowBack === undefined) {
     moveArrowBack = false;
   };
 
   function takeTourStep(path, index) {
+    if (!transitionContinueFlag) {
+      drawTempPath(path, false, true);
+      if (moveArrowBack) {
+        changeLHHighLight(path[0]);
+        showBuildingArrow(path[0]);
+        CM.enableHighLight(city_all.building2BucketPeel, path[0], true);
+
+        if (updateBestBuilding) {
+          if (index !== 0) {
+            const textElem = document.getElementById(`best_building_name_place_${index - 1}`);
+            textElem.style.color = null;
+            textElem.style.fontWeight = null;
+          }
+          const textElem = document.getElementById(`best_building_name_place_${0}`);
+          textElem.style.color = '#FF00FF';
+          textElem.style.fontWeight = "bold";
+        }
+      }
+      return;
+    }
     if (index == path.length) {
       toCityTopView();
       // showTempPathUntil(tempPathNewStartIdx);
@@ -2336,6 +2863,17 @@ function tourOnPath(path, moveArrowBack){
         changeLHHighLight(path[0]);
         showBuildingArrow(path[0]);
         CM.enableHighLight(city_all.building2BucketPeel, path[0], true);
+
+        if (updateBestBuilding) {
+          if (index !== 0) {
+            const textElem = document.getElementById(`best_building_name_place_${index - 1}`);
+            textElem.style.color = null;
+            textElem.style.fontWeight = null;
+          }
+          const textElem = document.getElementById(`best_building_name_place_${0}`);
+          textElem.style.color = '#FF00FF';
+          textElem.style.fontWeight = "bold";
+        }
       }
       return;
     } else {
@@ -2349,6 +2887,17 @@ function tourOnPath(path, moveArrowBack){
           }
           takeTourStep(path, ++index)
         });
+
+      if (updateBestBuilding) {
+        if (index !== 0) {
+          const textElem = document.getElementById(`best_building_name_place_${index - 1}`);
+          textElem.style.color = null;
+          textElem.style.fontWeight = null;
+        }
+        const textElem = document.getElementById(`best_building_name_place_${index}`);
+        textElem.style.color = '#FF00FF';
+        textElem.style.fontWeight = "bold";
+      }
     };
   };
   let index = 0;
@@ -2455,6 +3004,7 @@ function clearRoadNetwork() {
 }
 
 function addRoadNetwork(buildingName, disableOthers) {
+  cleanBestBuildingNameList();
   if (disableOthers === null || disableOthers === undefined) {
     disableOthers = true;
   };
@@ -2483,11 +3033,13 @@ function updateCityLight(buildingNameList, disableOthers) {
   if (disableOthers === true) {
     clearCityLight()
   };
+  console.log(buildingNameList.map(d => getBuidlingShortName(d)))
   const result = LH.updateSelectionLights(city_all, light_objects, buildingNameList.map(d => getBuidlingShortName(d)));
   light_objects = result.light_objects;
 }
 
 function clearTempPath() {
+  // cleanBestBuildingNameList();
   for (const pathObj of tempCityPathObjList) {
     scene_city.remove(pathObj);
   };
@@ -2507,7 +3059,7 @@ function drawTempPath(buildingList, hidden, disableOthers) {
   if (hidden === null || hidden === undefined) {
     hidden = true;
   };
-  tempCityPathObjList.push(... PATH.drawPath(city_all, buildingList));
+  tempCityPathObjList.push(... PATH.drawPathColor(city_all, buildingList, 0x000000));
   console.log(tempCityPathObjList)
   for (const pathObj of tempCityPathObjList) {
     scene_city.add(pathObj);
@@ -2593,13 +3145,118 @@ function goBestBuilding(statName) {
   console.log(buildingStatList);
   buildingStatList.sort((a, b) => -(a[1] - b[1]))
   // console.log(buildingStatList);
-  const bestList = buildingStatList.slice(0, parseInt(Math.ceil(Math.log2(buildingList.length)) / 2)).map(d => d[0]);
+  const bestList = buildingStatList.slice(0, parseInt(Math.ceil(Math.log2(buildingList.length)) / 1)).map(d => d[0]);
   console.log(bestList);
+
   updateCityLight(bestList);
   clearRoadNetwork();
-  drawTempPath(bestList);
 
-  tourOnPath(bestList, true);
+  initBestBuildingNameList(bestList, statName)
+
+  if (demoModeFlag) {
+    drawTempPath(bestList);
+    tourOnPath(bestList, true, true);
+    // this is a syn function, do not put any code after this line!
+  } else {
+    drawTempPath(bestList, false);
+    toCityTopView();
+    changeLHHighLight(bestList[0]);
+    showBuildingArrow(bestList[0]);
+    CM.enableHighLight(city_all.building2BucketPeel, bestList[0], true);
+    const textElem = document.getElementById(`best_building_name_place_${0}`);
+    textElem.style.color = '#FF00FF';
+    textElem.style.fontWeight = "bold";
+  }
+  
+}
+
+function cleanBestBuildingNameList() {
+  const containerElem = document.getElementById('best-building-name-list-container');
+  containerElem.innerHTML = '';
+  return containerElem;
+}
+
+function updateBestBuildingNameHighLight(index) {
+  const textNameList = document.getElementsByClassName('best_building_name');
+  console.log(textNameList, index);
+  for (let idx = 0; idx < textNameList.length; idx ++) {
+    if (idx === index) {
+      textNameList.item(idx).style.color = '#FF00FF';
+      textNameList.item(idx).style.fontWeight = "bold";
+    } else {
+      textNameList.item(idx).style.color = null;
+      textNameList.item(idx).style.fontWeight = null;
+    }
+  }
+}
+
+function initBestBuildingNameList(bestList, statName) {
+  const containerElem = cleanBestBuildingNameList();
+  console.log(containerElem)
+  if (statName === 'largest') {
+    const nameDiv = document.createElement("div");
+    nameDiv.style.fontWeight = 'bold';
+    nameDiv.style.position = 'relative';
+    nameDiv.style.left = '-20px'
+    nameDiv.innerText = `Largest buildings' FP value`
+    containerElem.appendChild(nameDiv)
+  } else if (statName === 'tallest') {
+    const nameDiv = document.createElement("div");
+    nameDiv.style.fontWeight = 'bold';
+    nameDiv.style.position = 'relative';
+    nameDiv.style.left = '-20px'
+    nameDiv.innerText = `Tallest buildings' FP value`
+    containerElem.appendChild(nameDiv)
+  } else if (statName === 'floor') {
+    const nameDiv = document.createElement("div");
+    nameDiv.style.fontWeight = 'bold';
+    nameDiv.style.position = 'relative';
+    nameDiv.style.left = '-20px'
+    nameDiv.innerText = `Most-number-of-floor buildings' FP value`
+    containerElem.appendChild(nameDiv)
+  } else if (statName === 'densest') {
+    const nameDiv = document.createElement("div");
+    nameDiv.style.fontWeight = 'bold';
+    nameDiv.style.position = 'relative';
+    nameDiv.style.left = '-20px'
+    nameDiv.innerText = `Densest buildings' FP value`
+    containerElem.appendChild(nameDiv)
+  } else if (statName === 'most diverse') {
+    const nameDiv = document.createElement("div");
+    nameDiv.style.fontWeight = 'bold';
+    nameDiv.style.position = 'relative';
+    nameDiv.style.left = '-20px'
+    nameDiv.innerText = `Most diverse buildings' FP value`
+    containerElem.appendChild(nameDiv)
+  }
+
+  console.log(bestList)
+
+  bestList.forEach((buildingName, idx) => {
+    const fp = buildingName.split('_')[1];
+    const fpDiv = document.createElement("div");
+    fpDiv.setAttribute('id', `best_building_name_place_${idx}`);
+    fpDiv.setAttribute('class', 'best_building_name')
+    fpDiv.innerText = `FP${fp}`;
+    fpDiv.onclick = () => {
+      root_dropdown.setValue(buildingName);
+      updateCityLight([buildingName])
+      // addRoadNetwork(buildingName);
+      CM.enableHighLight(city_all.building2BucketPeel, buildingName, true);
+      changeLHHighLight(buildingName);
+      showBuildingArrow(buildingName);
+      zoomAtBuilding(buildingName)
+      //   .then(() => {            
+      //     let showBuildingTour_FeatureFlag = false;
+      //     if(showBuildingTour_FeatureFlag){            
+      //       buildingTour(buildingName);            
+      //     }
+      // });
+      updateBestBuildingNameHighLight(idx)
+    }
+    containerElem.appendChild(fpDiv);
+    console.log(idx);
+  })
 }
 
 document.getElementById('city-largest-building-button').onclick = function goLargestBuilding() {
@@ -2856,6 +3513,8 @@ function handleLeftClick(selectedDot, data) {
   } else if (selectingTourNavigation) {
     document.getElementById('city-tour-navigation-src').value = selectedBuilding;
   }
+
+  cleanBestBuildingNameList();
 };
 
 function addMapDropListHandle() {
@@ -2974,7 +3633,7 @@ function processGlyph(glyphData) {
 }
 
 function drawMap(divName) {
-  Promise.all([
+  return Promise.all([
     d3.json(buildingMap_file),
     d3.json(buildingMapBucket_file),
     d3.json(bucket_file),
@@ -2982,6 +3641,10 @@ function drawMap(divName) {
   ]).then(function (datas) {
     const result = CM.drawMap(datas, buildingMapControls, divName)
     city_all.building2BucketPeel = result.building2BucketPeel;
+    city_all.building2size = {};
+    for (const [building, bucketPeel] of Object.entries(city_all.building2BucketPeel)) {
+      city_all.building2size[building] = result.buckSize[`${bucketPeel[1]}-${bucketPeel[0]}`]
+    };
     if (!glyphDoneFlag) {
       glyphData = result.glyphData;
       processGlyph(glyphData);
@@ -3024,58 +3687,266 @@ function goInsideBuilding(buildingName) {
   let selected_building = buildingName;
 
   let wavemap_ID_ID_freq = selected_building.split('_');
-  let file;
+  let file = 'data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2];
   let validCheck = true;
   let forkView = false;
   let nameSuffix = '';
   const validSize = 262144;
-  if (!mapWaveSelection) {
-    // console.log(dagSizeDict)
-    const key = 'dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2]
-    if (dagSizeDict.hasOwnProperty(key)) {
-      console.log(dagSizeDict[key])
-      if (parseInt(dagSizeDict[key]) > parseInt(validSize)) {
-        validCheck = false;
-        alert('Please select a wave');
-      }
-    }
-    file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2] + '.json';
-  } else {
-    // console.log(dagSizeDict)
-    console.log(dagSizeDict['dagmeta_' + mapWaveSelectedName])
-    if (parseInt(dagSizeDict['dagmeta_' + mapWaveSelectedName]) > parseInt(validSize)) {
-      console.log('frag fork')
-      // validCheck = false;
-      forkView = true;
-      nameSuffix = 'f'+mapWaveSelectedName.split('w')[1];
-      file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + mapWaveSelectedName.replace('w', 'f') + '.json'
-    } else {
-      nameSuffix = 'w'+mapWaveSelectedName.split('w')[1];
-      file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + mapWaveSelectedName + '.json';
-    }
-  }
-  mapWaveSelection = false;
-  if (validCheck) {
-    onDagViews = true;
-    inner_view_history.push(selected_building);
-    window.scrollTo(0,bottom);
-    console.log(inner_view_history);
-    LH.updateDropdown(visited_inner_views, inner_view_history);
-    visited_inner_views.setValue(inner_view_history[inner_view_history.length-1]);
-    arrow_objects[selected_building].visible = true;
-    
-    console.log("******** " + selected_building + " *********");
-    console.log("******** " + paramsL.dataSet + " *********");
+  // if (!mapWaveSelection) {
+  //   // console.log(dagSizeDict)
+  //   const key = 'dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2]
+  //   if (dagSizeDict.hasOwnProperty(key)) {
+  //     console.log(dagSizeDict[key])
+  //     if (parseInt(dagSizeDict[key]) > parseInt(validSize)) {
+  //       validCheck = false;
+  //       alert('Please select a wave');
+  //     }
+  //   }
+  //   file = 'data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2];
+  // } else {
+  //   // console.log(dagSizeDict)
+  //   console.log(dagSizeDict['dagmeta_' + mapWaveSelectedName])
+  //   if (parseInt(dagSizeDict['dagmeta_' + mapWaveSelectedName]) > parseInt(validSize)) {
+  //     console.log('frag fork')
+  //     // validCheck = false;
+  //     forkView = true;
+  //     nameSuffix = 'f'+mapWaveSelectedName.split('w')[1];
+  //     file = 'data_dags/' + paramsL.dataSet + '/dagmeta_' + mapWaveSelectedName.replace('w', 'f')
+  //   } else {
+  //     nameSuffix = 'w'+mapWaveSelectedName.split('w')[1];
+  //     file = 'data_dags/' + paramsL.dataSet + '/dagmeta_' + mapWaveSelectedName;
+  //   }
+  // }
+  // mapWaveSelection = false;
 
-    console.log("Loading: ", file);
-    loadFile2(file, forkView, nameSuffix);
-    loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
+  // console.log(city_all)
+  // console.log(selected_building)
+  // console.log(city_all[selected_building])
+  console.log(TH_STRATA_FULL)
+
+  onDagViews = true;
+  inner_view_history.push(selected_building);
+  window.scrollTo(0,bottom);
+  console.log(inner_view_history);
+  LH.updateDropdown(visited_inner_views, inner_view_history);
+  visited_inner_views.setValue(inner_view_history[inner_view_history.length-1]);
+  arrow_objects[selected_building].visible = true;
+  
+  console.log("******** " + selected_building + " *********");
+  console.log("******** " + paramsL.dataSet + " *********");
+
+  console.log("Loading: ", file);
+  
+  if (city_all[selected_building].E < TH_STRATA_FULL) {
+    console.log('send to strata')
+    httpPostAsync(JSON.stringify({
+      filename: file,
+      graphName: paramsL.dataSet,
+      layer: parseInt(wavemap_ID_ID_freq[1]),
+      lcc: parseInt(wavemap_ID_ID_freq[2]),
+      bucket: parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]),
+      maxEdges: IP.max_edges,
+      buildingName: selected_building,
+    }), localHost + 'building2strata', function(res) {
+      if (!res.res) {
+        console.log(res.detail);
+      } else {
+        const filename = `${paramsL.dataSet}_${parseInt(wavemap_ID_ID_freq[1])}-${parseInt(wavemap_ID_ID_freq[2])}`;
+        // let C = new THREE.Color(node.color);
+        console.log("?dataPath=" + filename);
+        console.log(document.getElementById('strata').src);
+        httpGetAsync(PREFIX + "query?type=add&file=" + filename + ".csv", function(res) {
+          console.log(res);
+          setStrataUrl("?dataPath=" + filename + '&nodeColorProperty=waveLevel&heightProperty=waveLevel');
+          console.log(document.getElementById('strata').src);
+        });
+      }
+    }, 'json')
+
+    document.getElementById('meta-name').innerText = `${paramsL.dataSet}-${wavemap_ID_ID_freq[1]}-${wavemap_ID_ID_freq[2]}`
+    document.getElementById('meta-size').innerText = `|V|:${city_all[selected_building].V} |E|:${city_all[selected_building].E}`
+
+    // document.getElementById('strata-container').style.display = 'block';
+    // document.getElementById('strata-container').style.width = '100%';
+    // document.getElementById('graph-container').style.display = 'none';
+
+    httpPostAsync(JSON.stringify({
+      filename: file,
+      graphName: paramsL.dataSet,
+      layer: parseInt(wavemap_ID_ID_freq[1]),
+      lcc: parseInt(wavemap_ID_ID_freq[2]),
+      bucket: parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]),
+      maxEdges: IP.max_edges,
+      buildingName: selected_building,
+    }), localHost + 'meta-dag', function(res) {
+      // console.log(res);
+      loadMetaArray(res);
+      // window.open(res);
+    }, 'json')
+
+    onDagViews = false;
+    animateStartFlag = false;
+    tempGraph.resumeAnimation();
+
+    document.getElementById('strata-container').style.display = 'block';
+    document.getElementById('strata-container').style.width = '50%'
+    document.getElementById('graph-container').style.width = '49.5%';
+    document.getElementById('full-dag-graph-container').style.display = 'none';
+    document.getElementById('send-to-fpViewer-button').style.display = 'block';
+    document.getElementById('send-to-fpViewer-button').onclick = () => {
+      httpPostAsync(JSON.stringify({
+        filename: file,
+        graphName: paramsL.dataSet,
+        layer: parseInt(wavemap_ID_ID_freq[1]),
+        lcc: parseInt(wavemap_ID_ID_freq[2]),
+        bucket: parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]),
+        maxEdges: IP.max_edges,
+        buildingName: selected_building,
+      }), localHost + 'building2fpviewer', function(res) {
+        console.log(res);
+        if (!res.res) {
+          console.log(res.detail);
+        } else {
+          window.open(res.url);
+        }
+      }, 'json')
+    }
+
+  } else if (city_all[selected_building].E < TH_FPVIEWER_BUILDING) {
+    httpPostAsync(JSON.stringify({
+      filename: file,
+      graphName: paramsL.dataSet,
+      layer: parseInt(wavemap_ID_ID_freq[1]),
+      lcc: parseInt(wavemap_ID_ID_freq[2]),
+      bucket: parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]),
+      maxEdges: IP.max_edges,
+      buildingName: selected_building,
+    }), localHost + 'building2fpviewer', function(res) {
+      console.log(res);
+      if (!res.res) {
+        console.log(res.detail);
+      } else {
+        window.open(res.url);
+      }
+    }, 'json')
+    window.scrollTo(0,0);
+
+  } else {
+    // file = 'data_dags/test/dagmeta_wave_25_16040.json';
+    // loadFile2(file, forkView, nameSuffix);
+    // loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
+
+
+    console.log(paramsL.dataSet, parseInt(wavemap_ID_ID_freq[1]), parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]))
+    console.log(IP)
+    httpPostAsync(JSON.stringify({
+            filename: file,
+            graphName: paramsL.dataSet,
+            layer: parseInt(wavemap_ID_ID_freq[1]),
+            lcc: parseInt(wavemap_ID_ID_freq[2]),
+            bucket: parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]),
+            maxEdges: IP.max_edges,
+            buildingName: selected_building,
+          }), localHost + 'meta-dag', function(res) {
+            // console.log(res);
+            loadMetaArray(res);
+            // window.open(res);
+          }, 'json')
+
+    onDagViews = false;
+    animateStartFlag = false;
+    tempGraph.resumeAnimation();
+  
+    document.getElementById('meta-name').innerText = `${paramsL.dataSet}-${wavemap_ID_ID_freq[1]}-${wavemap_ID_ID_freq[2]}`
+    document.getElementById('meta-size').innerText = `|V|:${city_all[selected_building].V} |E|:${city_all[selected_building].E}`
+  
+    document.getElementById('strata-container').style.display = 'none';
+    document.getElementById('graph-container').style.width = '100%';
+    document.getElementById('graph-container').style.display = 'block';
+    document.getElementById('send-to-fpViewer-button').style.display = 'none';
   }
-  onDagViews = false;
+
+  // if (true) {
+  //   // console.log(city_all);
+  //   // console.log(buildingName);
+  //   // console.log(city_all[buildingName].floorSize);
+  //   // console.log(city_all[buildingName].fragNum)
+  //   if (city_all[buildingName].floorSize < 40 && city_all[buildingName].fragNum < 60) {
+  //     console.log('go to fp viewer');
+  //     httpPostAsync(JSON.stringify({
+  //       filename: paramsL.dataSet + "_" + wavemap_ID_ID_freq[1] + "_" + wavemap_ID_ID_freq[2],
+  //       graphName: paramsL.dataSet,
+  //       layer: wavemap_ID_ID_freq[1],
+  //       lcc: wavemap_ID_ID_freq[2]
+  //     }), localHost + 'fp-viewer-set-lcc', function(res) {
+  //       // console.log(res);
+  //       window.open(res);
+  //     }, 'text')
+  //   }
+  //   else {
+  //     console.log('go to meta-DAG');
+
+  //     const key = 'dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2]
+  //     if (dagSizeDict.hasOwnProperty(key)) {
+  //       console.log(dagSizeDict[key])
+  //       if (parseInt(dagSizeDict[key].edges) > parseInt(validSize)) {
+  //         // check merging size
+  //       } else {
+  //         // directly show DAG
+  //       }
+  //     }
+  //     // file = '../data_dags/' + paramsL.dataSet + '/dagmeta_' + wavemap_ID_ID_freq[1] + '_' + wavemap_ID_ID_freq[2] + '.json';
+
+  //     // mapWaveSelection = false;
+  //     // if (validCheck) {
+  //     //   onDagViews = true;
+  //     //   inner_view_history.push(selected_building);
+  //     //   window.scrollTo(0,bottom);
+  //     //   console.log(inner_view_history);
+  //     //   LH.updateDropdown(visited_inner_views, inner_view_history);
+  //     //   visited_inner_views.setValue(inner_view_history[inner_view_history.length-1]);
+  //     //   arrow_objects[selected_building].visible = true;
+        
+  //     //   console.log("******** " + selected_building + " *********");
+  //     //   console.log("******** " + paramsL.dataSet + " *********");
+
+  //     //   console.log("Loading: ", file);
+  //     //   loadFile2(file, forkView, nameSuffix);
+  //     //   loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
+  //     // }
+  //     // onDagViews = false;
+
+  //   }
+  // }
 }
 
 
 document.getElementById('stop-transition').onclick = function stopTransition() {
   transitionContinueFlag = false;
   // setTimeout(() => transitionContinueFlag = true, 1000);
+}
+
+document.getElementById('main-view').onmouseenter = function startCityAnimation() {
+  console.log('start animate')
+  animate();
+  tempGraph.pauseAnimation();
+}
+document.getElementById('inner-view').onmouseenter = function stopCityAnimation() {
+  console.log('stop animate')
+  animateStartFlag = false;
+}
+
+function checkServerCache() {
+  httpPostAsync(JSON.stringify({
+    graphName: paramsL.dataSet,
+  }), localHost + 'best-cache', function(res) {
+    console.log(res)
+    if (res.res) {
+      document.getElementById('cache-message-container').style.display = 'none';
+    } else {
+      setTimeout(() => {
+        checkServerCache()
+      }, 1000 * 60);
+    }
+  }, 'json')
 }
