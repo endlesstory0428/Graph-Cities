@@ -1,0 +1,107 @@
+<!-- vim: set ts=2 sw=2 expandtab :-->
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+
+<!-- Create a div where the graph will take place -->
+<div id="my_dataviz"></div>
+
+<script>
+  let buildings_movies = ["60_12370_2", "48_13096_2", "76_12776_2", "41_13114_2", "57_15545_3", "38_15906_3", "18_13639_3", "8_11589_3", "56_16757_5", "40_13169_6", "37_12382_9", "37_23740_12", "46_11766_17", "24_12180_23", "29_13695_43", "9_12922_89", "15_17754_35", "14_14781_337", "5_16664_287", "2_15608_15"];
+  let buildings_patents = ["19_239987_3", "43_1965538_5", "25_3804978_8", "17_1851996_8", "16_1362234_16", "21_3292172_25", "19_2571623_35", "18_2914315_48", "23_1433320_64", "15_3718944_45", "13_3434164_105", "15_3515498_169", "11_2983724_385", "8_4342010_162", "1_405063_798", "1_250725_1023", "1_140109_1283", "1_62999_1884", "3_3191982_27"];
+  let buildings_friendster = ["82_49855703_2", "80_49855703_2", "77_49855703_4", "18_13234024_3", "31_4062912_8", "41_60187632_16", "16_41201_32", "34_90152410_52", "19_19546040_102", "14_238083_160", "1_5249714_247", "7_19325784_356", "9_201256_351", "1_58275384_547", "1_8645756_634", "1_2878103_708", "1_17833995_771", "1_6980866_827", "1_60939141_881", "1_15204409_930", "1_31820411_979", "1_201283_1031", "1_10126754_1079", "1_14609_1141", "1_7241947_1198", "4_6552536_1280", "1_1443591_1372", "1_754869_1520", "1_1623531_1994", "2_2407314_44"];
+  let buildings = [buildings_movies, buildings_patents, buildings_friendster];
+  
+  var DATA = 'com-friendster';
+  b = buildings[2][30];
+  let BUILDING = b.slice(0,b.lastIndexOf('_'));
+  BUILDING = BUILDING.replace('-','_')
+  // var BUILDING = '11_2983724';
+  console.log(DATA+'_'+BUILDING);
+  // set the dimensions and margins of the graph
+  var margin = {
+      top: 30,
+      right: 30,
+      bottom: 70,
+      left: 60
+    },
+    width = 460 - margin.left - margin.right,
+    height = 400 - margin.top - margin.bottom;
+
+  // append the svg object to the body of the page
+  var svg = d3.select("#my_dataviz")
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform",
+      "translate(" + margin.left + "," + margin.top + ")");
+
+
+  d3.json("./data_flags/" + DATA + ".json", function(jsondata) {
+    console.log(jsondata);
+    var freq = jsondata[BUILDING].freq;
+    console.log(freq);
+    var barNums = [];
+    var barESize = [];
+    //var barVSize = [];
+    for (let Peel in freq) {
+      let info = freq[Peel];
+      barNums.push({
+        Peel,
+        Value: info.num
+      });
+      barESize.push({Peel, Value: info.edges});
+      //barVSize.push({Peel, Value: info.verts});
+    }
+    console.log(barNums);
+    let data = barNums;
+    let data2 = barESize;
+
+    /*
+    });
+
+    // Parse the Data
+    d3.csv("https://raw.githubusercontent.com/holtzy/data_to_viz/master/Example_dataset/7_OneCatOneNum_header.csv", function(data) {
+      console.log(data);
+    */
+    // X axis
+    var x = d3.scaleBand()
+      .range([0, width])
+      .domain(data.map(d => d.Peel))
+      .padding(0.2);
+    svg.append("g")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(x))
+      .selectAll("text")
+      .attr("transform", "translate(-10,0)rotate(-45)")
+      .style("text-anchor", "end");
+
+    // Add Y axis
+    var y = d3.scaleLinear()
+      .domain([0, d3.max(data.map(x => x.Value))])
+      .range([height, 0]);
+    svg.append("g")
+      .call(d3.axisLeft(y));
+
+    // Bars
+    svg.selectAll("mybar")
+      .data(data)
+      .enter()
+      .append("rect")
+      .attr("x", function(d) {
+        return x(d.Peel);
+      })
+      .attr("y", function(d) {
+        return y(d.Value);
+      })
+      .attr("width", x.bandwidth())
+      .attr("height", function(d) {
+        return height - y(d.Value);
+      })
+      .attr("fill", "#69b3a2")
+
+  })
+</script>

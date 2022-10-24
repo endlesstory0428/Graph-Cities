@@ -1,0 +1,1213 @@
+<!-- vim: set ts=2 sw=2 expandtab :-->
+<html>
+  <head>
+    <title>Graph City Building</title>
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <!-- <link type="text/css" rel="stylesheet" href="./three.js/editor/css/main.css"> -->
+    <!-- <script src="lib/jquery-3.5.1.min.js"> </script> -->
+    <style>
+      body { margin: 0; }
+      canvas { display: block; }
+    </style>
+    <script> 
+        function locationreload() { 
+            location.reload(); 
+        } 
+    </script> 
+  </head>
+  <body>
+    <script type="module">
+      import * as THREE from './node_modules/three/build/three.module.js';
+      import { TrackballControls } from './node_modules/three/examples/jsm/controls/TrackballControls.js';
+      import { GUI } from './node_modules/three/examples/jsm/libs/dat.gui.module.js';
+      import { BufferGeometryUtils } from './three.js/examples/jsm/utils/BufferGeometryUtils.js';
+      import { OBJLoader } from './three.js/examples/jsm/loaders/OBJLoader.js';
+      // import { Water } from './three.js/examples/jsm/objects/Water.js';
+      // import { Sky } from './three.js/examples/jsm/objects/Sky.js';
+      // THREE.Cache.enabled = true;
+
+      let perspectiveCamera, orthographicCamera, controls, scene, renderer;
+
+      let spiral = [];
+      let frustumSize = 400;
+      let aspect = window.innerWidth/window.innerHeight;
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color('skyblue');
+      // let camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+
+      let raycaster = new THREE.Raycaster();
+      let mouse = new THREE.Vector2();
+      let objects = [];
+      let INTERSECTED;
+      let city_tracking = {};
+      let city_all = {};
+      let city_mesh = [];
+      let city_to_load = 77; // hard-coded
+      let bushes = {}
+      let groundMesh;
+      let source_dir = "data/";
+      let spiral_file = "data/SPIRAL.txt";
+      let voronoi_file = "python/voronoi.txt";
+      let land_obj = "models/island.obj";
+      let manager = new THREE.LoadingManager();
+      // let source_dir;
+      // let y_scale = 50; // scale up the height of building
+      let last = [-187.86920742571192,-69.84011743155536]
+      let y_scale = Math.sqrt(last[0] ** 2 + last[1] ** 2) / 4.565727849181679;
+      // let x_scale = 800000.0; // scale down the coordinates span
+      let x_scale = 1;
+      let default_persp = [0,200,400]
+      // GUI parameters
+      let params = {
+          orthographicCamera: false,
+          resetCamera: function() {
+              controls.reset();
+          },
+          ground: "#CCA262",
+          // colorMap: "jet",
+          // hideBuilding: false
+          root: 'any building'
+      };
+      let building_params = {
+          floor: '',
+          layer: ''
+      };
+      let water;
+      init();
+      animate();
+
+      function init() {
+        perspectiveCamera = new THREE.PerspectiveCamera( 60, aspect, 1, 4000 );
+        perspectiveCamera.position.z = 850;
+        perspectiveCamera.position.y = 650;
+
+        orthographicCamera = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 1, 1000 );
+        orthographicCamera.position.z = 20;
+
+        renderer = new THREE.WebGLRenderer();
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        document.body.appendChild( renderer.domElement );
+        document.addEventListener( 'mousemove', onMouseMove, false );
+        window.addEventListener( 'resize', onWindowResize, false );
+        // window.addEventListener( 'reset_camera', onResetCamera, false);
+        createControls( perspectiveCamera );
+
+        // load files
+        manager.onStart = function(url,itemsLoaded,itemsTotal) {
+          console.log('Started loading file: '+url+'.\nLoaded '+itemsLoaded+' of '+itemsTotal+' files.');
+        };
+
+        loadBushData();
+        loadFile(spiral_file,manager);
+        
+        // GUI folders
+        let gui = new GUI();
+        let f1 = gui.addFolder('Building Info');
+        f1.add(building_params, 'floor').name('floor number').listen();
+        f1.add(building_params, 'layer').name('layer info').listen();
+        // f1.add(params, 'colorMap', ['jet','others']).name('color map').onChange(function () {
+        //     updateColorMap();
+        //     render();
+        // });
+        f1.open();
+        let f2 = gui.addFolder('Camera Control');
+        f2.add(params, 'resetCamera').name('reset camera');
+        f2.add(params, 'orthographicCamera').name('use orthographic').onChange(
+            function( value ) {
+                // controls.dispose();
+            createControls( value ? orthographicCamera : perspectiveCamera );
+        });
+        f2.open();
+        // let f3 = gui.addFolder('Environment Control');
+        // f3.addColor(params, 'ground').name('ground color').onChange( function( colorValue ) {
+        //     colorValue = parseInt(colorValue.replace('#','0x'), 16);
+        //     let colorObject = new THREE.Color( colorValue );
+        //     groundMesh.material.color = colorObject;
+        //     animate();
+        // });
+        // f3.open();
+        
+        let f4 = gui.addFolder('Path Planning');
+        
+        f4.open();
+        // ground
+        // let groundMat = new THREE.MeshBasicMaterial( {color:params.ground} );
+        // groundMat.side = THREE.DoubleSide;
+
+        // let groundUrl = "models/island.obj";
+        // let groundMesh = objLoader(groundUrl, groundMat);
+
+        // groud - 2
+        let groundNormal = new THREE.TextureLoader().load('textures/ground_2.jpg');
+        groundNormal.wrapS = THREE.RepeatWrapping;
+        groundNormal.wrapT = THREE.RepeatWrapping;
+        groundNormal.repeat.set( 10,10 );
+        groundNormal.rotation = 10;
+        let groundMat = new THREE.MeshBasicMaterial( {map:groundNormal} );
+        // groundMat.normalMap = groundNormal;
+        // groundMat.side = THREE.DoubleSide;
+        // let groundUrl = "models/island.obj";
+        let groundUrl = "models/flat_island.obj"
+        let groundMesh = groundObjLoader(groundUrl, groundMat);
+        
+        // let size = 1200;
+        // let divisions = 24;
+        // let gridHelper = new THREE.GridHelper( size, divisions );
+        // scene.add( gridHelper );
+        
+        // lights
+        var ambientLight = new THREE.AmbientLight( 0x404040 ); // soft white light
+        scene.add( ambientLight );
+        var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5);
+        scene.add( directionalLight );
+        
+        // water - 2
+        let waterGeo = new THREE.BoxBufferGeometry( 5000, 50, 5000 );
+        let waterNormal = new THREE.TextureLoader().load( 'textures/waternormals.jpg', function ( texture ) {
+          texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+          texture.repeat.set( 4, 4 );
+        });        
+        let waterMat = new THREE.MeshPhongMaterial( {
+          color: 0x006994,
+          normalMap: waterNormal
+        } );
+        waterMat.transparent=true;
+        waterMat.opacity=0.7;
+        let waterMesh = new THREE.Mesh( waterGeo, waterMat );
+        waterMesh.position.y=-50;
+        scene.add( waterMesh );
+      }
+
+      function loadBushData() {
+        var requestURL = source_dir+"bushes.json";
+        var request = new XMLHttpRequest();
+
+        request.open('GET', requestURL);
+        request.responseType = 'json';
+
+        request.send();
+
+        request.onload = function() {
+          bushes = request.response;
+        }
+      }
+
+      function loadFile(file,manager) {
+        let loader = new THREE.FileLoader(manager);
+        let blob = null;
+        loader.responseType = "blob";
+        loader.load(file,
+          function(data) {
+            getAsText(data,file);
+          },
+          function(xhr) {
+            console.log((file+' '+xhr.loaded/xhr.total*100)+'% loaded');
+          },
+          function(err) {
+            console.error('An error happened when loading '+file);
+          }
+        );
+      }
+
+      function loadVoronoiFile(file,manager) {
+        let loader = new THREE.FileLoader(manager);
+        let blob = null;
+        loader.responseType = "blob";
+        loader.load(file,
+          function(data) {
+            getAsTextVoronoi(data,file);
+          },
+          function(xhr) {
+            console.log((file+' '+xhr.loaded/xhr.total*100)+'% loaded');
+          },
+          function(err) {
+            console.error('An error happened when loading '+file);
+          }
+        );
+      }
+
+      //load ground OBJ file
+      function groundObjLoader(obj_url,obj_material) {
+        var loader = new OBJLoader();
+        loader.load(
+            obj_url,
+            function ( object ) {
+                object.traverse(function(child){
+                    console.log("child type: "+child.type);
+                    if(child.type == "Mesh") {
+                        child.material = obj_material;
+                    }
+                });
+                object.position.x=-60;
+                object.position.y=-8;
+                object.position.z=20;
+                object.scale.set(0.4,0.1,0.3);
+                
+                scene.add( object );
+            },
+            function ( xhr ) {
+                console.log( obj_url + ' ' + ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+            },
+            function ( error ) {
+                console.log( 'An error happened when loading ' + obj_url );
+            }
+        );
+      }
+
+      function getAsText(file,url) {
+        let reader = new FileReader();
+        reader.readAsText(file);
+        reader.onProgress = updateProgress;
+        reader.onload = loaded;
+        reader.onerror = errorHandler;
+        reader.url = url;
+        let text = reader.result;
+      }
+
+      function getAsTextVoronoi(file,url) {
+        let reader = new FileReader();
+        reader.readAsText(file);
+        reader.onProgress = updateProgress;
+        reader.onload = loadedVoronoi;
+        reader.onerror = errorHandler;
+        reader.url = url;
+        let text = reader.result;
+      }
+
+      function updateProgress(evt) {
+        if(evt.lengthComputable) {
+          let loaded = (evt.loaded/evt.total);
+        }
+      }
+
+      function updateDropdown(target, list){   
+        innerHTMLStr = "";
+        for(var i=0; i<list.length; i++){
+            var str = "<option value='" + list[i] + "'>" + list[i] + "</option>";
+            innerHTMLStr += str;        
+        }
+        if (innerHTMLStr != "") target.domElement.children[0].innerHTML = innerHTMLStr;
+      }
+
+      dropdown = gui.add(MyObject, 'Values', ['A', 'B']);
+
+      updateDropdown(dropdown, ['A', 'B', 'C', 'D']);
+
+      // if using python http server
+      function loaded(evt) {
+        let fileString = evt.target.result;
+        let isFolder = fileString.startsWith("<!DOCTYPE HTML PUBLIC");
+        let lines = null;
+        if(isFolder) {
+          lines = fileString.split('\n');
+          let doc = new DOMParser().parseFromString(fileString, "text/html");
+          let files = doc.getElementsByTagName("LI");
+          city_to_load = Math.trunc((files.length-2)/2);
+          console.log("loaded: city_to_load = "+city_to_load);
+          for(let i=0;i<files.length;i++){
+            let file_url = source_dir+files[i].firstChild.innerHTML;
+            console.log("loaded: loading file: "+file_url);
+            loadFile(file_url);
+          }
+        } else {
+          let filename = evt.target.url;
+          let layer_name;
+          lines = fileString.split('\n');
+          let element_count = (lines[0].split(' ')).length;
+          // need to update when SPIRAL.txt updates
+          if(element_count == 7) {
+            // console.log("loaded: SPIRAL file");
+            loadSpiral(lines,filename);
+          } else if(element_count == 6) {
+            // console.log("loaded: color file");
+            layer_name = fileToLayer(filename);
+            loadColor(lines,layer_name);
+          } else if(element_count == 3) {
+            // console.log("loaded: floor file");
+            layer_name = fileToLayer(filename);
+            loadFloor(lines,layer_name);
+          }
+        }
+      }
+
+      function loadedVoronoi(evt) {
+        let fileString = evt.target.result;
+        let lines = fileString.split('\n');
+        let filename = evt.target.url;
+        loadVoronoi(lines,filename);
+      }
+
+      function fileToLayer(filename) {
+        let start = filename.lastIndexOf('/');
+        let end = filename.lastIndexOf('_');
+        return filename.substring(start+1,end);
+      }
+
+      function getLayerAllObj(layer_name) {
+        let layer_all = {
+          coords:[],
+          colors:{},
+          shapes:[],
+          voronoi:[],
+          V:0,
+          E:0
+        };
+        return layer_all;
+      }
+
+      function getLayerTrackingObj(layer_name) {
+        let layer_tracking = {
+          ready_to_move: false,
+          ready_to_color: false
+        };
+        return layer_tracking;
+      }
+
+      function printGlobalDict(func) {
+        console.log(func + ": city_all");
+        console.log(city_all);
+        console.log(func + ": city_tracking");
+        console.log(city_tracking);
+      }
+
+      // add a new floor shape to a given building
+      function addNewFloor(layer_name, h, inner_r, outer_r) {
+        let floor = {
+          height: h,
+          inner_radius: inner_r,
+          outer_radius: outer_r
+        }
+        console.log("Layer_name!", layer_name);
+        city_all[layer_name].shapes.push(floor);
+      }
+
+      // take layer name and lines from floor file, update the shape of building
+      function loadFloor(lines,layer_name) {
+        // console.log("loadFloor: "+layer_name);
+        if (!(layer_name in city_all)) {
+          city_all[layer_name] = getLayerAllObj(layer_name);
+        } else if (!(layer_name in city_all)) {
+          city_all[layer_name] = getLayerTrackingObj(layer_name);
+        }
+        let i;
+        let tmp_outer_radius = 0;
+        
+        for(i=0; i<lines.length; i++) {
+            let elements = lines[i].split(' ');
+            // console.log("loadFloor: floor "+i);
+            // console.log(elements);
+            if (elements.length == 3) {
+                if (elements[1] == 0) {
+                  // console.log("loadFloor: add new floor "+city_all[layer_name].shapes.length);
+                  addNewFloor(layer_name,0.0,parseFloat(elements[2]),0.0);
+                } 
+                else if (i%2 == 0 && i < lines.length-2) {
+                  tmp_outer_radius = elements[2];
+                } 
+                else if (i%2 == 1) {
+                  // console.log("loadFloor: add new floor "+city_all[layer_name].shapes.length);
+                  if(i == lines.length-2) {
+                      tmp_outer_radius = 0;
+                  }
+                  // console.log("loadFloor: add new floor "+elements[0]+' '+elements[1]+' '+elements[2]+' '+tmp_outer_radius);
+                  addNewFloor(layer_name,parseFloat(elements[1]),parseFloat(elements[2]),parseFloat(tmp_outer_radius));
+                }
+            }
+        }
+        city_all[layer_name].b_value = lines[lines.length-1];
+        // shape of building is ready, check if coordinates is ready
+        if(city_all[layer_name].coords.length > 0) {
+          city_tracking[layer_name].ready_to_move = true;
+        }
+        // printGlobalDict("loadFloor");
+      }
+
+      // take color file of a layer and save information to global dictionary
+      function loadColor(color_list,layer_name) {
+        // console.log("loadColor: " +layer_name);
+        if (!(layer_name in city_all)) {
+          city_all[layer_name] = getLayerAllObj(layer_name);
+        }
+        if (!(layer_name in city_tracking)) {
+          city_tracking[layer_name] = getLayerTrackingObj(layer_name);
+        }
+        // inner structure of colors in layer_all dictionary
+        let color_dict = {
+          disc:[],
+          inner:[],
+          outer:[]
+        };
+        // read lines from a color file into "colors" dictionary
+        let i;
+        for(i=0; i<color_list.length; i++) {
+          let elements = color_list[i].split(' ');
+          let rgb = {
+              r: parseFloat(elements[3]),
+              g: parseFloat(elements[4]),
+              b: parseFloat(elements[5])
+          };
+          if (color_list[i].search("disc")>0) {
+            color_dict.disc.push(rgb);
+          } else if (color_list[i].search("inner")>0) {
+            color_dict.inner.push(rgb);
+          } else if (color_list[i].search("outer")>0) {
+            color_dict.outer.push(rgb);
+          }
+        }
+        city_all[layer_name].colors = color_dict;
+        city_tracking[layer_name].ready_to_color = true;
+        // printGlobalDict("loadColor");
+      }
+
+      function loadSpiral(lines,filename) {
+        // console.log("loading spiral");
+        // console.log(filename);
+        for(let i=0; i<lines.length-1; i++) {
+          let elements = lines[i].split(' ');
+          let layer_name = elements[0];
+          //update global dictionaries if new layer appears
+          if (!(layer_name in city_tracking)) {
+            city_tracking[layer_name] = getLayerTrackingObj(layer_name);
+            // console.log("loadSpiral: update city_tracking of "+layer_name);
+          }
+          if (!(layer_name in city_all)) {
+            city_all[layer_name] = getLayerAllObj(layer_name);
+          }
+          city_all[layer_name].coords = [elements[1]/x_scale, elements[2]/x_scale, elements[3]]; /* X, Z, rotation */
+          //grass
+          let F = parseInt(layer_name.split('_').pop()); /* # of fixed points represented by selected building */
+          if(F > 1) {
+            let grassRadius = parseFloat(elements[4]);
+            let grassFace = Math.log2(8 * (F - 1));
+            let grassGeo = new THREE.CylinderBufferGeometry(grassRadius, grassRadius, 0.2, grassFace);
+            grassGeo.translate(city_all[layer_name].coords[0], 1, city_all[layer_name].coords[1]);
+            let grassMat = new THREE.MeshBasicMaterial( {color: 0x7cfc00} );
+            let grassMesh = new THREE.Mesh(grassGeo, grassMat);
+            scene.add(grassMesh);
+
+            let x_z = [city_all[layer_name].coords[0],  city_all[layer_name].coords[1]];
+            let layer_name_end = layer_name.lastIndexOf('_');
+            let simplified_layer_name = layer_name.slice(8,layer_name_end);
+            createBushMeshes(simplified_layer_name, x_z, grassFace, grassRadius);
+          }
+          // flag
+          city_all[layer_name].V = parseInt(elements[5]);
+          city_all[layer_name].E = parseInt(elements[6]);
+          // //coordinates is ready, check if shape of building is ready
+          if(city_all[layer_name].shapes.length > 0) {
+            city_tracking[layer_name].ready_to_move = true;
+          }
+          let color_file = "data/" + layer_name + "_color.txt";
+          let floor_file = "data/" + layer_name + "_floor.txt";
+          loadFile(color_file,manager);
+          loadFile(floor_file,manager);
+        }
+        loadVoronoiFile(voronoi_file,manager);
+        // printGlobalDict("loadSpiral");
+      }
+
+      function loadVoronoi(lines,filename){
+        for(let i=0; i<lines.length-1; i++){
+          let elements = lines[i].split(' ');
+          let layer_name = elements[0];
+          let voronoi = [];
+          for(let j=1; j<elements.length; j=j+2){
+            let voronoi_vertex = [elements[j],elements[j+1]];
+            voronoi.push(voronoi_vertex);
+          }
+          city_all[layer_name].voronoi = voronoi;
+          // console.log("loadVoronoi: "+layer_name+".voronoi "+city_all[layer_name].voronoi);
+        }
+      }
+
+      function errorHandler(evt) {
+        if(evt.target.error.name == "NotReadableError") {
+          console.log("The file could not be read");
+        }
+      }
+
+      function colorToHex(c) {
+        let hex = c.toString(16);
+        return hex.length == 1 ? "0" + hex : hex;
+      }
+
+      // RGB in [0,255]
+      function rgbToHex(r,g,b) {
+        return parseInt("0x"+colorToHex(r)+colorToHex(g)+colorToHex(b));
+      }
+
+      //given a normalized vector, compute the Euler angles of rotation for bars in truss structure
+      function truss_rotate(b) {
+        let i,j;
+        let a = [0,1,0];
+        b[0] = -b[0];
+        b[2] = -b[2];
+        let v = [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+        let c = a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+        let I = [[1,0,0],[0,1,0],[0,0,1]];
+        let v_matrix = [[0,-v[2],v[1]],[v[2],0,-v[0]],[-v[1],v[0],0]];
+        let v_matrix_2 = [[-v[2]*v[2]-v[1]*v[1],v[0]*v[1],v[0]*v[2]],[v[0]*v[1],-v[0]*v[0]-v[2]*v[2],v[1]*v[2]],[v[0]*v[2],v[1]*v[2],-v[0]*v[0]-v[1]*v[1]]];
+        let R = [];
+        if(c == -1) {
+          for(j=0; j<3; j++) {
+            let line = [];
+            for(i=0; i<3; i++) {
+              line.push(I[i][j] + v_matrix[i][j] + v_matrix_2[i][j]);
+            }
+            R.push(line);
+          }
+        } else {
+          for(j=0; j<3; j++) {
+            let line = [];
+            for(i=0; i<3; i++) {
+              line.push(I[i][j] + v_matrix[i][j] + v_matrix_2[i][j]/(1+c));
+            }
+            R.push(line);
+          }
+        }
+        let sy = Math.sqrt(R[0][0]*R[0][0]+R[1][0]*R[1][0]);
+        // https://www.learnopencv.com/rotation-matrix-to-euler-angles/
+        let singular = sy<1e-8;
+        let x,y,z;
+        if(!singular) {
+          x = Math.atan2(R[2][1],R[2][2]);
+          y = Math.atan2(-R[2][0],sy);
+          z = Math.atan2(R[1][0],R[0][0]);
+        } else {
+          x = Math.atan2(-R[1][2],R[1][1]);
+          y = Math.atan2(-R[2][0],sy);
+          z = 0;
+        }
+         let rotate_rad = [x,y,z];
+        return rotate_rad;
+      }
+
+      function mag(v) {
+        return Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+      }
+
+      function normalize(v) {
+        let length = mag(v);
+        let i;
+        let normalized = [];
+        for(i=0; i<3; i++) {
+          normalized.push(v[i]/length);
+        }
+        return normalized;
+      }
+
+      function obtain_truss(center,top_radius,btm_radius,height,r,g,b) {
+        let thickness = 0.1;
+        let number = 6;
+        let truss_geo = new THREE.BufferGeometry();
+        let i;
+        for (i = 0; i<number; i++) {
+          let theta = i*(360/number);
+          let theta_sin = Math.sin(theta*Math.PI/180);
+          let theta_cos = Math.cos(theta*Math.PI/180);
+          let top = [theta_cos*top_radius,height/2,theta_sin*top_radius];
+          let btm = [theta_cos*btm_radius,-height/2,theta_sin*btm_radius];
+          let top_btm = [top[0]-btm[0], top[1]-btm[1], top[2]-btm[2]];
+          let length = mag(top_btm);
+          let normalized_top_btm = normalize(top_btm);
+          let mid_radius = (top_radius+btm_radius)/2;
+          let bar_center = [center[0]+theta_cos*mid_radius,center[1],center[2]+theta_sin*mid_radius];
+          let bar = new THREE.CylinderBufferGeometry(thickness,thickness,length,8,8);
+          // rotate the side bars
+          let rotated = truss_rotate(normalized_top_btm);
+          bar.rotateX(rotated[0]);
+          bar.rotateY(rotated[1]);
+          bar.rotateZ(rotated[2]);
+          bar.translate(bar_center[0],bar_center[1],bar_center[2]);
+          let bar_mesh = new THREE.Mesh(bar);
+          bar_mesh.updateMatrix();
+          // merge all bars together
+          // BufferGeometryUtils.mergeBufferGeometries([truss_geo,bar_mesh.geometry],bar_mesh.matrix);
+        }
+        // create torus geometry
+        let torus_geo = new THREE.TorusGeometry(top_radius,thickness,16,100);
+        torus_geo.rotateX(90*Math.PI/180);
+        let material = new THREE.MeshBasicMaterial({color:rgbToHex(r,g,b)});
+        let torus_mesh = new THREE.Mesh(torus_geo, material);
+        let torus_flat = new THREE.Object3D();
+        torus_flat.add(torus_mesh);
+        torus_flat.translateX(center[0]);
+        torus_flat.translateY(center[1]+height/2);
+        torus_flat.translateZ(center[2]);
+        // scene.add(torus_flat);
+        // merge torus with bars
+        // truss_geo.merge(torus_mesh.geometry,torus_mesh.matrix);
+        // truss_geo.merge(torus_flat.geometry,torus_flat.matrix);
+        let truss_mesh = new THREE.Mesh(truss_geo,material);
+        return truss_mesh;
+      }
+
+      function createFlags(coord, base_Y, V, E, fixed_point_number, mast_length) {
+        // console.log("coord of flag", fixed_point_number, "is", coord, "height of flag is", base_Y);
+        let X = coord[0], Z = coord[1];
+        let flag_width = Math.log(V), flag_height = Math.log(E); 
+        
+        let flag = new THREE.Mesh( new THREE.BoxBufferGeometry(flag_width,flag_height,0.5), new THREE.MeshBasicMaterial( {color: 0xffffff}));
+        flag.translateX(X+flag_width/2);
+        flag.translateY(base_Y+mast_length+flag_height/2);
+        flag.translateZ(Z);
+        let rod = new THREE.Mesh( new THREE.CylinderBufferGeometry(0.5,0.5,mast_length,8), new THREE.MeshBasicMaterial( {color: 0x000000}));
+        rod.translateX(X);
+        rod.translateY(base_Y+mast_length/2);
+        rod.translateZ(Z);
+        scene.add(flag);
+        scene.add(rod);
+      }
+
+      // check city_tracking, create buildings that are ready to color & move
+      // delete colored and moved building from city_tracking
+      function createCityMeshes() {
+        for (let layer in city_tracking) {
+            if(city_tracking[layer].ready_to_move && city_tracking[layer].ready_to_color) {
+                let layer_shape = city_all[layer].shapes;
+                let height = layer_shape.length;
+                // translate in X,Z direction
+                let X = city_all[layer].coords[0];
+                let Z = city_all[layer].coords[1];
+                // loop from bottom floor to top floor
+                for (let h=1; h<height; h++) {
+                    // translate in Y direction
+                    let Y = y_scale*(0.5*layer_shape[h].height + 0.5*layer_shape[h-1].height);
+                    // create inner frustum geometry
+                    let top_in_r = layer_shape[h].inner_radius;
+                    let btm_in_r = layer_shape[h-1].inner_radius;
+                    let tall = y_scale*(layer_shape[h].height - layer_shape[h-1].height);
+                    let floor = new THREE.CylinderBufferGeometry(top_in_r,btm_in_r,tall,16,16);
+                    floor.translate(X,Y,Z);
+                    // apply colors
+                    let r, g, b;
+                    try {
+                        r = parseInt(city_all[layer].colors.inner[h-1].r*255);
+                        g = parseInt(city_all[layer].colors.inner[h-1].g*255);
+                        b = parseInt(city_all[layer].colors.inner[h-1].b*255);    
+                    } catch(err) {
+                        console.log(err.message+" "+layer);
+                    }
+                    let material = new THREE.MeshBasicMaterial({color:rgbToHex(r,g,b)});
+                    let frustum_mesh = new THREE.Mesh(floor,material);
+                    frustum_mesh.floor_name = h;
+                    frustum_mesh.layer_name = layer.substring(8);
+                    // draw inner frustums
+                    scene.add(frustum_mesh);
+                    objects.push(frustum_mesh);
+
+                    // outer frustums
+                    if(h<height-1) {
+                        //create outer frustum as truss structure
+                        let top_out_r = layer_shape[h].outer_radius;
+                        let btm_out_r = layer_shape[h-1].inner_radius;
+                        r = parseInt(city_all[layer].colors.outer[h-1].r*255);
+                        g = parseInt(city_all[layer].colors.outer[h-1].g*255);
+                        b = parseInt(city_all[layer].colors.outer[h-1].b*255);
+                        let truss_mesh = obtain_truss([X,Y,Z],top_out_r,btm_out_r,tall,r,g,b);
+                        // console.log("createCityMeshes: create a set of truss");
+                        // draw outer frustums
+                        // scene.add(truss_mesh);
+                    }
+                }
+                let flag_base_Y = y_scale * layer_shape[height-1].height;
+                let fixed_point_number =  parseInt(layer.slice(layer.lastIndexOf('_')+1));
+                let mast_scale = 1;
+                let mast_length = mast_scale * height;
+                createFlags([X,Z], flag_base_Y, city_all[layer].V, city_all[layer].E, fixed_point_number, mast_length);
+                console.log("createCityMeshes: loaded "+layer+", city to load = "+city_to_load);
+                delete city_tracking[layer];
+                --city_to_load;
+            }
+        }
+      }
+
+      // layer name and coordinate of it on the ground, i.e [X,Z]
+      function createBushMeshes(layer, coord, num_fp, grassRad) {
+        //console.log(bushes);
+        var stepSize = 0.1;
+        var iterations = 2;
+        var rotationAngle = 18;
+
+        var rules =  {
+          "A": "I+[A+w]--//[--L]I[++L]",
+          "I": "FS[//&&L][//^^L]FS",
+          "S": "SFS",
+          "w": "[&&&p/W////W////W////W////W]",
+          "p": "FF",
+          "W": "[^F][&&&&P]"
+        }
+
+        var command = "A"
+
+        var DATA = bushes[layer]
+        // console.log(layer, DATA)
+
+        var turters = new Turtle(stepSize, rotationAngle);
+        var commandEx = processLSystem(iterations, command, rules);
+        // console.log("Iters:",iterations);
+        // console.log("Iters:",iterations+1);
+        var commandEx2 = processLSystem(iterations+1, command, rules);
+
+        drawData(turters, DATA, commandEx, commandEx2);
+        var meshes = createBushMesh(turters.vertices, turters.leafVertices, turters.petalVertices);
+ 
+        var r = grassRad/2.0;
+        for (let i = 0; i < num_fp; i++) {
+          var theta = 2.0*Math.PI*i/num_fp;
+          var x = coord[0] + r * Math.cos(theta);
+          var z = coord[1] + r * Math.sin(theta);
+          // console.log(coord, x, z, r, theta);
+          var rot = Math.random()*2*Math.PI;
+          for (let j = 0; j < meshes.length; j++) {
+            var geo = meshes[j][0].clone();
+            geo.scale(y_scale/8,y_scale/8,y_scale/8);
+            geo.rotateY(rot);
+            if (j == 0) {
+              var mesh = new THREE.LineSegments( geo, meshes[j][1] );
+              mesh.position.set( x, 1, z );
+              scene.add( mesh );
+            } else {
+              var mesh = new THREE.Mesh( geo, meshes[j][1] );
+              mesh.position.set( x, 1, z );
+              scene.add( mesh );
+            }
+            // mesh.position.set( x, 1, z );
+          }
+        }
+
+      }
+
+      function createControls( camera ) {
+        controls = new TrackballControls( camera, renderer.domElement );
+        controls.rotateSpeed = 1.0;
+        controls.zoomSpeed = 1.2;
+        controls.panSpeed = 0.8;
+        controls.keys = [ 65, 83, 68 ];
+      }
+
+      function onWindowResize() {
+
+        let aspect = window.innerWidth / window.innerHeight;
+
+        perspectiveCamera.aspect = aspect;
+        perspectiveCamera.updateProjectionMatrix();
+
+        orthographicCamera.left = - frustumSize * aspect / 2;
+        orthographicCamera.right = frustumSize * aspect / 2;
+        orthographicCamera.top = frustumSize / 2;
+        orthographicCamera.bottom = - frustumSize / 2;
+        orthographicCamera.updateProjectionMatrix();
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+        controls.handleResize();
+
+      }
+      
+      function animate() {
+        requestAnimationFrame( animate );
+        controls.update();
+        // stats.update();
+        if(city_to_load>0) {
+          console.log("animate: run createCityMeshes()");
+          createCityMeshes();
+
+        }
+        render();
+      }
+
+      function render() {
+        let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
+        renderer.render(scene, camera);
+        // let time = performance.now() * 0.001;
+        // water.material.uniforms[ 'time' ].value += 1.0 / 60.0;
+      }
+
+      function onMouseMove( event ) {
+        mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
+        mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
+        let camera = (params.orthographicCamera) ? orthographicCamera : perspectiveCamera;
+        raycaster.setFromCamera( mouse, camera );
+
+        let intersects = raycaster.intersectObjects( objects );
+        // Toggle rotation bool for meshes that we clicked
+        if (intersects.length > 0) {
+          // if the closest object intersected is not the currently stored intersection object
+          if (intersects[0].object != INTERSECTED ) {
+            INTERSECTED = intersects[0].object;
+            if(intersects[0].object.floor_name) {
+              building_params.floor = intersects[0].object.floor_name;
+            } else {
+              building_params.floor = '';
+            }
+            if(intersects[0].object.layer_name) {
+              building_params.layer = intersects[0].object.layer_name;
+            } else {
+              building_params.layer = '';
+            }
+          }
+        } else // there are no intersections
+        {
+          INTERSECTED = null;
+          building_params.floor='';
+          building_params.layer='';
+        }
+      }
+
+      function createBushMesh(lineVertices, leafVertices, petalVertices) {
+        var canvasColor = '#f2f2f2';
+        var lineColor = '#4c4c4c';
+        var leafColor = '#1d8348';
+        var petalColor = '#ff5733';
+
+        var geometry = new THREE.BufferGeometry();
+        geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( lineVertices, 3 ) );
+        var material = new THREE.LineBasicMaterial( { color: lineColor, linewidth: 1} );
+        //geometry.scale(33,1,33);
+        // var lines = new THREE.LineSegments( geometry, material );
+        // scene.add( lines );
+
+        var leafGeometry = new THREE.BufferGeometry();
+        leafGeometry.setAttribute( 'position', new THREE.Float32BufferAttribute( leafVertices, 3 ) );
+        var leafMaterial = new THREE.MeshBasicMaterial( { color: leafColor, side: THREE.DoubleSide } );
+        //leafGeometry.scale(33,1,33);
+        // var leafMesh = new THREE.Mesh( leafGeometry, leafMaterial );
+        // scene.add( leafMesh );
+
+        var petalGeometry = new THREE.BufferGeometry();
+        petalGeometry.setAttribute( 'position', new THREE.Float32BufferAttribute( petalVertices, 3 ) );
+        var petalMaterial = new THREE.MeshBasicMaterial( { color: petalColor, side: THREE.DoubleSide } );
+        //petalGeometry.scale(33,1,33);
+        //var petalMesh = new THREE.Mesh( petalGeometry, petalMaterial );
+        // scene.add( petalMesh );
+
+        return [[geometry, material], [leafGeometry, leafMaterial], [petalGeometry, petalMaterial]]
+      }
+
+      function Turtle(stepSize, rotationAngle) {
+        this.stepSize = stepSize;
+        this.rotationAngle = rotationAngle * Math.PI / 180;
+        this.stateStack = [];
+        this.vertices = [];
+        this.leafVertices = [];
+        this.petalVertices = [];
+        this.center = new THREE.Vector3(0, 0, 0);
+        this.vertexSum = new THREE.Vector3(0, 0, 0);
+        this.vertexCount = 1;
+
+        // initialize at origin
+        this.position = new THREE.Vector3( 0, 0, 0 );
+
+        // initialize heading in the +y direction
+        this.hlu = new THREE.Matrix3();
+        this.hlu.set(
+          0, 1, 0,
+          1, 0, 0,
+          0, 0, -1
+        );
+
+        this.moveForward = function(step=this.stepSize) {
+          var h = new THREE.Vector3(
+            this.hlu.elements[0],
+            this.hlu.elements[1],
+            this.hlu.elements[2]
+          );
+
+          this.vertices.push(
+            this.position.x,
+            this.position.y,
+            this.position.z
+          );
+
+          this.position.addScaledVector(h, step);
+
+          this.vertexSum.add(this.position);
+          this.vertexCount++;
+          this.center = this.vertexSum.clone().divideScalar(this.vertexCount);
+
+          this.vertices.push(
+            this.position.x,
+            this.position.y,
+            this.position.z
+          );
+        }
+
+        this.moveForwardNoDraw = function(step=this.stepSize) {
+          var h = new THREE.Vector3(
+            this.hlu.elements[0],
+            this.hlu.elements[1],
+            this.hlu.elements[2]
+          );
+
+          this.position.addScaledVector(h, step);
+        }
+
+        this.turnLeft = function(d=-this.rotationAngle) {
+          // var d = -this.rotationAngle;
+          var rot = new THREE.Matrix3();
+          rot.set(
+            Math.cos(d), Math.sin(d), 0,
+            -Math.sin(d), Math.cos(d), 0,
+            0, 0, 1
+          );
+          this.hlu.multiply(rot);
+        };
+
+        this.turnRight = function(d=this.rotationAngle) {
+          // var d =  this.rotationAngle;
+          var rot = new THREE.Matrix3();
+          rot.set(
+            Math.cos(d), Math.sin(d), 0,
+            -Math.sin(d), Math.cos(d), 0,
+            0, 0, 1
+          );
+          this.hlu.multiply(rot);
+        };
+
+        this.pitchDown = function(d=-this.rotationAngle) {
+          // var d = -this.rotationAngle;
+          var rot = new THREE.Matrix3();
+          rot.set(
+            Math.cos(d), 0, -Math.sin(d),
+            0, 1, 0,
+            Math.sin(d), 0, Math.cos(d)
+          );
+          this.hlu.multiply(rot);
+        };
+
+        this.pitchUp = function(d=this.rotationAngle) {
+          // var d = this.rotationAngle;
+          var rot = new THREE.Matrix3();
+          rot.set(
+            Math.cos(d), 0, -Math.sin(d),
+            0, 1, 0,
+            Math.sin(d), 0, Math.cos(d)
+          );
+          this.hlu.multiply(rot);
+        };
+
+        this.rollLeft = function(d=-this.rotationAngle) {
+          // var d = -this.rotationAngle;
+          var rot = new THREE.Matrix3();
+          rot.set(
+            1, 0, 0,
+            0, Math.cos(d), -Math.sin(d),
+            0, Math.sin(d), Math.cos(d)
+          );
+          this.hlu.multiply(rot);
+        };
+
+        this.rollRight = function(d=this.rotationAngle) {
+          // var d = this.rotationAngle;
+          var rot = new THREE.Matrix3();
+          rot.set(
+            1, 0, 0,
+            0, Math.cos(d), -Math.sin(d),
+            0, Math.sin(d), Math.cos(d)
+          );
+          this.hlu.multiply(rot);
+        };
+
+        this.turnAround = function() {
+          var rot = new THREE.Matrix3();
+          rot.set(
+            -1, 0, 0,
+            0, -1, 0,
+            0, 0, 1
+          );
+          this.hlu.multiply(rot);
+        }
+
+        this.pushState = function() {
+          var turtleState = {
+            position : this.position.clone(),
+            hlu : this.hlu.clone()
+          };
+          this.stateStack.push(turtleState);
+        };
+
+        this.popState = function() {
+          var turtleState = this.stateStack.pop();
+          this.position = turtleState["position"];
+          this.hlu = turtleState["hlu"];
+        };
+
+        this.drawLeaf = function() {
+          var pos = new THREE.Vector3(this.position.x, this.position.y, this.position.z);
+          var head = new THREE.Vector3(this.hlu.elements[0], this.hlu.elements[1], this.hlu.elements[2]);
+          var left = new THREE.Vector3(this.hlu.elements[3], this.hlu.elements[4], this.hlu.elements[5]);
+          var up = new THREE.Vector3(this.hlu.elements[6], this.hlu.elements[7], this.hlu.elements[8]);
+
+          var edge1 = left.clone().multiplyScalar(0.5).add(head).normalize().multiplyScalar(this.stepSize);
+          var edge2 = left.clone().multiplyScalar(0.5).negate().add(head).normalize().multiplyScalar(this.stepSize);
+          var diag = edge1.clone().add(edge2);
+
+          this.leafVertices.push(
+            pos.x, pos.y, pos.z,
+            (pos.clone().add(edge1)).x, (pos.clone().add(edge1)).y, (pos.clone().add(edge1)).z,
+            (pos.clone().add(diag)).x, (pos.clone().add(diag)).y, (pos.clone().add(diag)).z,
+            (pos.clone().add(diag)).x, (pos.clone().add(diag)).y, (pos.clone().add(diag)).z,
+            (pos.clone().add(edge2)).x, (pos.clone().add(edge2)).y, (pos.clone().add(edge2)).z,
+            pos.x, pos.y, pos.z,
+          );
+        }
+
+        this.drawPetal = function() {
+          var pos = new THREE.Vector3(this.position.x, this.position.y, this.position.z);
+          var head = new THREE.Vector3(this.hlu.elements[0], this.hlu.elements[1], this.hlu.elements[2]);
+          var left = new THREE.Vector3(this.hlu.elements[3], this.hlu.elements[4], this.hlu.elements[5]);
+          var up = new THREE.Vector3(this.hlu.elements[6], this.hlu.elements[7], this.hlu.elements[8]);
+
+          var edge1 = left.clone().multiplyScalar(0.5).add(head).normalize().multiplyScalar(this.stepSize);
+          var edge2 = left.clone().multiplyScalar(0.5).negate().add(head).normalize().multiplyScalar(this.stepSize);
+          var diag = edge1.clone().add(edge2);
+
+          this.petalVertices.push(
+            pos.x, pos.y, pos.z,
+            (pos.clone().add(edge1)).x, (pos.clone().add(edge1)).y, (pos.clone().add(edge1)).z,
+            (pos.clone().add(diag)).x, (pos.clone().add(diag)).y, (pos.clone().add(diag)).z,
+            (pos.clone().add(diag)).x, (pos.clone().add(diag)).y, (pos.clone().add(diag)).z,
+            (pos.clone().add(edge2)).x, (pos.clone().add(edge2)).y, (pos.clone().add(edge2)).z,
+            pos.x, pos.y, pos.z,
+          );
+        }
+      }
+
+      function processLSystem(iterations, command, rules) {
+        var re = /[\+\-\&\^\\\/\|\[\]]/g;
+        for(var i = 0; i < iterations; i++) {
+          var buffer = "";
+          for(var j = 0; j < command.length; j++) {
+            var symbol = command.charAt(j);
+            if(!re.test(symbol) && rules[symbol] != null) {
+              buffer += rules[symbol];
+            } else {
+              buffer += symbol;
+            }
+          }
+          command = buffer;
+        }
+        return command;
+      }
+
+      function drawLSystem(turtle, command) {
+        for(var i = 0; i < command.length; i++) {
+          switch(command.charAt(i)) {
+            case "F":
+            case "G":
+              turtle.moveForward();
+              break;
+            case "f":
+              turtle.moveForwardNoDraw();
+              break;
+            case "+":
+              turtle.turnLeft();
+              break;
+            case "-":
+              turtle.turnRight();
+              break;
+            case "&":
+              turtle.pitchDown();
+              break;
+            case "^":
+              turtle.pitchUp();
+              break;
+            case "\\":
+              turtle.rollLeft();
+              break;
+            case "/":
+              turtle.rollRight();
+              break;
+            case "|":
+              turtle.turnAround();
+              break;
+            case "[":
+              turtle.pushState();
+              break;
+            case "]":
+              turtle.popState();
+              break;
+            case "L":
+              turtle.drawLeaf();
+              break;
+            case "P":
+              turtle.drawPetal();
+              break;
+            default:
+
+          }
+        }
+      }
+
+      function drawLineHere(turtle, theta, phi, roll, length, lsys, lsys2, pp){
+        turtle.pushState();
+        turtle.rollLeft(theta);
+        turtle.pitchDown(Math.PI/2-phi);
+        for (var i = 1; i < 2*length+1; i++) {
+          turtle.pushState();
+          turtle.rollLeft(i*9.0+roll);
+          if (i % pp == 0) {
+            drawLSystem(turtle, lsys2);
+          } else {
+            drawLSystem(turtle, lsys);
+          }
+          turtle.popState();
+          turtle.moveForward(0.5);
+        }
+        turtle.popState();
+      }
+
+      function drawEdgesHere(turtle, num, phi, roll, length, lsys, lsys2, pp) {
+        var percent = phi*3.0/Math.PI
+        var prop = Math.round(1/pp)
+        // console.log("PP0: ", pp, prop);
+        var i;
+        for (i = 0; i < num*percent; i++) {
+          drawLineHere(turtle, 7.0*i/num+roll, phi, roll, length, lsys, lsys2, prop);
+        }
+        // console.log("i?: ", i, num*percent, num*percent-i+1, (num*percent-i+1)*length);
+        if (2*length*pp < 1) {
+          prop = Math.floor(2*length-pp)
+        }
+        // console.log("PP1: ", pp, prop);
+        drawLineHere(turtle,7.0*i/num+roll, phi, roll, (num*percent-i+1)*length, lsys, lsys2, prop);
+      }
+
+      function drawData(turtle, data, lsys, lsys2){
+        // drawLineHere(turtle, 0, 0, 10, lsys);
+        var max = 1;
+        var maxP = 1;
+        for (let i in data) {
+          var floor = data[i]; // stem length, stem angle, inner num, inner length, inner angle, outer num, outer length, outer angle
+          if (floor[3] > max){
+            max = floor[3]
+          }
+          if (floor[6] > max){
+            max = floor[6]
+          }
+          if (floor[8] > maxP) {
+            maxP = floor[8]*1.0
+          }
+        }
+        // console.log("Maxes: ", max, maxP);
+        for (let i in data) {
+          var floor = data[i]; // stem length, stem angle, inner num, inner length, inner angle, outer num, outer length, outer angle
+          // console.log(floor[4], floor[7]);
+          // drawEdgesHere(turtle, floor[2],floor[4] * Math.PI/180,floor[3], lsys);
+          // drawEdgesHere(turtle, floor[5],floor[7] * Math.PI/180,floor[6], lsys);
+          turtle.pitchDown(floor[1] * Math.PI/180);
+          turtle.moveForward(floor[0]);
+          turtle.hlu.set(
+            0, 1, 0,
+            1, 0, 0,
+            0, 0, -1
+          );
+          drawEdgesHere(turtle, floor[2],floor[4] * Math.PI/180, 3.0*i/data.length, floor[3]/max, lsys, lsys2, floor[8]/maxP);
+          turtle.rollLeft(2*i*Math.PI);
+          drawEdgesHere(turtle, floor[5],floor[7] * Math.PI/180, 5.0*i/data.length, floor[6]/max, lsys, lsys2, floor[8]/maxP);
+        }
+      }
+    </script>
+  </body>
+</html>
