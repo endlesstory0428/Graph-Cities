@@ -14,7 +14,7 @@ If you use our code, please consider citing our paper.
 ```
 
 # Flowchart of Graph Cities Infrastructure
-![Graph Cities Infrastructure](.\docs\figs\GraphCityFlow.png)
+![Graph Cities Infrastructure](./docs/figs/GraphCityFlow.png)
 
 # Summary of Graph Cities Infrastructure
 ## File Structure
