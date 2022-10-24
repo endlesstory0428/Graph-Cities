@@ -1,6 +1,6 @@
-import * as THREE from '../../node_modules/three/build/three.module.js';
+import * as THREE from '../../lib/three/build/three.module.js';
 import * as BUSH from '../bush.js';
-import { SVGLoader } from '../../node_modules/three/examples/jsm/loaders/SVGLoader.js'
+import { SVGLoader } from '../../lib/three/examples/jsm/loaders/SVGLoader.js'
 
 //////// for glyph, copyed from cityMap.js
 function interpolateLinearly(x, values) {
@@ -175,7 +175,7 @@ function loadColor(color_list, layer_name, city_all, city_tracking) {
   return { all: city_all, tracking: city_tracking };
 }
 
-function loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tracking, x_scale) {
+function loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tracking, x_scale, glyphBack_objects, buildingTexture) {
   // console.log("loading spiral");
   // console.log(filename);
   let city_to_load = (lines.length - 1) / 2;
@@ -207,6 +207,14 @@ function loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tr
       scene.add(grassMesh);
       grass_objects.push(grassMesh);
 
+      const vicinityMesh = new THREE.Mesh(new THREE.BoxBufferGeometry(grassRadius / 2, 0.2, grassRadius / 2), buildingTexture.vicinity);
+      vicinityMesh.position.x = city_all[layer_name].coords[0],
+      vicinityMesh.position.y = 0.1,
+      vicinityMesh.position.z = city_all[layer_name].coords[1] + grassRadius * 3 / 4,
+      vicinityMesh.layerName = layer_name;
+      scene.add(vicinityMesh);
+      glyphBack_objects.push(vicinityMesh);
+
       let x_z = [city_all[layer_name].coords[0], city_all[layer_name].coords[1]];
       let layer_name_end = layer_name.lastIndexOf('_');
       let simplified_layer_name = layer_name.slice(8, layer_name_end);
@@ -235,7 +243,91 @@ function loadSpiral(scene, lines, city_all, grass_objects, bush_objects, city_tr
     }
   }
   // console.log(building_with_grass);
-  return { all: city_all, tracking: city_tracking, grass: grass_objects, bush: bush_objects, city_count: city_to_load };
+  return { all: city_all, tracking: city_tracking, grass: grass_objects, bush: bush_objects, city_count: city_to_load, glyphBack_objects: glyphBack_objects };
+}
+
+function loadSpiral_dagType(scene, lines, city_all, grass_objects, bush_objects, city_tracking, x_scale, glyphBack_objects, buildingTexture, vicinityTHList) {
+  // console.log("loading spiral");
+  // console.log(filename);
+  let city_to_load = (lines.length - 1) / 2;
+  console.log("city_to_load = " + city_to_load);
+  let building_with_grass = [];
+  for (let i = 0; i < lines.length - 1; i++) {
+    let elements = lines[i].split(' ');
+    let layer_name = elements[0];
+    //update global dictionaries if new layer appears
+    if (!(layer_name in city_tracking)) {
+      city_tracking[layer_name] = getLayerTrackingObj(layer_name);
+      // console.log("loadSpiral: update city_tracking of "+layer_name);
+    }
+    if (!(layer_name in city_all)) {
+      city_all[layer_name] = getLayerAllObj(layer_name);
+    }
+    city_all[layer_name].coords = [elements[1] / x_scale, elements[2] / x_scale, elements[3]]; /* X, Z, rotation */
+    //grass
+    // let F = parseInt(layer_name.split('_').pop()); /* # of fixed points represented by selected building */
+    let F = parseInt(elements[10]);
+    if (F > 1) {
+      building_with_grass.push(layer_name.slice(layer_name.indexOf('_') + 1, layer_name.length));
+      let grassRadius = parseFloat(elements[4]);
+      let grassFace = Math.log2(8 * (F - 1));
+      let grassGeo = new THREE.CylinderBufferGeometry(grassRadius, grassRadius, 0.2, grassFace);
+      grassGeo.translate(city_all[layer_name].coords[0], 0, city_all[layer_name].coords[1]);
+      let grassMat = new THREE.MeshStandardMaterial({ color: 0x7cfc00 });
+      let grassMesh = new THREE.Mesh(grassGeo, grassMat);
+      scene.add(grassMesh);
+      grass_objects.push(grassMesh);
+
+      const bucketSize = elements.length > 15 ? parseInt(elements[15]) : undefined;
+      let vicinityTexture;
+      if (bucketSize <= vicinityTHList[0]) {
+        vicinityTexture = buildingTexture.strata;
+      } else if (bucketSize <= vicinityTHList[1]) {
+        vicinityTexture = buildingTexture.fpviewer;
+      } else {
+        vicinityTexture = buildingTexture.vicinity;
+      }
+
+      const vicinityMesh = new THREE.Mesh(new THREE.BoxBufferGeometry(grassRadius / 2, 0.2, grassRadius / 2), vicinityTexture);
+      vicinityMesh.position.x = city_all[layer_name].coords[0],
+      vicinityMesh.position.y = 0.1,
+      vicinityMesh.position.z = city_all[layer_name].coords[1] + grassRadius / 2,
+      vicinityMesh.layerName = layer_name;
+      scene.add(vicinityMesh);
+      glyphBack_objects.push(vicinityMesh);
+
+      let x_z = [city_all[layer_name].coords[0], city_all[layer_name].coords[1]];
+      let layer_name_end = layer_name.lastIndexOf('_');
+      let simplified_layer_name = layer_name.slice(8, layer_name_end);
+      let result = BUSH.createBushMeshes(scene, bush_objects, simplified_layer_name, x_z, grassFace, grassRadius);
+      bush_objects = result.bush;
+    }
+
+    // flag
+    city_all[layer_name].V = parseInt(elements[5]);
+    city_all[layer_name].E = parseInt(elements[6]);
+    city_all[layer_name]['fragNum'] = parseInt(elements[7]);
+    city_all[layer_name]['fragNeg'] = parseInt(elements[8]);
+    city_all[layer_name]['fragPos'] = parseInt(elements[9]);
+    city_all[layer_name]['bushSize'] = parseInt(elements[10]);
+    city_all[layer_name]['duplicate'] = parseInt(elements[11]);
+    city_all[layer_name]['dagType'] = parseInt(elements[12]);
+    city_all[layer_name]['mallVicinityNum'] = elements.length > 13 ? parseInt(elements[13]) : undefined;
+    city_all[layer_name]['largeNum'] = elements.length > 14 ? parseInt(elements[14]) : undefined;
+
+    i++;
+
+    city_all[layer_name]['fragBucket'] = lines[i].split(' ').map(x => parseInt(x, 10));
+
+    city_all[layer_name]['spiralIdx'] = i / 2;
+
+    // coordinates is ready, check if shape of building is ready
+    if (city_all[layer_name].shapes.length > 0) {
+      city_tracking[layer_name].ready_to_move = true;
+    }
+  }
+  // console.log(building_with_grass);
+  return { all: city_all, tracking: city_tracking, grass: grass_objects, bush: bush_objects, city_count: city_to_load, glyphBack_objects: glyphBack_objects };
 }
 
 function loadVoronoi(city_all, lines, filename) {
@@ -392,8 +484,9 @@ function addTruss(scene, truss_objects, window_objects, h, center, top_radius, b
   return { scene: scene, truss: truss_objects, window: window_objects };
 }
 
-function createFlags(scene, height, coord, base_Y, layer, V, E, fragNum, fragNeg, fragPos, fragBucket, duplicate, flag_objects, lcc, peel, mast_scale, dataSet, flag_objects_new, glyphInfo, glyphFactors, bushSize, glyph_objects, glyphBack_objects) {
+function createFlags(scene, height, coord, base_Y, layer, V, E, fragNum, fragNeg, fragPos, fragBucket, duplicate, flag_objects, lcc, peel, mast_scale, dataSet, flag_objects_new, glyphInfo, glyphFactors, bushSize, glyph_objects, glyphBack_objects, lighthouseColor, dagType, buildingTexture, mallVicinityNum, largeNum) {
   let loadFlagTexture = true;
+  const font = buildingTexture.font;
   // console.log("coord of flag", fixed_point_number, "is", coord, "height of flag is", base_Y);
   let X = coord[0], Z = coord[1];
   let flag_width = Math.log(V), flag_height = Math.log(E), flag_thickness = 0.5;
@@ -407,122 +500,189 @@ function createFlags(scene, height, coord, base_Y, layer, V, E, fragNum, fragNeg
     // if (bushSize == 1) {
     if (glyphInfo.hasOwnProperty('circle')) {
       flag_mesh = new THREE.Mesh(new THREE.BoxBufferGeometry(flag_width, flag_height, flag_thickness), new THREE.MeshStandardMaterial({ color: 0xffffff }));
-      let loader = new THREE.FontLoader();
-      loader.load('../textures/helvetiker_regular.typeface.json', function (font) {
-        // console.log("font loaded!");
 
-        let text_geo = new THREE.Geometry();
-        // let peel_geo = new THREE.TextGeometry( peel.toString(), {
-        //   font: font,
-        //   size: flag_width/peel.toString().length,
-        //   height: flag_thickness/2+0.15
-        // } );
-        // if(peel.toString().length > 1){
-        //   peel_geo.translate(X+flag_height/16,base_Y+mast_length+flag_height/2,Z);
-        //   console.log(peel);
-        // }else{
-        //   peel_geo.translate(X+flag_height/16,base_Y+mast_length,Z);
-        // }
-        // console.log("text size: "+flag_width/peel.toString().length);
-        // console.log("text height: "+flag_thickness/2+0.15);
+      // let loader = new THREE.FontLoader();
+      // loader.load('../textures/helvetiker_regular.typeface.json', function (font) {
+      // console.log("font loaded!");
 
-        // console.log("building.js::createFlags - V = "+V.toString()+", E = "+E.toString()+", # of floors = "+height.toString());
-        let text_size = flag_height / 4;
-        let text_height = flag_thickness / 2 + 0.15;
-        let height_offset = flag_height / 32;
-        let V_e = V.toExponential(2);
-        let E_e = E.toExponential(2);
-        let V_E_size = flag_width / (Math.max(V_e.length, E_e.toString().length));
-        let peel_geo = new THREE.TextGeometry("Peel: " + peel.toString(), { font: font, size: flag_width / (peel.toString().length + 5), height: text_height });
-        peel_geo.translate(X + height_offset, base_Y + mast_length + height_offset, Z);
-        let V_geo = new THREE.TextGeometry("V: " + V_e, { font: font, size: V_E_size, height: text_height });
-        V_geo.translate(X, base_Y + mast_length + flag_height / 4 + 2 * height_offset, Z);
-        let E_geo = new THREE.TextGeometry("E: " + E_e, { font: font, size: V_E_size, height: text_height });
-        E_geo.translate(X, base_Y + mast_length + 2 * flag_height / 4 + height_offset, Z);
-        let height_geo = new THREE.TextGeometry(height.toString() + " Floors", { font: font, size: flag_width / (height.toString().length + 7), height: text_height });
-        height_geo.translate(X + height_offset, base_Y + mast_length + 3 * flag_height / 4, Z);
-        text_geo.merge(peel_geo);
-        text_geo.merge(V_geo);
-        text_geo.merge(E_geo);
-        text_geo.merge(height_geo);
-        let text_buffer_geo = new THREE.BufferGeometry().fromGeometry(text_geo);
-        let text_mesh = new THREE.Mesh(text_buffer_geo, new THREE.MeshStandardMaterial({ color: 0x000000 }));
+      let text_geo = new THREE.Geometry();
+      let fp_text_geo = new THREE.Geometry();
+      // let peel_geo = new THREE.TextGeometry( peel.toString(), {
+      //   font: font,
+      //   size: flag_width/peel.toString().length,
+      //   height: flag_thickness/2+0.15
+      // } );
+      // if(peel.toString().length > 1){
+      //   peel_geo.translate(X+flag_height/16,base_Y+mast_length+flag_height/2,Z);
+      //   console.log(peel);
+      // }else{
+      //   peel_geo.translate(X+flag_height/16,base_Y+mast_length,Z);
+      // }
+      // console.log("text size: "+flag_width/peel.toString().length);
+      // console.log("text height: "+flag_thickness/2+0.15);
 
-        let duplicate_geo;
-        if (duplicate === 1) {
-          duplicate_geo = new THREE.Geometry();
-        } else if (duplicate > 1) {
-          duplicate_geo = new THREE.TextGeometry("Dup: " + duplicate.toString(), { font: font, size: flag_width / (duplicate.toString().length + 4), height: text_height });
-        } else if (duplicate > 10000) {
-          duplicate_geo = new THREE.TextGeometry("Dup: " + duplicate.toExponential(2), { font: font, size: flag_width / (duplicate.toExponential(2).length + 4), height: text_height });
-        }
+      // console.log("building.js::createFlags - V = "+V.toString()+", E = "+E.toString()+", # of floors = "+height.toString());
+      let text_size = flag_height / 4;
+      let text_height = flag_thickness / 2 + 0.15;
+      let height_offset = flag_height / 32;
+      let V_e = V.toExponential(2);
+      let E_e = E.toExponential(2);
+      let V_E_size = flag_width / (Math.max(V_e.length, E_e.toString().length));
+      let peel_geo = new THREE.TextGeometry("Peel: " + peel.toString(), { font: font, size: flag_width / (peel.toString().length + 5), height: text_height });
+      peel_geo.translate(X + height_offset, base_Y + mast_length + height_offset, Z);
+      let V_geo = new THREE.TextGeometry("V: " + V_e, { font: font, size: V_E_size, height: text_height });
+      V_geo.translate(X, base_Y + mast_length + flag_height / 4 + 2 * height_offset, Z);
+      let E_geo = new THREE.TextGeometry("E: " + E_e, { font: font, size: V_E_size, height: text_height });
+      E_geo.translate(X, base_Y + mast_length + 2 * flag_height / 4 + height_offset, Z);
+      let height_geo = new THREE.TextGeometry(height.toString() + " Floors", { font: font, size: flag_width / (height.toString().length + 7), height: text_height });
+      height_geo.translate(X + height_offset, base_Y + mast_length + 3 * flag_height / 4, Z);
 
-        duplicate_geo.rotateY(Math.PI);
-        duplicate_geo.translate(X - height_offset + flag_width, base_Y + mast_length + 3 * flag_height / 4, Z);
-        let duplicate_buffer_geo = new THREE.BufferGeometry().fromGeometry(duplicate_geo);
-        let duplicate_mesh = new THREE.Mesh(duplicate_buffer_geo, new THREE.MeshStandardMaterial({ color: 0x000000 }));
+      fp_text_geo.merge(peel_geo);
+      let fp_text_buffer_geo = new THREE.BufferGeometry().fromGeometry(fp_text_geo);
+      let fp_text_mesh = new THREE.Mesh(fp_text_buffer_geo, new THREE.MeshStandardMaterial({ color: lighthouseColor }));
 
-        scene.add(text_mesh);
-        flag_objects.push(text_mesh);
-        scene.add(duplicate_mesh);
-        flag_objects.push(duplicate.mesh);
+      text_geo.merge(V_geo);
+      text_geo.merge(E_geo);
+      text_geo.merge(height_geo);
+      let text_buffer_geo = new THREE.BufferGeometry().fromGeometry(text_geo);
+      let text_mesh = new THREE.Mesh(text_buffer_geo, new THREE.MeshStandardMaterial({ color: 0x000000 }));
 
+      let duplicate_geo;
+      if (duplicate === 1) {
+        duplicate_geo = new THREE.Geometry();
+      } else if (duplicate > 1) {
+        duplicate_geo = new THREE.TextGeometry("Dup: " + duplicate.toString(), { font: font, size: flag_width / (duplicate.toString().length + 4), height: text_height });
+      } else if (duplicate > 10000) {
+        duplicate_geo = new THREE.TextGeometry("Dup: " + duplicate.toExponential(2), { font: font, size: flag_width / (duplicate.toExponential(2).length + 4), height: text_height });
+      }
 
-        const glyphGroup = new THREE.Group();
-        // console.log(glyphInfo)
+      duplicate_geo.rotateY(Math.PI);
+      duplicate_geo.translate(X - height_offset + flag_width, base_Y + mast_length + 3 * flag_height / 4, Z);
+      let duplicate_buffer_geo = new THREE.BufferGeometry().fromGeometry(duplicate_geo);
+      let duplicate_mesh = new THREE.Mesh(duplicate_buffer_geo, new THREE.MeshStandardMaterial({ color: 0x000000 }));
 
-        // const glyphPath = spiralLine(glyphInfo.spiral.pos, 0, 0, flag_width / 6 * glyphFactors.size.spiral)
-        const colorFactor = glyphFactors.color;
-        // console.log(glyphInfo, layer)
-        const glyphColor = d3.rgb(...interpolateLinearly(curve(density(glyphInfo.circle['lccList'][0]), colorFactor), grey2red).map(x => x * 255)).darker(1.25)
-        const glyphCircleR = flag_width / 12 * glyphFactors.size.building.circle * Math.sqrt(Math.log(1 + glyphInfo.circle['lccList'][0]['edges']))
-
-        const glyphCircleGeo = new THREE.CylinderGeometry( glyphCircleR, glyphCircleR, text_height, 32 );
-        glyphCircleGeo.rotateX(Math.PI / 2);
-        glyphCircleGeo.translate(X + height_offset + flag_width * 5 / 6, base_Y + mast_length + flag_height - flag_width / 6, Z + text_height - flag_thickness / 2);
-        const glyphCircleMesh = new THREE.Mesh(glyphCircleGeo, new THREE.MeshStandardMaterial({ color: glyphColor.formatHex() }))
-        glyphGroup.add(glyphCircleMesh);
+      scene.add(text_mesh);
+      flag_objects.push(text_mesh);
+      scene.add(fp_text_mesh);
+      flag_objects.push(fp_text_mesh);
+      scene.add(duplicate_mesh);
+      flag_objects.push(duplicate_mesh);
 
 
-        // console.log(glyphInfo.dot)
-        // for (const spikeInfo of Object.values(glyphInfo.dot)) {
-        //   console.log(spikeInfo)
-        //   const spikePath = speedometerLine(spikeInfo.info.srcPos, spikeInfo.info.vPos, 0, 0, flag_width / 2 * glyphFactors.size.building.dot)
-        //   console.log(spikePath)
-        // }
+      const glyphGroup = new THREE.Group();
+      // console.log(glyphInfo)
 
-        // const $d3g = {};
-			  // d3threeD( $d3g );
+      // const glyphPath = spiralLine(glyphInfo.spiral.pos, 0, 0, flag_width / 6 * glyphFactors.size.spiral)
+      const colorFactor = glyphFactors.color;
+      // console.log(glyphInfo, layer)
+      const glyphColor = d3.rgb(...interpolateLinearly(curve(density(glyphInfo.circle['lccList'][0]), colorFactor), grey2red).map(x => x * 255)).darker(1.25)
+      const glyphCircleR = flag_width / 12 * glyphFactors.size.building.circle * Math.sqrt(Math.log(1 + glyphInfo.circle['lccList'][0]['edges']))
 
-        // const tempPath = $d3g.transformSVGPath(glyphPath)
-        // // console.log(tempPath)
-        // const tempShapes = tempPath.toShapes( true )
+      const glyphCircleGeo = new THREE.CylinderGeometry(glyphCircleR, glyphCircleR, text_height, 32);
+      glyphCircleGeo.rotateX(Math.PI / 2);
+      glyphCircleGeo.translate(X + height_offset + flag_width * 5 / 6, base_Y + mast_length + flag_height - flag_width / 6, Z + text_height - flag_thickness / 2);
+      const glyphCircleMesh = new THREE.Mesh(glyphCircleGeo, new THREE.MeshStandardMaterial({ color: glyphColor.formatHex() }))
+      glyphGroup.add(glyphCircleMesh);
 
-        // // const points = tempPath.getPoints();
+
+      // console.log(glyphInfo.dot)
+      // for (const spikeInfo of Object.values(glyphInfo.dot)) {
+      //   console.log(spikeInfo)
+      //   const spikePath = speedometerLine(spikeInfo.info.srcPos, spikeInfo.info.vPos, 0, 0, flag_width / 2 * glyphFactors.size.building.dot)
+      //   console.log(spikePath)
+      // }
+
+      // const $d3g = {};
+      // d3threeD( $d3g );
+
+      // const tempPath = $d3g.transformSVGPath(glyphPath)
+      // // console.log(tempPath)
+      // const tempShapes = tempPath.toShapes( true )
+
+      // // const points = tempPath.getPoints();
 
 
-        // // const geometry = new THREE.BufferGeometry().setFromPoints( points );
-        // // const material = new THREE.LineBasicMaterial( { color: 0xffffff } );
+      // // const geometry = new THREE.BufferGeometry().setFromPoints( points );
+      // // const material = new THREE.LineBasicMaterial( { color: 0xffffff } );
 
-        // // const line = new THREE.Line( geometry, material );
-        // // scene.add( line );
+      // // const line = new THREE.Line( geometry, material );
+      // // scene.add( line );
 
-        // const glyphGroup = new THREE.Group();
+      // const glyphGroup = new THREE.Group();
 
-        // for (let shapeIdx = 0; shapeIdx < tempShapes.length; shapeIdx ++) {
-        //   const tempShape = tempShapes[shapeIdx];
-        //   const shapeGeo = new THREE.ExtrudeGeometry(tempShape, {depth: text_height, bevelEnabled: false})
-        //   shapeGeo.translate(0, 0, -text_height);
-        //   shapeGeo.rotateX(Math.PI)
-        //   shapeGeo.translate(X + height_offset + flag_width * 5 / 6, base_Y + mast_length + flag_height - flag_width / 6, Z);
-        //   const shapeMesh = new THREE.Mesh(shapeGeo, new THREE.MeshStandardMaterial({ color: glyphColor.formatHex() }))
-          
-        //   glyphGroup.add(shapeMesh);
-        // }
-        glyphCircleMesh.layerName = layer;
-        scene.add(glyphCircleMesh);
-        glyph_objects.push(glyphCircleMesh);
-      });
+      // for (let shapeIdx = 0; shapeIdx < tempShapes.length; shapeIdx ++) {
+      //   const tempShape = tempShapes[shapeIdx];
+      //   const shapeGeo = new THREE.ExtrudeGeometry(tempShape, {depth: text_height, bevelEnabled: false})
+      //   shapeGeo.translate(0, 0, -text_height);
+      //   shapeGeo.rotateX(Math.PI)
+      //   shapeGeo.translate(X + height_offset + flag_width * 5 / 6, base_Y + mast_length + flag_height - flag_width / 6, Z);
+      //   const shapeMesh = new THREE.Mesh(shapeGeo, new THREE.MeshStandardMaterial({ color: glyphColor.formatHex() }))
+
+      //   glyphGroup.add(shapeMesh);
+      // }
+      glyphCircleMesh.layerName = layer;
+      scene.add(glyphCircleMesh);
+      glyph_objects.push(glyphCircleMesh);
+      // });
+
+
+      // console.log(dagType)
+      const xOffset = X + height_offset;
+      const yOffset = base_Y + mast_length + flag_height - flag_width / 8 / 4 * 3;
+      const zOffset =  Z + text_height - flag_thickness / 2;
+      let svgGroup;
+      let animalMesh;
+
+      if (dagType === 0) {
+        // console.log('bird')
+        svgGroup = extrudeSVG(buildingTexture.rawDag, text_height);
+        animalMesh = new THREE.Mesh(new THREE.BoxBufferGeometry(flag_width / 10, flag_width / 10, text_height), buildingTexture.bird);
+        // console.log(animalMesh)
+      } else if (dagType === 1) {
+        // console.log('horse')
+        svgGroup = extrudeSVG(buildingTexture.edgeCutDag, text_height);
+        animalMesh = new THREE.Mesh(new THREE.BoxBufferGeometry(flag_width / 10, flag_width / 10, text_height), buildingTexture.horse);
+        // console.log(animalMesh)
+      } else if (dagType === 2) {
+        // console.log('gorilla')
+        svgGroup = extrudeSVG(buildingTexture.waveDag, text_height);
+        // console.log(svgGroup.scale)
+        // console.log(buildingTexture.gorilla)
+        // console.log(new THREE.MeshStandardMaterial({ color: 0x000000 }))
+        animalMesh = new THREE.Mesh(new THREE.BoxBufferGeometry(flag_width / 10, flag_width / 10, text_height), buildingTexture.gorilla);
+        // console.log(animalMesh)
+        // scene.add(animalMesh);
+      }
+      if (svgGroup) {
+        svgGroup.scale.set(flag_width / 8 / 320, flag_width / 8 / 320, 1)
+        svgGroup.position.x = xOffset;
+        svgGroup.position.y = yOffset;
+        svgGroup.position.z = zOffset;
+        scene.add(svgGroup);
+      }
+      if (animalMesh) {
+        animalMesh.position.x = xOffset + flag_width / 6 + flag_width / 24;
+        animalMesh.position.y = yOffset + flag_width / 24;
+        animalMesh.position.z = zOffset;
+        scene.add(animalMesh);
+      }
+
+      if (mallVicinityNum > 0) {
+        const dangerMesh = new THREE.Mesh(new THREE.BoxBufferGeometry(flag_width / 10, flag_width / 10, text_height), buildingTexture.mall);
+        dangerMesh.position.x = xOffset + flag_width / 3 + flag_width / 24;
+        dangerMesh.position.y = yOffset + flag_width / 24;
+        dangerMesh.position.z = zOffset;
+        scene.add(dangerMesh);
+      }
+
+      if (mallVicinityNum > 0 || largeNum > 0) {
+        const dangerMesh = new THREE.Mesh(new THREE.BoxBufferGeometry(flag_width / 10, flag_width / 10, text_height), buildingTexture.danger);
+        dangerMesh.position.x = xOffset + flag_width / 2 + flag_width / 24;
+        dangerMesh.position.y = yOffset + flag_width / 24;
+        dangerMesh.position.z = zOffset;
+        scene.add(dangerMesh);
+      }
+
     }
     // else if (bushSize > 1) {
     else if (glyphInfo.hasOwnProperty('spiral')) {
@@ -538,163 +698,216 @@ function createFlags(scene, height, coord, base_Y, layer, V, E, fragNum, fragNeg
       // } 
       // flag_mesh = new THREE.Mesh( new THREE.BoxBufferGeometry(flag_width,flag_height,flag_thickness), flag_material);
       flag_mesh = new THREE.Mesh(new THREE.BoxBufferGeometry(flag_width, flag_height, flag_thickness), new THREE.MeshStandardMaterial({ color: 0xffffff }));
-      let loader = new THREE.FontLoader();
-      loader.load('../textures/helvetiker_regular.typeface.json', function (font) {
-        // console.log("font loaded!");
+      // let loader = new THREE.FontLoader();
+      // loader.load('../textures/helvetiker_regular.typeface.json', function (font) {
+      // console.log("font loaded!");
 
-        let text_geo = new THREE.Geometry();
-        // let peel_geo = new THREE.TextGeometry( peel.toString(), {
-        //   font: font,
-        //   size: flag_width/peel.toString().length,
-        //   height: flag_thickness/2+0.15
-        // } );
-        // if(peel.toString().length > 1){
-        //   peel_geo.translate(X+flag_height/16,base_Y+mast_length+flag_height/2,Z);
-        //   console.log(peel);
-        // }else{
-        //   peel_geo.translate(X+flag_height/16,base_Y+mast_length,Z);
-        // }
-        // console.log("text size: "+flag_width/peel.toString().length);
-        // console.log("text height: "+flag_thickness/2+0.15);
+      let text_geo = new THREE.Geometry();
+      let fp_text_geo = new THREE.Geometry();
+      // let peel_geo = new THREE.TextGeometry( peel.toString(), {
+      //   font: font,
+      //   size: flag_width/peel.toString().length,
+      //   height: flag_thickness/2+0.15
+      // } );
+      // if(peel.toString().length > 1){
+      //   peel_geo.translate(X+flag_height/16,base_Y+mast_length+flag_height/2,Z);
+      //   console.log(peel);
+      // }else{
+      //   peel_geo.translate(X+flag_height/16,base_Y+mast_length,Z);
+      // }
+      // console.log("text size: "+flag_width/peel.toString().length);
+      // console.log("text height: "+flag_thickness/2+0.15);
 
-        // console.log("building.js::createFlags - V = "+V.toString()+", E = "+E.toString()+", # of floors = "+height.toString());
-        let text_size = flag_height / 4;
-        let text_height = flag_thickness / 2 + 0.15;
-        let height_offset = flag_height / 32;
-        let V_e = V.toExponential(2);
-        let E_e = E.toExponential(2);
-        let V_E_size = flag_width / (Math.max(V_e.length, E_e.toString().length));
-        let peel_geo = new THREE.TextGeometry("Peel: " + peel.toString(), { font: font, size: flag_width / (peel.toString().length + 5), height: text_height });
-        peel_geo.translate(X + height_offset, base_Y + mast_length + height_offset, Z);
-        let V_geo = new THREE.TextGeometry("V: " + V_e, { font: font, size: V_E_size, height: text_height });
-        V_geo.translate(X, base_Y + mast_length + flag_height / 4 + 2 * height_offset, Z);
-        let E_geo = new THREE.TextGeometry("E: " + E_e, { font: font, size: V_E_size, height: text_height });
-        E_geo.translate(X, base_Y + mast_length + 2 * flag_height / 4 + height_offset, Z);
-        let height_geo = new THREE.TextGeometry(height.toString() + " Floors", { font: font, size: flag_width / (height.toString().length + 7), height: text_height });
-        height_geo.translate(X + height_offset, base_Y + mast_length + 3 * flag_height / 4, Z);
-        text_geo.merge(peel_geo);
-        text_geo.merge(V_geo);
-        text_geo.merge(E_geo);
-        text_geo.merge(height_geo);
-        let text_buffer_geo = new THREE.BufferGeometry().fromGeometry(text_geo);
-        let text_mesh = new THREE.Mesh(text_buffer_geo, new THREE.MeshStandardMaterial({ color: 0x000000 }));
+      // console.log("building.js::createFlags - V = "+V.toString()+", E = "+E.toString()+", # of floors = "+height.toString());
+      let text_size = flag_height / 4;
+      let text_height = flag_thickness / 2 + 0.15;
+      let height_offset = flag_height / 32;
+      let V_e = V.toExponential(2);
+      let E_e = E.toExponential(2);
+      let V_E_size = flag_width / (Math.max(V_e.length, E_e.toString().length));
+      let peel_geo = new THREE.TextGeometry("Peel: " + peel.toString(), { font: font, size: flag_width / (peel.toString().length + 5), height: text_height });
+      peel_geo.translate(X + height_offset, base_Y + mast_length + height_offset, Z);
+      let V_geo = new THREE.TextGeometry("V: " + V_e, { font: font, size: V_E_size, height: text_height });
+      V_geo.translate(X, base_Y + mast_length + flag_height / 4 + 2 * height_offset, Z);
+      let E_geo = new THREE.TextGeometry("E: " + E_e, { font: font, size: V_E_size, height: text_height });
+      E_geo.translate(X, base_Y + mast_length + 2 * flag_height / 4 + height_offset, Z);
+      let height_geo = new THREE.TextGeometry(height.toString() + " Floors", { font: font, size: flag_width / (height.toString().length + 7), height: text_height });
+      height_geo.translate(X + height_offset, base_Y + mast_length + 3 * flag_height / 4, Z);
 
-        let duplicate_geo;
-        if (duplicate === 1) {
-          duplicate_geo = new THREE.Geometry();
-        } else if (duplicate > 1) {
-          duplicate_geo = new THREE.TextGeometry("Dup: " + duplicate.toString(), { font: font, size: flag_width / (duplicate.toString().length + 4), height: text_height });
-        } else if (duplicate > 10000) {
-          duplicate_geo = new THREE.TextGeometry("Dup: " + duplicate.toExponential(2), { font: font, size: flag_width / (duplicate.toExponential(2).length + 4), height: text_height });
-        }
+      fp_text_geo.merge(peel_geo);
+      let fp_text_buffer_geo = new THREE.BufferGeometry().fromGeometry(fp_text_geo);
+      let fp_text_mesh = new THREE.Mesh(fp_text_buffer_geo, new THREE.MeshStandardMaterial({ color: lighthouseColor }));
 
-        duplicate_geo.rotateY(Math.PI);
-        duplicate_geo.translate(X - height_offset + flag_width, base_Y + mast_length + 3 * flag_height / 4, Z);
-        let duplicate_buffer_geo = new THREE.BufferGeometry().fromGeometry(duplicate_geo);
-        let duplicate_mesh = new THREE.Mesh(duplicate_buffer_geo, new THREE.MeshStandardMaterial({ color: 0x000000 }));
+      text_geo.merge(V_geo);
+      text_geo.merge(E_geo);
+      text_geo.merge(height_geo);
+      let text_buffer_geo = new THREE.BufferGeometry().fromGeometry(text_geo);
+      let text_mesh = new THREE.Mesh(text_buffer_geo, new THREE.MeshStandardMaterial({ color: 0x000000 }));
 
-        scene.add(text_mesh);
-        flag_objects.push(text_mesh);
-        scene.add(duplicate_mesh);
-        flag_objects.push(duplicate.mesh);
+      let duplicate_geo;
+      if (duplicate === 1) {
+        duplicate_geo = new THREE.Geometry();
+      } else if (duplicate > 1) {
+        duplicate_geo = new THREE.TextGeometry("Dup: " + duplicate.toString(), { font: font, size: flag_width / (duplicate.toString().length + 4), height: text_height });
+      } else if (duplicate > 10000) {
+        duplicate_geo = new THREE.TextGeometry("Dup: " + duplicate.toExponential(2), { font: font, size: flag_width / (duplicate.toExponential(2).length + 4), height: text_height });
+      }
 
+      duplicate_geo.rotateY(Math.PI);
+      duplicate_geo.translate(X - height_offset + flag_width, base_Y + mast_length + 3 * flag_height / 4, Z);
+      let duplicate_buffer_geo = new THREE.BufferGeometry().fromGeometry(duplicate_geo);
+      let duplicate_mesh = new THREE.Mesh(duplicate_buffer_geo, new THREE.MeshStandardMaterial({ color: 0x000000 }));
 
-        const glyphGroup = new THREE.Group();
-        // console.log(glyphInfo);
-        // console.log(glyphFactors)
-        const glyphPath = spiralLine(glyphInfo.spiral.pos, 0, 0, flag_width / 6 * glyphFactors.size.spiral)
-        // const glyphPath = spiralLine(glyphInfo.spiral.pos, 0, 0, 1)
-        const colorFactor = glyphFactors.color;
-        const glyphColor = d3.rgb(...interpolateLinearly(curve(density(glyphInfo.spiral), colorFactor), grey2red).map(x => x * 255)).darker(1.25)
+      scene.add(text_mesh);
+      flag_objects.push(text_mesh);
+      scene.add(fp_text_mesh);
+      flag_objects.push(fp_text_mesh);
+      scene.add(duplicate_mesh);
+      flag_objects.push(duplicate_mesh);
 
 
-        // console.log(glyphPath)
-        // const svgLoader = new SVGLoader()
-        // const svgData = loader.parse(glyphPath)
-        // console.log(svgData.paths)
+      const glyphGroup = new THREE.Group();
+      // console.log(glyphInfo);
+      // console.log(glyphFactors)
+      const glyphPath = spiralLine(glyphInfo.spiral.pos, 0, 0, flag_width / 6 * glyphFactors.size.spiral)
+      // const glyphPath = spiralLine(glyphInfo.spiral.pos, 0, 0, 1)
+      const colorFactor = glyphFactors.color;
+      const glyphColor = d3.rgb(...interpolateLinearly(curve(density(glyphInfo.spiral), colorFactor), grey2red).map(x => x * 255)).darker(1.25)
 
-        const $d3g = {};
-			  d3threeD( $d3g );
 
-        const tempPath = $d3g.transformSVGPath(glyphPath)
-        // console.log(tempPath)
-        const tempShapes = tempPath.toShapes( true )
+      // console.log(glyphPath)
+      // const svgLoader = new SVGLoader()
+      // const svgData = loader.parse(glyphPath)
+      // console.log(svgData.paths)
 
-        // const points = tempPath.getPoints();
+      const $d3g = {};
+      d3threeD($d3g);
 
-        // const geometry = new THREE.BufferGeometry().setFromPoints( points );
-        // const material = new THREE.LineBasicMaterial( { color: 0xffffff } );
+      const tempPath = $d3g.transformSVGPath(glyphPath)
+      // console.log(tempPath)
+      const tempShapes = tempPath.toShapes(true)
 
-        // const line = new THREE.Line( geometry, material );
-        // scene.add( line );
+      // const points = tempPath.getPoints();
 
-        for (let shapeIdx = 0; shapeIdx < tempShapes.length; shapeIdx ++) {
-          const tempShape = tempShapes[shapeIdx];
-          const shapeGeo = new THREE.ExtrudeGeometry(tempShape, {depth: text_height, bevelEnabled: false})
-          shapeGeo.translate(0, 0, -text_height);
-          shapeGeo.rotateX(Math.PI)
-          shapeGeo.translate(X + height_offset + flag_width * 5 / 6, base_Y + mast_length + flag_height - flag_width / 6, Z);
-          const shapeMesh = new THREE.Mesh(shapeGeo, new THREE.MeshStandardMaterial({ color: glyphColor.formatHex() }))
-          
-          // glyphGroup.add(shapeMesh);
-          shapeMesh.layerName = layer;
-          scene.add(shapeMesh);
-          glyph_objects.push(shapeMesh);
-        }
-        // glyphGroup.layerName = layer;
-        // scene.add(glyphGroup);
-        // glyph_objects.push(glyphGroup);
+      // const geometry = new THREE.BufferGeometry().setFromPoints( points );
+      // const material = new THREE.LineBasicMaterial( { color: 0xffffff } );
 
-        // const svgMarkup = document.getElementById(`spiralDot_${glyphInfo.spiral.layer}_${glyphInfo.spiral.bucket}`).outerHTML;
-        // console.log(svgMarkup);
-        // const svgLoader = new SVGLoader()
-        // const svgData = svgLoader.parse(svgMarkup);
+      // const line = new THREE.Line( geometry, material );
+      // scene.add( line );
 
-        // console.log(svgData)
-        // console.log(svgData.paths)
+      for (let shapeIdx = 0; shapeIdx < tempShapes.length; shapeIdx++) {
+        const tempShape = tempShapes[shapeIdx];
+        const shapeGeo = new THREE.ExtrudeGeometry(tempShape, { depth: text_height, bevelEnabled: false })
+        shapeGeo.translate(0, 0, -text_height);
+        shapeGeo.rotateX(Math.PI)
+        shapeGeo.translate(X + height_offset + flag_width * 5 / 6, base_Y + mast_length + flag_height - flag_width / 6, Z);
+        const shapeMesh = new THREE.Mesh(shapeGeo, new THREE.MeshStandardMaterial({ color: glyphColor.formatHex() }))
 
-        // // svgData.paths.forEach((tempPath, i) => {
-        // //   console.log(tempPath);
-        // //   const shapes = tempPath.toShapes(true);
+        // glyphGroup.add(shapeMesh);
+        shapeMesh.layerName = layer;
+        scene.add(shapeMesh);
+        glyph_objects.push(shapeMesh);
+      }
+      // glyphGroup.layerName = layer;
+      // scene.add(glyphGroup);
+      // glyph_objects.push(glyphGroup);
 
-        // //   shapes.forEach((shape, j) => {
-        // //     const shapeGeo = new THREE.ExtrudeGeometry(shape, {depth: 0.1, bevelEnabled: false});
-        // //     shapeGeo.translate(X + height_offset, base_Y + mast_length + 3 * flag_height / 4, Z);
-        // //     const shapeMesh = new THREE.Mesh(shapeGeo, new THREE.MeshStandardMaterial({ color: 0x000000 }));
-        // //     scene.add(shapeMesh);
-        // //   });
+      // const svgMarkup = document.getElementById(`spiralDot_${glyphInfo.spiral.layer}_${glyphInfo.spiral.bucket}`).outerHTML;
+      // console.log(svgMarkup);
+      // const svgLoader = new SVGLoader()
+      // const svgData = svgLoader.parse(svgMarkup);
 
-        // // })
+      // console.log(svgData)
+      // console.log(svgData.paths)
 
-        // console.log(svgData.paths[0])
+      // // svgData.paths.forEach((tempPath, i) => {
+      // //   console.log(tempPath);
+      // //   const shapes = tempPath.toShapes(true);
 
-        const backPath = spiralLine(glyphInfo.spiral.pos, 0, 0, flag_width / 2 * glyphFactors.size.spiral)
-        // const backPath = spiralLine(glyphInfo.spiral.pos, 0, 0, 1)
+      // //   shapes.forEach((shape, j) => {
+      // //     const shapeGeo = new THREE.ExtrudeGeometry(shape, {depth: 0.1, bevelEnabled: false});
+      // //     shapeGeo.translate(X + height_offset, base_Y + mast_length + 3 * flag_height / 4, Z);
+      // //     const shapeMesh = new THREE.Mesh(shapeGeo, new THREE.MeshStandardMaterial({ color: 0x000000 }));
+      // //     scene.add(shapeMesh);
+      // //   });
 
-        const tempBackPath = $d3g.transformSVGPath(backPath)
-        // console.log(tempPath)
-        const tempBackShapes = tempBackPath.toShapes( true )
+      // // })
 
-        // if (layer === 'wavemap_3_47317_1') {
-        //   console.log(backPath)
-        //   console.log(tempBackShapes.length)
-        // }
+      // console.log(svgData.paths[0])
 
-        for (let shapeIdx = 0; shapeIdx < tempBackShapes.length; shapeIdx ++) {
-          const tempBackShape = tempBackShapes[shapeIdx];
-          const shapeGeo = new THREE.ExtrudeGeometry(tempBackShape, {depth: text_height, bevelEnabled: false})
-          shapeGeo.translate(0, 0, -text_height);
-          shapeGeo.rotateX(Math.PI);
-          shapeGeo.rotateY(Math.PI)
-          shapeGeo.translate(X + height_offset + flag_width / 2, base_Y + mast_length + flag_width / 2, Z);
-          const shapeMesh = new THREE.Mesh(shapeGeo, new THREE.MeshStandardMaterial({ color: glyphColor.formatHex() }))
-          
-          // glyphGroup.add(shapeMesh);
-          shapeMesh.layerName = layer;
-          scene.add(shapeMesh);
-          glyphBack_objects.push(shapeMesh);
-        }
-      });
+      const backPath = spiralLine(glyphInfo.spiral.pos, 0, 0, flag_width / 2 * glyphFactors.size.spiral)
+      // const backPath = spiralLine(glyphInfo.spiral.pos, 0, 0, 1)
+
+      const tempBackPath = $d3g.transformSVGPath(backPath)
+      // console.log(tempPath)
+      const tempBackShapes = tempBackPath.toShapes(true)
+
+      // if (layer === 'wavemap_3_47317_1') {
+      //   console.log(backPath)
+      //   console.log(tempBackShapes.length)
+      // }
+
+      for (let shapeIdx = 0; shapeIdx < tempBackShapes.length; shapeIdx++) {
+        const tempBackShape = tempBackShapes[shapeIdx];
+        const shapeGeo = new THREE.ExtrudeGeometry(tempBackShape, { depth: text_height, bevelEnabled: false })
+        shapeGeo.translate(0, 0, -text_height);
+        shapeGeo.rotateX(Math.PI);
+        shapeGeo.rotateY(Math.PI)
+        shapeGeo.translate(X + height_offset + flag_width / 2, base_Y + mast_length + flag_width / 2, Z);
+        const shapeMesh = new THREE.Mesh(shapeGeo, new THREE.MeshStandardMaterial({ color: glyphColor.formatHex() }))
+
+        // glyphGroup.add(shapeMesh);
+        shapeMesh.layerName = layer;
+        scene.add(shapeMesh);
+        glyphBack_objects.push(shapeMesh);
+      }
+      // });
+
+      // console.log(dagType)
+      const xOffset = X + height_offset;
+      const yOffset = base_Y + mast_length + flag_height - flag_width / 8 / 4 * 3;
+      const zOffset =  Z + text_height - flag_thickness / 2;
+      let svgGroup;
+      let animalMesh;
+
+      if (dagType === 0) {
+        // console.log('bird')
+        svgGroup = extrudeSVG(buildingTexture.rawDag, text_height);
+        animalMesh = new THREE.Mesh(new THREE.BoxBufferGeometry(flag_width / 10, flag_width / 10, text_height), buildingTexture.bird);
+        // console.log(animalMesh)
+      } else if (dagType === 1) {
+        // console.log('horse')
+        svgGroup = extrudeSVG(buildingTexture.edgeCutDag, text_height);
+        animalMesh = new THREE.Mesh(new THREE.BoxBufferGeometry(flag_width / 10, flag_width / 10, text_height), buildingTexture.horse);
+        // console.log(animalMesh)
+      } else if (dagType === 2) {
+        // console.log('gorilla')
+        svgGroup = extrudeSVG(buildingTexture.waveDag, text_height);
+        // console.log(svgGroup.scale)
+        animalMesh = new THREE.Mesh(new THREE.BoxBufferGeometry(flag_width / 10, flag_width / 10, text_height), buildingTexture.gorilla);
+        // console.log(animalMesh)
+      }
+      if (svgGroup) {
+        svgGroup.scale.set(flag_width / 8 / 320, flag_width / 8 / 320, 1)
+        svgGroup.position.x = xOffset;
+        svgGroup.position.y = yOffset;
+        svgGroup.position.z = zOffset;
+        scene.add(svgGroup);
+      }
+      if(animalMesh) {
+        animalMesh.position.x = xOffset + flag_width / 6 + flag_width / 24;
+        animalMesh.position.y = yOffset + flag_width / 24;
+        animalMesh.position.z = zOffset;
+        scene.add(animalMesh);
+      }
+
+      if (mallVicinityNum > 0) {
+        const dangerMesh = new THREE.Mesh(new THREE.BoxBufferGeometry(flag_width / 10, flag_width / 10, text_height), buildingTexture.danger);
+        dangerMesh.position.x = xOffset + flag_width / 3 + flag_width / 24;
+        dangerMesh.position.y = yOffset + flag_width / 24;
+        dangerMesh.position.z = zOffset;
+        scene.add(dangerMesh);
+      }
     }
   }
 
@@ -757,7 +970,7 @@ function ifUrlExists(url) {
 
 // check city_tracking, create buildings that are ready to color & move
 // delete colored and moved building from city_tracking
-function createCityMeshes(scene, objects, city_all, city_tracking, ceil_objects, middle_objects, truss_objects, window_objects, flag_objects, flag_objects_new, arrow_objects, src_objects, tgt_objects, glyph_objects, glyphBack_objects, city_to_load, y_scale, dataSet, ceilVisible, isNight, oneBuilding = false) {
+function createCityMeshes(scene, objects, city_all, city_tracking, ceil_objects, middle_objects, truss_objects, window_objects, flag_objects, flag_objects_new, arrow_objects, src_objects, tgt_objects, glyph_objects, glyphBack_objects, city_to_load, y_scale, dataSet, ceilVisible, isNight, oneBuilding = false, first_key_color_dict, buildingTexture) {
   for (let layer in city_tracking) {
     // console.log(city_tracking[layer].ready_to_move)
     // console.log(city_tracking[layer].ready_to_color)
@@ -860,7 +1073,7 @@ function createCityMeshes(scene, objects, city_all, city_tracking, ceil_objects,
       let splitLayerName = layer.split('_');
       let layerShortName = `${splitLayerName[1]}_${splitLayerName[2]}`
       // console.log(city_all.glyphInfo, layerShortName, city_all[layer].bushSize)
-      let result = createFlags(scene, height - 1, [X, Z], flag_base_Y, layer, city_all[layer].V, city_all[layer].E, city_all[layer].fragNum, city_all[layer].fragNeg, city_all[layer].fragPos, city_all[layer].fragBucket, city_all[layer].duplicate, flag_objects, lcc, fixed, mast_scale, dataSet, flag_objects_new, city_all.glyphInfo[layerShortName], city_all.glyphInfo.factors, city_all[layer].bushSize, glyph_objects, glyphBack_objects);
+      let result = createFlags(scene, height - 1, [X, Z], flag_base_Y, layer, city_all[layer].V, city_all[layer].E, city_all[layer].fragNum, city_all[layer].fragNeg, city_all[layer].fragPos, city_all[layer].fragBucket, city_all[layer].duplicate, flag_objects, lcc, fixed, mast_scale, dataSet, flag_objects_new, city_all.glyphInfo[layerShortName], city_all.glyphInfo.factors, city_all[layer].bushSize, glyph_objects, glyphBack_objects, first_key_color_dict[fixed], city_all[layer].dagType, buildingTexture, city_all[layer].mallVicinityNum, city_all[layer].largeNum);
       scene = result.scene;
       flag_objects_new = result.flag_objects_new;
       glyph_objects = result.glyph_objects;
@@ -924,6 +1137,31 @@ function createArrows(scene, name, coord, Y, arrow_objects, src_objects, tgt_obj
   })
   return { scene: scene, arrow_objects: arrow_objects, src_objects: src_objects, tgt_objects: tgt_objects };
 }
+
+
+function extrudeSVG(paths, depth = 20) {
+  const svgGroup = new THREE.Group();
+  paths.forEach((path, i) => {
+    const shapes = SVGLoader.createShapes(path);
+    // Each path has array of shapes
+    shapes.forEach((shape, j) => {
+      // Finally we can take each shape and extrude it
+      const geometry = new THREE.ExtrudeGeometry(shape, {
+        depth: depth,
+        bevelEnabled: false
+      });
+
+      geometry.computeVertexNormals();
+
+      // Create a mesh and add it to the group
+      const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: 0x000000 }));
+
+      svgGroup.add(mesh);
+    });
+  })
+  return svgGroup
+}
+
 
 // From d3-threeD.js
 /* This Source Code Form is subject to the terms of the Mozilla Public
@@ -1239,4 +1477,4 @@ function d3threeD(exports) {
 
 
 
-export { loadColor, loadSpiral, loadFloor, loadVoronoi, createCityMeshes };
+export { loadColor, loadSpiral, loadSpiral_dagType, loadFloor, loadVoronoi, createCityMeshes };

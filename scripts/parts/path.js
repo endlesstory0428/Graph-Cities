@@ -1,4 +1,4 @@
-import * as THREE from '../../node_modules/three/build/three.module.js';
+import * as THREE from '../../lib/three/build/three.module.js';
 // import * as mst from './TSP-MST/MST.js'
 // import {AdjMatrixGraph} from './TSP-MST/adjMatrixGraph.js'
 
@@ -580,5 +580,52 @@ function drawPath(city_all, buildingList) {
     return path_objects;
 }
 
+function drawPathColor(city_all, buildingList, color) {
+    const path_objects = [];
+    const width = 1;
+    const path = buildingList.map(d => [city_all[d].coords[0], city_all[d].coords[1]])
+    const connections = city_all.connections;
+    for (let i = 0; i < path.length-1; i++) {
+        const srcName = buildingList[i]
+        const tgtName = buildingList[i+1]
+        // console.log(city_all.connections)
+        
+        let height = getDistance(path[i],path[i+1]);
 
-export {updateDropdown, loadNeighbors, loadMeta, pathPlanning, getTourPath, getCityTour, drawPath};
+        let geometry = new THREE.PlaneBufferGeometry(width+1, height);
+        let material;
+        
+        material = new THREE.MeshStandardMaterial( {color: color, side: THREE.DoubleSide} );
+        
+        let path_segment = new THREE.Mesh( geometry, material );
+        let position = getMiddlePoint(path[i],path[i+1]);
+        let rotation = getRotation(path[i],path[i+1]);
+        path_segment.rotateX(90*Math.PI/180);
+        let path_segment_tmp_1 = new THREE.Object3D(); 
+        path_segment_tmp_1.add(path_segment);
+        path_segment_tmp_1.rotateY(rotation); 
+        let path_segment_tmp_2 = new THREE.Object3D();
+        path_segment_tmp_2.add(path_segment_tmp_1);
+        path_segment_tmp_2.position.set(position[0],0,position[1]);
+        // console.log("connectNeighbors: "+height+" "+position+" "+rotation);
+
+        // let wireframe = new THREE.WireframeGeometry( path_segment_tmp_2.geometry );
+        // let line = new THREE.LineSegments( wireframe, new THREE.LineDashedMaterial( {
+        //     color: 0xffffff,
+        //     linewidth: 10,
+        //     scale: 1,
+        //     dashSize: 10,
+        //     gapSize: 1,
+        // } ));
+
+        // console.log(line)
+
+        path_objects.push(path_segment_tmp_2);
+        // path_objects.push(line);
+
+    }
+    return path_objects;
+}
+
+
+export {updateDropdown, loadNeighbors, loadMeta, pathPlanning, getTourPath, getCityTour, drawPath, drawPathColor};

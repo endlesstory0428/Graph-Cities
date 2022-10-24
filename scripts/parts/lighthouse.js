@@ -1,6 +1,6 @@
-import * as THREE from '../../node_modules/three/build/three.module.js';
-// import {TrackballControls} from '../../node_modules/three/examples/jsm/controls/TrackballControls.js';
-// import {GUI} from '../../node_modules/three/examples/jsm/libs/dat.gui.module.js';
+import * as THREE from '../../lib/three/build/three.module.js';
+// import {TrackballControls} from '../../lib/three/examples/jsm/controls/TrackballControls.js';
+// import {GUI} from '../../lib/three/examples/jsm/libs/dat.gui.module.js';
 // import {jet} from '../lighthouse/jet_colormap.js';
 import {grey2red} from '../lighthouse/grey2red_colormap.js';
 
@@ -49,6 +49,7 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
     // console.log("scale_factor", scale_factor);
 
     let max_R = 0;
+    let maxHeight = 0;
     for(let key in info) {
         // const peel_value_color = 1.0-(1.0/(Math.log2(parseFloat(info[key]['meanDegree'])+1.0)));
         const peel_value_color = 1 - Math.log((info[key]['meanDegree'] / max_peel_meanDegree) * (1 - color_factor) + color_factor) / Math.log(color_factor);
@@ -58,7 +59,8 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
             // console.log(key+' -> '+info[key]);
             // let color = interpolateLinearly(peel_value_color,jet); //jet colormap [0=blue, 1=red]
             let color = interpolateLinearly(peel_value_color,grey2red); //grey2red colormap [0=grey, 1=red]
-            const entropy_intensity = 0.25 + 0.75 * entropy[parseInt(key)];
+            // const entropy_intensity = 0.25 + 0.75 * entropy[parseInt(key)];
+            const entropy_intensity = 1 - Math.log((0.25 + 0.75 * entropy[parseInt(key)]) * (1 - 0.01) + 0.01) / Math.log(0.01);
             let color_hex = rgbToHex(Math.round(color[0]*255),Math.round(color[1]*255),Math.round(color[2]*255));
             // const material = new THREE.MeshBasicMaterial({color:color_string}); //black color
             
@@ -96,6 +98,8 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
             // console.log("lighthouse - combined mesh name:", combined_mesh.name);
             lighthouse_objects.push(combined_mesh);
             scene.add(combined_mesh);
+
+            maxHeight = Y_max;
         }
     }
     // highlight the part of lighthouse when selected from dropdown
@@ -106,6 +110,21 @@ function loadCitySummaryFile(info, scene, lighthouse_objects, entropy, first_key
     highlighter.scale.set(lighthouse_objects[0].maxR*1.1, lighthouse_objects[0].dY, lighthouse_objects[0].maxR*1.1);
     scene.add(highlighter);
     lighthouse_objects.push(highlighter);
+
+    // console.log(scene.userData.camera)
+    // console.log(scene.userData.camera.zoom)
+    console.log(maxHeight)
+    const camera = scene.userData.camera;
+    const controls = scene.userData.controls
+    const fov = camera.fov * ( Math.PI / 180 );
+	let cameraZ = Math.abs( Math.max(maxHeight, 10) / 2 * Math.tan( fov * 2 ) );
+    cameraZ *= 3.5;
+    camera.position.set(0, maxHeight / 2, cameraZ);
+    controls.target.set(0, maxHeight / 2, 0);
+    scene.userData.controls.update()
+    // scene.userData.camera.zoom = Math.min(1, 5 / maxHeight);
+    // console.log(scene.userData.camera.zoom)
+    scene.userData.camera.updateProjectionMatrix()
 
     color_display.setValue(first_key_color_dict[first_key_list[0]]);
     // console.log(first_key_list);

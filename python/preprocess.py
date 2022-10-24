@@ -4,6 +4,8 @@ from scipy.spatial import Voronoi
 from scipy.spatial import voronoi_plot_2d
 import sys
 
+from itertools import combinations
+
 # SPIRAL_FILE = '../data/com-friendster/SPIRAL.txt'
 # SPIRAL_FILE = '../data/cit-Patents/SPIRAL.txt'
 # SPIRAL_FILE = '../data/movies/SPIRAL.txt'
@@ -52,10 +54,19 @@ def main():
         names.append(point_name)
         spiral_points[point_name] = point
     print(names)
-    vor = Voronoi(points)
-    # voronoi_plot_2d(vor)
-    createVoronoiText(vor,names,points)
-    createVoronoiNeighborsText(vor,names)
+    if len(points) < 4:
+        with open('voronoi.txt','w') as f:
+            for idx, name in enumerate(names):
+                f.write(f'{name} {idx} {idx} {idx} {idx}\n')
+        with open('neighbors.txt','w') as f:
+            for name1, name2 in combinations(names, 2):
+                f.write(f'{name1} {name2}\n')
+
+    else:
+        vor = Voronoi(points)
+        # voronoi_plot_2d(vor)
+        createVoronoiText(vor,names,points)
+        createVoronoiNeighborsText(vor,names)
 
 if __name__ == '__main__':
     main()
