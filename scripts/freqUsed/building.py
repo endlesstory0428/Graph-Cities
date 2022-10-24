@@ -81,15 +81,15 @@ for w in range(1, len(data) + 1):
     color_ceil = ToRgb(dense_ceil, colorFactor)
     print(floor, floor, 'ceil', *color_ceil, file=colorfile)
 
-    go = info['gt']
-    ge = info['ge']
-    dense_outer = ge / float(v * go) if ge > 0 else 0
-    color_outer = ToRgb(dense_outer, colorFactor)
-    print(floor, floor + 1, 'outer', *color_outer, file=colorfile)
-
-    # dense_outer = 0
+    # go = info['gt']
+    # ge = info['ge']
+    # dense_outer = ge / float(v * go) if ge > 0 else 0
     # color_outer = ToRgb(dense_outer, colorFactor)
     # print(floor, floor + 1, 'outer', *color_outer, file=colorfile)
+
+    dense_outer = 0
+    color_outer = ToRgb(dense_outer, colorFactor)
+    print(floor, floor + 1, 'outer', *color_outer, file=colorfile)
 
     if not last:
         e2n = info[f'e->w{w+1}']
@@ -102,11 +102,11 @@ for w in range(1, len(data) + 1):
     floor += 1
     print(floor, accum_height, r_upper, 'inner', file=floorfile)
 
-    r_upper_outer = log2(info['gt'] + 1)
-    print(floor, accum_height, r_upper_outer, 'outer', file=floorfile)
-
-    # r_upper_outer = log2(info['t'] + 1)
+    # r_upper_outer = log2(info['gt'] + 1)
     # print(floor, accum_height, r_upper_outer, 'outer', file=floorfile)
+
+    r_upper_outer = log2(info['t'] + 1)
+    print(floor, accum_height, r_upper_outer, 'outer', file=floorfile)
 
     # if last:
     #     break

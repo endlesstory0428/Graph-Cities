@@ -19,7 +19,7 @@ for wavemap in wavemaps:
 	else:
 		bushList.append(wavemap)
 
-print(f'python3 scripts/freqUsed/spiral_min.py {path} {graph} {" ".join(buildingList)} > {path}{graph}/cityMesh/SPIRAL.txt')
+print(f'python3 scripts/freqUsed/spiral.py {path} {graph} {" ".join(buildingList)} > {path}{graph}/cityMesh/SPIRAL.txt')
 for building in buildingList:
 	print(f'python3 scripts/freqUsed/building.py {path}{graph}/{graph}_waves/{building} {path}{graph}/cityMesh/{".".join(building.split(".")[:-1])}_floor.txt {path}{graph}/cityMesh/{".".join(building.split(".")[:-1])}_color.txt {color}')
 for bush in bushList:
