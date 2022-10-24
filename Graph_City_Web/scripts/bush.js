@@ -1,4 +1,4 @@
-import * as THREE from '../node_modules/three/build/three.module.js';
+import * as THREE from '../lib/three/build/three.module.js';
 
 let bushes = {};
 let last = [-187.86920742571192,-69.84011743155536]

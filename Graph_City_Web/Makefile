@@ -4,6 +4,7 @@ DIR := $(shell pwd)
 GRAPH := simplegraph
 
 retrive:
+	mkdir data_dags; \
 	ln -s ../wave-decomposition/${GRAPH} ${GRAPH}; \
 	ln -s ../wave-decomposition/${GRAPH}/cityMesh data/${GRAPH}; \
 	ln -s ../wave-decomposition/${GRAPH}/dag data_dags/${GRAPH}; \
