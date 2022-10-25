@@ -108,7 +108,7 @@ with open(f'config.sh', 'w', newline = '') as f:
     f.write(f"sed -i '25c {line}' Graph_City_Web/scripts/main.js\n")
 
     line = f'const localHost = `http://{address}:{city_port}/`'
-    f.write(f"sed -i '6c {line}' Graph_City_Web/scripts/main.js\n")
+    f.write(f"sed -i '6c {line}' Graph_City_Web/scripts/dag_view_server.js\n")
 
     line = f'const hostAddress = "http://{address}:{city_port}"'
     f.write(f"sed -i '7c {line}' Graph_City_Web/scripts/dag_view_server.js\n")
