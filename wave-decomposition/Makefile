@@ -189,9 +189,9 @@ cc-layers:
 cc-layers-uf:
 	for FILE in $$(ls $(GRAPH)/$(GRAPH)_layers -v | grep .csv); do \
 		echo $$FILE; \
-		LAYERSIZE=$$($(PYTHON) layerSizes.py $(GRAPH)/$(GRAPH)_layers/"$$FILE" $(GRAPH)/$(GRAPH)-layer-info.json); \
+		LAYERSIZE=$$($(PYTHON) scripts/freqUsed/layerSizes.py $(GRAPH)/$(GRAPH)_layers/"$$FILE" $(GRAPH)/$(GRAPH)-layer-info.json); \
 		echo $$LAYERSIZE; \
-		./cc-layers-mat-uf $(GRAPH)/$(GRAPH)_layers/"$$FILE" $(GRAPH)/$(GRAPH).cc $(GRAPH)/$(GRAPH)_layers $(LOGSIZE) $$LAYERSIZE; \
+		./cc-layers-mat $(GRAPH)/$(GRAPH)_layers/"$$FILE" $(GRAPH)/$(GRAPH).cc $(GRAPH)/$(GRAPH)_layers $(LOGSIZE) $$LAYERSIZE; \
 	done
 
 .PHONY: cc-layers-uf
@@ -338,7 +338,7 @@ wavemap_int:
 
 wavemap_cpp:
 	$(PYTHON) scripts/freqUsed/wavemapsNames.py $(GRAPH) ; \
-	./wavemaps_csv \
+	./wavemaps \
 		$(GRAPH) \
 		$(GRAPH)/ \
 		$(GRAPH)/$(GRAPH)_waves/ \
