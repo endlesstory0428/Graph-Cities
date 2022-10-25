@@ -1,6 +1,50 @@
 # Graph-Cities
 This repository stores code for *Graph Cities*, which contians four sub-modules: `wave-decomposition`, `Graph_City_Web`, `fpViewer` and `graph-strata`.
 
+This project was founded by NSF IIS-1563816 and IIS-1563971, leaded by Prof. [James Abello](mailto:abello@dimacs.rutgers.edu). It constitues a major part of the incoming Ph.D. thesis of [Haoyang Zhang](mailto:hz333@scarletmail.rutgers.edu).
+
+## Credits
+- Overall Project Design and Coordination: [James Abello](mailto:abello@dimacs.rutgers.edu)
+- Algorithms: James Abello, Haoyang Zhang, and Daniel Nakhimovich
+- Overall Integration and Platform Deployment: Haoyang Zhang
+- Graph Cities Rendering: Chengguizi Han, and Mridul Aanjaneya [ ] TOCHECK
+- Force Directed Layout Applications: 
+	- fpViewer: Haoyang Zhang
+	- Graph Strata base code: Qi Dong
+- Interaction Tools and Documentation: Haoyang Zhang, James Abello, and Shaad Quazi [ ] TOCHECK
+- Data Sets Exploration: Fatima AlSaadeh, Tim Tangerlini, and Peter Broadwell [ ] TOCHECK
+- Mini-Cloud Deployment: Haoyang Zhang, and Charles Hedrick [ ] TOCHECK
+
+## Preprocessed Data Sets
+### Tiny
+| name            | V     | E     | cc  | FP |
+|-----------------|-------|-------|-----|----|
+| Starwars        | 111   | 444   | 1   | 7  |
+| Game of Thrones | 796   | 2823  | 1   | 9  |
+| Danish Fabula   | 19738 | 28292 | 414 | 6  |
+### Small
+| name       | V       | E       | cc    | FP |
+|------------|---------|---------|-------|----|
+| ogbn-arxiv | 169343  | 1157799 | 1     | 22 |
+| Pandora    | 1968951 | 2832596 | 31347 | 31 |
+### Medium
+| name          | V       | E        | cc   | FP  |
+|---------------|---------|----------|------|-----|
+| cit-Patents   | 3774768 | 16518947 | 3627 | 41  |
+| ogbn-mag      | 1134649 | 21090258 | 1    | 64  |
+| ogbn-proteins | 132534  | 39561252 | 1    | 157 |
+| ogbn-products | 2400608 | 61859012 | 4237 | 102 |
+### Large
+| name            | V         | E          | cc  | FP  |
+|-----------------|-----------|------------|-----|-----|
+| movies          | 218052    | 115050370  | 38  | 78  |
+| ogbn-papers100M | 111059956 | 1614062356 | 151 | 159 |
+| com-friendster  | 65608366  | 1806067135 | 1   | 72  |
+
+## Sample Findings
+[ ] TOCHECK
+
+## Papers
 If you use our code, please consider citing our paper.
 ```bibtex
 @article{Abello2022GigaGC,
@@ -79,6 +123,11 @@ ln -s $(pwd)/wave-decomposition $(pwd)/fpViewer/
 ln -s $(pwd)/fpViewer $(pwd)/Graph_City_Web/
 ```
 #### Set Up Server
+Under your work space `./`, type the following commands to set up configure your server address and ports.
+```bash
+python3 config.py -a ${server_address} -c ${graph_city_port} -s ${graph_strata_port}
+```
+
 Under your work space `./`, type the following commands to set up Graph Strata server.
 ```bash
 cd ./graph-strata/
@@ -128,7 +177,7 @@ A detailed explanation can be found in [wave-decomposition section](#wave-decomp
 #### Browse Graph City
 Using your web browser to access the following webpage will bring your Graph City.
 ```bash
-http://${server_address}:18000/?city=${DATASET}
+http://${server_address}:${graph_city_port}/?city=${DATASET}
 ```
 
 # wave-decomposition
