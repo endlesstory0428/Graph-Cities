@@ -133,6 +133,7 @@ Under your work space `./`, type the following commands to set up Graph Strata s
 cd ./graph-strata/
 mkdir data
 npm ci
+chmod +x run.sh
 ./run.sh
 ```
 
