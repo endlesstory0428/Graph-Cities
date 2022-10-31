@@ -591,6 +591,7 @@
 			display: inline-block;
 		}
 	</style>
+	<link rel="stylesheet" href="/range-input.css">
 	<script>
 		function locationreload() {
 			location.reload();
@@ -818,6 +819,7 @@
 					</div>
 				</div>
 				<div id="dag-button-container">
+					<button id="dag-reset-button">Reset</button> <br>
 					<button id="height-constrain-button">Use Level as Height Constraint</button> <br>
 					<button id="full-dag-button">Request Full Dag</button> <br>
 					<button id="send-to-fpViewer-button">Open in FPViewer</button>
@@ -825,23 +827,23 @@
 				<div id="dag-slider-container">
 					<div id="dag-node-size-slider-container">
 						<label for="dag-node-size" class="dag-slider-label">node size</label>
-						<input type="range" id="dag-node-size" class="dag-slider" name="dag-node-size" min="1" max="1000" value="100">
+						<input type="range" id="dag-node-size" class="dag-slider styled-slider slider-progress" name="dag-node-size" min="1" max="1000" value="100">
 					</div>
 					<div id="dag-link-size-slider-container">
 						<label for="dag-link-size" class="dag-slider-label">link size</label>
-						<input type="range" id="dag-link-size" class="dag-slider" name="dag-link-size" min="1" max="1000" value="100">
+						<input type="range" id="dag-link-size" class="dag-slider styled-slider slider-progress" name="dag-link-size" min="1" max="1000" value="100">
 					</div>
 					<div id="dag-vertical-stretch-slider-container">
 						<label for="dag-vertical-stretch" class="dag-slider-label">vertical spread</label>
-						<input type="range" id="dag-vertical-stretch" class="dag-slider" name="dag-vertical-stretch" min="1" max="1000" value="100">
+						<input type="range" id="dag-vertical-stretch" class="dag-slider styled-slider slider-progress" name="dag-vertical-stretch" min="1" max="1000" value="20">
 					</div>
 					<div id="dag-node-threshold-max-slider-container">
 						<label for="dag-node-threshold-max" class="dag-slider-label">node size max<span id="dag-node-max-value"></span></label>
-						<input type="range" id="dag-node-threshold-max" class="dag-slider" name="dag-node-threshold-max" min="0" max="1000" value="1000">
+						<input type="range" id="dag-node-threshold-max" class="dag-slider styled-slider slider-progress" name="dag-node-threshold-max" min="0" max="1000" value="1000">
 					</div>
 					<div id="dag-node-threshold-min-slider-container">
 						<label for="dag-node-threshold-min" class="dag-slider-label">node size min<span id="dag-node-min-value"></span></label>
-						<input type="range" id="dag-node-threshold-min" class="dag-slider" name="dag-node-threshold-min" min="0" max="1000" value="1">
+						<input type="range" id="dag-node-threshold-min" class="dag-slider styled-slider slider-progress" name="dag-node-threshold-min" min="0" max="1000" value="1">
 					</div>
 				</div>
 			</div>

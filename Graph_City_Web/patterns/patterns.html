@@ -1,20 +1,21 @@
 <!DOCTYPE html>
+
 <head>
     <title>City Gallery</title>
     <style>
-        h3{
+        h3 {
             text-align: center;
         }
 
-        .gallery{
+        .gallery {
             display: flex;
             flex-wrap: wrap;
             flex-direction: row;
             margin: 4px;
             padding: 4px;
         }
-        
-        .gallery-item{
+
+        .gallery-item {
             border: 1px solid #ccc;
             margin: 8px;
             height: 330px;
@@ -23,14 +24,14 @@
             box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.2);
 
             display: flex;
-            flex-direction: column;            
+            flex-direction: column;
         }
 
-        .gallery-item:hover{
+        .gallery-item:hover {
             box-shadow: 6px 6px 6px rgba(0, 0, 0, 0.4);
         }
-        
-        .gallery-item p{            
+
+        .gallery-item p {
             /* width: 100%; */
             margin: 4px;
             padding: 8px;
@@ -39,13 +40,13 @@
             flex-grow: 2;
         }
 
-        .gallery-item img{
+        .gallery-item img {
             height: 85%;
             width: 100%;
             flex-grow: 1;
         }
 
-        .gallery-modal{
+        .gallery-modal {
             z-index: 3;
             display: none;
             /* padding-top: 100px; */
@@ -56,10 +57,10 @@
             height: 100%;
             overflow: auto;
             /* background-color: rgb(0,0,0); */
-            background-color: rgba(0,0,0,0.4);
+            background-color: rgba(0, 0, 0, 0.4);
         }
 
-        .gallery-close-btn{
+        .gallery-close-btn {
             border: 1px solid #000;
             background-color: #df4759;
             position: fixed;
@@ -69,69 +70,172 @@
             font-size: 40px;
         }
 
-        .gallery-modal-body{
-            position: fixed;            
+        .gallery-modal-body {
+            position: fixed;
             top: 80px;
             left: 15%;
             /* top: 20%; */
         }
 
-        .gallery-modal-img{
+        .gallery-modal-img {
             border: 1px solid #ccc;
             height: 750px;
-            width: 1000px;           
+            width: 1000px;
             padding: 4px;
             box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.2);
         }
+
+        #top-title {
+            position: sticky;
+            top: 0px;
+            width: 100%;
+            height: 80px;
+            padding-top: 5px;
+            padding-bottom: 5px;
+            font-size: larger;
+            background-color: rgba(255, 255, 255, 0.8)
+        }
+        #title {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+        }
+        #submit-pattern {
+            position: absolute;
+            right: 0%;
+            bottom: 0%;
+            font-size: smaller;
+        }
+        
     </style>
 </head>
+
 <body>
-    <h3>Cit-Patents</h3>
-    <div class="gallery">        
-        <div class="gallery-item" id='wavemap_25_3804978_1'>
-            <img src="./topo-generalized_star_glued_with_matchings-Moriah.png">
-            <p>description can be added here</p>
+    <div id="top-title">
+        <div id="title"> <h2>Graph City Patten Gallery</h2></div>
+        <div id="submit-pattern"> <a href="/patterns/submitPattern/email.html">Submit your own pattern now</a></div>
+    </div>
+    
+    <div class="gallery">
+        <!-- imdb-kw2movies -->
+        <div class="gallery-item" id='wavemap_3_31638_9'>
+            <img src="./fig/antman_and_thor.png">
+            <p>Antman and Thor glued by Avangers</p>
         </div>
-        <div class="gallery-item" id='wavemap_53_524219_1'>
-            <img src="./topo-generalized_stars_glued_together-Moriah.png">
-            <p>description can be added here</p>
+        <div class="gallery-item" id='wavemap_8_265163_2'>
+            <img src="./fig/harry_potter.png">
+            <p>Harry Potter Clones in two Fixed Points</p>
+        </div>
+        <div class="gallery-item" id='wavemap_13_261039_1'>
+            <img src="./fig/kongfu_biK.png">
+            <p>Kong Fu bi-clique</p>
+        </div>
+        <div class="gallery-item" id='wavemap_3_271634_2'>
+            <img src="./fig/starwars.png">
+            <p>bicliques glued in Star Wars</p>
         </div>
 
-        <!-- Extra Below -->
+        <!-- imdb-movieKws -->
+        <div class="gallery-item" id='wavemap_48_261714_1'>
+            <img src="./fig/Charlie_Chan_and_Tora-san.png">
+            <p>Charlie Chan and Tora-san glued by keyword sequel</p>
+        </div>
+        <div class="gallery-item" id='wavemap_6_262258_1'>
+            <img src="./fig/macro_structure.png">
+            <p>Cycles and trees of cliques and bicliques like substructure</p>
+        </div>
 
-        <div class="gallery-item" id='wavemap_25_3804978_1'>
-            <img src="./topo-generalized_star_glued_with_matchings-Moriah.png">
-            <p>description can be added here</p>
-        </div>
-        <div class="gallery-item" id='wavemap_53_524219_1'>
-            <img src="./topo-generalized_stars_glued_together-Moriah.png">
-            <p>description can be added here</p>
+
+        <!-- patents -->
+        <div class="gallery-item" id='wavemap_15_371894411_22'>
+            <img src="./fig/cit-Patents_15-371894411_5_generalizedStar.png">
+            <p>generalized star</p>
         </div>
         <div class="gallery-item" id='wavemap_25_3804978_1'>
-            <img src="./topo-generalized_star_glued_with_matchings-Moriah.png">
-            <p>description can be added here</p>
+            <img src="./fig/topo-generalized_star_glued_with_matchings-Moriah.png">
+            <p>star + matching</p>
         </div>
         <div class="gallery-item" id='wavemap_53_524219_1'>
-            <img src="./topo-generalized_stars_glued_together-Moriah.png">
-            <p>description can be added here</p>
+            <img src="./fig/topo-generalized_stars_glued_together-Moriah.png">
+            <p>stars</p>
         </div>
-        <div class="gallery-item" id='wavemap_25_3804978_1'>
-            <img src="./topo-generalized_star_glued_with_matchings-Moriah.png">
-            <p>description can be added here</p>
+        <div class="gallery-item" id='wavemap_12_315644255_13'>
+            <img src="./fig/cit-Patents_12-315644255_7_generalizedStar2similarVertices2tree.png">
+            <p>similar vertices</p>
         </div>
-        <div class="gallery-item" id='wavemap_53_524219_1'>
-            <img src="./topo-generalized_stars_glued_together-Moriah.png">
-            <p>description can be added here</p>
+        <div class="gallery-item" id='wavemap_31_295174029_2'>
+            <img src="./fig/cit-Patents_31-295174029_2_starOfCycles---gluedCycles.png">
+            <p>glued cycles</p>
         </div>
+        <div class="gallery-item" id='wavemap_33_295174029_2'>
+            <img src="./fig/cit-Patents_33-36577415_bicliqueToBicliqueToPath.png">
+            <p>bi-clique + bi-clique + path</p>
+        </div>
+        <div class="gallery-item" id='wavemap_18_3472857_16'>
+            <img src="./fig/cit-Patents_18-34728574_4.png">
+            <p>similar vertices</p>
+        </div>
+        <div class="gallery-item" id='wavemap_10_196384_1'>
+            <img src="./fig/cit 10 p2.png">
+            <p>cycles</p>
+        </div>
+        <div class="gallery-item" id='wavemap_10_196384_1_5'>
+            <img src="./fig/cit 10 p5.png">
+            <p>mini buildings in fp5</p>
+        </div>
+        <div class="gallery-item" id='wavemap_10_196384_1_6'>
+            <img src="./fig/cit 10 p6.png">
+            <p>mini buildings in fp6</p>
+        </div>
+        <div class="gallery-item" id='wavemap_10_196384_1_8'>
+            <img src="./fig/cit 10 p8.png">
+            <p>mini buildings in fp8</p>
+        </div>
+        <div class="gallery-item" id='wavemap_10_196384_1_9'>
+            <img src="./fig/cit 10 p9.png">
+            <p>mini buildings in fp9</p>
+        </div>
+
+        <!-- movies -->
+        <div class="gallery-item" id='wavemap_101_11400_1'>
+            <img src="./fig/topo-biclique(9,16)_glued_with_clique(16)-Moriah.png">
+            <p>bi-clique + clique</p>
+        </div>
+        <div class="gallery-item" id='wavemap_119_11833_1'>
+            <img src="./fig/movies_119-1183331_9_biclique.png">
+            <p>bi-clique</p>
+        </div>
+        <div class="gallery-item" id='wavemap_16_11696_1'>
+            <img src="./fig/story-biclique_glued_with_a_generalized_biclique_by_a_tree-Moriah.png">
+            <p>biclique + tree + generalized biclique</p>
+        </div>
+        <div class="gallery-item" id='wavemap_26_11399_1'>
+            <img src="./fig/topo-two_generalized_stars_glued_by_a_vertex-Jiajun.png">
+            <p>generalized stars glued by a vertex</p>
+        </div>
+        <div class="gallery-item" id='wavemap_12_11399_1'>
+            <img src="./fig/story-clique_of_time_travel-Moriah.png">
+            <p>clique (time travel)</p>
+        </div>
+        <div class="gallery-item" id='wavemap_13_11413_1'>
+            <img src="./fig/movies_13-114131683_4.png">
+            <p>bridge</p>
+        </div>
+        <div class="gallery-item" id='wavemap_27_11403_1'>
+            <img src="./fig/Screenshot (29).png">
+            <p>biclique</p>
+        </div>
+        <!-- <div class="gallery-item" id='wavemap_76_12776_1'>
+            <img src="./fig/movies_76-1277646.png">
+            <p>similar vertices</p>
+        </div> -->
+
     </div>
-        
-    <h3>Movies</h3>
-    <div class="gallery">        
-        <div class="gallery-item" id='movies_4_101'>
-            <img src="./topo-biclique(9,16)_glued_with_clique(16)-Moriah.png">
-            <p>description can be added here</p>
-        </div>
-    </div>
+
+
+    <!-- <h3>Movies</h3> -->
+    <!-- <div class="gallery">        
+    </div> -->
 
 
 
@@ -139,7 +243,7 @@
     <div id="myModal" class="gallery-modal">
         <span class="gallery-close-btn">&times;</span>
         <div class="gallery-modal-body">
-          <img class="gallery-modal-img" id="modal-image">
+            <img class="gallery-modal-img" id="modal-image">
         </div>
     </div>
 

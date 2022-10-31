@@ -285,7 +285,7 @@ void writeMetaData(std::string prefix, std::vector<long long> &timeList,
     outputFile << "\"jumpNum\":" << jumpNum << ",\n";
     outputFile << "\"read-nodes-time\":" << timeList[0] << ",\n";
     outputFile << "\"read-links-time\":" << timeList[1] << ",\n";
-    outputFile << "\"write-time\":" << timeList[2] << ",\n}";
+    outputFile << "\"write-time\":" << timeList[2] << "\n}";
     outputFile.close();
 }
 
