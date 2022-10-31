@@ -119,7 +119,7 @@ gui2.add(MAX_VSIZE, 'node_scale', 1, 1000)
   });
 
 let verticalStretch = {
-  verticalFactor: 100
+  verticalFactor: 20
 }
 gui2.add(verticalStretch, 'verticalFactor', 1, 1000)
   .name('vertical stretch')
@@ -142,8 +142,10 @@ function stretchGraph(graph) {
   graph.d3ReheatSimulation()
 }
 
-document.getElementById('dag-node-size').oninput = function(e) {
-  const value = parseInt(e.target.value);
+function updateNodeSizeSlider(value) {
+  // const value = parseInt(e.target.value);
+  document.getElementById('dag-node-size').value = value;
+  document.getElementById('dag-node-size').style.setProperty('--value', value)
   MAX_VSIZE.node_scale = value;
   if (tempGraph) {
     tempGraph.nodeVal(node => nodeSize(node));
@@ -153,11 +155,17 @@ document.getElementById('dag-node-size').oninput = function(e) {
     fullDagGraph.nodeVal(node => nodeSize(node));
     fullDagGraph.nodeThreeObject(node => nodeGeom(node, tempGraphIdx));
   }
-  
+  graphInfoList[tempGraphIdx].nodeSizeSlider = value;
 }
 
-document.getElementById('dag-link-size').oninput = function(e) {
-  const value = parseInt(e.target.value);
+document.getElementById('dag-node-size').oninput = (e) => {
+  updateNodeSizeSlider(e.target.value);
+}
+
+function updateLinkSizeSlider(value) {
+  // const value = parseInt(e.target.value);
+  document.getElementById('dag-link-size').value = value;
+  document.getElementById('dag-link-size').style.setProperty('--value', value)
   MAX_ESIZE.link_scale = value;
   if (tempGraph) {
     tempGraph.linkWidth(link => (MAX_ESIZE.link_scale / MAX_MAXSIZE) * Math.log1p(link.size))
@@ -165,10 +173,17 @@ document.getElementById('dag-link-size').oninput = function(e) {
   if (fullDagGraph) {
     fullDagGraph.linkWidth(link => (MAX_ESIZE.link_scale / MAX_MAXSIZE) * Math.log1p(link.size))
   }
+  graphInfoList[tempGraphIdx].linkSizeSlider = value;
 }
 
-document.getElementById('dag-vertical-stretch').oninput = function(e) {
-  const value = parseInt(e.target.value);
+document.getElementById('dag-link-size').oninput = (e) => {
+  updateLinkSizeSlider(e.target.value);
+}
+
+function updateVerticalStretchSlider(value) {
+  // const value = parseInt(e.target.value);
+  document.getElementById('dag-vertical-stretch').value = value;
+  document.getElementById('dag-vertical-stretch').style.setProperty('--value', value)
   verticalStretch.verticalFactor = value;
   if (tempGraph) {
     stretchGraph(tempGraph)
@@ -176,9 +191,13 @@ document.getElementById('dag-vertical-stretch').oninput = function(e) {
   if (fullDagGraph) {
     stretchGraph(fullDagGraph)
   }
-  
+  graphInfoList[tempGraphIdx].verticalStretchSlider = value;
 }
 
+document.getElementById('dag-vertical-stretch').oninput = (e) => {
+  updateVerticalStretchSlider(e.target.value);
+}
+ 
 // document.getElementById('dag-vertical-stretch').oninput = function(e) {
 //   const value = parseInt(e.target.value);
 //   verticalStretch.verticalFactor = value;
@@ -539,7 +558,7 @@ function initGraph(elemName, waveMiniFlag = false) {
     // .dagMode('bu')
     // .dagLevelDistance(50)
     .backgroundColor('#ffffff')
-    .linkColor(() => 'rgba(0,0,0,1.0)')
+    .linkColor(link => linkColor(link))
     .nodeRelSize(NODE_REL_SIZE)
     .nodeId('id')
     .nodeVal(node => nodeSize(node))
@@ -549,6 +568,8 @@ function initGraph(elemName, waveMiniFlag = false) {
     .nodeOpacity(0.8)
     .linkLabel(link => '<p style="color:black">' + link['size'] + '</p>')
     .linkWidth(link => (MAX_ESIZE.link_scale / MAX_MAXSIZE) * Math.log1p(link.size))
+    .linkDirectionalArrowLength(link => linkArrow(link))
+    .linkDirectionalArrowColor(link => linkColor(link))
     //.linkDirectionalParticles(2)
     //.linkDirectionalParticleWidth(0.8)
     //.linkDirectionalParticleWidth('logsize')
@@ -878,6 +899,7 @@ function click2wccDag(node) {
       metaNode: node.id,
       lcc: DATA.lcc,
       buildingName: DATA.buildingName,
+      requestFull: DATA.smallBuilding
     }), localHost + 'meta-dag-wcc', function(res) {
       console.log(res);
       // if (!res.res) {
@@ -1121,7 +1143,8 @@ function click2fpViewer(node) {
       // metaGraph: tempGraph.graphData(),
       metaGraph: [miniBuildingGraph.graphData(), graphList[1].graphData(), graphList[2].graphData()],
       buildingName: DATA.buildingName,
-      prevMetaNode: DATA.parentNode.id,
+      prevMetaNode: (DATA.dagType === 'wf.dag' || DATA.dagType === 'wf.dag.detail') ? node.wave : DATA.parentNode.id,
+      tempMetaNode: (DATA.dagType === 'wf.dag' || DATA.dagType === 'wf.dag.detail') ? node.frag + 1 : nodeID,
       desc: ['BLDG', DATAList[1].dagType, DATAList[2].dagType === 'wf.frag' ? DATAList[2].dagType : 'frag.cc'],
       // metaType: graphInfoList[tempGraphIdx].metaType
     }), localHost + 'meta-dag-node-fp-viewer', function(res) {
@@ -1158,7 +1181,7 @@ function click2strata(node) {
     return nodeGeom(node, tempGraphIdx)
   });
 
-  if (node.esize > TH_STRATA) {
+  if (((DATAList[tempGraphIdx].dagType === 'wf.dag' || DATAList[tempGraphIdx].dagType === 'wf.dag.detail') && (node.esize + node.touchESize > TH_STRATA_FULL)) || node.esize > TH_STRATA) {
     click2fpViewer(node)
   } else {
     document.getElementById('strata-container').style.display = 'block';
@@ -1235,6 +1258,13 @@ function click2strata(node) {
         });
       }
     }, 'json')
+  }
+}
+
+document.getElementById('dag-reset-button').onclick = () => {
+  if (tempGraph) {
+    tempGraph.cameraPosition();
+    tempGraph.zoomToFit(250, 10, node => true)
   }
 }
 
@@ -1492,6 +1522,19 @@ function requestNodeFullLabel(node) {
   }, 'json')
 }
 
+function linkColor(link) {
+  if (link.spanMark) {
+    return '#FF00FF'
+  }
+  return 'rgba(0,0,0,1.0)'
+}
+
+function linkArrow(link) {
+  if (link.spanMark) {
+    return (MAX_ESIZE.link_scale / MAX_MAXSIZE) * Math.log1p(link.size) * 4
+  }
+  return 0
+}
 
 function nodeLabel(node) {
   let retval
@@ -1963,7 +2006,18 @@ function switchGraphVisibility(graphIndex = 1, iterFlag = false) {
     document.getElementById('height-constrain-button').innerText = DATAList[graphIndex].heightConstrain ? 'Use Level as Height Constraint' : 'No Height Constraint';
   }
   DATA = DATAList[graphIndex]
-  switchMiniGraph(graphIndex, graphInfoList[graphIndex] && (graphInfoList[graphIndex].metaType === 'edgeCut.dag' || graphInfoList[graphIndex].metaType === 'wcc.dag') ? 1 : 0, iterFlag);
+  if (graphInfoList[graphIndex]) {
+    if (graphInfoList[graphIndex].nodeSizeSlider) {
+      updateNodeSizeSlider(graphInfoList[graphIndex].nodeSizeSlider)
+    }
+    if (graphInfoList[graphIndex].linkSizeSlider) {
+      updateLinkSizeSlider(graphInfoList[graphIndex].linkSizeSlider)
+    }
+    if (graphInfoList[graphIndex].verticalStretchSlider) {
+      updateVerticalStretchSlider(graphInfoList[graphIndex].verticalStretchSlider)
+    }
+  }
+  switchMiniGraph(graphIndex, graphInfoList[graphIndex] && (graphInfoList[graphIndex].metaType === 'edgeCut.dag' || graphInfoList[graphIndex].metaType === 'wcc.dag' || graphInfoList[graphIndex].metaType === 'wcc.dag.full') ? 1 : 0, iterFlag);
 }
 
 switchGraphVisibility(1);
@@ -1972,9 +2026,9 @@ function switchMiniGraph(graphIndex = 1, shapeIdx = 0, iterFlag = false) {
   for (let i = 1; i <= 4; i ++) {
     const tempGraphElem = document.getElementById(`graph${i}`)
     tempGraphElem.style.width = '100%';
-    tempGraphElem.style.height = '100%';
+    tempGraphElem.style.height = '79%';
     tempGraphElem.style.left = '0%'
-    tempGraphElem.style.top = '0%'
+    tempGraphElem.style.top = '10%'
     tempGraphElem.style.zIndex = '1';
     graphList[i].width(tempGraphElem.offsetWidth);
     graphList[i].height(tempGraphElem.offsetHeight);
@@ -2112,11 +2166,11 @@ function switchMiniBuilding(showFlag = true, posIdx = 0) {
 function switchFullDagGraph(showFlag = true) {
   if (showFlag) {
     document.getElementById('full-dag-graph-container').style.display = 'block';
-    document.getElementById('strata-container').style.display = 'hidden';
+    document.getElementById('strata-container').style.display = 'none';
     document.getElementById('graph-container').style.width = '49.5%';
     resizeDag()
   } else {
-    document.getElementById('full-dag-graph-container').style.display = 'hidden';
+    document.getElementById('full-dag-graph-container').style.display = 'none';
     document.getElementById('strata-container').style.display = 'block';
     document.getElementById('graph-container').style.width = '49.5%';
     resizeDag()
@@ -2220,6 +2274,10 @@ function updateDAGTitle(metaType, graphInfo) {
     }
   } else if (metaType === 'wcc.dag') {
     document.getElementById('meta-type').innerHTML = 'Local Spanning Meta-DAG'
+    document.getElementById('meta-node').setAttribute('title', 'level-connected component in the selected meta-node');
+    document.getElementById('meta-link').setAttribute('title', 'edges between nodes');
+  } else if (metaType === 'wcc.dag.full') {
+    document.getElementById('meta-type').innerHTML = 'Local Meta-DAG'
     document.getElementById('meta-node').setAttribute('title', 'level-connected component in the selected meta-node');
     document.getElementById('meta-link').setAttribute('title', 'edges between nodes');
   } else if (metaType === 'edgeCut') {
@@ -2346,7 +2404,7 @@ function loadMetaArray(data, graphIndex = 1) {
     loadMetaArrayDagInfo(graphInfo);
     const capitionElem = document.getElementById(`graph${graphIndex}-label`);
     capitionElem.innerText = 'frag cc DAG';
-    capitionElem.style.transform = 'translateY(-100%)'
+    capitionElem.style.transform = 'translateY(-200%)'
     capitionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeRightClick(node => {
@@ -2386,7 +2444,7 @@ function loadMetaArray(data, graphIndex = 1) {
     loadMetaArrayDagInfo(graphInfo);
     const capitionElem = document.getElementById(`graph${graphIndex}-label`);
     capitionElem.innerText = 'span frag cc DAG';
-    capitionElem.style.transform = 'translateY(-100%)'
+    capitionElem.style.transform = 'translateY(-200%)'
     capitionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeRightClick(node => {
@@ -2423,14 +2481,14 @@ function loadMetaArray(data, graphIndex = 1) {
     loadMetaArrayDagInfo(graphInfo);
     const capitionElem = document.getElementById(`graph${graphIndex}-label`);
     capitionElem.innerText = 'wave cc Meta DAG';
-    capitionElem.style.transform = 'translateY(-100%)'
+    capitionElem.style.transform = 'translateY(-200%)'
     capitionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeClick(node => {
         click2wccDag(node)
         addBuildingHighlight(miniBuildingGraph, new Set([node.wave]))
       });
-  } else if (metaType === 'wcc.dag') {
+  } else if (metaType === 'wcc.dag' || metaType === 'wcc.dag.full') {
     switchMiniBuilding(true, 1);
     const [graphData, graphInfo] = prepareMetaArrayDag(metaData);
     graphInfo.metaType = metaType
@@ -2444,8 +2502,12 @@ function loadMetaArray(data, graphIndex = 1) {
     }, 500);
     loadMetaArrayDagInfo(graphInfo);
     const capitionElem = document.getElementById(`graph${graphIndex}-label`);
-    capitionElem.innerText = 'span frag cc DAG';
-    capitionElem.style.transform = 'translateY(-100%)'
+    if (metaType === 'wcc.dag') {
+      capitionElem.innerText = 'span frag cc DAG';
+    } else {
+      capitionElem.innerText = 'frag cc DAG';
+    }
+    capitionElem.style.transform = 'translateY(-200%)'
     capitionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeRightClick(node => {
@@ -2471,7 +2533,7 @@ function loadMetaArray(data, graphIndex = 1) {
     loadMetaArrayDagInfo(graphInfo);
     const capitionElem = document.getElementById(`graph${graphIndex}-label`);
     capitionElem.innerText = 'partial src2snk agg.';
-    capitionElem.style.transform = 'translateY(-100%)'
+    capitionElem.style.transform = 'translateY(-200%)'
     capitionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeClick(node => {
@@ -2493,7 +2555,7 @@ function loadMetaArray(data, graphIndex = 1) {
     loadMetaArrayDagInfo(graphInfo);
     const capitionElem = document.getElementById(`graph${graphIndex}-label`);
     capitionElem.innerText = 'span frag cc DAG';
-    capitionElem.style.transform = 'translateY(-100%)'
+    capitionElem.style.transform = 'translateY(-200%)'
     capitionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeRightClick(node => {
@@ -2520,7 +2582,7 @@ function loadMetaArray(data, graphIndex = 1) {
     loadMetaArrayDagInfo(graphInfo);
     const capitionElem = document.getElementById(`graph${graphIndex}-label`);
     capitionElem.innerText = 'wave DAG';
-    capitionElem.style.transform = 'translateY(-100%)'
+    capitionElem.style.transform = 'translateY(-200%)'
     capitionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeClick(node => {
@@ -2545,7 +2607,7 @@ function loadMetaArray(data, graphIndex = 1) {
     loadMetaArrayDagInfo(graphInfo);
     const capitionElem = document.getElementById(`graph${graphIndex}-label`);
     capitionElem.innerText = 'frag DAG';
-    capitionElem.style.transform = 'translateY(-100%)'
+    capitionElem.style.transform = 'translateY(-200%)'
     capitionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeClick(node => {
@@ -2568,16 +2630,17 @@ function loadMetaArray(data, graphIndex = 1) {
     }, 500);
     loadMetaArrayDagInfo(graphInfo);
     const capitionElem = document.getElementById(`graph${graphIndex}-label`);
-    capitionElem.innerText = 'frag cc';
-    capitionElem.style.transform = 'translateY(-100%)'
+    capitionElem.innerText = 'frag cc\nThis window meta nodes represent "vertex seed sets", and their corresponding "edge fragments" are shown on the right window.';
+    capitionElem.style.transform = 'translateY(-200%)'
     capitionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeClick(node => {
-        if (node.idList.length === 1) {
-          click2strata(node)
-        } else {
-          click2wfDagDetail(node)
-        }
+        click2strata(node)
+        // if (node.idList.length === 1) {
+        //   click2strata(node)
+        // // } else {
+        //   click2wfDagDetail(node)
+        // }
       });
   } else if (metaType === 'wf.dag.detail') {
     iterFlag = true
@@ -2596,8 +2659,8 @@ function loadMetaArray(data, graphIndex = 1) {
     }, 500);
     loadMetaArrayDagInfo(graphInfo);
     const capitionElem = document.getElementById(`graph${graphIndex}-label`);
-    capitionElem.innerText = 'frag cc';
-    capitionElem.style.transform = 'translateY(-100%)'
+    capitionElem.innerText = 'frag cc\nThis window meta nodes represent "vertex seed sets", and their corresponding "edge fragments" are shown on the right window ';
+    capitionElem.style.transform = 'translateY(-200%)'
     capitionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeRightClick(node => {
@@ -2625,6 +2688,7 @@ function prepareMetaArrayDag(data) {
   let fpedges = 0;
   let minNodeESize = Infinity;
   let maxNodeESize = 0;
+  let maxLinkESize = 0;
 
   const nodes = [];
   const links = [];
@@ -2665,6 +2729,7 @@ function prepareMetaArrayDag(data) {
       edges += eSize;
       idx2node[tgt].isSrc = false;
       idx2node[tgt].wDeg += eSize;
+      maxLinkESize = Math.max(maxLinkESize, eSize);
     }
   }
   if (jumpLinkArray == null || jumpLinkArray == undefined) {
@@ -2676,13 +2741,14 @@ function prepareMetaArrayDag(data) {
       edges += eSize;
       idx2node[tgt].isSrc = false;
       idx2node[tgt].wDeg += eSize;
+      maxLinkESize = Math.max(maxLinkESize, eSize);
     }
   }
   console.log('links', links.length)
 
   const setRange = maxSet - minSet + 1;
   console.log(maxSet, minSet);
-  const distFactor = Math.min(400, Math.max(2000 / setRange, 160));
+  const distFactor = Math.min(40, Math.max(2000 / setRange, 10));
   for (const node of nodes) {
     node.density = node.esize == 0 ? 0 : 2 * node.esize / node.size / (node.size - 1);
     if (node.density == null || isNaN(node.density)) {
@@ -2695,6 +2761,11 @@ function prepareMetaArrayDag(data) {
     node.fyBase = (node.set - minSet - setRange / 2) * distFactor;
     node.fy = node.fyBase * verticalStretch.verticalFactor / 100;
   }
+
+  // updateNodeSizeSlider(200 / Math.cbrt(maxNodeESize + 1))
+  // updateLinkSizeSlider(80 / Math.log1p(maxLinkESize))
+  // updateVerticalStretchSlider( Math.min(20, 80 / Math.sqrt(setRange)))
+
 
   let importantNodes;
   const maxWDeg = d3.max(nodes, d => d.wDeg)
@@ -2723,7 +2794,10 @@ function prepareMetaArrayDag(data) {
       maxNodeESize: maxNodeESize, 
       minNodeESize: minNodeESize, 
       nodeNum: nodes.length, 
-      linkNum: links.length
+      linkNum: links.length,
+      nodeSizeSlider: 200 / Math.cbrt(maxNodeESize + 1),
+      linkSizeSlider: 1500 / Math.log1p(maxLinkESize),
+      verticalStretchSlider: Math.min(20, 80 / Math.sqrt(setRange))
     }
   ]
 }
@@ -2738,6 +2812,7 @@ function prepareMetaArrayEdgeCut(data) {
   let fpedges = 0;
   let minNodeESize = Infinity;
   let maxNodeESize = 0;
+  let maxLinkESize = 0;
 
   const nodes = [];
   const links = [];
@@ -2781,6 +2856,7 @@ function prepareMetaArrayEdgeCut(data) {
     edges += eSize;
     idx2node[tgt].isSrc = false;
     idx2node[tgt].wDeg += eSize;
+    maxLinkESize = Math.max(maxLinkESize, eSize)
 
     if (!src2minTgtSet.hasOwnProperty(src)) {
       src2minTgtSet[src] = Infinity;
@@ -2800,7 +2876,7 @@ function prepareMetaArrayEdgeCut(data) {
   }
 
   const setRange = set2hight[maxSet] - set2hight[minSet] + 1;
-  const distFactor = Math.min(100, Math.max(2000 / setRange, 10));
+  const distFactor = Math.min(40, Math.max(2000 / setRange, 10));
   for (const node of nodes) {
     node.density = node.esize == 0 ? 0 : 2 * node.esize / node.size / (node.size - 1);
     if (node.density == null || isNaN(node.density)) {
@@ -2810,6 +2886,10 @@ function prepareMetaArrayEdgeCut(data) {
     node.fyBase = (set2hight[node.set] - setRange / 2) * distFactor;
     node.fy = node.fyBase * verticalStretch.verticalFactor / 100;
   }
+
+  // updateNodeSizeSlider(200 / Math.cbrt(maxNodeESize + 1))
+  // updateLinkSizeSlider(80 / Math.log1p(maxLinkESize))
+  // updateVerticalStretchSlider( Math.min(20, 80 / Math.sqrt(setRange)))
 
   const maxWDeg = d3.max(nodes, d => d.wDeg)
   const aveWDeg = d3.mean(nodes, d => d.wDeg)
@@ -2846,6 +2926,9 @@ function prepareMetaArrayEdgeCut(data) {
       nodeNum: nodes.length, 
       linkNum: finalLinks.length,
       topoSpan: topoSpan,
+      nodeSizeSlider: 200 / Math.cbrt(maxNodeESize + 1),
+      linkSizeSlider: 1500 / Math.log1p(maxLinkESize),
+      verticalStretchSlider: Math.min(20, 80 / Math.sqrt(setRange))
     }
   ]
 }
@@ -2860,6 +2943,7 @@ function prepareMetaArrayWcc(data) {
   let fpedges = 0;
   let minNodeESize = Infinity;
   let maxNodeESize = 0;
+  let maxLinkESize = 0;
 
   const nodes = [];
   const links = [];
@@ -2902,6 +2986,7 @@ function prepareMetaArrayWcc(data) {
     edges += eSize;
     idx2node[tgt].isSrc = false;
     idx2node[tgt].wDeg += eSize;
+    maxLinkESize = Math.max(maxLinkESize, eSize)
 
     if (!src2minTgtSet.hasOwnProperty(src)) {
       src2minTgtSet[src] = Infinity;
@@ -2921,7 +3006,7 @@ function prepareMetaArrayWcc(data) {
   }
 
   const setRange = set2hight[maxSet] - set2hight[minSet] + 1;
-  const distFactor = Math.min(100, Math.max(2000 / setRange, 10));
+  const distFactor = Math.min(40, Math.max(2000 / setRange, 10));
   for (const node of nodes) {
     node.density = node.esize == 0 ? 0 : 2 * node.esize / node.size / (node.size - 1);
     if (node.density == null || isNaN(node.density)) {
@@ -2931,6 +3016,10 @@ function prepareMetaArrayWcc(data) {
     node.fyBase = (set2hight[node.set] - setRange / 2) * distFactor;
     node.fy = node.fyBase * verticalStretch.verticalFactor / 100;
   }
+
+  // updateNodeSizeSlider(200 / Math.cbrt(maxNodeESize + 1))
+  // updateLinkSizeSlider(80 / Math.log1p(maxLinkESize))
+  // updateVerticalStretchSlider( Math.min(20, 80 / Math.sqrt(setRange)))
 
   const maxWDeg = d3.max(nodes, d => d.wDeg)
   const aveWDeg = d3.mean(nodes, d => d.wDeg)
@@ -2968,6 +3057,9 @@ function prepareMetaArrayWcc(data) {
       nodeNum: nodes.length, 
       linkNum: finalLinks.length,
       topoSpan: topoSpan,
+      nodeSizeSlider: 200 / Math.cbrt(maxNodeESize + 1),
+      linkSizeSlider: 1500 / Math.log1p(maxLinkESize),
+      verticalStretchSlider: Math.min(20, 80 / Math.sqrt(setRange))
     }
   ]
 }
@@ -2982,6 +3074,7 @@ function prepareMetaArrayWave(data) {
   let fpedges = 0;
   let minNodeESize = Infinity;
   let maxNodeESize = 0;
+  let maxLinkESize = 0;
 
   const nodes = [];
   const links = [];
@@ -3018,11 +3111,13 @@ function prepareMetaArrayWave(data) {
   }
   console.log('nodes', nodes.length)
   for (const [src, tgt, eSize] of linkArray) {
-    links.push({ source: src, target: tgt, size: eSize })
+    const tempLink = { source: src, target: tgt, size: eSize }
+    links.push(tempLink)
     fpedges += eSize;
     edges += eSize;
     idx2node[tgt].isSrc = false;
     idx2node[tgt].wDeg += eSize;
+    maxLinkESize = Math.max(maxLinkESize, eSize)
 
     if (!src2minTgtSet.hasOwnProperty(src)) {
       src2minTgtSet[src] = Infinity;
@@ -3032,6 +3127,10 @@ function prepareMetaArrayWave(data) {
       tgt2maxSrcSet[tgt] = -Infinity;
     }
     tgt2maxSrcSet[tgt] = Math.max(tgt2maxSrcSet[tgt], v2set[src]);
+
+    if (tgt === src + 1) {
+      tempLink.spanMark = true;
+    }
   }
   console.log('links', links.length);
 
@@ -3042,7 +3141,7 @@ function prepareMetaArrayWave(data) {
   }
 
   const setRange = set2hight[maxSet] - set2hight[minSet] + 1;
-  const distFactor = Math.min(100, Math.max(2000 / setRange, 10));
+  const distFactor = Math.min(40, Math.max(2000 / setRange, 10));
   for (const node of nodes) {
     node.density = node.esize == 0 ? 0 : 2 * node.esize / node.size / (node.size - 1);
     if (node.density == null || isNaN(node.density)) {
@@ -3052,6 +3151,10 @@ function prepareMetaArrayWave(data) {
     node.fyBase = (set2hight[node.set] - setRange / 2) * distFactor;
     node.fy = node.fyBase * verticalStretch.verticalFactor / 100;
   }
+
+  // updateNodeSizeSlider(200 / Math.cbrt(maxNodeESize + 1))
+  // updateLinkSizeSlider(80 / Math.log1p(maxLinkESize))
+  // updateVerticalStretchSlider( Math.min(20, 80 / Math.sqrt(setRange)))
 
   const maxWDeg = d3.max(nodes, d => d.wDeg)
   const aveWDeg = d3.mean(nodes, d => d.wDeg)
@@ -3089,6 +3192,9 @@ function prepareMetaArrayWave(data) {
       nodeNum: nodes.length, 
       linkNum: finalLinks.length,
       topoSpan: topoSpan,
+      nodeSizeSlider: 200 / Math.cbrt(maxNodeESize + 1),
+      linkSizeSlider: 1500 / Math.log1p(maxLinkESize),
+      verticalStretchSlider: Math.min(20, 80 / Math.sqrt(setRange))
     }
   ]
 }
@@ -3103,6 +3209,7 @@ function prepareMetaArrayFrag(data) {
   let fpedges = 0;
   let minNodeESize = Infinity;
   let maxNodeESize = 0;
+  let maxLinkESize = 0;
 
   const nodes = [];
   const links = [];
@@ -3139,11 +3246,13 @@ function prepareMetaArrayFrag(data) {
   }
   console.log('nodes', nodes.length)
   for (const [src, tgt, eSize] of linkArray) {
-    links.push({ source: src, target: tgt, size: eSize })
+    const tempLink = { source: src, target: tgt, size: eSize }
+    links.push(tempLink)
     fpedges += eSize;
     edges += eSize;
     idx2node[tgt].isSrc = false
     idx2node[tgt].wDeg += eSize;
+    maxLinkESize = Math.max(maxLinkESize, eSize)
 
     if (!src2minTgtSet.hasOwnProperty(src)) {
       src2minTgtSet[src] = Infinity;
@@ -3153,6 +3262,10 @@ function prepareMetaArrayFrag(data) {
       tgt2maxSrcSet[tgt] = -Infinity;
     }
     tgt2maxSrcSet[tgt] = Math.max(tgt2maxSrcSet[tgt], v2set[src]);
+
+    if (tgt === src + 1) {
+      tempLink.spanMark = true;
+    }
   }
   console.log('links', links.length);
 
@@ -3163,7 +3276,7 @@ function prepareMetaArrayFrag(data) {
   }
 
   const setRange = set2hight[maxSet] - set2hight[minSet] + 1;
-  const distFactor = Math.min(100, Math.max(2000 / setRange, 10));
+  const distFactor = Math.min(40, Math.max(2000 / setRange, 10));
   for (const node of nodes) {
     node.density = node.esize == 0 ? 0 : 2 * node.esize / node.size / (node.size - 1);
     if (node.density == null || isNaN(node.density)) {
@@ -3173,6 +3286,10 @@ function prepareMetaArrayFrag(data) {
     node.fyBase = (set2hight[node.set] - setRange / 2) * distFactor;
     node.fy = node.fyBase * verticalStretch.verticalFactor / 100;
   }
+
+  // updateNodeSizeSlider(200 / Math.cbrt(maxNodeESize + 1))
+  // updateLinkSizeSlider(80 / Math.log1p(maxLinkESize))
+  // updateVerticalStretchSlider( Math.min(20, 80 / Math.sqrt(setRange)))
 
   const maxWDeg = d3.max(nodes, d => d.wDeg)
   const aveWDeg = d3.mean(nodes, d => d.wDeg)
@@ -3210,6 +3327,9 @@ function prepareMetaArrayFrag(data) {
       nodeNum: nodes.length, 
       linkNum: finalLinks.length,
       topoSpan: topoSpan,
+      nodeSizeSlider: 200 / Math.cbrt(maxNodeESize + 1),
+      linkSizeSlider: 1500 / Math.log1p(maxLinkESize),
+      verticalStretchSlider: Math.min(20, 80 / Math.sqrt(setRange))
     }
   ]
 }
@@ -3563,6 +3683,13 @@ function loadMetaArrayDagInfo(graphInfo) {
   maxSlider.value = graphInfo.maxNodeESize;
   document.getElementById('dag-node-max-value').innerText = `(${graphInfo.maxNodeESize})`;
   document.getElementById('dag-node-min-value').innerText = `(${graphInfo.minNodeESize})`;
+
+  for (let e of document.querySelectorAll('input[type="range"].slider-progress')) {
+    e.style.setProperty('--value', e.value);
+    e.style.setProperty('--min', e.min == '' ? '0' : e.min);
+    e.style.setProperty('--max', e.max == '' ? '100' : e.max);
+    // e.addEventListener('input', () => e.style.setProperty('--value', e.value));
+  }
 }
 
 // function loadMetaDagUnCompress(data) {

@@ -955,6 +955,7 @@ app.post('/meta-dag', (req, res) => {
   const bucket = req.body.bucket;
   const maxEdge = req.body.maxEdges;
   const buildingName = req.body.buildingName;
+  const smallBuilding = req.body.smallBuilding;
   console.log(filename, dataset, layer, bucket, maxEdge);
 
   const retInfo = {
@@ -964,18 +965,23 @@ app.post('/meta-dag', (req, res) => {
     lcc: lcc,
     bucket: bucket,
     buildingName: buildingName,
+    smallBuilding: smallBuilding,
   }
 
   const dagFilePrefix = `${__dirname}/${filename}`;
   const dagInfoFileName = `${dagFilePrefix}-info.json`;
+  const dagSpanInfoFileName = `${dagFilePrefix}.span-info.json`;
   const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
   const waveFileName = `layer-${layer}-waves-buck${bucket}.csv`;
   const node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
   Promise.all([
-    fs.promises.readFile(dagInfoFileName, 'utf8')
+    fs.promises.readFile(dagInfoFileName, 'utf8'),
+    fs.promises.readFile(dagSpanInfoFileName, 'utf8')
   ]).then(datas => {
     const dagInfoFile = datas[0];
+    const dagSpanInfoFile = datas[1];
     const dagInfo = JSON.parse(dagInfoFile);
+    const dagSpanInfo = JSON.parse(dagSpanInfoFile);
     const rawEdgeCnt = dagInfo['edges'];
     if (dagInfo['linkNum'] < TH_DAG) {
 
@@ -1055,7 +1061,7 @@ app.post('/meta-dag', (req, res) => {
       if (!cache.has(node2edgeListCacheName, {updateAgeOnHas: true})) {
         readWaveAndVMapStream(filename, waveFileName, waveDir, dataset);
       }
-    } else if (dagInfo['spanNum'] < TH_DAG) {
+    } else if (dagSpanInfo['spanNum'] < TH_DAG) {
 
       const wccLinkFile = `${dagFilePrefix}.wcc.link`;
       const wccNodeFile = `${dagFilePrefix}.wcc.node`;
@@ -2532,7 +2538,8 @@ app.post('/meta-dag-wcc', (req, res) => {
   const metaNode = req.body.metaNode;
   const lcc = req.body.lcc;
   const buildingName = req.body.buildingName;
-  console.log(filename, dataset, layer, bucket, metaNode);
+  const requestFull = req.body.requestFull;
+  console.log(filename, dataset, layer, bucket, metaNode, requestFull);
 
   const retInfo = {
     filename: filename, 
@@ -2550,18 +2557,27 @@ app.post('/meta-dag-wcc', (req, res) => {
   const dagNodeFile = `${dagFilePrefix}.node`;
   const metaVMapFile = `${dagFilePrefix}.wcc.vmap`;
   const dagCacheName = `${dataset}/${filename}.dag`;
-  const retName = 'wcc.dag'
+  const retName = 'wcc.dag';
   if (!cache.has(dagCacheName, {updateAgeOnHas: true})) {
     // // not in the cache
     const processPromise = readDagNodeLinkByMetaStream(dagCacheName, dagNodeFile, dagLinkFile, dagJumpLinkFile, metaVMapFile);
     processPromise.then(() => {
       const cachedData = cache.get(dagCacheName);
-      const retData = [
-        cachedData.data[0][metaNode], // node
-        cachedData.data[1][metaNode], // link
-        // cachedData.data[2][metaNode], // jumpLink
-      ]
-      res.send(JSON.stringify([retData, retInfo, retName]));
+      if (requestFull) {
+        const retData = [
+          cachedData.data[0][metaNode], // node
+          cachedData.data[1][metaNode], // link
+          cachedData.data[2][metaNode], // jumpLink
+        ]
+        res.send(JSON.stringify([retData, retInfo, retName + '.full']));
+      } else {
+        const retData = [
+          cachedData.data[0][metaNode], // node
+          cachedData.data[1][metaNode], // link
+          // cachedData.data[2][metaNode], // jumpLink
+        ]
+        res.send(JSON.stringify([retData, retInfo, retName]));
+      }
     })
   } else {
     // // in the cache
@@ -2571,21 +2587,40 @@ app.post('/meta-dag-wcc', (req, res) => {
       console.log('W: still processing data in /meta-dag-wcc');
       cachedData.processPromise.then(() => {
         const updatedCachedData = cache.get(dagCacheName);
-        const retData = [
-          updatedCachedData.data[0][metaNode], // node
-          updatedCachedData.data[1][metaNode], // link
-          // updatedCachedData.data[2][metaNode], // jumpLink
-        ]
-        res.send(JSON.stringify([retData, retInfo, retName]));
+        if (requestFull) {
+          const retData = [
+            updatedCachedData.data[0][metaNode], // node
+            updatedCachedData.data[1][metaNode], // link
+            updatedCachedData.data[2][metaNode], // jumpLink
+          ]
+          res.send(JSON.stringify([retData, retInfo, retName + '.full']));
+        } else {
+          const retData = [
+            updatedCachedData.data[0][metaNode], // node
+            updatedCachedData.data[1][metaNode], // link
+            // updatedCachedData.data[2][metaNode], // jumpLink
+          ]
+          res.send(JSON.stringify([retData, retInfo, retName]));
+        }
       })
     } else {
       // // processed
-      const retData = [
-        cachedData.data[0][metaNode], // node
-        cachedData.data[1][metaNode], // link
-        // cachedData.data[2][metaNode], // jumpLink
-      ]
-      res.send(JSON.stringify([retData, retInfo, retName]));
+      if (requestFull) {
+        const retData = [
+          cachedData.data[0][metaNode], // node
+          cachedData.data[1][metaNode], // link
+          cachedData.data[2][metaNode], // jumpLink
+        ]
+        res.send(JSON.stringify([retData, retInfo, retName + '.full']));
+      } else {
+        const retData = [
+          cachedData.data[0][metaNode], // node
+          cachedData.data[1][metaNode], // link
+          // cachedData.data[2][metaNode], // jumpLink
+        ]
+        res.send(JSON.stringify([retData, retInfo, retName]));
+      }
+
     }
   }
 });
@@ -3270,6 +3305,7 @@ app.post('/meta-dag-node-fp-viewer', async (req, res) => {
   const metaGraph = req.body.metaGraph; // should contain {building, metaDAG, localMetaDAG}
   const buildingName = req.body.buildingName;
   const prevMetaNode = req.body.prevMetaNode; // need send from client
+  const tempMetaNode = req.body.tempMetaNode; // need send from client
   const desc = req.body.desc;
 
   console.log(buildingName, prevMetaNode, metaNode)
@@ -3471,7 +3507,7 @@ app.post('/meta-dag-node-fp-viewer', async (req, res) => {
             // res.send(JSON.stringify({res: false, detail: 'fpViewer', url: `na`}));
             return console.log(err);
           }
-          exec(`cd fpViewer; make GRAPH=${filename} LOCALMININODE=${metaNodeID} MININODE=${prevMetaNode} FLOORLIST=[${wfInfo[0]}] BLDGFILE=${dataset}-${buildingName} METAFILE=${dataset}-${buildingName} LOCALFILE=${dataset}-${buildingName}-${prevMetaNode} BLDGDESC=${desc[0]} METADESC=${desc[1]} LOCALDESC=${desc[2]} retrive`, (err, stdout, stderr) => {
+          exec(`cd fpViewer; make GRAPH=${filename} LOCALMININODE=${tempMetaNode} MININODE=${prevMetaNode} FLOORLIST=[${wfInfo[0]}] BLDGFILE=${dataset}-${buildingName} METAFILE=${dataset}-${buildingName} LOCALFILE=${dataset}-${buildingName}-${prevMetaNode} BLDGDESC=${desc[0]} METADESC=${desc[1]} LOCALDESC=${desc[2]} retrive`, (err, stdout, stderr) => {
             if (err) {
               // res.send(JSON.stringify({res: false, detail: 'fpViewer', url: `na`}));
               return console.log(err);

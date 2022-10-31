@@ -1006,7 +1006,7 @@ div.material-slider-bar-container{
 	box-sizing:border-box;
 	
 	width:52%;height:10px;
-	background-color:darkgrey;
+	background-color:lightgray;
 	margin:0;padding:0;
 	border-top-left-radius: 5px;
     border-top-right-radius: 5px;
@@ -1016,7 +1016,7 @@ div.material-slider-bar-container{
 }
 div.material-slider-bar{
 	position:absolute;left:0;
-	background-color:limegreen;
+	background-color:dimgray;
 	margin:0;padding:0;
 	height:100%;
 	border-top-left-radius: 5px;

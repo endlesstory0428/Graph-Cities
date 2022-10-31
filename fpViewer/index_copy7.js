@@ -656,6 +656,33 @@ function drawMiniGraph(datas) {
   const localMiniGraphData = datas[0];
   const miniGraphData = datas[1];
   const buidlingData = datas[2];
+  for (const link of localMiniGraphData.links) {
+    link.source = link.source.id;
+    link.target = link.target.id;
+    link.__lineObj = undefined;
+    link.__arrowObj = undefined;
+    link.__curve = undefined;
+  }
+  for (const link of miniGraphData.links) {
+    link.source = link.source.id;
+    link.target = link.target.id;
+    link.__lineObj = undefined;
+    link.__arrowObj = undefined;
+    link.__curve = undefined;
+  }
+  for (const node of localMiniGraphData.nodes) {
+    node.__threeObj = undefined;
+    node.fx = node.x;
+    node.fy = node.y;
+    node.fz = node.z;
+  }
+  for (const node of miniGraphData.nodes) {
+    node.__threeObj = undefined;
+    node.fx = node.x;
+    node.fy = node.y;
+    node.fz = node.z;
+  }
+
   // console.log(miniGraphData)
 
   // for (const node of miniGraphData.nodes) {
@@ -723,7 +750,7 @@ function drawMiniGraph(datas) {
     // .linkDirectionalArrowLength(10)
     .nodeColor('color')
     .nodeThreeObject(node => nodeMiniGeom(node));
-
+  
   setTimeout(() => {
     miniGraph.zoomToFit(250, 10, node => node.isOpened)}, 1000);
   miniGraph.enablePointerInteraction(false)

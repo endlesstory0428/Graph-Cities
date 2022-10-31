@@ -322,6 +322,13 @@ export function getParams() {
 }
 
 function init() {
+  for (let e of document.querySelectorAll('input[type="range"].slider-progress')) {
+    e.style.setProperty('--value', e.value);
+    e.style.setProperty('--min', e.min == '' ? '0' : e.min);
+    e.style.setProperty('--max', e.max == '' ? '100' : e.max);
+    e.addEventListener('input', () => e.style.setProperty('--value', e.value));
+  }
+  
   canvas = document.getElementById("c");
 
   renderer = new THREE.WebGLRenderer({canvas: canvas, antialias: true});
@@ -3778,6 +3785,7 @@ function goInsideBuilding(buildingName) {
       bucket: parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]),
       maxEdges: IP.max_edges,
       buildingName: selected_building,
+      smallBuilding: true,
     }), localHost + 'meta-dag', function(res) {
       // console.log(res);
       loadMetaArray(res);
@@ -3847,6 +3855,7 @@ function goInsideBuilding(buildingName) {
             bucket: parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]),
             maxEdges: IP.max_edges,
             buildingName: selected_building,
+            smallBuilding: false,
           }), localHost + 'meta-dag', function(res) {
             // console.log(res);
             loadMetaArray(res);
