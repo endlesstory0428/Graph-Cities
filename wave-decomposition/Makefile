@@ -803,7 +803,8 @@ prepareVicinity:
 	make GRAPH=$(GRAPH) lccBuck_cpp; \
 	$(PYTHON) scripts/test/addDagInfo.py $(GRAPH); \
 	$(PYTHON) scripts/test/checkLargeNode.py $(GRAPH); \
-	$(PYTHON) scripts/test/addBuckESize.py $(GRAPH);
+	$(PYTHON) scripts/test/addBuckESize.py $(GRAPH); \
+	$(PYTHON) scripts/test/bucket2sample.py $(GRAPH);
 .PHONY: prepareVicinity
 
 prepareCity:
@@ -835,7 +836,8 @@ prepareCity:
 	make GRAPH=$(GRAPH) lccBuck_cpp; \
 	$(PYTHON) scripts/test/addDagInfo.py $(GRAPH); \
 	$(PYTHON) scripts/test/checkLargeNode.py $(GRAPH); \
-	$(PYTHON) scripts/test/addBuckESize.py $(GRAPH);
+	$(PYTHON) scripts/test/addBuckESize.py $(GRAPH); \
+	$(PYTHON) scripts/test/bucket2sample.py $(GRAPH);
 .PHONY: prepareCity
 
 prepare:
@@ -865,7 +867,8 @@ prepare:
 	make GRAPH=$(GRAPH) lccBuck_cpp; \
 	$(PYTHON) scripts/test/addDagInfo.py $(GRAPH); \
 	$(PYTHON) scripts/test/checkLargeNode.py $(GRAPH); \
-	$(PYTHON) scripts/test/addBuckESize.py $(GRAPH);
+	$(PYTHON) scripts/test/addBuckESize.py $(GRAPH); \
+	$(PYTHON) scripts/test/bucket2sample.py $(GRAPH);
 .PHONY: prepare
 
 prepareDAG:

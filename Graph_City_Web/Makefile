@@ -35,7 +35,7 @@ retrive:
 	mv wave-decomposition/$(GRAPH)/${GRAPH}_lcc_dist.png data/; \
 	cp index.html.template index-$(GRAPH).html; \
 	cp scripts/main.js scripts/main_$(GRAPH).js; \
-	sed -i '1003s/main.js/main_$(GRAPH).js/' index-$(GRAPH).html; \
+	sed -i '1006s/main.js/main_$(GRAPH).js/' index-$(GRAPH).html; \
 	sed -i '120s/.*/const data_list = ["got", "$(GRAPH)", "starwars"]/' scripts/main_$(GRAPH).js;
 
 retrive-vicinity:
@@ -70,7 +70,7 @@ retrive-vicinity:
 	mv wave-decomposition/$(GRAPH)/${GRAPH}_lcc_dist.png data/; \
 	cp index.html.template index-$(GRAPH).html; \
 	cp scripts/main.js scripts/main_$(GRAPH).js; \
-	sed -i '1003s/main.js/main_$(GRAPH).js/' index-$(GRAPH).html; \
+	sed -i '1006s/main.js/main_$(GRAPH).js/' index-$(GRAPH).html; \
 	sed -i '120s/.*/const data_list = ["got", "$(GRAPH)", "starwars"]/' scripts/main_$(GRAPH).js; \
 	sed -i '29c let vicinityFlag = true' scripts/main_$(GRAPH).js; \
 	sed -i '30c let mallVicinityFlag = false' scripts/main_$(GRAPH).js; \
@@ -108,7 +108,7 @@ retrive-vicinity-smp:
 	mv wave-decomposition/$(GRAPH)/${GRAPH}_lcc_dist.png data/; \
 	cp index.html.template index-$(GRAPH).html; \
 	cp scripts/main.js scripts/main_$(GRAPH).js; \
-	sed -i '1003s/main.js/main_$(GRAPH).js/' index-$(GRAPH).html; \
+	sed -i '1006s/main.js/main_$(GRAPH).js/' index-$(GRAPH).html; \
 	sed -i '120s/.*/const data_list = ["got", "$(GRAPH)", "starwars"]/' scripts/main_$(GRAPH).js; \
 	sed -i '29c let vicinityFlag = true' scripts/main_$(GRAPH).js; \
 	sed -i '30c let mallVicinityFlag = false' scripts/main_$(GRAPH).js; \
@@ -146,7 +146,7 @@ retrive-mall:
 	mv wave-decomposition/$(GRAPH)/${GRAPH}_lcc_dist.png data/; \
 	cp index.html.template index-$(GRAPH).html; \
 	cp scripts/main.js scripts/main_$(GRAPH).js; \
-	sed -i '1003s/main.js/main_$(GRAPH).js/' index-$(GRAPH).html; \
+	sed -i '1006s/main.js/main_$(GRAPH).js/' index-$(GRAPH).html; \
 	sed -i '120s/.*/const data_list = ["got", "$(GRAPH)", "starwars"]/' scripts/main_$(GRAPH).js; \
 	sed -i '29c let vicinityFlag = true' scripts/main_$(GRAPH).js; \
 	sed -i '30c let mallVicinityFlag = true' scripts/main_$(GRAPH).js;
@@ -154,13 +154,13 @@ retrive-mall:
 update:
 	cp index.html.template index-$(GRAPH).html; \
 	cp scripts/main.js scripts/main_$(GRAPH).js; \
-	sed -i '1003s/main.js/main_$(GRAPH).js/' index-$(GRAPH).html; \
+	sed -i '1006s/main.js/main_$(GRAPH).js/' index-$(GRAPH).html; \
 	sed -i '120s/.*/const data_list = ["got", "$(GRAPH)", "starwars"]/' scripts/main_$(GRAPH).js;
 
 update-vicinity:
 	cp index.html.template index-$(GRAPH).html; \
 	cp scripts/main.js scripts/main_$(GRAPH).js; \
-	sed -i '1003s/main.js/main_$(GRAPH).js/' index-$(GRAPH).html; \
+	sed -i '1006s/main.js/main_$(GRAPH).js/' index-$(GRAPH).html; \
 	sed -i '120s/.*/const data_list = ["got", "$(GRAPH)", "starwars"]/' scripts/main_$(GRAPH).js; \
 	sed -i '29c let vicinityFlag = true' scripts/main_$(GRAPH).js; \
 	sed -i '30c let mallVicinityFlag = false' scripts/main_$(GRAPH).js; \
@@ -169,7 +169,7 @@ update-vicinity:
 update-vicinity-smp:
 	cp index.html.template index-$(GRAPH).html; \
 	cp scripts/main.js scripts/main_$(GRAPH).js; \
-	sed -i '1003s/main.js/main_$(GRAPH).js/' index-$(GRAPH).html; \
+	sed -i '1006s/main.js/main_$(GRAPH).js/' index-$(GRAPH).html; \
 	sed -i '120s/.*/const data_list = ["got", "$(GRAPH)", "starwars"]/' scripts/main_$(GRAPH).js; \
 	sed -i '29c let vicinityFlag = true' scripts/main_$(GRAPH).js; \
 	sed -i '30c let mallVicinityFlag = false' scripts/main_$(GRAPH).js; \
@@ -178,7 +178,7 @@ update-vicinity-smp:
 update-mall:
 	cp index.html.template index-$(GRAPH).html; \
 	cp scripts/main.js scripts/main_$(GRAPH).js; \
-	sed -i '1003s/main.js/main_$(GRAPH).js/' index-$(GRAPH).html; \
+	sed -i '1006s/main.js/main_$(GRAPH).js/' index-$(GRAPH).html; \
 	sed -i '120s/.*/const data_list = ["got", "$(GRAPH)", "starwars"]/' scripts/main_$(GRAPH).js; \
 	sed -i '29c let vicinityFlag = true' scripts/main_$(GRAPH).js; \
 	sed -i '30c let mallVicinityFlag = true' scripts/main_$(GRAPH).js;
