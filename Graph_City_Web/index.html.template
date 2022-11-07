@@ -893,6 +893,9 @@
 					<div id="full-dag-button-container">
 						<button id="full-dag-button">Request Full Dag</button>
 					</div>
+					<div id="span-only-button-container">
+						<button id="span-only-button">Hide/show jump-links</button>
+					</div>
 					<div id="frag-buck-button-container">
 						<button id="frag-buck-button">Expand Frag Buckets</button>
 					</div>
@@ -910,7 +913,7 @@
 					<div id="dag-node-size-slider-container">
 						<label for="dag-node-size" class="dag-slider-label">node size</label>
 						<input type="range" id="dag-node-size" class="dag-slider styled-slider slider-progress"
-							name="dag-node-size" min="1" max="1000" value="100">
+							name="dag-node-size" min="1" max="10000" value="100">
 					</div>
 					<div id="dag-link-size-slider-container">
 						<label for="dag-link-size" class="dag-slider-label">link size</label>

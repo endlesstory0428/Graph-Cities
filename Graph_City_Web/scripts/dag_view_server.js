@@ -750,6 +750,7 @@ switchFullDagGraph(false);
 let DATA = null;
 let DATAList = [];
 let graphInfoList = [];
+let fullDagInfo = {};
 let nodeDS = null;
 let layer_lcc = null;
 let DATASET = null;
@@ -1417,6 +1418,42 @@ document.getElementById('height-constrain-button').onclick = () => {
   }
 }
 
+function updateJumpLinkVisibility(showFlag, fullDagFlag = false) {
+  if (fullDagFlag) {
+    fullDagGraph.linkVisibility(link => linkVis(link, !showFlag))
+    if (showFlag) {
+      const captionElem = document.getElementById(`full-dag-graph-label`);
+      captionElem.innerText = 'frag cc bucket DAG';
+    } else {
+      const captionElem = document.getElementById(`full-dag-graph-label`);
+      captionElem.innerText = 'span frag cc bucket DAG';
+    }
+  } else {
+    graphList[tempGraphIdx].linkVisibility(link => linkVis(link, !showFlag))
+    if (showFlag) {
+      const captionElem = document.getElementById(`graph${tempGraphIdx}-label`);
+      captionElem.innerText = 'frag DAG\nhide jump link by clicking button below';
+    } else {
+      const captionElem = document.getElementById(`graph${tempGraphIdx}-label`);
+      captionElem.innerText = 'span frag DAG\nshow jump link by clicking button below';
+    }
+  }
+}
+
+document.getElementById('span-only-button-container').onclick = () => {
+  if (DATAList[tempGraphIdx].dagType === 'wf.frag' && !graphInfoList[tempGraphIdx].topoSpan) {
+    graphInfoList[tempGraphIdx].showJumpLink = !(graphInfoList[tempGraphIdx].showJumpLink)
+    updateJumpLinkVisibility(graphInfoList[tempGraphIdx].showJumpLink)
+  }
+  if (fullDagInfo.hasOwnProperty('topoSpan')){
+    if (!fullDagInfo.topoSpan) {
+      updateJumpLinkVisibility(graphInfoList[tempGraphIdx].showJumpLink, true)
+    }else {
+      captionElem = document.getElementById('full-dag-graph-label').innerText = 'span frag cc bucket DAG\ndue to size, we cannot show a full DAG';
+    }
+  }
+}
+
 function updateLinkVisibility(showFlag) {
   graphList[tempGraphIdx].linkVisibility(showFlag)
   if (showFlag) {
@@ -1563,10 +1600,11 @@ function requestFragBuck(DATA, tempGraphIdx, wfInfo = []) {
       // resGraph.nodeLabel(node => nodeLabel(node))
       switchFullDagGraph(true);
       if (graphInfo.topoSpan) {
-        document.getElementById('full-dag-graph-label').innerText = 'frag cc bucket DAG'
+        document.getElementById('full-dag-graph-label').innerText = 'span frag cc bucket DAG'
       } else {
         document.getElementById('full-dag-graph-label').innerText = 'frag cc bucket DAG'
       }
+      fullDagInfo = graphInfo;
     }
   }, 'json')
 }
@@ -1832,6 +1870,14 @@ function linkArrow(link) {
     return (MAX_ESIZE.link_scale / MAX_MAXSIZE) * Math.log1p(link.size) * 4
   }
   return 0
+}
+
+function linkVis(link, spanFlag = false) {
+  if (spanFlag && link.hasOwnProperty('spanMark')) {
+    return link.spanMark
+  } else {
+    return true
+  }
 }
 
 function nodeLabel(node, graphIdx) {
@@ -2353,8 +2399,10 @@ function switchGraphVisibility(graphIndex = 1, iterFlag = false) {
     }
     if (graphInfoList[graphIndex] && graphInfoList[graphIndex].metaType === 'wf.frag') {
       document.getElementById('frag-buck-button-container').style.display = 'block';
+      document.getElementById('span-only-button-container').style.display = 'block';
     } else {
       document.getElementById('frag-buck-button-container').style.display = 'none';
+      document.getElementById('span-only-button-container').style.display = 'none';
     }
   }
   switchMiniGraph(graphIndex, graphInfoList[graphIndex] && (graphInfoList[graphIndex].metaType === 'edgeCut.dag' || graphInfoList[graphIndex].metaType === 'wcc.dag' || graphInfoList[graphIndex].metaType === 'wcc.dag.full') ? 1 : 0, iterFlag);
@@ -2704,6 +2752,8 @@ function loadMetaArray(data, graphIndex = 1) {
   //   DATAList[idx] = undefined;
   //   graphInfoList[idx] = undefined;
   // }
+  graphList[graphIndex].linkVisibility(true);
+  fullDagGraph.linkVisibility(true);
 
   const metaData = data[0]
   const metaInfo = data[1]
@@ -2898,6 +2948,12 @@ function loadMetaArray(data, graphIndex = 1) {
   } else if (metaType === 'edgeCut.dag') {
     switchMiniBuilding(true, 1);
     const [graphData, graphInfo] = prepareMetaArrayDag(metaData);
+    // update only for edgeCut.dag to git rid of a large number of small seedset cc
+    const metaNodeNum = graphData.nodes.length
+    graphInfo.nodeSizeSlider *= (Math.sqrt(metaNodeNum) / 128 + 1) * 32;
+    graphInfo.linkSizeSlider /= (Math.sqrt(metaNodeNum) / 128 + 1) * 8;
+    graphInfo.verticalStretchSlider *= (Math.sqrt(metaNodeNum) / 128 + 1) * 8;
+
     graphInfo.metaType = metaType
     graphInfo.parentNode = clicked;
     graphInfo.showLink = true; // add a toggle for link visibility
@@ -2964,7 +3020,11 @@ function loadMetaArray(data, graphIndex = 1) {
     }, 500);
     loadMetaArrayDagInfo(graphInfo);
     const captionElem = document.getElementById(`graph${graphIndex}-label`);
-    captionElem.innerText = 'frag DAG';
+    if (graphInfo.topoSpan) {
+      captionElem.innerText = 'span frag DAG\nshow jump link by clicking button below';
+    } else {
+      captionElem.innerText = 'frag DAG\nhide jump link by clicking button below';
+    }
     // captionElem.style.transform = 'translateY(calc(-100% - 1.5em))'
     // captionElem.style.pointerEvents = 'none'
     tempGraph
@@ -3623,7 +3683,7 @@ function prepareMetaArrayFrag(data) {
   }
   console.log('nodes', nodes.length)
   for (const [src, tgt, eSize] of linkArray) {
-    const tempLink = { source: src, target: tgt, size: eSize }
+    const tempLink = { source: src, target: tgt, size: eSize, spanMark: false }
     links.push(tempLink)
     fpedges += eSize;
     edges += eSize;
@@ -3706,7 +3766,8 @@ function prepareMetaArrayFrag(data) {
       topoSpan: topoSpan,
       nodeSizeSlider: 200 / Math.cbrt(maxNodeESize + 1),
       linkSizeSlider: 1500 / Math.log1p(maxLinkESize),
-      verticalStretchSlider: Math.min(20, 80 / Math.sqrt(setRange))
+      verticalStretchSlider: Math.min(20, 80 / Math.sqrt(setRange)),
+      showJumpLink: !topoSpan
     }
   ]
 }
@@ -4158,7 +4219,7 @@ function prepareMetaArrayFragBuck(data) {
       virtualFlag = true;
       eSize = 0.001
     }
-    const tempLink = { source: src, target: tgt, size: eSize }
+    const tempLink = { source: src, target: tgt, size: eSize, spanMark: false }
     links.push(tempLink)
     fpedges += eSize;
     edges += eSize;
@@ -4177,7 +4238,7 @@ function prepareMetaArrayFragBuck(data) {
     }
     tgt2maxSrcSet[tgt] = Math.max(tgt2maxSrcSet[tgt], v2set[src]);
 
-    if (tgt === src + 1) {
+    if (idx2node[tgt].set === idx2node[src].set + 1) {
       tempLink.spanMark = true;
     }
   }
