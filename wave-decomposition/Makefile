@@ -804,7 +804,7 @@ prepareVicinity:
 	$(PYTHON) scripts/test/addDagInfo.py $(GRAPH); \
 	$(PYTHON) scripts/test/checkLargeNode.py $(GRAPH); \
 	$(PYTHON) scripts/test/addBuckESize.py $(GRAPH); \
-	$(PYTHON) scripts/test/bucket2sample.py $(GRAPH);
+	$(PYTHON) scripts/test/bucket2sample.py $(GRAPH) 16384;
 .PHONY: prepareVicinity
 
 prepareCity:
@@ -837,7 +837,7 @@ prepareCity:
 	$(PYTHON) scripts/test/addDagInfo.py $(GRAPH); \
 	$(PYTHON) scripts/test/checkLargeNode.py $(GRAPH); \
 	$(PYTHON) scripts/test/addBuckESize.py $(GRAPH); \
-	$(PYTHON) scripts/test/bucket2sample.py $(GRAPH);
+	$(PYTHON) scripts/test/bucket2sample.py $(GRAPH) 16384;
 .PHONY: prepareCity
 
 prepare:
@@ -868,7 +868,7 @@ prepare:
 	$(PYTHON) scripts/test/addDagInfo.py $(GRAPH); \
 	$(PYTHON) scripts/test/checkLargeNode.py $(GRAPH); \
 	$(PYTHON) scripts/test/addBuckESize.py $(GRAPH); \
-	$(PYTHON) scripts/test/bucket2sample.py $(GRAPH);
+	$(PYTHON) scripts/test/bucket2sample.py $(GRAPH) 16384;
 .PHONY: prepare
 
 prepareDAG:

@@ -131,22 +131,22 @@ app.use(
 
 app.use(express.json());
 
-const apiTimeout = 30 * 1000;
-app.use((req, res, next) => {
-    // Set the timeout for all HTTP requests
-    req.setTimeout(apiTimeout, () => {
-        let err = new Error('Request Timeout');
-        err.status = 408;
-        next(err);
-    });
-    // Set the server response timeout for all HTTP requests
-    res.setTimeout(apiTimeout, () => {
-        let err = new Error('Service Unavailable');
-        err.status = 503;
-        next(err);
-    });
-    next();
-});
+// const apiTimeout = 30 * 1000;
+// app.use((req, res, next) => {
+//     // Set the timeout for all HTTP requests
+//     req.setTimeout(apiTimeout, () => {
+//         let err = new Error('Request Timeout');
+//         err.status = 408;
+//         next(err);
+//     });
+//     // Set the server response timeout for all HTTP requests
+//     res.setTimeout(apiTimeout, () => {
+//         let err = new Error('Service Unavailable');
+//         err.status = 503;
+//         next(err);
+//     });
+//     next();
+// });
 
 // app.get("*", (req, res) => {
   
@@ -4404,7 +4404,7 @@ app.post('/city-vicinity', (req, res) => {
           res.send(JSON.stringify({success: false, detail: 'prepareVicinity', name: `na`}));
           return console.log(err);
         }
-        exec(`make GRAPH=${vicinityName} retrive-vicinity`, {maxBuffer: 1024 * 1024 * 50}, (err, stdout, stderr) => {
+        exec(`make GRAPH=${vicinityName} retrive-vicinity${makeName}`, {maxBuffer: 1024 * 1024 * 50}, (err, stdout, stderr) => {
           if (err) {
             res.send(JSON.stringify({success: false, detail: 'retrive', name: `na`}));
             return console.log(err);
