@@ -153,7 +153,9 @@ This will create a Graph City work space folder `Graph-Cities`. We refer to this
 ### Compile Graph City Infrastructure
 Before you start creating your own Graph City, you first need to compile "Graph Cities Infrastructure".
 #### Compile `wave-decomposition`
-Under your Work Space './', type the following commands in your console to compile `.cpp` files.
+In this version, we provide compiled binary files that one can directly use them.
+
+~~Under your Work Space './', type the following commands in your console to compile `.cpp` files.~~
 ```bash
 cd wave-decomposition
 make
