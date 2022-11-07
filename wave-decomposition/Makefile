@@ -10,7 +10,7 @@ WAVE := 0
 SP := 2**16
 LOGSIZE := 100000000
 DAGNAME := simplegraph
-DAGTH := 16384
+DAGTH := 8192
 
 PRODUCT := preproc buffkcore ewave cc-layers-mat
 
@@ -43,7 +43,7 @@ src-cc-layers-uf: cc-layers-mat
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCDIRS) -c $< -o $@
 
-src-dagMeta: DAGMetaNode_touch edgeCutCompress_touch topSrc_touch waveCC_touch waveFragLevel_touch
+src-dagMeta: DAGMetaNode_touch edgeCutCompress_touch topSrc_touch waveCC_touch waveFragLevel_touch waveFragLevel_touch_bucket
 
 %: $(SRCDIR)/dagMeta/%.o
 	$(LINKER) $(CXXFLAGS) $^ -o $@
@@ -630,6 +630,17 @@ wave-frag-compress-touch:
 		$(DAGTH)
 .PHONY:wave-frag-compress-touch
 
+frag-buck-compress-touch:
+	sort -S 50% -t, -n -k4,4 $(GRAPH)/dag/$(DAGNAME).node -o $(GRAPH)/dag/$(DAGNAME).node; \
+	./waveFragLevel_touch_bucket \
+		$(GRAPH) \
+		$(GRAPH)/ \
+		$(GRAPH)/dag/ \
+		$(DAGNAME) \
+		$$($(PYTHON) -c "import sys, json; x=json.load(sys.stdin); print(' '.join(map(str, [x['maxNodeLabel'], x['nodeNum'], sum(x['wave-frag-size']), len(x['wave-frag-size'])])))" < $(GRAPH)/dag/$(DAGNAME)-info.json) \
+		$(DAGTH)
+.PHONY:wave-frag-compress-touch
+
 frag-dag-all:
 	mkdir $(DIR)/$(GRAPH)/dag; \
 	$(PYTHON) scripts/freqUsed/dagBat_cpp.py $(GRAPH) frag-dag-all > $(DIR)/dag_$(GRAPH).sh; \
@@ -693,6 +704,13 @@ wave-frag-compress-touch-all:
 	./dag_$(GRAPH).sh
 .PHONY:wave-frag-compress-touch-all
 
+frag-buck-compress-touch-all:
+	mkdir $(DIR)/$(GRAPH)/dag; \
+	$(PYTHON) scripts/freqUsed/dagBat_post_cpp.py $(GRAPH) frag-buck-compress-touch > $(DIR)/dag_$(GRAPH).sh; \
+	chmod +x $(DIR)/dag_$(GRAPH).sh; \
+	./dag_$(GRAPH).sh
+.PHONY:frag-buck-compress-touch-all
+
 dag-size:
 	for DAG in $$(ls $(GRAPH)/dag | grep "dagmeta_[0-9]*_[0-9]*.span.link$$"); \
 	do \
@@ -742,8 +760,20 @@ fpViewer:
 .PHONY: fpViewer
 
 buck2vicinity:
-	$(PYTHON) scripts/test/bucket2city.py $(GRAPH) $(LAYER) $(BUCKET); 
+	$(PYTHON) scripts/test/bucket2city.py $(GRAPH) $(LAYER) $(BUCKET) false;
 .PHONY: buck2vicinity
+
+buck2vicinity-smp:
+	$(PYTHON) scripts/test/bucket2city.py $(GRAPH) $(LAYER) $(BUCKET) true;
+.PHONY: buck2vicinity-smp
+
+buck2strata:
+	$(PYTHON) scripts/test/bucket2strata.py $(GRAPH) $(LAYER) $(BUCKET) false;
+.PHONY: buck2strata
+
+buck2strata-smp:
+	$(PYTHON) scripts/test/bucket2strata.py $(GRAPH) $(LAYER) $(BUCKET) true;
+.PHONY: buck2strata-smp
 
 prepareVicinity:
 	./preproc \
@@ -754,7 +784,7 @@ prepareVicinity:
 	make GRAPH=$(GRAPH) cc-layers-uf; \
 	make GRAPH=$(GRAPH) wave-layer-cc_direct; \
 	make GRAPH=$(GRAPH) fp-info_int; \
-	$(PYTHON) scripts/test/lcc-json2csv.py $(GRAPH)
+	$(PYTHON) scripts/test/lcc-json2csv.py $(GRAPH); \
 	make GRAPH=$(GRAPH) bucket_int_linear; \
 	make GRAPH=$(GRAPH) wavemap_cpp; \
 	make GRAPH=$(GRAPH) sculpture_int_cpp; \
@@ -768,6 +798,7 @@ prepareVicinity:
 	make GRAPH=$(GRAPH) wcc-compress-touch-all; \
 	make GRAPH=$(GRAPH) wave-frag-compress-touch-all; \
 	make GRAPH=$(GRAPH) edge-cut-compress-touch-all; \
+	make GRAPH=$(GRAPH) frag-buck-compress-touch-all; \
 	make GRAPH=$(GRAPH) dag-size; \
 	make GRAPH=$(GRAPH) lccBuck_cpp; \
 	$(PYTHON) scripts/test/addDagInfo.py $(GRAPH); \
@@ -784,7 +815,7 @@ prepareCity:
 	make GRAPH=$(GRAPH) cc-layers-uf; \
 	make GRAPH=$(GRAPH) wave-layer-cc_direct; \
 	make GRAPH=$(GRAPH) fp-info_int; \
-	$(PYTHON) scripts/test/lcc-json2csv.py $(GRAPH)
+	$(PYTHON) scripts/test/lcc-json2csv.py $(GRAPH); \
 	make GRAPH=$(GRAPH) bucket_int; \
 	make GRAPH=$(GRAPH) wavemap_cpp; \
 	make GRAPH=$(GRAPH) sculpture_int_cpp; \
@@ -799,6 +830,7 @@ prepareCity:
 	make GRAPH=$(GRAPH) wcc-compress-touch-all; \
 	make GRAPH=$(GRAPH) wave-frag-compress-touch-all; \
 	make GRAPH=$(GRAPH) edge-cut-compress-touch-all; \
+	make GRAPH=$(GRAPH) frag-buck-compress-touch-all; \
 	make GRAPH=$(GRAPH) dag-size; \
 	make GRAPH=$(GRAPH) lccBuck_cpp; \
 	$(PYTHON) scripts/test/addDagInfo.py $(GRAPH); \
@@ -813,7 +845,7 @@ prepare:
 	make GRAPH=$(GRAPH) cc-layers-uf; \
 	make GRAPH=$(GRAPH) wave-layer-cc_direct; \
 	make GRAPH=$(GRAPH) fp-info_int; \
-	$(PYTHON) scripts/test/lcc-json2csv.py $(GRAPH)
+	$(PYTHON) scripts/test/lcc-json2csv.py $(GRAPH); \
 	make GRAPH=$(GRAPH) bucket_int; \
 	make GRAPH=$(GRAPH) wavemap_cpp; \
 	make GRAPH=$(GRAPH) sculpture_int_cpp; \
@@ -828,6 +860,7 @@ prepare:
 	make GRAPH=$(GRAPH) wcc-compress-touch-all; \
 	make GRAPH=$(GRAPH) wave-frag-compress-touch-all; \
 	make GRAPH=$(GRAPH) edge-cut-compress-touch-all; \
+	make GRAPH=$(GRAPH) frag-buck-compress-touch-all; \
 	make GRAPH=$(GRAPH) dag-size; \
 	make GRAPH=$(GRAPH) lccBuck_cpp; \
 	$(PYTHON) scripts/test/addDagInfo.py $(GRAPH); \
@@ -841,6 +874,7 @@ prepareDAG:
 	make GRAPH=$(GRAPH) wcc-compress-touch-all; \
 	make GRAPH=$(GRAPH) wave-frag-compress-touch-all; \
 	make GRAPH=$(GRAPH) edge-cut-compress-touch-all; \
+	make GRAPH=$(GRAPH) frag-buck-compress-touch-all; \
 	make GRAPH=$(GRAPH) dag-size; \
 	$(PYTHON) scripts/test/addDagInfo.py $(GRAPH); \
 	$(PYTHON) scripts/test/checkLargeNode.py $(GRAPH); \

@@ -29,6 +29,7 @@ let addBuildings = true, addDagViews = true, onDagViews = false;
 let vicinityFlag = false;
 let mallVicinityFlag = false;
 let vicinitySize = 1;
+let sampleFlag = false;
 
 THREE.Cache.enabled = true;
 const scenes = [];
@@ -139,8 +140,8 @@ let font_file = "../textures/helvetiker_regular.typeface.json";
 let buildingTextureLoadedFlag = false;
 let buildingTexture = {};
 
-const TH_DAG = 32768;
-const TH_SUBDAG = 16384;
+const TH_DAG = 8192;
+const TH_SUBDAG = 8192;
 let TH_STRATA = 8192;
 const TH_STRATA_FULL = 16384
 const TH_FPVIEWER = 131072;
@@ -352,6 +353,7 @@ function init() {
   } else {
     scene_city.background = new THREE.Color('skyblue');
   }
+  
 
   // city map
   console.log(buildingMap_file);
@@ -606,7 +608,11 @@ function init() {
   selectData.onChange(
     function(dataSet) {
       if(addDagViews) {
-        setStrataUrl('?data=nodata');        
+        setStrataUrl('?data=nodata');   
+        setStrataUrl('?data=nodata', 'strata-complement');  
+        document.getElementById('local-sampling-res-button-container').style.display = 'none'
+        document.getElementById('local-sampling-res-info-container').style.display = 'none'    
+        cleanDagInfo()
       }
       objects.every(object => scene_city.remove(object));
       if (clearTempPathFlag) {
@@ -769,6 +775,10 @@ function init() {
     function(value) {
       if(addDagViews) {
         setStrataUrl('?data=nodata');
+        setStrataUrl('?data=nodata', 'strata-complement'); 
+        document.getElementById('local-sampling-res-button-container').style.display = 'none'
+        document.getElementById('local-sampling-res-info-container').style.display = 'none' 
+        cleanDagInfo()
       }
       if (clearTempPathFlag) {
         clearTempPath();
@@ -1314,7 +1324,9 @@ function summaryFormat(summaryData) {
     } else if (key === 'dataset') {
       retval.appendChild(createTextSpan(`data: ${val} | `));
       const vicinityInfo = document.getElementById('vicinity-info');
+      const vicinityNavi = document.getElementById('vicinity-navigation');
       vicinityInfo.innerHTML = '';
+      vicinityNavi.innerHTML = '';
       if (vicinityFlag) {
         if (mallVicinityFlag) {
           vicinityInfo.innerText = 'Mini City Room\n';
@@ -1329,19 +1341,47 @@ function summaryFormat(summaryData) {
           roomNameElem.style.fontSize = 'large';
           vicinityInfo.appendChild(buildingNameElem);
           vicinityInfo.appendChild(roomNameElem);
+          vicinityNavi.innerText = 'To go back to the building where this minicity room is located, close current webpage tab.';
         } else {
           vicinityInfo.innerText = 'Vicinity Park\n';
           const splitName = val.split('-');
           const buildingName = splitName.slice(0, splitName.length - 2).join('-');
           const parkName = splitName.slice(splitName.length - 2).join('-');
           const buildingNameElem = document.createElement('span');
-          buildingNameElem.innerText = `BLDG ${buildingName}\n`;
+          buildingNameElem.innerText = `City ${buildingName}\n`;
           buildingNameElem.style.fontSize = 'large';
           const parkNameElem = document.createElement('span');
           parkNameElem.innerText = `Park ${parkName} |V|: ${summaryData.vertices} |E|: ${summaryData.edges}`;
           parkNameElem.style.fontSize = 'large';
           vicinityInfo.appendChild(buildingNameElem);
           vicinityInfo.appendChild(parkNameElem);
+          if (summaryData.con_fixpoints > summaryData['displayed_con_fixpoints(buildings)']) {
+            const bucketFailElem = document.createElement('span');
+            bucketFailElem.innerText = '\nBuilding of the same size detected';
+            bucketFailElem.style.fontSize = 'medium'
+            vicinityInfo.appendChild(bucketFailElem)
+          } 
+          vicinityNavi.innerText = 'To go back to city location where this vicinity park is located, close current webpage tab.';
+
+          if (vicinityFlag && !mallVicinityFlag && sampleFlag) {
+            const citySmpElem = document.getElementById('city-sampling-res-info-container')
+            const splitParkName = parkName.split('-')
+            const layerName = splitParkName[0].slice(1)
+            const bucketName = splitParkName[1].slice(1, splitParkName[1].length - 3);
+            const duplicationInfoFile = `${buildingName}/${buildingName}_waves/lccBuck/smp/layer-${layerName}-waves-buck${bucketName}-dup-info.csv`
+            Promise.all([
+              d3.text(duplicationInfoFile)
+            ]).then(data => {
+              console.log(data)
+              citySmpElem.innerHTML = ''
+              citySmpElem.style.display = 'block'
+              const duplicationInfo = data[0]
+              for (const [l, lcc, vSize, eSize, dup] of d3.csvParseRows(duplicationInfo)) {
+                citySmpElem.innerHTML += `<b>${l}-${lcc}</b>: V${vSize} E${eSize} x${dup}<br>`;
+              } 
+            })
+            
+          }
         }
       }
     } else if (key === 'displayed_con_fixpoints(buildings)') {
@@ -2258,18 +2298,113 @@ function onMouseDown(event) {
   if (glyphBackIntersects.length > 0) {
     selected_glyphBack = glyphBackIntersects[0].object.layerName;
     const wavemap_ID_ID_freq = selected_glyphBack.split('_')
-    httpPostAsync(JSON.stringify({
-      graphName: paramsL.dataSet,
-      layer: parseInt(wavemap_ID_ID_freq[1]),
-      lcc: parseInt(wavemap_ID_ID_freq[2]),
-      bucket: parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]),
-    }), localHost + 'city-vicinity', function(res) {
-      // console.log(res);
-      if (res.success) {
-        window.open(`${hostAddress}/?city=${res.name}`);
-      }
-      // window.open(res);
-    }, 'json')
+
+    console.log(city_all.building2size)
+    console.log(wavemap_ID_ID_freq)
+    const bucketSize = city_all.building2size[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`];
+
+    if (bucketSize[1] < TH_STRATA_FULL) {
+      httpPostAsync(JSON.stringify({
+        graphName: paramsL.dataSet,
+        layer: parseInt(wavemap_ID_ID_freq[1]),
+        lcc: parseInt(wavemap_ID_ID_freq[2]),
+        bucket: parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]),
+      }), localHost + 'city-vicinity-strata', function(res) {
+        console.log(res);
+        if (res.res) {
+          const filename = res.url;
+          // let C = new THREE.Color(node.color);
+          console.log("?dataPath=" + filename);
+          console.log(document.getElementById('strata').src);
+          httpGetAsync(PREFIX + "query?type=add&file=" + filename + ".csv", function(res) {
+            console.log(res);
+            setStrataUrl("?dataPath=" + filename + '&nodeColorProperty=waveLevel&heightProperty=waveLevel', 'strata');
+            console.log(document.getElementById('strata').src);
+            document.getElementById('strata-container').style.display = 'block';
+            document.getElementById('strata-container').style.width = '100%'
+            document.getElementById('graph-container').style.display = 'none';
+            document.getElementById('full-dag-graph-container').style.display = 'none';
+            window.scrollTo(0,document.getElementById("inner-view").offsetTop);
+          });
+          document.getElementById('strata-caption').innerText = 'local decomposition of selected bush'
+        }
+      }, 'json')
+    } else {
+
+      const layer = parseInt(wavemap_ID_ID_freq[1])
+      const bucket = parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0])
+      const sampleInfoFile = `${paramsL.dataSet}/${paramsL.dataSet}_waves/lccBuck/smp/layer-${layer}-waves-buck${bucket}-smp-info.json`
+      Promise.all([
+        d3.json(sampleInfoFile)
+      ]).then(data => {
+        const sampleInfo = data[0]
+        if (sampleInfo['eSize'] < TH_STRATA_FULL) {
+          httpPostAsync(JSON.stringify({
+            graphName: paramsL.dataSet,
+            layer: parseInt(wavemap_ID_ID_freq[1]),
+            lcc: parseInt(wavemap_ID_ID_freq[2]),
+            bucket: parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]),
+            sample: true
+          }), localHost + 'city-vicinity-strata', function(res) {
+            console.log(res);
+            if (res.res) {
+              const filename = res.url;
+              // let C = new THREE.Color(node.color);
+              console.log("?dataPath=" + filename);
+              console.log(document.getElementById('strata').src);
+              httpGetAsync(PREFIX + "query?type=add&file=" + filename + ".csv", function(res) {
+                console.log(res);
+                setStrataUrl("?dataPath=" + filename + '&nodeColorProperty=waveLevel&heightProperty=waveLevel', 'strata');
+                console.log(document.getElementById('strata').src);
+                document.getElementById('strata-container').style.display = 'block';
+                document.getElementById('strata-container').style.width = '100%'
+                document.getElementById('graph-container').style.display = 'none';
+                document.getElementById('full-dag-graph-container').style.display = 'none';
+                window.scrollTo(0,document.getElementById("inner-view").offsetTop);
+              });
+              document.getElementById('strata-caption').innerText = 'local decomposition of selected bush samples'
+            }
+          }, 'json')
+
+          const duplicationInfoFile = `${paramsL.dataSet}/${paramsL.dataSet}_waves/lccBuck/smp/layer-${layer}-waves-buck${bucket}-dup-info.csv`
+          Promise.all([
+            d3.text(duplicationInfoFile)
+          ]).then(data => {
+            const duplicationInfoElem = document.getElementById('local-sampling-res-info-container')
+            duplicationInfoElem.style.display = 'none'
+            duplicationInfoElem.innerHTML = ''
+            const duplicationInfo = data[0]
+            for (const [l, lcc, vSize, eSize, dup] of d3.csvParseRows(duplicationInfo)) {
+              duplicationInfoElem.innerHTML += `<b>${l}-${lcc}</b>: V${vSize} E${eSize} x${dup}<br>`;
+            } 
+            const duplicationButtonElem = document.getElementById('local-sampling-res-button-container')
+            duplicationButtonElem.style.display = 'block';
+            duplicationButtonElem.onclick = () => {
+              duplicationInfoElem.style.display = duplicationInfoElem.style.display === 'none' ? 'block' : 'none';
+            }
+          })
+        } else {
+          httpPostAsync(JSON.stringify({
+            graphName: paramsL.dataSet,
+            layer: parseInt(wavemap_ID_ID_freq[1]),
+            lcc: parseInt(wavemap_ID_ID_freq[2]),
+            bucket: parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]),
+            sample: true
+          }), localHost + 'city-vicinity', function(res) {
+            // console.log(res);
+            if (res.success) {
+              window.open(`${hostAddress}/?city=${res.name}`);
+            }
+            // window.open(res);
+          }, 'json')
+        }
+      })
+
+
+    }
+
+
+
     // console.log(selected_glyphBack);
     // if (selected_glyphBack === 'wavemap_10_68576_10') {
     //   window.open(`${hostAddress}/minicity_movies.html`);
@@ -3640,6 +3775,16 @@ function processGlyph(glyphData) {
 }
 
 function drawMap(divName) {
+  const cityMapElem = document.getElementById(divName)
+  // console.log(vicinityFlag, mallVicinityFlag, sampleFlag)
+  if (vicinityFlag && !mallVicinityFlag && sampleFlag) {
+    cityMapElem.style.width = 'calc(100vw - 375px - 6px - 200px)'
+    cityMapElem.style.right = '200px'
+  } else {
+    cityMapElem.style.width = 'calc(100vw - 375px - 6px)'
+    cityMapElem.style.right = '0px'
+  }
+  
   return Promise.all([
     d3.json(buildingMap_file),
     d3.json(buildingMapBucket_file),
@@ -3649,8 +3794,10 @@ function drawMap(divName) {
     const result = CM.drawMap(datas, buildingMapControls, divName)
     city_all.building2BucketPeel = result.building2BucketPeel;
     city_all.building2size = {};
+    // console.log(result)
     for (const [building, bucketPeel] of Object.entries(city_all.building2BucketPeel)) {
-      city_all.building2size[building] = result.buckSize[`${bucketPeel[1]}-${bucketPeel[0]}`]
+      // console.log(`${bucketPeel[0][1]}-${bucketPeel[0][0]}`, result.buckSize, result.buckSize[`${bucketPeel[0][1]}-${bucketPeel[0][0]}`])
+      city_all.building2size[building] = result.buckSize[`${bucketPeel[0][1]}-${bucketPeel[0][0]}`]
     };
     if (!glyphDoneFlag) {
       glyphData = result.glyphData;
@@ -3690,6 +3837,7 @@ document.getElementById('city-gallery-button').onclick = function parseGalleryBu
 }
 
 function goInsideBuilding(buildingName) {
+  document.getElementById('strata-complement-container').style.display = 'none';
   let bottom = document.getElementById("inner-view").offsetTop;
   let selected_building = buildingName;
 
@@ -3767,6 +3915,7 @@ function goInsideBuilding(buildingName) {
           setStrataUrl("?dataPath=" + filename + '&nodeColorProperty=waveLevel&heightProperty=waveLevel');
           console.log(document.getElementById('strata').src);
         });
+        document.getElementById('strata-caption').innerText = 'local decomposition of selected building'
       }
     }, 'json')
 
@@ -3798,9 +3947,10 @@ function goInsideBuilding(buildingName) {
 
     document.getElementById('strata-container').style.display = 'block';
     document.getElementById('strata-container').style.width = '50%'
+    document.getElementById('graph-container').style.display = 'block';
     document.getElementById('graph-container').style.width = '49.5%';
     document.getElementById('full-dag-graph-container').style.display = 'none';
-    document.getElementById('send-to-fpViewer-button').style.display = 'block';
+    document.getElementById('send-to-fpViewer-button-container').style.display = 'block';
     document.getElementById('send-to-fpViewer-button').onclick = () => {
       httpPostAsync(JSON.stringify({
         filename: file,
@@ -3844,7 +3994,6 @@ function goInsideBuilding(buildingName) {
     // loadFile2(file, forkView, nameSuffix);
     // loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
 
-
     console.log(paramsL.dataSet, parseInt(wavemap_ID_ID_freq[1]), parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]))
     console.log(IP)
     httpPostAsync(JSON.stringify({
@@ -3859,6 +4008,7 @@ function goInsideBuilding(buildingName) {
           }), localHost + 'meta-dag', function(res) {
             // console.log(res);
             loadMetaArray(res);
+            document.getElementById('strata-caption').innerText = 'local decomposition of selected pink node'
             // window.open(res);
           }, 'json')
 
@@ -3870,9 +4020,10 @@ function goInsideBuilding(buildingName) {
     document.getElementById('meta-size').innerText = `|V|:${city_all[selected_building].V} |E|:${city_all[selected_building].E}`
   
     document.getElementById('strata-container').style.display = 'none';
+    document.getElementById('graph-container').style.display = 'block';
     document.getElementById('graph-container').style.width = '100%';
     document.getElementById('graph-container').style.display = 'block';
-    document.getElementById('send-to-fpViewer-button').style.display = 'none';
+    document.getElementById('send-to-fpViewer-button-container').style.display = 'none';
   }
 
   // if (true) {

@@ -14,8 +14,8 @@ const localPort = 18000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const strataAddress = "http://addressSample:8888/";
-const TH_DAG = 32768;
-const TH_SUBDAG = 16384;
+const TH_DAG = 8192;
+const TH_SUBDAG = 8192;
 const TH_STRATA = 16384;
 const TH_FPVIEWER = 262144;
 const TH_RAWSPLIT = 4194304;
@@ -130,6 +130,23 @@ app.use(
 );
 
 app.use(express.json());
+
+const apiTimeout = 30 * 1000;
+app.use((req, res, next) => {
+    // Set the timeout for all HTTP requests
+    req.setTimeout(apiTimeout, () => {
+        let err = new Error('Request Timeout');
+        err.status = 408;
+        next(err);
+    });
+    // Set the server response timeout for all HTTP requests
+    res.setTimeout(apiTimeout, () => {
+        let err = new Error('Service Unavailable');
+        err.status = 503;
+        next(err);
+    });
+    next();
+});
 
 // app.get("*", (req, res) => {
   
@@ -2266,6 +2283,46 @@ function cacheFragNodeLinkStream(filename, nodeFile, linkFile, wave2fragInfoFile
   return processPromise;
 }
 
+function readFragBuckNodeLinkStream(filename, nodeFile, linkFile, vmapFile) {
+  const processPromise = cacheFragBuckNodeLinkStream(filename, nodeFile, linkFile, vmapFile);
+  cache.set(filename, {processingFlag: true, processPromise: processPromise, type: 'dagNodeLink.wf.frag.buck', size: 1, data: undefined});
+  return processPromise;
+}
+
+function cacheFragBuckNodeLinkStream(filename, nodeFile, linkFile, vmapFile) {
+  const nodePromise = csvParseStreamAsSimpleObjAndArrayObj(nodeFile, d => d[0], d => d[1], d => d[1], d => d)
+
+  const linkPromise = nodePromise.then(data => {
+    const node2wave = data[0][0]
+    return csvParseStreamAsArrayObj(linkFile, d => node2wave[d[0]], d => d, d => true)
+  });
+  const allPromises = [nodePromise, linkPromise];
+  const processPromise = Promise.all(allPromises);
+
+  processPromise.then(datas => {
+    // console.log('datas', datas)
+    const [[node2waveMap, nodeArray], nodeArrayLength] = datas[0];
+    const [linkArray, linkArrayLength] = datas[1];
+    // let jumpLinkArray;
+    // let jumpLinkArrayLength;
+    // if (datas.length === 2) {
+    //   // // no jump edge, skip
+    //   jumpLinkArray = {};
+    //   jumpLinkArrayLength = 0;
+    // } else {
+    //   [jumpLinkArray, jumpLinkArrayLength] = datas[2];
+    // }
+
+    cache.set(filename, {
+      processingFlag: false, 
+      type: 'dagNodeLink.wf.frag', 
+      size: nodeArrayLength + linkArrayLength,
+      data: [nodeArray, linkArray]
+    });
+  })
+  return processPromise;
+}
+
 // function readFragNodeLink(filename, nodeFile, linkFile, wave2fragInfoFile) {
 //   const readPromise = Promise.all([
 //     fs.promises.readFile(nodeFile, 'utf8'),
@@ -2478,7 +2535,7 @@ app.post('/meta-dag-edgeCut', (req, res) => {
     layer: layer, 
     lcc: lcc,
     bucket: bucket,
-    buildingName: buildingName
+    buildingName: buildingName,
   }
 
   const dagFilePrefix = `${__dirname}/${filename}`;
@@ -2547,7 +2604,7 @@ app.post('/meta-dag-wcc', (req, res) => {
     layer: layer, 
     lcc: lcc,
     bucket: bucket,
-    buildingName: buildingName
+    buildingName: buildingName,
   }
 
   const dagFilePrefix = `${__dirname}/${filename}`;
@@ -2888,6 +2945,77 @@ app.post('/meta-dag-wf-dag', (req, res) => {
   });
 });
 
+
+app.post('/meta-dag-wf-frag-bucket', (req, res) => {
+  // console.log(req.body.suffix);
+  const filename = req.body.filename;
+  const dataset = req.body.graphName;
+  const layer = req.body.layer;
+  const bucket = req.body.bucket;
+  const metaNode = req.body.metaNode;
+  const lcc = req.body.lcc;
+  const buildingName = req.body.buildingName;
+  console.log(filename, dataset, layer, bucket, metaNode);
+
+  const retInfo = {
+    filename: filename, 
+    dataset: dataset, 
+    layer: layer, 
+    lcc: lcc,
+    bucket: bucket,
+    buildingName: buildingName,
+    parentNode: metaNode
+  }
+
+  const dagFilePrefix = `${__dirname}/${filename}`;
+  const buckLinkFile = `${dagFilePrefix}.buck.link`;
+  const buckNodeFile = `${dagFilePrefix}.buck.node`;
+  const buckVMapFile = `${dagFilePrefix}.buck.vmap`;
+  // const wave2fragInfoFile = `${dagFilePrefix}-info.json`;
+  const buckCacheName = `${dataset}/${filename}.frag.buck`;
+  const retName = 'wf.frag.buck';
+  if (!cache.has(buckCacheName, {updateAgeOnHas: true})) {
+    // // not in the cache
+    console.log('not in the cache', buckCacheName)
+    const processPromise = readFragBuckNodeLinkStream(buckCacheName, buckNodeFile, buckLinkFile, buckVMapFile);
+    processPromise.then(() => {
+      const cachedData = cache.get(buckCacheName);
+      const retData = [
+        cachedData.data[0][metaNode], // node
+        cachedData.data[1][metaNode], // link
+      ]
+      res.send(JSON.stringify([retData, retInfo, retName]));
+    })
+  } else {
+    // // in the cache
+    console.log('in the cache', buckCacheName)
+    const cachedData = cache.get(buckCacheName);
+    if (cachedData.processingFlag) {
+      // // still processing
+      console.log('W: still processing data in /meta-dag-wf-frag');
+      cachedData.processPromise.then(() => {
+        const updatedCachedData = cache.get(buckCacheName);
+        const retData = [
+          updatedCachedData.data[0][metaNode], // node
+          updatedCachedData.data[1][metaNode], // link
+        ]
+        res.send(JSON.stringify([retData, retInfo, retName]));
+      })
+    } else {
+      console.log('processed', buckCacheName)
+      // console.log(cachedData.data)
+      // // processed
+      const retData = [
+        cachedData.data[0][metaNode], // node
+        cachedData.data[1][metaNode], // link
+      ]
+      console.log('size length', cachedData.data[0][metaNode].length, cachedData.data[1][metaNode].length)
+      res.send(JSON.stringify([retData, retInfo, retName]));
+    }
+  }
+});
+
+
 app.post('/meta-dag-full', (req, res) => {
   // filename: DATA.filename,
   // graphName: DATA.dataset,
@@ -3074,6 +3202,7 @@ app.post('/meta-dag-node', async (req, res) => {
   const lcc = req.body.lcc;
   const wfInfo = req.body.wfInfo;
   const buildingName = req.body.buildingName;
+  const sampleFlag = req.body.sampleFlag;
 
   const wavefile = `layer-${layer}-waves-buck${bucket}.csv`;
   const dir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
@@ -3113,8 +3242,11 @@ app.post('/meta-dag-node', async (req, res) => {
     }
   }
   
+  let strataFilename = Array.isArray(metaNode) ? `${dataset}_${layer}-${lcc}_${metaNode[0]}` : `${dataset}_${layer}-${lcc}_${metaNode}`;
+  if (sampleFlag) {
+    strataFilename += '-smp'
+  }
 
-  const strataFilename = Array.isArray(metaNode) ? `${dataset}_${layer}-${lcc}_${metaNode[0]}` : `${dataset}_${layer}-${lcc}_${metaNode}`;
   
   let readyFlag = true;
   let vMap = undefined;
@@ -3125,12 +3257,12 @@ app.post('/meta-dag-node', async (req, res) => {
     processPromise.then(async () => {
       const cachedData = cache.get(node2edgeListCacheName);
       if (Array.isArray(metaNode)) {
-        const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
+        const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1).filter(d => d != null)
         const nodeVerts = metaNode.map(d => cachedData.data[1][d]).flat(1)
         const nodeLabels = await getNodeLabels(nodeVerts, dataset)
         send(strataFilename, nodeEdges, nodeLabels);
       } else {
-        const nodeEdges = cachedData.data[0][metaNode];
+        const nodeEdges = cachedData.data[0][metaNode].filter(d => d != null);
         const nodeVerts = cachedData.data[1][metaNode];
         const nodeLabels = await getNodeLabels(nodeVerts, dataset)
         send(strataFilename, nodeEdges, nodeLabels);
@@ -3144,12 +3276,12 @@ app.post('/meta-dag-node', async (req, res) => {
       cachedData.processPromise.then(async () => {
         const updatedCachedData = cache.get(node2edgeListCacheName);
         if (Array.isArray(metaNode)) {
-          const nodeEdges = metaNode.map(d => updatedCachedData.data[0][d]).flat(1)
+          const nodeEdges = metaNode.map(d => updatedCachedData.data[0][d]).flat(1).filter(d => d != null)
           const nodeVerts = metaNode.map(d => updatedCachedData.data[1][d]).flat(1)
           const nodeLabels = await getNodeLabels(nodeVerts, dataset)
           send(strataFilename, nodeEdges, nodeLabels);
         } else {
-          const nodeEdges = updatedCachedData.data[0][metaNode];
+          const nodeEdges = updatedCachedData.data[0][metaNode].filter(d => d != null);
           const nodeVerts = updatedCachedData.data[1][metaNode];
           const nodeLabels = await getNodeLabels(nodeVerts, dataset)
           send(strataFilename, nodeEdges, nodeLabels);
@@ -3158,12 +3290,12 @@ app.post('/meta-dag-node', async (req, res) => {
     } else {
       // // processed
       if (Array.isArray(metaNode)) {
-        const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
+        const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1).filter(d => d != null)
         const nodeVerts = metaNode.map(d => cachedData.data[1][d]).flat(1)
         const nodeLabels = await getNodeLabels(nodeVerts, dataset)
         send(strataFilename, nodeEdges, nodeLabels);
       } else {
-        const nodeEdges = cachedData.data[0][metaNode];
+        const nodeEdges = cachedData.data[0][metaNode].filter(d => d != null);
         const nodeVerts = cachedData.data[1][metaNode];
         const nodeLabels = await getNodeLabels(nodeVerts, dataset)
         send(strataFilename, nodeEdges, nodeLabels);
@@ -3247,7 +3379,7 @@ app.post('/meta-dag-node', async (req, res) => {
 
   function send(filename, nodeEdges, nodeLabels) {
     const linkJsonList = [];
-    // console.log(nodeEdges, nodeLabels)
+    console.log(nodeEdges)
     const labelJsonList = [{source: "new_id", target: "name"}];
     for (const [src, tgt] of nodeEdges) {
       linkJsonList.push({source: src, target: tgt});
@@ -3307,13 +3439,18 @@ app.post('/meta-dag-node-fp-viewer', async (req, res) => {
   const prevMetaNode = req.body.prevMetaNode; // need send from client
   const tempMetaNode = req.body.tempMetaNode; // need send from client
   const desc = req.body.desc;
+  const sampleFlag = req.body.sampleFlag;
 
   console.log(buildingName, prevMetaNode, metaNode)
 
   console.log(wfInfo)
   const metaNodeID = Array.isArray(metaNode) ? metaNode[0] : metaNode;
 
-  const strataFilename = Array.isArray(metaNode) ? `${dataset}_${layer}-${lcc}_${metaNode[0]}` : `${dataset}_${layer}-${lcc}_${metaNode}`;
+  let strataFilename = Array.isArray(metaNode) ? `${dataset}_${layer}-${lcc}_${metaNode[0]}` : `${dataset}_${layer}-${lcc}_${metaNode}`;
+  if (sampleFlag) {
+    strataFilename += '-smp'
+  }
+  
   const fpViewerFileName = `${__dirname}/fpViewer/index3_${strataFilename}.html`;
   if (fs.existsSync(fpViewerFileName)) {
     console.log(fpViewerFileName, 'exists')
@@ -3562,8 +3699,12 @@ app.post('/meta-dag-node-vicinity', async (req, res) => {
   const wfInfo = req.body.wfInfo;
   const metaGraph = req.body.metaGraph;
   const buildingName = req.body.buildingName;
+  const sampleFlag = req.body.sampleFlag;
 
-  const strataFilename = Array.isArray(metaNode) ? `${dataset}-${layer}-${lcc}-${metaNode[0]}` : `${dataset}-${layer}-${lcc}-${metaNode}`;
+  let strataFilename = Array.isArray(metaNode) ? `${dataset}-${layer}-${lcc}-${metaNode[0]}` : `${dataset}-${layer}-${lcc}-${metaNode}`;
+  if (sampleFlag) {
+    strataFilename += '-smp'
+  }
   const vicinityFileName = `${__dirname}/index-${strataFilename}.html`;
   if (fs.existsSync(vicinityFileName)) {
     console.log(vicinityFileName, 'exists')
@@ -3943,7 +4084,7 @@ async function getAllNodeLabels(vList, dataset) {
         }
       }
     } else {
-      return vList.map(d => [d, d]);
+      return vList;
     }
   } else {
     const cachedData = cache.get(labelCacheName)
@@ -3959,6 +4100,61 @@ async function getAllNodeLabels(vList, dataset) {
         return vList;
       } else {
         return vList.map(d => cachedData.data[d]);
+      }
+    }
+  }
+}
+
+async function getDagNodeLabels(vList, dataset) {
+  // const labelFileName = `${__dirname}/wave-decomposition/${dataset}/${dataset}_label.csv`;
+  const labelCacheName = `${dataset}_label`;
+  const vObj = {};
+
+  if (!cache.has(labelCacheName, { updateAgeOnHas: true })) {
+    const res = cacheLabel(dataset)
+    console.log('no', labelCacheName, res)
+    if (res) {
+      // there is a label.csv
+      const cachedData = cache.get(labelCacheName);
+      if (cachedData.processingFlag) {
+        // // still processing
+        console.log('W: still processing data in /getNodeLables');
+        await cachedData.processPromise
+        const updatedCachedData = cache.get(labelCacheName)
+        // return vList.map(d => updatedCachedData.data[d]);
+        vList.forEach(d => vObj[d] = updatedCachedData.data[d]);
+        return vObj;
+      } else {
+        // // processed
+        if (cachedData.type === 'label.null') {
+          vList.forEach(d => vObj[d] = d);
+          return vObj
+        } else {
+          vList.forEach(d => vObj[d] = cachedData.data[d]);
+          return vObj
+        }
+      }
+    } else {
+      vList.forEach(d => vObj[d] = d);
+      return vObj
+    }
+  } else {
+    const cachedData = cache.get(labelCacheName)
+    if (cachedData.processingFlag) {
+      // // still processing
+      console.log('W: still processing data in /getNodeLables');
+      await cachedData.processPromise
+      const updatedCachedData = cache.get(labelCacheName)
+      vList.forEach(d => vObj[d] = updatedCachedData.data[d]);
+      return vObj;
+    } else {
+      // // processed
+      if (cachedData.type === 'label.null') {
+        vList.forEach(d => vObj[d] = d);
+        return vObj
+      } else {
+        vList.forEach(d => vObj[d] = cachedData.data[d]);
+        return vObj;
       }
     }
   }
@@ -4183,14 +4379,22 @@ app.post('/city-vicinity', (req, res) => {
   const layer = req.body.layer;
   const bucket = req.body.bucket;
   const lcc = req.body.lcc;
+  const sample = req.body.sample == null ? false : true;
 
-  const vicinityName = `${dataset}-l${layer}-b${bucket}`
+  let smpSuffix = ''
+  let makeName = ''
+  if (sample) {
+    smpSuffix += 'smp'
+    makeName += '-smp'
+  }
+
+  const vicinityName = `${dataset}-l${layer}-b${bucket}${smpSuffix}`
   const vicinityFileName = `${__dirname}/index-${vicinityName}.html`
 
   if (fs.existsSync(vicinityFileName)) {
     res.send(JSON.stringify({success: true, name: vicinityName}))
   } else {
-    exec(`cd wave-decomposition; make GRAPH=${dataset} LAYER=${layer} BUCKET=${bucket} buck2vicinity`, (err, stdout, stderr) => {
+    exec(`cd wave-decomposition; make GRAPH=${dataset} LAYER=${layer} BUCKET=${bucket} buck2vicinity${makeName}`, (err, stdout, stderr) => {
       if (err) {
         res.send(JSON.stringify({success: false, detail: 'buck2vicinity', name: `na`}));
         return console.log(err);
@@ -4246,39 +4450,49 @@ app.post('/city-vicinity-fpviewer', (req, res) => {
   }
 })
 
-// app.post('/city-vicinity-strata', (req, res) => {
-//   const dataset = req.body.graphName;
-//   const layer = req.body.layer;
-//   const bucket = req.body.bucket;
-//   const lcc = req.body.lcc;
+app.post('/city-vicinity-strata', (req, res) => {
+  const dataset = req.body.graphName;
+  const layer = req.body.layer;
+  const bucket = req.body.bucket;
+  const lcc = req.body.lcc;
+  const sample = req.body.sample == null ? false : true;
 
-//   const vicinityName = `${dataset}-l${layer}-b${bucket}`
-//   const vicinityFileName = `${__dirname}/fpViewer/index3_${vicinityName}.html`;
+  let smpSuffix = ''
+  let makeName = ''
+  if (sample) {
+    smpSuffix += 'smp'
+    makeName += '-smp'
+  }
 
-//   if (fs.existsSync(vicinityFileName)) {
-//     res.send(JSON.stringify({success: true, name: vicinityName}))
-//   } else {
-//     exec(`cd wave-decomposition; make GRAPH=${dataset} LAYER=${layer} BUCKET=${bucket} buck2vicinity`, (err, stdout, stderr) => {
-//       if (err) {
-//         res.send(JSON.stringify({res: false, detail: 'fpViewer', url: `na`}));
-//         return console.log(err);
-//       }
-//       exec(`cd wave-decomposition; ln -s ${__dirname}/wave-decomposition/${dataset}/${dataset}_label.csv ${__dirname}/wave-decomposition/${vicinityName}/${vicinityName}_label.csv; make GRAPH=${vicinityName} PARENT=${dataset} fpViewer`, (err, stdout, stderr) => {
-//         if (err) {
-//           res.send(JSON.stringify({res: false, detail: 'fpViewer', url: `na`}));
-//           return console.log(err);
-//         }
-//         exec(`cd fpViewer; make GRAPH=${vicinityName} retrive`, (err, stdout, stderr) => {
-//           if (err) {
-//             res.send(JSON.stringify({res: false, detail: 'fpViewer', url: `na`}));
-//             return console.log(err);
-//           }
-//           res.send(JSON.stringify({res: true, detail: 'fpViewer', url: `fpViewer/index3_${vicinityName}.html`}));
-//         })
-//       })
-//     })
-//   }
-// })
+  const vicinityName = `${dataset}-l${layer}-b${bucket}${smpSuffix}`
+  // const vicinityFileName = `${__dirname}/fpViewer/index3_${vicinityName}.html`;
+
+  httpGetAsync(strataAddress + "query?type=setdatadir&file=./temp", function(strataRes) {
+    console.log(strataRes);
+  });
+
+  exec(`cd wave-decomposition; make GRAPH=${dataset} LAYER=${layer} BUCKET=${bucket} buck2strata${makeName}`, (err, stdout, stderr) => {
+    if (err) {
+      res.send(JSON.stringify({res: false, detail: 'strata', url: `na`}));
+      return console.log(err);
+    }
+    // exec(`cd wave-decomposition; ln -s ${__dirname}/wave-decomposition/${dataset}/${dataset}_label.csv ${__dirname}/wave-decomposition/${vicinityName}/${vicinityName}_label.csv; make GRAPH=${vicinityName} PARENT=${dataset} fpViewer`, (err, stdout, stderr) => {
+    //   if (err) {
+    //     res.send(JSON.stringify({res: false, detail: 'fpViewer', url: `na`}));
+    //     return console.log(err);
+    //   }
+    //   exec(`cd fpViewer; make GRAPH=${vicinityName} retrive`, (err, stdout, stderr) => {
+    //     if (err) {
+    //       res.send(JSON.stringify({res: false, detail: 'fpViewer', url: `na`}));
+    //       return console.log(err);
+    //     }
+    //     res.send(JSON.stringify({res: true, detail: 'fpViewer', url: `fpViewer/index3_${vicinityName}.html`}));
+    //   })
+    // })
+    res.send(JSON.stringify({res: true, detail: 'strata', url: vicinityName}));
+  })
+
+})
 
 app.post('/building2strata', async (req, res) => {
   // console.log(req.body.suffix);
@@ -5558,5 +5772,323 @@ app.post('/meta-dag-node-label', async (req, res) => {
       stream.write(str + '\n'); 
     });
     stream.end();
+  }
+});
+
+
+app.post('/meta-dag-edgeCut-strata', async (req, res) => {
+  // console.log(req.body.suffix);
+  const filename = req.body.filename;
+  const dataset = req.body.graphName;
+  const layer = req.body.layer;
+  const bucket = req.body.bucket;
+  const metaNode = req.body.metaNode;
+  const lcc = req.body.lcc;
+  const buildingName = req.body.buildingName;
+  console.log(filename, dataset, layer, bucket, metaNode);
+
+  const retInfo = {
+    filename: filename, 
+    dataset: dataset, 
+    layer: layer, 
+    lcc: lcc,
+    bucket: bucket,
+    buildingName: buildingName
+  }
+
+  const strataFilename = `${dataset}_${layer}-${lcc}_${metaNode}-meta`
+
+  const dagFilePrefix = `${__dirname}/${filename}`;
+  // const dagLinkFile = `${dagFilePrefix}.link`;
+  const dagLinkFile = `${dagFilePrefix}.span.link`;
+  const dagJumpLinkFile = `${dagFilePrefix}.span.link.jump`;
+  const dagNodeFile = `${dagFilePrefix}.node`;
+  const metaVMapFile = `${dagFilePrefix}.edgeCut.vmap`;
+  const dagCacheName = `${dataset}/${filename}.dag`;
+  const retName = 'edgeCut.dag'
+  if (!cache.has(dagCacheName, {updateAgeOnHas: true})) {
+    // // not in the cache
+    const processPromise = readDagNodeLinkByMetaStream(dagCacheName, dagNodeFile, dagLinkFile, dagJumpLinkFile, metaVMapFile);
+    processPromise.then(async () => {
+      const cachedData = cache.get(dagCacheName);
+      // const retData = [
+      //   cachedData.data[0][metaNode], // node
+      //   cachedData.data[1][metaNode], // link
+      //   // cachedData.data[2][metaNode], // jumpLink
+      // ]
+      // res.send(JSON.stringify([retData, retInfo, retName]));
+      const nodeEdges = cachedData.data[1][metaNode].map(d => [d[0], d[1]]);
+      const nodeVerts = cachedData.data[0][metaNode].map(d => d[0]);
+      console.log(nodeVerts)
+      const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+      send(strataFilename, nodeEdges, nodeLabels);
+    })
+  } else {
+    // // in the cache
+    const cachedData = cache.get(dagCacheName);
+    if (cachedData.processingFlag) {
+      // // still processing
+      console.log('W: still processing data in /meta-dag-edgeCut');
+      cachedData.processPromise.then(async () => {
+        const updatedCachedData = cache.get(dagCacheName);
+        // const retData = [
+        //   updatedCachedData.data[0][metaNode], // node
+        //   updatedCachedData.data[1][metaNode], // link
+        //   // updatedCachedData.data[2][metaNode], // jumpLink
+        // ]
+        // res.send(JSON.stringify([retData, retInfo, retName]));
+        const nodeEdges = updatedCachedData.data[1][metaNode].map(d => [d[0], d[1]]);
+        const nodeVerts = updatedCachedData.data[0][metaNode].map(d => d[0]);
+        console.log(nodeVerts)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        send(strataFilename, nodeEdges, nodeLabels);
+      })
+    } else {
+      // // processed
+      // const retData = [
+      //   cachedData.data[0][metaNode], // node
+      //   cachedData.data[1][metaNode], // link
+      //   // cachedData.data[2][metaNode], // jumpLink
+      // ]
+      // res.send(JSON.stringify([retData, retInfo, retName]));
+      const nodeEdges = cachedData.data[1][metaNode].map(d => [d[0], d[1]]);
+      const nodeVerts = cachedData.data[0][metaNode].map(d => d[0]);
+      console.log(nodeVerts)
+      const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+      send(strataFilename, nodeEdges, nodeLabels);
+    }
+  }
+
+  function send(filename, nodeEdges, nodeLabels) {
+    const linkJsonList = [];
+    // console.log(nodeEdges, nodeLabels)
+    const labelJsonList = [{source: "new_id", target: "name"}];
+    // console.log(nodeEdges)
+    for (const [src, tgt] of nodeEdges) {
+      linkJsonList.push({source: src, target: tgt});
+    }
+    console.log(nodeLabels)
+    for (const [v, label] of nodeLabels) {
+      labelJsonList.push({source: v, target: label});
+    }
+    console.log(filename);
+    let content = JSON.stringify({
+      filename: filename + ".csv",
+      edges: linkJsonList
+    });
+
+    // console.log(content);
+    httpGetAsync(strataAddress + "query?type=setdatadir&file=./temp", function(strataRes) {
+      console.log(strataRes);
+    });
+    httpPostAsync(content, strataAddress + "save", function(strataRes) {
+      console.log(strataRes)
+      console.log(strataRes.errno)
+      if (strataRes.errno == 0 || strataRes.errno == -17) {
+        // // send labels to strata
+        content = JSON.stringify({
+          filename: filename + "_labels.csv",
+          edges: labelJsonList
+        });
+        httpPostAsync(content, strataAddress + "save", function(strataRes) {
+          console.log(strataRes)
+          console.log(strataRes.errno)
+          if (strataRes.errno == 0 || strataRes.errno == -17) {
+            // console.log(true)
+            res.send(JSON.stringify({res: true, detail: 'strata'}));
+          } else {
+            res.send(JSON.stringify({res: false, detail: 'strata'}));
+          }
+        });
+      } else {
+        res.send(JSON.stringify({res: false, detail: 'strata'}));
+      }
+    });
+  }
+});
+
+app.post('/meta-dag-edgeCut-label', async (req, res) => {
+  // console.log(req.body.suffix);
+  const filename = req.body.filename;
+  const dataset = req.body.graphName;
+  const layer = req.body.layer;
+  const bucket = req.body.bucket;
+  const metaNode = req.body.metaNode;
+  const lcc = req.body.lcc;
+  const buildingName = req.body.buildingName;
+  const tempGraphIdx = req.body.tempGraphIdx;
+  console.log(filename, dataset, layer, bucket, metaNode);
+
+  const retInfo = {
+    filename: filename, 
+    dataset: dataset, 
+    layer: layer, 
+    lcc: lcc,
+    bucket: bucket,
+    buildingName: buildingName,
+    tempGraphIdx: tempGraphIdx,
+    parentNode: metaNode
+  }
+
+
+  const dagFilePrefix = `${__dirname}/${filename}`;
+  // const dagLinkFile = `${dagFilePrefix}.link`;
+  const dagLinkFile = `${dagFilePrefix}.span.link`;
+  const dagJumpLinkFile = `${dagFilePrefix}.span.link.jump`;
+  const dagNodeFile = `${dagFilePrefix}.node`;
+  const metaVMapFile = `${dagFilePrefix}.edgeCut.vmap`;
+  const dagCacheName = `${dataset}/${filename}.dag`;
+  const retName = 'edgeCut.dag'
+  if (!cache.has(dagCacheName, {updateAgeOnHas: true})) {
+    // // not in the cache
+    const processPromise = readDagNodeLinkByMetaStream(dagCacheName, dagNodeFile, dagLinkFile, dagJumpLinkFile, metaVMapFile);
+    processPromise.then(async () => {
+      const cachedData = cache.get(dagCacheName);
+      // const retData = [
+      //   cachedData.data[0][metaNode], // node
+      //   cachedData.data[1][metaNode], // link
+      //   // cachedData.data[2][metaNode], // jumpLink
+      // ]
+      // res.send(JSON.stringify([retData, retInfo, retName]));
+      // const nodeEdges = cachedData.data[1][metaNode].map(d => [d[0], d[1]]);
+      const nodeVerts = cachedData.data[0][metaNode].map(d => d[0]);
+      // console.log(nodeVerts)
+      const nodeLabels = await getDagNodeLabels(nodeVerts, dataset)
+      // send(strataFilename, nodeEdges, nodeLabels);
+      send(nodeLabels)
+    })
+  } else {
+    // // in the cache
+    const cachedData = cache.get(dagCacheName);
+    if (cachedData.processingFlag) {
+      // // still processing
+      console.log('W: still processing data in /meta-dag-edgeCut');
+      cachedData.processPromise.then(async () => {
+        const updatedCachedData = cache.get(dagCacheName);
+        // const retData = [
+        //   updatedCachedData.data[0][metaNode], // node
+        //   updatedCachedData.data[1][metaNode], // link
+        //   // updatedCachedData.data[2][metaNode], // jumpLink
+        // ]
+        // res.send(JSON.stringify([retData, retInfo, retName]));
+        // const nodeEdges = updatedCachedData.data[1][metaNode].map(d => [d[0], d[1]]);
+        const nodeVerts = updatedCachedData.data[0][metaNode].map(d => d[0]);
+        // console.log(nodeVerts)
+        const nodeLabels = await getDagNodeLabels(nodeVerts, dataset)
+        // send(strataFilename, nodeEdges, nodeLabels);
+        send(nodeLabels)
+      })
+    } else {
+      // // processed
+      // const retData = [
+      //   cachedData.data[0][metaNode], // node
+      //   cachedData.data[1][metaNode], // link
+      //   // cachedData.data[2][metaNode], // jumpLink
+      // ]
+      // res.send(JSON.stringify([retData, retInfo, retName]));
+      // const nodeEdges = cachedData.data[1][metaNode].map(d => [d[0], d[1]]);
+      const nodeVerts = cachedData.data[0][metaNode].map(d => d[0]);
+      // console.log(nodeVerts)
+      const nodeLabels = await getDagNodeLabels(nodeVerts, dataset)
+      // send(strataFilename, nodeEdges, nodeLabels);
+      send(nodeLabels)
+    }
+  }
+
+  function send(nodeLabels) {
+    res.send(JSON.stringify({res: nodeLabels, detail: 'labels', metaInfo: retInfo}));
+  }
+});
+
+app.post('/meta-dag-wcc-label', async (req, res) => {
+  // console.log(req.body.suffix);
+  const filename = req.body.filename;
+  const dataset = req.body.graphName;
+  const layer = req.body.layer;
+  const bucket = req.body.bucket;
+  const metaNode = req.body.metaNode;
+  const lcc = req.body.lcc;
+  const buildingName = req.body.buildingName;
+  const tempGraphIdx = req.body.tempGraphIdx;
+  console.log(filename, dataset, layer, bucket, metaNode);
+
+  const retInfo = {
+    filename: filename, 
+    dataset: dataset, 
+    layer: layer, 
+    lcc: lcc,
+    bucket: bucket,
+    buildingName: buildingName,
+    tempGraphIdx: tempGraphIdx,
+    parentNode: metaNode
+  }
+
+
+  const dagFilePrefix = `${__dirname}/${filename}`;
+  // const dagLinkFile = `${dagFilePrefix}.link`;
+  const dagLinkFile = `${dagFilePrefix}.span.link`;
+  const dagJumpLinkFile = `${dagFilePrefix}.span.link.jump`;
+  const dagNodeFile = `${dagFilePrefix}.node`;
+  const metaVMapFile = `${dagFilePrefix}.wcc.vmap`;
+  const dagCacheName = `${dataset}/${filename}.dag`;
+  const retName = 'wcc.dag'
+  if (!cache.has(dagCacheName, {updateAgeOnHas: true})) {
+    // // not in the cache
+    const processPromise = readDagNodeLinkByMetaStream(dagCacheName, dagNodeFile, dagLinkFile, dagJumpLinkFile, metaVMapFile);
+    processPromise.then(async () => {
+      const cachedData = cache.get(dagCacheName);
+      // const retData = [
+      //   cachedData.data[0][metaNode], // node
+      //   cachedData.data[1][metaNode], // link
+      //   // cachedData.data[2][metaNode], // jumpLink
+      // ]
+      // res.send(JSON.stringify([retData, retInfo, retName]));
+      // const nodeEdges = cachedData.data[1][metaNode].map(d => [d[0], d[1]]);
+      const nodeVerts = cachedData.data[0][metaNode].map(d => d[0]);
+      // console.log(nodeVerts)
+      const nodeLabels = await getDagNodeLabels(nodeVerts, dataset)
+      // send(strataFilename, nodeEdges, nodeLabels);
+      send(nodeLabels)
+    })
+  } else {
+    // // in the cache
+    const cachedData = cache.get(dagCacheName);
+    if (cachedData.processingFlag) {
+      // // still processing
+      console.log('W: still processing data in /meta-dag-wcc');
+      cachedData.processPromise.then(async () => {
+        const updatedCachedData = cache.get(dagCacheName);
+        // const retData = [
+        //   updatedCachedData.data[0][metaNode], // node
+        //   updatedCachedData.data[1][metaNode], // link
+        //   // updatedCachedData.data[2][metaNode], // jumpLink
+        // ]
+        // res.send(JSON.stringify([retData, retInfo, retName]));
+        // const nodeEdges = updatedCachedData.data[1][metaNode].map(d => [d[0], d[1]]);
+        const nodeVerts = updatedCachedData.data[0][metaNode].map(d => d[0]);
+        // console.log(nodeVerts)
+        const nodeLabels = await getDagNodeLabels(nodeVerts, dataset)
+        // send(strataFilename, nodeEdges, nodeLabels);
+        send(nodeLabels)
+      })
+    } else {
+      // // processed
+      // const retData = [
+      //   cachedData.data[0][metaNode], // node
+      //   cachedData.data[1][metaNode], // link
+      //   // cachedData.data[2][metaNode], // jumpLink
+      // ]
+      // res.send(JSON.stringify([retData, retInfo, retName]));
+      // const nodeEdges = cachedData.data[1][metaNode].map(d => [d[0], d[1]]);
+      const nodeVerts = cachedData.data[0][metaNode].map(d => d[0]);
+      // console.log(nodeVerts)
+      const nodeLabels = await getDagNodeLabels(nodeVerts, dataset)
+      // send(strataFilename, nodeEdges, nodeLabels);
+      send(nodeLabels)
+    }
+  }
+
+  function send(nodeLabels) {
+    res.send(JSON.stringify({res: nodeLabels, detail: 'labels', metaInfo: retInfo}));
   }
 });

@@ -3,6 +3,8 @@
 //   gui
 // } from '../node_modules/three/examples/jsm/libs/dat.gui.module.js';
 
+// import { FlatShading } from "../three.js/build/three.module";
+
 const localHost = `http://addressSample:18000/`
 const hostAddress = 'http://addressSample:18000'
 
@@ -10,8 +12,8 @@ var PREFIX = "http://addressSample:8888/";
 const peelCCFolder = '../data_dags/peelCC/'
 var nameSuffix = '';
 
-const TH_DAG = 32768;
-const TH_SUBDAG = 16384;
+const TH_DAG = 8192;
+const TH_SUBDAG = 8192;
 let TH_STRATA = 8192;
 const TH_STRATA_FULL = 16384
 const TH_FPVIEWER = 131072;
@@ -61,8 +63,8 @@ function httpPostAsync(content, theUrl, callback, resType) {
   xmlHttp.send(content);
 }
 
-function setStrataUrl(request) {
-  document.getElementById('strata').src = PREFIX + request;
+function setStrataUrl(request, strataElemId = 'strata') {
+  document.getElementById(strataElemId).src = PREFIX + request;
 }
 
 // var cityContainer = document.getElementById('graph');
@@ -601,9 +603,23 @@ function initGraph(elemName, waveMiniFlag = false) {
   graphLabel.id = `${elemName}-label`;
   graphLabel.style.textAlign = 'center';
   graphLabel.style.fontSize = 'smaller';
+  graphLabel.style.transform = 'translateY(calc(-100% - 1.5em))'
+  graphLabel.style.pointerEvents = 'none'
   elem.appendChild(graphLabel);
 
   return graph;
+}
+
+function closeFullDagGraph(resizeGraphFlag = true) {
+  document.getElementById('full-dag-graph-container').style.display = 'none';
+  if (resizeGraphFlag) {
+    document.getElementById('graph-container').style.width = '100%';
+  } else {
+    // nothing to do
+  }
+  
+  fullDagGraph.graphData({nodes: [], links: []});
+  resizeDag()
 }
 
 function initFullDagGraph(elemName) {
@@ -661,13 +677,16 @@ function initFullDagGraph(elemName) {
   closeButton.style.position = 'absolute';
   closeButton.style.top = '0%';
   closeButton.style.right = '0%';
-  closeButton.onclick = () => {
-    document.getElementById('full-dag-graph-container').style.display = 'none';
-    document.getElementById('graph-container').style.width = '100%';
-    graph.graphData({nodes: [], links: []});
-    resizeDag()
-  }
+  closeButton.onclick = () => closeFullDagGraph()
   document.getElementById('full-dag-graph-container').appendChild(closeButton);
+
+  const graphLabel = document.createElement('div');
+  graphLabel.id = `full-dag-graph-label`;
+  graphLabel.style.textAlign = 'center';
+  graphLabel.style.fontSize = 'smaller';
+  graphLabel.style.transform = 'translateY(calc(-100% - 1.5em))'
+  graphLabel.style.pointerEvents = 'none'
+  elem.appendChild(graphLabel);
 
   return graph;
 }
@@ -718,6 +737,7 @@ const graph4 = initGraph('graph4');
 let tempGraph = graph1;
 let tempMiniGraph = undefined;
 const graphList = [undefined, graph1, graph2, graph3, graph4];
+const labelList = [{}, {}, {}, {}, {}];
 let tempGraphIdx = 0;
 // const miniWaveGraph = initGraph('mini-wave-graph', true)
 // let showMiniWaveGraphFlag = false;
@@ -735,6 +755,13 @@ let layer_lcc = null;
 let DATASET = null;
 //let nodeMAP = null;
 
+function cleanDagInfo() {
+  DATAList = []
+  graphInfoList = []
+  for (let idx = 1; idx < labelList.length; idx ++) {
+    labelList.idx = {};
+  }
+}
 
 let peelCCFlag = false;
 let forkFlag = false;
@@ -828,6 +855,43 @@ function click2edgeCutDag(node) {
       loadMetaArray(res, 2);
     }, 'json')
   }
+}
+
+function requestMetaLink2strata(node) {
+  const strataComplementElem = document.getElementById('strata-complement-container')
+  const strataElem = document.getElementById('strata-container')
+  const dagElem = document.getElementById('graph-container')
+
+  strataComplementElem.style.display = 'block';
+  strataComplementElem.style.width = '50%';
+  strataComplementElem.style.right = '0%'
+  strataElem.style.display = 'none'
+  dagElem.style.width = '49.5%';
+
+  httpPostAsync(JSON.stringify({
+    filename: DATA.filename,
+    graphName: DATA.dataset,
+    layer: DATA.layer,
+    bucket: DATA.bucket,
+    metaNode: node.id,
+    lcc: DATA.lcc,
+    buildingName: DATA.buildingName
+  }), localHost + 'meta-dag-edgeCut-strata', function(res) {
+    console.log(res);
+    if (!res.res) {
+      console.log(res.detail);
+    } else {
+      const filename = `${DATA.dataset}_${DATA.layer}-${DATA.lcc}_${node.id}-meta`;
+      // let C = new THREE.Color(node.color);
+      console.log("?dataPath=" + filename);
+      console.log(document.getElementById('strata').src);
+      httpGetAsync(PREFIX + "query?type=add&file=" + filename + ".csv", function(res) {
+        console.log(res);
+        setStrataUrl("?dataPath=" + filename + '&nodeColorProperty=waveLevel&heightProperty=waveLevel', 'strata-complement');
+        console.log(document.getElementById('strata').src);
+      });
+    }
+  }, 'json')
 }
 
 function click2wccDag(node) {
@@ -1044,7 +1108,7 @@ function click2wfDagDetail(node) {
   // }, 'json')
 }
 
-function click2Vicinity(node) {
+function click2Vicinity(node, sampleFlag) {
   let wfInfo = [];
   if (node.hasOwnProperty('wave') && node.hasOwnProperty('frag')) {
     wfInfo = [node.wave, node.frag]
@@ -1105,7 +1169,8 @@ function click2Vicinity(node) {
       lcc: DATA.lcc,
       wfInfo: wfInfo,
       metaGraph: tempGraph.graphData(),
-      buildingName: DATA.buildingName
+      buildingName: DATA.buildingName,
+      sampleFlag: sampleFlag
       // metaType: graphInfoList[tempGraphIdx].metaType
     }), localHost + 'meta-dag-node-vicinity', function(res) {
       console.log(res);
@@ -1116,10 +1181,10 @@ function click2Vicinity(node) {
   }
 }
 
-function click2fpViewer(node) {
+function click2fpViewer(node, sampleFlag = false) {
 
-  if (node.esize + node.touchESize > TH_FPVIEWER) {
-    click2Vicinity(node)
+  if ((sampleFlag ? node.sampleSize : node.esize + node.touchESize) > TH_FPVIEWER) {
+    click2Vicinity(node, sampleFlag)
   } else {
     let wfInfo = [];
     if (node.hasOwnProperty('wave') && node.hasOwnProperty('frag')) {
@@ -1147,6 +1212,7 @@ function click2fpViewer(node) {
       tempMetaNode: (DATA.dagType === 'wf.dag' || DATA.dagType === 'wf.dag.detail') ? node.frag + 1 : nodeID,
       desc: ['BLDG', DATAList[1].dagType, DATAList[2].dagType === 'wf.frag' ? DATAList[2].dagType : 'frag.cc'],
       // metaType: graphInfoList[tempGraphIdx].metaType
+      sampleFlag: sampleFlag
     }), localHost + 'meta-dag-node-fp-viewer', function(res) {
       console.log(res);
       if (!res.res) {
@@ -1158,7 +1224,8 @@ function click2fpViewer(node) {
   }
 }
 
-function click2strata(node) {
+function click2strata(node, sampleFlag = false) {
+  console.log('sampleFlag', sampleFlag)
   // peelCCBoardWarp.style.visibility = 'hidden';
   setStrataUrl('?data=nodata');
   clicked = node;
@@ -1181,12 +1248,23 @@ function click2strata(node) {
     return nodeGeom(node, tempGraphIdx)
   });
 
-  if (((DATAList[tempGraphIdx].dagType === 'wf.dag' || DATAList[tempGraphIdx].dagType === 'wf.dag.detail') && (node.esize + node.touchESize > TH_STRATA_FULL)) || node.esize > TH_STRATA) {
-    click2fpViewer(node)
+  const wfCheck = (DATAList[tempGraphIdx].dagType === 'wf.dag' || DATAList[tempGraphIdx].dagType === 'wf.dag.detail')
+  const wfCondition = (sampleFlag ? node.sampleSize : node.esize + node.touchESize) > TH_STRATA_FULL
+
+  if ((wfCheck && wfCondition) || (!wfCheck) && (node.esize > TH_STRATA)) {
+    click2fpViewer(node, sampleFlag)
   } else {
+    const strataComplementElem = document.getElementById('strata-complement-container');
     document.getElementById('strata-container').style.display = 'block';
-    document.getElementById('strata-container').style.width = '50%'
-    document.getElementById('graph-container').style.width = '49.5%';
+    if (strataComplementElem.style.display === 'none') {
+      document.getElementById('strata-container').style.width = '50%'
+      document.getElementById('graph-container').style.width = '49.5%';
+    } else if (strataComplementElem.style.display === 'block') {
+      document.getElementById('strata-container').style.width = '35%';
+      strataComplementElem.style.width = '34.5%';
+      strataComplementElem.style.right = '35%'
+      document.getElementById('graph-container').style.width = '30%';
+    }
     document.getElementById('full-dag-graph-container').style.display = 'none';
     fullDagGraph.graphData({nodes: [], links: []})
     resizeDag()
@@ -1225,8 +1303,13 @@ function click2strata(node) {
     let nodeID;
     let nodeName;
     if (node.hasOwnProperty('idList')) {
-      nodeID = node.idList;
-      nodeName = node.idList[0]
+      if (!sampleFlag && node.hasOwnProperty('fullIDList')) {
+        nodeID = node.fullIDList;
+        nodeName = node.fullIDList[0];
+      } else {
+        nodeID = node.idList;
+        nodeName = node.idList[0]
+      }
     } else {
       nodeID = node.id;
       nodeName = node.id;
@@ -1241,18 +1324,22 @@ function click2strata(node) {
       metaNode: nodeID,
       lcc: DATA.lcc,
       wfInfo: wfInfo,
-      buildingName: DATA.buildingName
+      buildingName: DATA.buildingName,
+      sampleFlag: sampleFlag
     }), localHost + 'meta-dag-node', function(res) {
       console.log(res);
       if (!res.res) {
         console.log(res.detail);
       } else {
-        const filename = `${DATA.dataset}_${DATA.layer}-${DATA.lcc}_${nodeName}`;
+        let filename = `${DATA.dataset}_${DATA.layer}-${DATA.lcc}_${nodeName}`;
+        if (sampleFlag) {
+          filename += '-smp'
+        }
         let C = new THREE.Color(node.color);
         console.log("?dataPath=" + filename + '&nodeColor={"r":' + C.r + ',"g":' + C.g + ',"b":' + C.b + '}');
         console.log(document.getElementById('strata').src);
         httpGetAsync(PREFIX + "query?type=add&file=" + filename + ".csv", function(res) {
-          console.log(res);
+          console.log(res); // TODO: check res
           setStrataUrl("?dataPath=" + filename + '&nodeColor={"r":' + C.r + ',"g":' + C.g + ',"b":' + C.b + '}&nodeColorProperty=waveLevel&heightProperty=waveLevel');
           console.log(document.getElementById('strata').src);
         });
@@ -1291,6 +1378,14 @@ document.getElementById('full-dag-button').onclick = () => {
   }
 }
 
+document.getElementById('frag-buck-button').onclick = () => {
+  if (DATA.dagType === 'wf.frag') {
+    requestFragBuck(DATA, tempGraphIdx)
+  } else {
+    // not implemented yet
+  }
+}
+
 document.getElementById('height-constrain-button').onclick = () => {
   const elem = document.getElementById('height-constrain-button');
   if (DATA.dagType === 'wf.dag' || DATA.dagType === 'wf.dag.detail') {
@@ -1320,6 +1415,61 @@ document.getElementById('height-constrain-button').onclick = () => {
     }
     fullDagGraph.d3ReheatSimulation();
   }
+}
+
+function updateLinkVisibility(showFlag) {
+  graphList[tempGraphIdx].linkVisibility(showFlag)
+  if (showFlag) {
+    const captionElem = document.getElementById(`graph${tempGraphIdx}-label`);
+    captionElem.innerText = 'span frag cc DAG\nhide link by clicking button below';
+  } else {
+    const captionElem = document.getElementById(`graph${tempGraphIdx}-label`);
+    captionElem.innerText = 'span frag cc DAG\nshow link by clicking button below';
+  }
+}
+
+document.getElementById('hide-link-button-container').onclick = () => {
+  if (DATAList[tempGraphIdx].dagType === 'edgeCut.dag') {
+    graphInfoList[tempGraphIdx].showLink = !(graphInfoList[tempGraphIdx].showLink)
+    updateLinkVisibility(graphInfoList[tempGraphIdx].showLink)
+  }
+}
+
+function updateStrataComplementVisibility(showFlag) {
+  const strataComplementElem = document.getElementById('strata-complement-container')
+  const strataElem = document.getElementById('strata-container')
+  const dagElem = document.getElementById('graph-container')
+  if (strataElem.style.display === 'none') {
+    if (showFlag) {
+      strataComplementElem.style.display = 'block';
+      strataComplementElem.style.right = '0%';
+      strataComplementElem.style.width = '50%';
+      dagElem.style.width = '49.5%';
+    } else {
+      strataComplementElem.style.display = 'none';
+      dagElem.style.width = '100%';
+    }
+  } else if (strataElem.style.display === 'block') {
+    if (showFlag) {
+      strataElem.style.width = '34.5%'
+      strataComplementElem.style.display = 'block';
+      strataComplementElem.style.right = '35%';
+      strataComplementElem.style.width = '34.5%';
+      dagElem.style.width = '30%';
+    } else {
+      strataElem.style.width = '50%'
+      strataComplementElem.style.display = 'none';
+      dagElem.style.width = '49.5%';
+    }
+  }
+  resizeDag()
+}
+
+document.getElementById('hide-meta-link-button').onclick = () => {
+  updateStrataComplementVisibility(document.getElementById('strata-complement-container').style.display === 'none')
+}
+document.getElementById('strata-complement-hide-meta-link-button').onclick = () => {
+  updateStrataComplementVisibility(document.getElementById('strata-complement-container').style.display === 'none')
 }
 
 document.getElementById('back-button-container').onclick = () => {
@@ -1372,6 +1522,51 @@ function requestFullDag(DATA, tempGraphIdx, wfInfo = []) {
       // resGraph.graphData(graphData)
       // resGraph.nodeLabel(node => nodeLabel(node))
       switchFullDagGraph(true);
+      document.getElementById('full-dag-graph-label').innerText = 'full frag cc DAG'
+    }
+  }, 'json')
+}
+
+function requestFragBuck(DATA, tempGraphIdx, wfInfo = []) {
+  httpPostAsync(JSON.stringify({
+    filename: DATA.filename,
+    graphName: DATA.dataset,
+    layer: DATA.layer,
+    bucket: DATA.bucket,
+    metaNode: DATA.parentNode.id,
+    lcc: DATA.lcc,
+    // wfInfo: wfInfo,
+    // tempGraphIdx: tempGraphIdx,
+    buildingName: DATA.buildingName,
+    // parentNode: DATA.parentNode.id,
+    // dagType: DATA.dagType
+  }), localHost + 'meta-dag-wf-frag-bucket', function(res) {
+    console.log(res);
+    const metaInfo = res[1];
+    // const resGraphIdx = metaInfo.tempGraphIdx;
+    // const localDATA = DATAList[resGraphIdx];
+    if (DATA.dataset === metaInfo.dataset && DATA.layer === metaInfo.layer && DATA.lcc === metaInfo.lcc && DATA.parentNode.id === metaInfo.parentNode) {
+      // the same graph, update
+      // const resGraph = graphList[resGraphIdx];
+      // const graphData = resGraph.graphData()
+      // // const nodeLabels = res.res;
+      // // for (const node of graphData.nodes) {
+      // //   node.dataLabel = nodeLabels[node.id]
+      // // }
+      const [graphData, graphInfo] = prepareMetaArrayFragBuck(res[0]);
+      // graphInfo.metaType = metaType
+      // updateDAGTitle(metaType, graphInfo)
+      // graphInfoList[graphIndex] = graphInfo;
+      fullDagGraph.graphData(graphData);
+      setTimeout(() => fullDagGraph.zoomToFit(250, 10, node => true), 500);
+      // resGraph.graphData(graphData)
+      // resGraph.nodeLabel(node => nodeLabel(node))
+      switchFullDagGraph(true);
+      if (graphInfo.topoSpan) {
+        document.getElementById('full-dag-graph-label').innerText = 'frag cc bucket DAG'
+      } else {
+        document.getElementById('full-dag-graph-label').innerText = 'frag cc bucket DAG'
+      }
     }
   }, 'json')
 }
@@ -1405,21 +1600,32 @@ function requestNodeLabel(importantNodes, DATA, tempGraphIdx, wfInfo = []) {
     if (localDATA.dataset === metaInfo.dataset && localDATA.layer === metaInfo.layer && localDATA.lcc === metaInfo.lcc) {
       // the same graph, update
       const resGraph = graphList[resGraphIdx];
-      const graphData = resGraph.graphData()
+      // const graphData = resGraph.graphData()
       const nodeLabels = res.res;
-      for (const node of graphData.nodes) {
-        node.dataLabel = nodeLabels[node.id]
+      // for (const node of graphData.nodes) {
+      //   node.dataLabel = nodeLabels[node.id]
+      // }
+      const graphLabel = labelList[tempGraphIdx]
+      for (const [node, label] of Object.entries(nodeLabels)) {
+        graphLabel[node] = label;
       }
-      resGraph.graphData(graphData)
-      resGraph.nodeLabel(node => nodeLabel(node))
+      
+      
+      // resGraph.graphData(graphData)
+      resGraph.nodeLabel(node => nodeLabel(node, resGraphIdx))
 
       const labelElem = document.getElementById('dag-label-text')
       resGraph.onNodeHover((node, prevNode) => {
         if (node == null) {
           labelElem.innerText = ''
         } else {
-          if (node.dataLabel != null) {
-            labelElem.innerText = node.dataLabel.join('\n')
+          // if (node.dataLabel != null) {
+          //   labelElem.innerText = node.dataLabel.join('\n')
+          // } else {
+          //   labelElem.innerText = ''
+          // }
+          if (graphLabel[node.id] != null) {
+            labelElem.innerText = graphLabel[node.id].join('\n')
           } else {
             labelElem.innerText = ''
           }
@@ -1459,13 +1665,35 @@ function requestBucketedNodeLabel(importantNodes, DATA, tempGraphIdx, wfInfo = [
     if (localDATA.dataset === metaInfo.dataset && localDATA.layer === metaInfo.layer && localDATA.lcc === metaInfo.lcc) {
       // the same graph, update
       const resGraph = graphList[resGraphIdx];
-      const graphData = resGraph.graphData()
+      // const graphData = resGraph.graphData()
       const nodeLabels = res.res;
-      for (const node of graphData.nodes) {
-        node.dataLabel = nodeLabels[node.id]
+      // for (const node of graphData.nodes) {
+      //   node.dataLabel = nodeLabels[node.id]
+      // }
+      const graphLabel = labelList[metaInfo.tempGraphIdx]
+      for (const [node, label] of Object.entries(nodeLabels)) {
+        graphLabel[node] = label;
       }
-      resGraph.graphData(graphData)
-      resGraph.nodeLabel(node => nodeLabel(node))
+      // resGraph.graphData(graphData)
+      resGraph.nodeLabel(node => nodeLabel(node, resGraphIdx))
+
+      const labelElem = document.getElementById('dag-label-text')
+      resGraph.onNodeHover((node, prevNode) => {
+        if (node == null) {
+          labelElem.innerText = ''
+        } else {
+          // if (node.dataLabel != null) {
+          //   labelElem.innerText = node.dataLabel.join('\n')
+          // } else {
+          //   labelElem.innerText = ''
+          // }
+          if (graphLabel[node.id] != null) {
+            labelElem.innerText = graphLabel[node.id].join('\n')
+          } else {
+            labelElem.innerText = ''
+          }
+        }
+      })
     }
   }, 'json')
 }
@@ -1522,6 +1750,76 @@ function requestNodeFullLabel(node) {
   }, 'json')
 }
 
+function requestWCCMetaLabel(node) {
+  httpPostAsync(JSON.stringify({
+    filename: DATA.filename,
+    graphName: DATA.dataset,
+    layer: DATA.layer,
+    bucket: DATA.bucket,
+    metaNode: node.id,
+    lcc: DATA.lcc,
+    buildingName: DATA.buildingName,
+    tempGraphIdx: tempGraphIdx,
+  }), localHost + 'meta-dag-wcc-label', function(res) {
+    console.log(res);
+    const metaInfo = res.metaInfo;
+    const resGraphIdx = metaInfo.tempGraphIdx;
+    const localDATA = DATAList[resGraphIdx];
+    // console.log(localDATA.parentNode.id, metaInfo.parentNode)
+    if (localDATA.dataset === metaInfo.dataset && localDATA.layer === metaInfo.layer && localDATA.lcc === metaInfo.lcc) {
+      // the same graph, update
+      const resGraph = graphList[resGraphIdx];
+      // const graphData = resGraph.graphData()
+      const nodeLabels = res.res;
+
+      const graphLabel = labelList[tempGraphIdx + 1]
+      for (const [node, label] of Object.entries(nodeLabels)) {
+        if (graphLabel[node] == null) {
+          graphLabel[node] = [label];
+        }
+      }
+      
+      // resGraph.graphData(graphData)
+      resGraph.nodeLabel(node => nodeLabel(node, resGraphIdx))
+    }
+  }, 'json')
+}
+
+function requestEdgeCutMetaLabel(node) {
+  httpPostAsync(JSON.stringify({
+    filename: DATA.filename,
+    graphName: DATA.dataset,
+    layer: DATA.layer,
+    bucket: DATA.bucket,
+    metaNode: node.id,
+    lcc: DATA.lcc,
+    buildingName: DATA.buildingName,
+    tempGraphIdx: tempGraphIdx,
+  }), localHost + 'meta-dag-edgeCut-label', function(res) {
+    console.log(res);
+    const metaInfo = res.metaInfo;
+    const resGraphIdx = metaInfo.tempGraphIdx;
+    const localDATA = DATAList[resGraphIdx];
+    // console.log(localDATA.parentNode.id, metaInfo.parentNode)
+    if (localDATA.dataset === metaInfo.dataset && localDATA.layer === metaInfo.layer && localDATA.lcc === metaInfo.lcc) {
+      // the same graph, update
+      const resGraph = graphList[resGraphIdx];
+      // const graphData = resGraph.graphData()
+      const nodeLabels = res.res;
+
+      const graphLabel = labelList[tempGraphIdx + 1]
+      for (const [node, label] of Object.entries(nodeLabels)) {
+        if (graphLabel[node] == null) {
+          graphLabel[node] = [label];
+        }
+      }
+      
+      // resGraph.graphData(graphData)
+      resGraph.nodeLabel(node => nodeLabel(node, resGraphIdx))
+    }
+  }, 'json')
+}
+
 function linkColor(link) {
   if (link.spanMark) {
     return '#FF00FF'
@@ -1536,7 +1834,10 @@ function linkArrow(link) {
   return 0
 }
 
-function nodeLabel(node) {
+function nodeLabel(node, graphIdx) {
+  if (graphIdx == null) {
+    graphIdx = tempGraphIdx
+  } 
   let retval
   if (node.size == 1) {
     retval = '<p style="color:black">one node</p>'
@@ -1552,16 +1853,35 @@ function nodeLabel(node) {
         label += ` (${density.toFixed(4)}-clique)`
       }
     }
-    label += node.idList == null ? '' : ` ${node.idList.length} cc`
+    if (node.hasOwnProperty('fullIDList')) {
+      label += ` ${node.fullIDList.length} cc`
+    } else {
+      label += node.idList == null ? '' : ` ${node.idList.length} cc`
+    }
+    
     label += `</p>`
     retval = '<p style="color:black">V:' + node['size'] + ' E:' + node['esize'] + label + '</p>'
   }
   if (node.hasOwnProperty('touchESize')) {
     retval += `<p style="color:black">w. oDeg:${node.touchESize}</p>`
   }
-  if (node.dataLabel != null) {
-    retval += `<p style="color:black">` + node.dataLabel.join('<br>') + `</p>`
+  if (node.hasOwnProperty('sizeDist')) {
+    retval += '<p style="color:black">'
+    sizeList = Object.keys(node.sizeDist).map(d => d.split('-')).sort((a, b) => (a[0] - b[0] || a[1] - b[1] || a[2] - b[2]))
+    for(const [size, esize, touchESize] of sizeList) {
+      const freq = node.sizeDist[`${size}-${esize}-${touchESize}`]
+      const splitSize = size.split('-')
+      retval += `seedV${size},seedE${esize},outE${touchESize}: ${freq}<br>`
+    }
+    retval += '</p>'
   }
+  const graphLabel = labelList[graphIdx];
+  if (graphLabel[node.id] != null) {
+    retval += `<p style="color:black">` + graphLabel[node.id].join('<br>') + `</p>`
+  }
+  // if (node.dataLabel != null) {
+  //   retval += `<p style="color:black">` + node.dataLabel.join('<br>') + `</p>`
+  // }
   return retval
 }
 
@@ -1992,6 +2312,7 @@ function stopDAGAnimation() {
 }
 
 document.getElementById('strata').onmouseover = stopDAGAnimation;
+document.getElementById('strata-complement').onmouseover = stopDAGAnimation;
 
 function switchGraphVisibility(graphIndex = 1, iterFlag = false) {
   for (let i = 1; i <= 4; i ++) {
@@ -2007,6 +2328,7 @@ function switchGraphVisibility(graphIndex = 1, iterFlag = false) {
   }
   DATA = DATAList[graphIndex]
   if (graphInfoList[graphIndex]) {
+    // update slider
     if (graphInfoList[graphIndex].nodeSizeSlider) {
       updateNodeSizeSlider(graphInfoList[graphIndex].nodeSizeSlider)
     }
@@ -2015,6 +2337,24 @@ function switchGraphVisibility(graphIndex = 1, iterFlag = false) {
     }
     if (graphInfoList[graphIndex].verticalStretchSlider) {
       updateVerticalStretchSlider(graphInfoList[graphIndex].verticalStretchSlider)
+    }
+
+    // update show/hide link in edgeCut.dag
+    if (graphInfoList[graphIndex].showLink != null) {
+      document.getElementById('hide-link-button-container').style.display = 'block';
+      document.getElementById('hide-meta-link-button-container').style.display = 'block';
+      updateLinkVisibility(graphInfoList[graphIndex].showLink);
+      const strataComplementCaptionElem = document.getElementById('strata-complement-caption');
+      strataComplementCaptionElem.innerText = 'frag meta-links\nThis picture is just for reference. Click bottom-left button to hide it.'
+
+    } else {
+      document.getElementById('hide-link-button-container').style.display = 'none';
+      document.getElementById('hide-meta-link-button-container').style.display = 'none';
+    }
+    if (graphInfoList[graphIndex] && graphInfoList[graphIndex].metaType === 'wf.frag') {
+      document.getElementById('frag-buck-button-container').style.display = 'block';
+    } else {
+      document.getElementById('frag-buck-button-container').style.display = 'none';
     }
   }
   switchMiniGraph(graphIndex, graphInfoList[graphIndex] && (graphInfoList[graphIndex].metaType === 'edgeCut.dag' || graphInfoList[graphIndex].metaType === 'wcc.dag' || graphInfoList[graphIndex].metaType === 'wcc.dag.full') ? 1 : 0, iterFlag);
@@ -2167,6 +2507,7 @@ function switchFullDagGraph(showFlag = true) {
   if (showFlag) {
     document.getElementById('full-dag-graph-container').style.display = 'block';
     document.getElementById('strata-container').style.display = 'none';
+    document.getElementById('strata-complement-container').style.display = 'none';
     document.getElementById('graph-container').style.width = '49.5%';
     resizeDag()
   } else {
@@ -2358,6 +2699,12 @@ function updateDAGTitle(metaType, graphInfo) {
 // }
 
 function loadMetaArray(data, graphIndex = 1) {
+  // labelList[graphIndex] = {};
+  // for (let idx = graphIndex; idx < graphList.length; idx ++) {
+  //   DATAList[idx] = undefined;
+  //   graphInfoList[idx] = undefined;
+  // }
+
   const metaData = data[0]
   const metaInfo = data[1]
   const metaType = data[2]
@@ -2402,10 +2749,10 @@ function loadMetaArray(data, graphIndex = 1) {
       tempGraph.zoomToFit(250, 10, node => true)
     }, 500);
     loadMetaArrayDagInfo(graphInfo);
-    const capitionElem = document.getElementById(`graph${graphIndex}-label`);
-    capitionElem.innerText = 'frag cc DAG';
-    capitionElem.style.transform = 'translateY(-200%)'
-    capitionElem.style.pointerEvents = 'none'
+    const captionElem = document.getElementById(`graph${graphIndex}-label`);
+    captionElem.innerText = 'frag cc DAG';
+    // captionElem.style.transform = 'translateY(calc(-100% - 1.5em))'
+    // captionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeRightClick(node => {
         requestNodeFullLabel(node);
@@ -2442,10 +2789,10 @@ function loadMetaArray(data, graphIndex = 1) {
       tempGraph.zoomToFit(250, 10, node => true)
     }, 500);
     loadMetaArrayDagInfo(graphInfo);
-    const capitionElem = document.getElementById(`graph${graphIndex}-label`);
-    capitionElem.innerText = 'span frag cc DAG';
-    capitionElem.style.transform = 'translateY(-200%)'
-    capitionElem.style.pointerEvents = 'none'
+    const captionElem = document.getElementById(`graph${graphIndex}-label`);
+    captionElem.innerText = 'span frag cc DAG';
+    // captionElem.style.transform = 'translateY(calc(-100% - 1.5em))'
+    // captionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeRightClick(node => {
         requestNodeFullLabel(node);
@@ -2479,12 +2826,15 @@ function loadMetaArray(data, graphIndex = 1) {
       tempGraph.zoomToFit(250, 10, node => true)
     }, 500);
     loadMetaArrayDagInfo(graphInfo);
-    const capitionElem = document.getElementById(`graph${graphIndex}-label`);
-    capitionElem.innerText = 'wave cc Meta DAG';
-    capitionElem.style.transform = 'translateY(-200%)'
-    capitionElem.style.pointerEvents = 'none'
+    const captionElem = document.getElementById(`graph${graphIndex}-label`);
+    captionElem.innerText = 'wave cc Meta DAG';
+    // captionElem.style.transform = 'translateY(calc(-100% - 1.5em))'
+    // captionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeClick(node => {
+        closeFullDagGraph();
+        labelList[graphIndex+1] = {};
+        requestWCCMetaLabel(node)
         click2wccDag(node)
         addBuildingHighlight(miniBuildingGraph, new Set([node.wave]))
       });
@@ -2496,19 +2846,20 @@ function loadMetaArray(data, graphIndex = 1) {
     updateDAGTitle(metaType, graphInfo)
     graphInfoList[graphIndex] = graphInfo;
     tempGraph.graphData(graphData);
+    tempGraph.nodeLabel(node => nodeLabel(node, graphIndex))
     setTimeout(() => {
       tempGraph.cameraPosition();
       tempGraph.zoomToFit(250, 10, node => true)
     }, 500);
     loadMetaArrayDagInfo(graphInfo);
-    const capitionElem = document.getElementById(`graph${graphIndex}-label`);
+    const captionElem = document.getElementById(`graph${graphIndex}-label`);
     if (metaType === 'wcc.dag') {
-      capitionElem.innerText = 'span frag cc DAG';
+      captionElem.innerText = 'span frag cc DAG';
     } else {
-      capitionElem.innerText = 'frag cc DAG';
+      captionElem.innerText = 'frag cc DAG';
     }
-    capitionElem.style.transform = 'translateY(-200%)'
-    capitionElem.style.pointerEvents = 'none'
+    // captionElem.style.transform = 'translateY(calc(-100% - 1.5em))'
+    // captionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeRightClick(node => {
         requestNodeFullLabel(node);
@@ -2531,13 +2882,17 @@ function loadMetaArray(data, graphIndex = 1) {
       tempGraph.zoomToFit(250, 10, node => true)
     }, 500);
     loadMetaArrayDagInfo(graphInfo);
-    const capitionElem = document.getElementById(`graph${graphIndex}-label`);
-    capitionElem.innerText = 'partial src2snk agg.';
-    capitionElem.style.transform = 'translateY(-200%)'
-    capitionElem.style.pointerEvents = 'none'
+    const captionElem = document.getElementById(`graph${graphIndex}-label`);
+    captionElem.innerText = 'partial src2snk agg.';
+    // captionElem.style.transform = 'translateY(calc(-100% - 1.5em))'
+    // captionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeClick(node => {
+        closeFullDagGraph();
+        labelList[graphIndex+1] = {};
+        requestEdgeCutMetaLabel(node)
         click2edgeCutDag(node)
+        requestMetaLink2strata(node)
         addBuildingHighlight(miniBuildingGraph, new Set([...Array(node.waveMax - node.waveMin + 1).keys()].map(i => i + node.waveMin)))
       });
   } else if (metaType === 'edgeCut.dag') {
@@ -2545,18 +2900,20 @@ function loadMetaArray(data, graphIndex = 1) {
     const [graphData, graphInfo] = prepareMetaArrayDag(metaData);
     graphInfo.metaType = metaType
     graphInfo.parentNode = clicked;
+    graphInfo.showLink = true; // add a toggle for link visibility
     updateDAGTitle(metaType, graphInfo)
     graphInfoList[graphIndex] = graphInfo;
     tempGraph.graphData(graphData);
+    tempGraph.nodeLabel(node => nodeLabel(node, graphIndex))
     setTimeout(() => {
       tempGraph.cameraPosition();
       tempGraph.zoomToFit(250, 10, node => true)
     }, 500);
     loadMetaArrayDagInfo(graphInfo);
-    const capitionElem = document.getElementById(`graph${graphIndex}-label`);
-    capitionElem.innerText = 'span frag cc DAG';
-    capitionElem.style.transform = 'translateY(-200%)'
-    capitionElem.style.pointerEvents = 'none'
+    const captionElem = document.getElementById(`graph${graphIndex}-label`);
+    captionElem.innerText = 'span frag cc DAG\nhide link by clicking button below';
+    // captionElem.style.transform = 'translateY(calc(-100% - 1.5em))'
+    // captionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeRightClick(node => {
         requestNodeFullLabel(node);
@@ -2580,12 +2937,13 @@ function loadMetaArray(data, graphIndex = 1) {
       tempGraph.zoomToFit(250, 10, node => true)
     }, 500);
     loadMetaArrayDagInfo(graphInfo);
-    const capitionElem = document.getElementById(`graph${graphIndex}-label`);
-    capitionElem.innerText = 'wave DAG';
-    capitionElem.style.transform = 'translateY(-200%)'
-    capitionElem.style.pointerEvents = 'none'
+    const captionElem = document.getElementById(`graph${graphIndex}-label`);
+    captionElem.innerText = 'wave DAG';
+    // captionElem.style.transform = 'translateY(calc(-100% - 1.5em))'
+    // captionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeClick(node => {
+        closeFullDagGraph();
         click2wfFrag(node)
         addBuildingHighlight(miniBuildingGraph, new Set([node.id])) // here id is the wave index
       });
@@ -2605,12 +2963,13 @@ function loadMetaArray(data, graphIndex = 1) {
       tempGraph.zoomToFit(250, 10, node => true)
     }, 500);
     loadMetaArrayDagInfo(graphInfo);
-    const capitionElem = document.getElementById(`graph${graphIndex}-label`);
-    capitionElem.innerText = 'frag DAG';
-    capitionElem.style.transform = 'translateY(-200%)'
-    capitionElem.style.pointerEvents = 'none'
+    const captionElem = document.getElementById(`graph${graphIndex}-label`);
+    captionElem.innerText = 'frag DAG';
+    // captionElem.style.transform = 'translateY(calc(-100% - 1.5em))'
+    // captionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeClick(node => {
+        closeFullDagGraph();
         click2wfDag(node)
       });
   } else if (metaType === 'wf.dag') {
@@ -2618,7 +2977,7 @@ function loadMetaArray(data, graphIndex = 1) {
     // const buildingName = metaInfo.buildingName.slice(8); // TODO
     // drawMiniBuilding(metaInfo.dataset, buildingName); // TODO
     switchMiniBuilding(true, 1);
-    const [graphData, graphInfo] = prepareMetaArrayWFDag(metaData);
+    const [graphData, graphInfo] = prepareMetaArrayWFDag(metaData, graphInfoList[1].waveSize);
     graphInfo.metaType = metaType
     graphInfo.parentNode = clicked;
     updateDAGTitle(metaType, graphInfo)
@@ -2629,13 +2988,17 @@ function loadMetaArray(data, graphIndex = 1) {
       tempGraph.zoomToFit(250, 10, node => true)
     }, 500);
     loadMetaArrayDagInfo(graphInfo);
-    const capitionElem = document.getElementById(`graph${graphIndex}-label`);
-    capitionElem.innerText = 'frag cc\nThis window meta nodes represent "vertex seed sets", and their corresponding "edge fragments" are shown on the right window.';
-    capitionElem.style.transform = 'translateY(-200%)'
-    capitionElem.style.pointerEvents = 'none'
+    const captionElem = document.getElementById(`graph${graphIndex}-label`);
+    captionElem.innerText = 'frag cc\nThis window meta nodes represent "vertex seed sets", and their corresponding "edge fragments" are shown on the right window.';
+    // captionElem.style.transform = 'translateY(calc(-100% - 1.5em))'
+    // captionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeClick(node => {
-        click2strata(node)
+        if (node.esize + node.touchESize > TH_STRATA_FULL) {
+          click2strata(node, true)
+        } else {
+          click2strata(node)
+        }
         // if (node.idList.length === 1) {
         //   click2strata(node)
         // // } else {
@@ -2658,10 +3021,10 @@ function loadMetaArray(data, graphIndex = 1) {
       tempGraph.zoomToFit(250, 10, node => true)
     }, 500);
     loadMetaArrayDagInfo(graphInfo);
-    const capitionElem = document.getElementById(`graph${graphIndex}-label`);
-    capitionElem.innerText = 'frag cc\nThis window meta nodes represent "vertex seed sets", and their corresponding "edge fragments" are shown on the right window ';
-    capitionElem.style.transform = 'translateY(-200%)'
-    capitionElem.style.pointerEvents = 'none'
+    const captionElem = document.getElementById(`graph${graphIndex}-label`);
+    captionElem.innerText = 'frag cc\nThis window meta nodes represent "vertex seed sets", and their corresponding "edge fragments" are shown on the right window ';
+    // captionElem.style.transform = 'translateY(calc(-100% - 1.5em))'
+    // captionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeRightClick(node => {
         requestNodeFullLabel(node);
@@ -2693,6 +3056,7 @@ function prepareMetaArrayDag(data) {
   const nodes = [];
   const links = [];
   const idx2node = {};
+  const set2hight = {};
 
   for (const [v, wave, frag, set, vSize, eSize, touchESize] of nodeArray) {
     // console.log(v, set, vSize, eSize, localVSize, localESize)
@@ -2717,6 +3081,8 @@ function prepareMetaArrayDag(data) {
     fpedges += eSize;
     maxNodeESize = Math.max(maxNodeESize, eSize);
     minNodeESize = Math.min(minNodeESize, eSize);
+
+    set2hight[set] = 0;
   }
   console.log('nodes', nodes.length)
   // console.log(linkArray)
@@ -2746,7 +3112,12 @@ function prepareMetaArrayDag(data) {
   }
   console.log('links', links.length)
 
-  const setRange = maxSet - minSet + 1;
+  let tempHeight = 0;
+  for (const set of Object.keys(set2hight).sort((a, b) => parseInt(a) - parseInt(b))) {
+    set2hight[set] = tempHeight ++;
+  }
+
+  const setRange = set2hight[maxSet] - set2hight[minSet] + 1;
   console.log(maxSet, minSet);
   const distFactor = Math.min(40, Math.max(2000 / setRange, 10));
   for (const node of nodes) {
@@ -2758,7 +3129,7 @@ function prepareMetaArrayDag(data) {
       node.mall = true;
     }
     node.color = getColor(node.density);
-    node.fyBase = (node.set - minSet - setRange / 2) * distFactor;
+    node.fyBase = (set2hight[node.set] - setRange / 2) * distFactor;
     node.fy = node.fyBase * verticalStretch.verticalFactor / 100;
   }
 
@@ -3084,6 +3455,7 @@ function prepareMetaArrayWave(data) {
   const v2set = {};
   const src2minTgtSet = {};
   const tgt2maxSrcSet = {};
+  const waveSize = {};
 
   for (const [v, vSize, eSize, localVSize, localESize] of nodeArray) {
     // console.log(v, set, vSize, eSize, localVSize, localESize)
@@ -3108,6 +3480,8 @@ function prepareMetaArrayWave(data) {
 
     set2hight[v] = 0;
     v2set[v] = v;
+
+    waveSize[v] = eSize;
   }
   console.log('nodes', nodes.length)
   for (const [src, tgt, eSize] of linkArray) {
@@ -3131,6 +3505,8 @@ function prepareMetaArrayWave(data) {
     if (tgt === src + 1) {
       tempLink.spanMark = true;
     }
+
+    waveSize[src] += eSize;
   }
   console.log('links', links.length);
 
@@ -3194,7 +3570,8 @@ function prepareMetaArrayWave(data) {
       topoSpan: topoSpan,
       nodeSizeSlider: 200 / Math.cbrt(maxNodeESize + 1),
       linkSizeSlider: 1500 / Math.log1p(maxLinkESize),
-      verticalStretchSlider: Math.min(20, 80 / Math.sqrt(setRange))
+      verticalStretchSlider: Math.min(20, 80 / Math.sqrt(setRange)),
+      waveSize: waveSize
     }
   ]
 }
@@ -3334,7 +3711,7 @@ function prepareMetaArrayFrag(data) {
   ]
 }
 
-function prepareMetaArrayWFDag(data, minSizeTH = 3) {
+function prepareMetaArrayWFDag(data, waveSize, minSizeTH = 3) {
   const [nodeArray] = data;
 
   let minSet = Infinity;
@@ -3405,11 +3782,12 @@ function prepareMetaArrayWFDag(data, minSizeTH = 3) {
     node.fz = 0;
   }
 
+  const totalESize = waveSize[nodes[0].wave];
 
   let finalNodes;
   let bucket2nodes;
   if (nodes.length > 1024) {
-    const retval = bucketBySize(nodes)
+    const retval = bucketBySize(nodes, undefined, true, totalESize, true)
     finalNodes = retval[0];
     bucket2nodes = retval[1];
     [minNodeESize, maxNodeESize] = d3.extent(finalNodes, d => d.esize);
@@ -3417,7 +3795,7 @@ function prepareMetaArrayWFDag(data, minSizeTH = 3) {
   } else {
     // finalNodes = nodes
     // bucket2nodes = null;
-    const retval = bucketBySize(nodes)
+    const retval = bucketBySize(nodes, undefined, true, totalESize, true)
     finalNodes = retval[0];
     bucket2nodes = retval[1];
     [minNodeESize, maxNodeESize] = d3.extent(finalNodes, d => d.esize);
@@ -3562,16 +3940,10 @@ function prepareMetaArrayWFDagDetail(nodes, minSizeTH = 3) {
   ]
 }
 
-function bucketBySize(nodes, forceBySize = false) {
+function bucketBySize(nodes, forceBySize = false, logBuck = false, totalESize = undefined, postSample = false) {
   const getSizeStat = (node) => [1, node.esize, Math.pow(node.esize, 2)]
   const updateStat = (prev, temp) => [prev[0] + temp[0], prev[1] + temp[1], prev[2] + temp[2]]
   
-  const [num, sum, sumsq] = nodes.reduce((prev, temp) => {
-    return updateStat(prev, getSizeStat(temp))
-  }, [0, 0, 0]);
-  const ave = sum / num;
-  const std = Math.sqrt(sumsq / num - Math.pow(ave, 2));
-  console.log(ave, std);
 
   const bucket2buckNodes = {};
   const bucket = [];
@@ -3579,40 +3951,111 @@ function bucketBySize(nodes, forceBySize = false) {
 
   const wave = nodes[0].wave;
   const frag = nodes[0].frag;
-  // const [min, max] = d3.extent(nodes, node => node.esize);
-  if (std < 1 || forceBySize) {
-    // // bucket by esize
-    for (const node of nodes) {
-      const bucketId = node.esize;
-      if (!bucket2buckNodes.hasOwnProperty(bucketId)) {
-          const tempNode = { id: bucketId, set: node.set, size: 0, esize: 0, idList: [], wave: wave, frag: frag, touchESize: 0 };
-          bucket2buckNodes[bucketId] = tempNode;
-          bucket.push(tempNode);
-          bucket2nodes[bucketId] = [];
-        }
-        bucket2buckNodes[bucketId].size += node.size;
-        bucket2buckNodes[bucketId].esize += node.esize;
-        bucket2buckNodes[bucketId].touchESize += node.touchESize;
-        bucket2buckNodes[bucketId].idList.push(node.id);
-        bucket2nodes[bucketId].push(node);
+
+  if (logBuck) {
+    if (totalESize == null) {
+      totalESize = d3.sum(nodes, d => d.eSize);
+    }
+    if (totalESize < 4 || forceBySize) {
+      // // bucket by esize
+      for (const node of nodes) {
+        const bucketId = node.esize + node.touchESize;
+        if (!bucket2buckNodes.hasOwnProperty(bucketId)) {
+            const tempNode = { id: bucketId, set: node.set, size: 0, esize: 0, idList: [], wave: wave, frag: frag, touchESize: 0 };
+            bucket2buckNodes[bucketId] = tempNode;
+            bucket.push(tempNode);
+            bucket2nodes[bucketId] = [];
+          }
+          bucket2buckNodes[bucketId].size += node.size;
+          bucket2buckNodes[bucketId].esize += node.esize;
+          bucket2buckNodes[bucketId].touchESize += node.touchESize;
+          bucket2buckNodes[bucketId].idList.push(node.id);
+          bucket2nodes[bucketId].push(node);
+      }
+    } else {
+      const baseTH = Math.log2(totalESize)
+      for (const node of nodes) {
+        const bucketId = Math.floor(Math.log2(1 + node.esize + node.touchESize) / Math.log2(1 + baseTH));
+        if (!bucket2buckNodes.hasOwnProperty(bucketId)) {
+            const tempNode = { id: bucketId, set: node.set, size: 0, esize: 0, idList: [], wave: wave, frag: frag, touchESize: 0 };
+            bucket2buckNodes[bucketId] = tempNode;
+            bucket.push(tempNode);
+            bucket2nodes[bucketId] = [];
+          }
+          bucket2buckNodes[bucketId].size += node.size;
+          bucket2buckNodes[bucketId].esize += node.esize;
+          bucket2buckNodes[bucketId].touchESize += node.touchESize;
+          bucket2buckNodes[bucketId].idList.push(node.id);
+          bucket2nodes[bucketId].push(node);
+      }
     }
   } else {
-    // bucket by mean,std
-    for (const node of nodes) {
-      const bucketId = Math.floor((node.esize - ave) / std);
-      if (!bucket2buckNodes.hasOwnProperty(bucketId)) {
-          const tempNode = { id: bucketId, set: node.set, size: 0, esize: 0, idList: [], wave: wave, frag: frag, touchESize: 0 };
-          bucket2buckNodes[bucketId] = tempNode;
-          bucket.push(tempNode);
-          bucket2nodes[bucketId] = [];
-        }
-        bucket2buckNodes[bucketId].size += node.size;
-        bucket2buckNodes[bucketId].esize += node.esize;
-        bucket2buckNodes[bucketId].touchESize += node.touchESize;
-        bucket2buckNodes[bucketId].idList.push(node.id);
-        bucket2nodes[bucketId].push(node);
+    const [num, sum, sumsq] = nodes.reduce((prev, temp) => {
+      return updateStat(prev, getSizeStat(temp))
+    }, [0, 0, 0]);
+    const ave = sum / num;
+    const std = Math.sqrt(sumsq / num - Math.pow(ave, 2));
+    console.log(ave, std);
+  
+    // const [min, max] = d3.extent(nodes, node => node.esize);
+    if (std < 1 || forceBySize) {
+      // // bucket by esize
+      for (const node of nodes) {
+        const bucketId = node.esize;
+        if (!bucket2buckNodes.hasOwnProperty(bucketId)) {
+            const tempNode = { id: bucketId, set: node.set, size: 0, esize: 0, idList: [], wave: wave, frag: frag, touchESize: 0 };
+            bucket2buckNodes[bucketId] = tempNode;
+            bucket.push(tempNode);
+            bucket2nodes[bucketId] = [];
+          }
+          bucket2buckNodes[bucketId].size += node.size;
+          bucket2buckNodes[bucketId].esize += node.esize;
+          bucket2buckNodes[bucketId].touchESize += node.touchESize;
+          bucket2buckNodes[bucketId].idList.push(node.id);
+          bucket2nodes[bucketId].push(node);
+      }
+    } else {
+      // bucket by mean,std
+      for (const node of nodes) {
+        const bucketId = Math.floor((node.esize - ave) / std);
+        if (!bucket2buckNodes.hasOwnProperty(bucketId)) {
+            const tempNode = { id: bucketId, set: node.set, size: 0, esize: 0, idList: [], wave: wave, frag: frag, touchESize: 0 };
+            bucket2buckNodes[bucketId] = tempNode;
+            bucket.push(tempNode);
+            bucket2nodes[bucketId] = [];
+          }
+          bucket2buckNodes[bucketId].size += node.size;
+          bucket2buckNodes[bucketId].esize += node.esize;
+          bucket2buckNodes[bucketId].touchESize += node.touchESize;
+          bucket2buckNodes[bucketId].idList.push(node.id);
+          bucket2nodes[bucketId].push(node);
+      }
     }
   }
+
+  let finalBucket = {};
+  let finalBucket2nodes = {};
+  
+  if (postSample) {
+    for (const [bucketId, nodeList] of Object.entries(bucket2nodes)) {
+      const buckNode = bucket2buckNodes[bucketId];
+      if (buckNode.esize + buckNode.touchESize <= TH_STRATA_FULL) {
+        // buckNode.fullIDList = buckNode.idList;
+        buckNode.sampleSize = buckNode.esize + buckNode.touchESize;
+      }
+      const tempSample = {}
+      const tempSampleCount = {}
+      for (const node of nodeList) {
+        tempSample[`${node.size}-${node.esize}-${node.touchESize}`] = node.id;
+        tempSampleCount[`${node.size}-${node.esize}-${node.touchESize}`] = tempSampleCount[`${node.size}-${node.esize}-${node.touchESize}`] + 1 || 1;
+      }
+      buckNode.fullIDList = buckNode.idList;
+      buckNode.idList = Object.values(tempSample);
+      buckNode.sizeDist = tempSampleCount;
+      buckNode.sampleSize = Object.keys(tempSample).map(d => d.split('-')).map(d => parseInt(d[1]) + parseInt(d[2])).reduce((prev, temp) => prev + temp, 0);
+    }
+  }
+  
 
   function spiralLayout(bucket) {
     const spiralR = 10;
@@ -3642,6 +4085,181 @@ function bucketBySize(nodes, forceBySize = false) {
   spiralLayout(bucket);
   return [bucket, bucket2nodes];
 }
+
+
+function prepareMetaArrayFragBuck(data) {
+  const [nodeArray, linkArray] = data;
+
+  let minSet = Infinity;
+  let maxSet = 0;
+  let verts = 0;
+  let edges = 0;
+  let fpedges = 0;
+  let minNodeESize = Infinity;
+  let maxNodeESize = 0;
+  let maxLinkESize = 0;
+
+  const nodes = [];
+  const links = [];
+  const idx2node = [];
+
+  const set2hight = {};
+  const v2set = {};
+  const src2minTgtSet = {};
+  const tgt2maxSrcSet = {}
+
+  for (const [v, w, f, level, vSize, eSize, localVSize, touchESize] of nodeArray) {
+    // console.log(v, set, vSize, eSize, localVSize, localESize)
+    const node = {
+      id: v,
+      set: level,
+      size: vSize,
+      esize: eSize,
+      // localESize: localESize,
+      isSrc: true,
+      highWeight: false,
+      wDeg: 0,
+      isVirtual: false,
+      ccNum: localVSize,
+      touchESize: touchESize
+    }
+    nodes.push(node)
+    idx2node[v] = node;
+    maxSet = Math.max(maxSet, level);
+    minSet = Math.min(minSet, level);
+    verts += vSize;
+    fpedges += eSize;
+    maxNodeESize = Math.max(maxNodeESize, eSize);
+    minNodeESize = Math.min(minNodeESize, eSize);
+
+    set2hight[level] = 0;
+    v2set[v] = level;
+  }
+
+  const virtualNode = {
+    id: -1,
+    set: maxSet + 1,
+    size: 0,
+    esize: 0,
+    isSrc: false,
+    highWeight: false,
+    wDeg: 0,
+    isVirtual: true,
+    ccNum: 0,
+    touchESize: 0
+  }
+  idx2node[-1] = virtualNode
+  console.log('nodes', nodes.length)
+  
+  let virtualFlag = false
+  for (let [src, tgt, eSize] of linkArray) {
+    if (!idx2node.hasOwnProperty(tgt)) {
+      tgt = -1; // virtual higher node
+      virtualFlag = true;
+      eSize = 0.001
+    }
+    const tempLink = { source: src, target: tgt, size: eSize }
+    links.push(tempLink)
+    fpedges += eSize;
+    edges += eSize;
+    idx2node[tgt].isSrc = false
+    if (tgt !== -1) {
+      idx2node[tgt].wDeg += eSize;
+    }
+    maxLinkESize = Math.max(maxLinkESize, eSize)
+
+    if (!src2minTgtSet.hasOwnProperty(src)) {
+      src2minTgtSet[src] = Infinity;
+    }
+    src2minTgtSet[src] = Math.min(src2minTgtSet[src], v2set[tgt]);
+    if (!tgt2maxSrcSet.hasOwnProperty(tgt)) {
+      tgt2maxSrcSet[tgt] = -Infinity;
+    }
+    tgt2maxSrcSet[tgt] = Math.max(tgt2maxSrcSet[tgt], v2set[src]);
+
+    if (tgt === src + 1) {
+      tempLink.spanMark = true;
+    }
+  }
+  console.log('links', links.length);
+  if (virtualFlag) {
+    nodes.push(virtualNode)
+    set2hight[virtualNode.set] = 0;
+  }
+
+
+  let tempHeight = 0;
+  for (const set of Object.keys(set2hight).sort((a, b) => parseInt(a) - parseInt(b))) {
+    set2hight[set] = tempHeight ++;
+  }
+
+  const setRange = set2hight[maxSet] - set2hight[minSet] + 1;
+  // console.log('setRange', setRange)
+  const distFactor = Math.min(40, Math.max(2000 / setRange, 10));
+  // console.log('distFactor', distFactor)
+  for (const node of nodes) {
+    node.density = node.esize == 0 ? 0 : 2 * node.esize / node.size / (node.size - 1);
+    if (node.density == null || isNaN(node.density)) {
+      console.log("error")
+    }
+    node.color = getColor(node.density);
+    if (node.id === -1) {
+      node.fyBase = (set2hight[maxSet] * 1.25 - setRange / 2) * distFactor;
+    } else {
+      node.fyBase = (set2hight[node.set] - setRange / 2) * distFactor;
+    }
+    
+    // console.log(node.set, node.fyBase)
+    node.fy = node.fyBase * verticalStretch.verticalFactor / 100;
+  }
+
+  // updateNodeSizeSlider(200 / Math.cbrt(maxNodeESize + 1))
+  // updateLinkSizeSlider(80 / Math.log1p(maxLinkESize))
+  // updateVerticalStretchSlider( Math.min(20, 80 / Math.sqrt(setRange)))
+
+  const maxWDeg = d3.max(nodes, d => d.wDeg)
+  const aveWDeg = d3.mean(nodes, d => d.wDeg)
+  if (maxWDeg === aveWDeg) {
+    // the same deg, nothing todo with wDeg
+  } else {
+    const stdWDeg = d3.mean(nodes, d => d.wDeg)
+    const maxDeviation = Math.floor((maxWDeg - aveWDeg) / stdWDeg);
+    const TH = maxDeviation * stdWDeg + aveWDeg;
+    nodes.filter(d => d.wDeg >= TH).forEach(d => d.highWeight = true);
+  }
+
+
+  let finalLinks;
+  let topoSpan = false;
+  if (links.length > TH_SUBDAG) {
+    topoSpan = true;
+    // finalLinks = links.filter(link => v2set[link.target] === src2minTgtSet[link.source])
+    finalLinks = links.filter(link => v2set[link.source] === tgt2maxSrcSet[link.target] || v2set[link.target] === src2minTgtSet[link.source])
+  } else {
+    finalLinks = links
+  }
+  console.log('finalLinks', finalLinks.length)
+
+  return [
+    {
+      nodes: nodes,
+      links: finalLinks
+    }, {
+      verts: verts, 
+      edges: edges, 
+      fpedges: fpedges, 
+      maxNodeESize: maxNodeESize, 
+      minNodeESize: minNodeESize, 
+      nodeNum: nodes.length, 
+      linkNum: finalLinks.length,
+      topoSpan: topoSpan,
+      nodeSizeSlider: 200 / Math.cbrt(maxNodeESize + 1),
+      linkSizeSlider: 1500 / Math.log1p(maxLinkESize),
+      verticalStretchSlider: Math.min(20, 80 / Math.sqrt(setRange))
+    }
+  ]
+}
+
 
 function loadMetaArrayDagInfo(graphInfo) {
   // update gui2

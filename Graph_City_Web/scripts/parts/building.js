@@ -161,8 +161,9 @@ function loadColor(color_list, layer_name, city_all, city_tracking) {
       color_dict.ground.push(rgb);
     } else if (color_list[i].search("inner") > 0) {
       color_dict.inner.push(rgb);
+      color_dict.outer.push(rgb)
     } else if (color_list[i].search("outer") > 0) {
-      color_dict.outer.push(rgb);
+      // color_dict.outer.push(rgb);
     } else if (color_list[i].search("next") > 0) {
       color_dict.next.push(rgb);
     } else if (color_list[i].search("ceil") > 0) {
