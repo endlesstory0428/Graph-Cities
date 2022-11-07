@@ -2882,7 +2882,7 @@ function loadMetaArray(data, graphIndex = 1) {
     // captionElem.style.pointerEvents = 'none'
     tempGraph
       .onNodeClick(node => {
-        closeFullDagGraph();
+        // closeFullDagGraph();
         labelList[graphIndex+1] = {};
         requestWCCMetaLabel(node)
         click2wccDag(node)
