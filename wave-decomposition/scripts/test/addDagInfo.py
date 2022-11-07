@@ -5,8 +5,8 @@ import os
 import time
 
 graph = sys.argv[1]
-dagTH = 32768
-edgeCutTH = 32768
+dagTH = 8192
+edgeCutTH = 8192
 if len(sys.argv) > 2:
 	dagTH = int(sys.argv[2])
 if len(sys.argv) > 3:

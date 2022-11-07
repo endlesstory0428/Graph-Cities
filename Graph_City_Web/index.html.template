@@ -106,6 +106,7 @@
 			top: -25px;
 			height: 20px;
 		}
+
 		#stop-transition {
 			position: relative;
 			left: -310px;
@@ -199,6 +200,7 @@
 			left: 250px;
 			width: 115px;
 		}
+
 		.best-building-name {
 			position: relative;
 			left: 4em;
@@ -211,7 +213,7 @@
 			right: 0px;
 			height: 195px;
 			width: calc(100vw - 375px - 6px);
-			overflow: scroll;
+			overflow: auto;
 		}
 
 		.map-tooltip {
@@ -255,9 +257,20 @@
 			width: calc(100vw - 380px);
 			z-index: 0;
 		}
+
 		#vicinity-info {
 			font-size: xx-large;
 			pointer-events: none;
+			width: calc(100vw - 630px);
+		}
+
+		#vicinity-navigation {
+			font-size: medium;
+			pointer-events: none;
+			position: absolute;
+			right: 0%;
+			top: 0%;
+			max-width: 250px;
 		}
 
 		.element-container {
@@ -454,10 +467,12 @@
 			width: 350px;
 			table-layout: fixed;
 		}
+
 		.animal-container {
 			display: table-cell;
 			text-align: center;
 		}
+
 		.building-animal-pic {
 			width: 32px;
 			height: 32px;
@@ -548,13 +563,16 @@
 			width: 100%;
 			font-size: smaller;
 		}
+
 		#meta-name {
 			font-size: medium;
 			font-weight: bold;
 		}
+
 		#meta-node {
 			text-decoration: underline;
 		}
+
 		#meta-link {
 			text-decoration: underline;
 		}
@@ -566,29 +584,73 @@
 			z-index: 5;
 			height: 11%;
 			background-color: #dddddd;
-			background-color: rgba(0,0,0,0.05);
+			background-color: rgba(0, 0, 0, 0.05);
 			font-size: small;
 		}
+
 		#dag-button-container {
 			position: absolute;
 			top: 2%;
 			left: 10px;
 		}
+
 		#dag-slider-container {
 			position: absolute;
 			width: 80%;
 			top: 2%;
 			right: 0;
 		}
+
 		#dag-slider-container .dag-slider {
 			position: relative;
 			top: 0.25em;
 			width: 75%;
 		}
+
 		#dag-slider-container .dag-slider-label {
 			width: 20%;
 			text-align: right;
 			display: inline-block;
+		}
+
+		#sampling-res-container {
+			font-size: small;
+			z-index: 20;
+		}
+		#city-sampling-res-button-container {
+			display: none;
+		}
+		#city-sampling-res-info-container {
+			background-color: rgb(255, 255, 255);
+			position: absolute;
+			width: 200px;
+			height: 195px;
+			overflow: auto;
+			z-index: 20;
+			display: none;
+			right: 0px;
+			top: 75px;
+		}
+		#local-sampling-res-container {
+			position: absolute;
+			right: 0%;
+			top: calc(110% - 1.5em);
+		}
+		#local-sampling-res-button-container {
+			text-align: right;
+			display: none;
+		}
+		#local-sampling-res-info-container {
+			background-color: rgb(128, 128, 128);
+			background-color: rgba(255, 255, 255, 0.50);
+			max-width: 15%;
+			max-height: 35%;
+			overflow: auto;
+			max-width: 20vw;
+			max-height: 35vh;
+			overflow: auto;
+			z-index: 20;
+			display: none;
 		}
 	</style>
 	<link rel="stylesheet" href="/range-input.css">
@@ -690,8 +752,9 @@
 		<div id="city-building-map"></div>
 		<div class="col" id="city-view">
 			<div id="vicinity-info"></div>
+			<div id="vicinity-navigation"></div>
 		</div>
-	
+
 		<div id="city-overlay-container">
 			<input type="range" orient="vertical" id="overlay-slider">
 			<div id="overlay-circle-controller">
@@ -720,7 +783,7 @@
 
 		<div id="best-building-name-list-container">&nbsp;
 		</div>
-	
+
 		<div id="city-buidling-tour">
 			<div id="city-buidling-tour-button-div">
 				<span id="city-buidling-tour-button-span">
@@ -748,7 +811,7 @@
 				<span id="gorilla-number"></span>
 			</span>
 		</div>
-	
+
 		<div id="city-path-navigation">
 			<div id="city-path-navigation-menu" style="visibility: hidden;">
 				<div
@@ -782,7 +845,7 @@
 			</div>
 		</div>
 	</div>
-	
+
 
 
 	<div id="inner-view" class="element-container">
@@ -794,7 +857,8 @@
 		<div id="bottom-gui-container" style="visibility: hidden;"></div>
 		<div id="graph-container" style="position: absolute; bottom: 0px; width: 49.5%; height: 100%">
 			<div id="dag-title-container">
-				<div id="back-button-container" style="z-index: 5; font-size: xx-large; position: absolute; top: 25%; left: 4px; height: 50px; width: 50px; background: darkgrey;">
+				<div id="back-button-container"
+					style="z-index: 5; font-size: xx-large; position: absolute; top: 25%; left: 4px; height: 50px; width: 50px; background: darkgrey;">
 					←
 				</div>
 				<div id="dag-title">
@@ -810,7 +874,8 @@
 				</div>
 			</div>
 			<div id="dag-bottom-container">
-				<div id="dag-label-container" style="z-index: 5; position: absolute; height: 35vh; width: 20%; background: rgba(0,0,0,0.05); right: 0%; translate: 0 -100%; font-size: smaller;">
+				<div id="dag-label-container"
+					style="z-index: 5; position: absolute; height: 35vh; width: 20%; background: rgba(0,0,0,0.05); right: 0%; translate: 0 -100%; font-size: smaller;">
 					<div id="dag-label-title" style="font-size: larger">
 						Sample Labels in the Hovering Meta Node
 					</div>
@@ -819,31 +884,55 @@
 					</div>
 				</div>
 				<div id="dag-button-container">
-					<button id="dag-reset-button">Reset</button> <br>
-					<button id="height-constrain-button">Use Level as Height Constraint</button> <br>
-					<button id="full-dag-button">Request Full Dag</button> <br>
-					<button id="send-to-fpViewer-button">Open in FPViewer</button>
+					<div id="dag-reset-button-container">
+						<button id="dag-reset-button">Reset</button>
+					</div>
+					<div id="height-constrain-button-container">
+						<button id="height-constrain-button">Use Level as Height Constraint</button>
+					</div>
+					<div id="full-dag-button-container">
+						<button id="full-dag-button">Request Full Dag</button>
+					</div>
+					<div id="frag-buck-button-container">
+						<button id="frag-buck-button">Expand Frag Buckets</button>
+					</div>
+					<div id="send-to-fpViewer-button-container">
+						<button id="send-to-fpViewer-button">Open in FPViewer</button>
+					</div>
+					<div id="hide-link-button-container">
+						<button id="hide-link-button">Hide/show meta-links</button>
+					</div>
+					<div id="hide-meta-link-button-container">
+						<button id="hide-meta-link-button">Hide/show frag meta-links</button>
+					</div>
 				</div>
 				<div id="dag-slider-container">
 					<div id="dag-node-size-slider-container">
 						<label for="dag-node-size" class="dag-slider-label">node size</label>
-						<input type="range" id="dag-node-size" class="dag-slider styled-slider slider-progress" name="dag-node-size" min="1" max="1000" value="100">
+						<input type="range" id="dag-node-size" class="dag-slider styled-slider slider-progress"
+							name="dag-node-size" min="1" max="1000" value="100">
 					</div>
 					<div id="dag-link-size-slider-container">
 						<label for="dag-link-size" class="dag-slider-label">link size</label>
-						<input type="range" id="dag-link-size" class="dag-slider styled-slider slider-progress" name="dag-link-size" min="1" max="1000" value="100">
+						<input type="range" id="dag-link-size" class="dag-slider styled-slider slider-progress"
+							name="dag-link-size" min="1" max="1000" value="100">
 					</div>
 					<div id="dag-vertical-stretch-slider-container">
 						<label for="dag-vertical-stretch" class="dag-slider-label">vertical spread</label>
-						<input type="range" id="dag-vertical-stretch" class="dag-slider styled-slider slider-progress" name="dag-vertical-stretch" min="1" max="1000" value="20">
+						<input type="range" id="dag-vertical-stretch" class="dag-slider styled-slider slider-progress"
+							name="dag-vertical-stretch" min="1" max="1000" value="20">
 					</div>
 					<div id="dag-node-threshold-max-slider-container">
-						<label for="dag-node-threshold-max" class="dag-slider-label">node size max<span id="dag-node-max-value"></span></label>
-						<input type="range" id="dag-node-threshold-max" class="dag-slider styled-slider slider-progress" name="dag-node-threshold-max" min="0" max="1000" value="1000">
+						<label for="dag-node-threshold-max" class="dag-slider-label">node size max<span
+								id="dag-node-max-value"></span></label>
+						<input type="range" id="dag-node-threshold-max" class="dag-slider styled-slider slider-progress"
+							name="dag-node-threshold-max" min="0" max="1000" value="1000">
 					</div>
 					<div id="dag-node-threshold-min-slider-container">
-						<label for="dag-node-threshold-min" class="dag-slider-label">node size min<span id="dag-node-min-value"></span></label>
-						<input type="range" id="dag-node-threshold-min" class="dag-slider styled-slider slider-progress" name="dag-node-threshold-min" min="0" max="1000" value="1">
+						<label for="dag-node-threshold-min" class="dag-slider-label">node size min<span
+								id="dag-node-min-value"></span></label>
+						<input type="range" id="dag-node-threshold-min" class="dag-slider styled-slider slider-progress"
+							name="dag-node-threshold-min" min="0" max="1000" value="1">
 					</div>
 				</div>
 			</div>
@@ -852,26 +941,59 @@
 			<div id="graph3" class="meta-graph" style="position: absolute; top: 0px; width: 100%; height: 100%"></div>
 			<div id="graph4" class="meta-graph" style="position: absolute; top: 0px; width: 100%; height: 100%"></div>
 			<!-- <div id="mini-wave-graph" class="meta-graph" style="position: absolute; top: 0px; width: 100%; height: 100%"></div> -->
-			<div id="mini-building" class="meta-graph" style="position: absolute; top: 0px; width: 100%; height: 100%"></div>
+			<div id="mini-building" class="meta-graph" style="position: absolute; top: 0px; width: 100%; height: 100%">
+			</div>
 		</div>
 		<div id="peelCC-warp"
 			style="border-style:solid; position: absolute; bottom: 4px; left: 4px; width: 49%; height: 45%; visibility: hidden;">
-			<div id="peelCC-close" style="position: absolute; top: 2px; right: 4px; font-family: sans-serif; font-size: 20px; z-index: 2;">
+			<div id="peelCC-close"
+				style="position: absolute; top: 2px; right: 4px; font-family: sans-serif; font-size: 20px; z-index: 2;">
 				x
 			</div>
 			<div id="peelCC" style="width: 100%; height: 100%"></div>
 			<div id="peelCC-menu" style="position: absolute; top: 0px; left: 4px;"></div>
 		</div>
-		<div id="full-dag-graph-container" style="position: absolute; right: 0px; width: 50%; height: 100%; border-left: 5px solid black; ">
+		<div id="full-dag-graph-container"
+			style="position: absolute; right: 0px; width: 50%; height: 100%; border-left: 5px solid black; ">
 			<div id="full-dag-graph" style="position: absolute; top: 0px; width: 100%; height: 100%"></div>
 		</div>
 
-		<div id="strata-container" style="position: absolute; right: 0px; width: 50%; height: 100%; border-left: 5px solid black; ">
-			<iframe id="strata" src=http://addressSample:8080/?data=nodatasimplegraph width="100%" height="100%"></iframe>
+		<div id="strata-complement-container"
+			style="display: none; position: absolute; right: 0px; width: 50%; height: 100%; border-left: 5px solid black; ">
+			<iframe id="strata-complement" src=http://addressSample:8080/?data=nodatasimplegraph width="100%"
+				height="100%"></iframe>
+			<div id="strata-complement-caption"
+				style="position: absolute; bottom: 11%; width: 100%; font-size: small; text-align: center;"></div>
+			<div id="strata-complement-hide-meta-link-button-container" style="position: absolute; bottom: 0px; left: 0px; font-size: small;">
+				<button id="strata-complement-hide-meta-link-button">Hide/show frag meta-links</button>
+			</div>
+		</div>
+		<div id="strata-container"
+			style="position: absolute; right: 0px; width: 50%; height: 100%; border-left: 5px solid black; ">
+			<iframe id="strata" src=http://addressSample:8080/?data=nodatasimplegraph width="100%"
+				height="100%"></iframe>
+			<div id="strata-caption"
+				style="position: absolute; bottom: 11%; width: 100%; font-size: small; text-align: center;"></div>
 		</div>
 	</div>
 
-	<div id="cache-message-container" style="position: absolute; top:0%; z-index: 20; width: 100%; height: 100%; background:rgba(255, 255, 255, 0.50); font-size: xx-large;">
+	<div id="sampling-res-container">
+		<div id="city-sampling-res-container">
+			<div id="city-sampling-res-button-container">
+				<button id="city-sampling-res-button">Show/hide SMP info</button>
+			</div>
+			<div id="city-sampling-res-info-container"></div>
+		</div>
+		<div id="local-sampling-res-container">
+			<div id="local-sampling-res-button-container">
+				<button id="local-sampling-res-button">Show/hide LOC SMP info</button>
+			</div>
+			<div id="local-sampling-res-info-container"></div>
+		</div>
+	</div>
+
+	<div id="cache-message-container"
+		style="position: absolute; top:0%; z-index: 20; width: 100%; height: 100%; background:rgba(255, 255, 255, 0.50); font-size: xx-large;">
 		<div id="cache-message" style="position: absolute; width: 100%; top: 50%; text-align: center;">
 			Server is preparing. Please wait.
 		</div>

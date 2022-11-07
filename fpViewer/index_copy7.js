@@ -715,7 +715,9 @@ function drawMiniGraph(datas) {
     .backgroundColor('#222222')
     .nodeRelSize(20)
     .nodeVal(node => node.esize)
-    .linkWidth(link => 0)
+    .linkWidth(link => Math.log1p(link.size))
+    // .linkDirectionalArrowLength(link => link.spanMark ? Math.log1p(link.size) * 4 : 0)
+    // .linkDirectionalArrowColor(link => link.spanMark ? 'FF00FF' : '000000')
     // .linkDirectionalArrowLength(10)
     .nodeColor('color')
     .nodeThreeObject(node => nodeMiniGeom(node));
@@ -746,11 +748,14 @@ function drawMiniGraph(datas) {
     .backgroundColor('#222222')
     .nodeRelSize(20)
     .nodeVal(node => node.esize)
-    .linkWidth(link => 0)
+    .linkWidth(link => Math.log1p(link.size))
+    // .linkDirectionalArrowLength(link => link.spanMark ? Math.log1p(link.size) * 4 : 0)
+    // .linkDirectionalArrowColor(link => link.spanMark ? 'FF00FF' : '000000')
     // .linkDirectionalArrowLength(10)
     .nodeColor('color')
     .nodeThreeObject(node => nodeMiniGeom(node));
   
+
   setTimeout(() => {
     miniGraph.zoomToFit(250, 10, node => node.isOpened)}, 1000);
   miniGraph.enablePointerInteraction(false)
