@@ -185,6 +185,7 @@ Under your Work Space `./`, type the following commands in your console to set u
 ```bash
 cd ./Graph_City_Web/
 ln -s $(pwd) $(pwd)/public
+mkdir data_dags
 npm ci
 export NODE_OPTIONS="--max-old-space-size=65536"
 node app_addon.js
