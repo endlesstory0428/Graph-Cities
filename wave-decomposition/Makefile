@@ -804,7 +804,7 @@ prepareVicinity:
 	./scripts/test/addDagInfo $(GRAPH); \
 	./scripts/test/checkLargeNode $(GRAPH); \
 	./scripts/test/addBuckESize $(GRAPH); \
-	mkdir $(GRAPH)/$(GRAPH)_waves/lccBuck/smp/
+	mkdir $(GRAPH)/$(GRAPH)_waves/lccBuck/smp/; \
 	./scripts/test/bucket2sample $(GRAPH) 16384;
 .PHONY: prepareVicinity
 
@@ -838,7 +838,7 @@ prepareCity:
 	./scripts/test/addDagInfo $(GRAPH); \
 	./scripts/test/checkLargeNode $(GRAPH); \
 	./scripts/test/addBuckESize $(GRAPH); \
-	mkdir $(GRAPH)/$(GRAPH)_waves/lccBuck/smp/
+	mkdir $(GRAPH)/$(GRAPH)_waves/lccBuck/smp/; \
 	./scripts/test/bucket2sample $(GRAPH) 16384;
 .PHONY: prepareCity
 
@@ -870,7 +870,7 @@ prepare:
 	./scripts/test/addDagInfo $(GRAPH); \
 	./scripts/test/checkLargeNode $(GRAPH); \
 	./scripts/test/addBuckESize $(GRAPH); \
-	mkdir $(GRAPH)/$(GRAPH)_waves/lccBuck/smp/
+	mkdir $(GRAPH)/$(GRAPH)_waves/lccBuck/smp/; \
 	./scripts/test/bucket2sample $(GRAPH) 16384;
 .PHONY: prepare
 
