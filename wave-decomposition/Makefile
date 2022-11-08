@@ -15,8 +15,8 @@ DAGTH := 8192
 PRODUCT := preproc buffkcore ewave cc-layers-mat
 
 CXX := g++
-LINKER := g++
-CXXFLAGS := -Wall -Wextra -fopenmp -O3 -pthread -std=c++11 -Isrc/dagMeta/include -lboost_program_options -lboost_system -lboost_filesystem
+LINKER := g++ -static
+CXXFLAGS := -Wall -Wextra -fopenmp -O3 -pthread -std=c++11 -Isrc/dagMeta/include
 
 SRCDIR := ./src
 SRCFILES := $(wildcard $(SRCDIR)/*.cpp)
@@ -298,8 +298,8 @@ fp-info:
 	do \
 		$(PYTHON) scripts/freqUsed/wavelayercc.py $(GRAPH) $$FP; \
 	done; \
-	$(PYTHON) scripts/freqUsed/numfixedpoints.py $(GRAPH); \
-	$(PYTHON) scripts/freqUsed/convert.py -data $(GRAPH);
+	./scripts/freqUsed/numfixedpoints $(GRAPH); \
+	./scripts/freqUsed/convert -data $(GRAPH);
 .PHONY: fp-info
 
 fp-info_int:
@@ -308,8 +308,8 @@ fp-info_int:
 	do \
 		$(PYTHON) scripts/freqUsed/wavelayercc.py $(GRAPH) $$FP; \
 	done; \
-	$(PYTHON) scripts/freqUsed/numfixedpoints.py $(GRAPH); \
-	$(PYTHON) scripts/freqUsed/convert_ve.py -data $(GRAPH);
+	./scripts/freqUsed/numfixedpoints $(GRAPH); \
+	./scripts/freqUsed/convert_ve -data $(GRAPH);
 .PHONY: fp-info_int
 
 bucket:
@@ -337,7 +337,7 @@ wavemap_int:
 .PHONY: wavemap_int
 
 wavemap_cpp:
-	$(PYTHON) scripts/freqUsed/wavemapsNames.py $(GRAPH) ; \
+	./scripts/freqUsed/wavemapsNames $(GRAPH) ; \
 	./wavemaps \
 		$(GRAPH) \
 		$(GRAPH)/ \
@@ -349,7 +349,7 @@ wavemap_cpp:
 
 
 wavemapFullGraph_cpp:
-	$(PYTHON) scripts/freqUsed/getBuildingList.py $(GRAPH) ; \
+	./scripts/freqUsed/getBuildingList $(GRAPH) ; \
 	./wavemapsFileByFile \
 		$(GRAPH) \
 		$(GRAPH)/ \
@@ -367,7 +367,7 @@ wavemapFullGraph_wave_cpp:
 		echo $$SRCFILE; \
 		sort -S 50% -t, -n -k2,2 $(GRAPH)/$(GRAPH)_waves/$$SRCFILE -o $(GRAPH)/$(GRAPH)_waves/$$SRCFILE; \
 	done; \
-	$(PYTHON) scripts/freqUsed/getBuildingList.py $(GRAPH) ; \
+	./scripts/freqUsed/getBuildingList $(GRAPH) ; \
 	./wavemapsWaveByWave \
 		$(GRAPH) \
 		$(GRAPH)/ \
@@ -380,7 +380,7 @@ wavemapFullGraph_wave_cpp:
 .PHONY: wavemapFullGraph_wave_cpp
 
 wavemapFullGraph_wave_sorted_cpp:
-	$(PYTHON) scripts/freqUsed/getBuildingList.py $(GRAPH) ; \
+	./scripts/freqUsed/getBuildingList $(GRAPH) ; \
 	./wavemapsWaveByWave \
 		$(GRAPH) \
 		$(GRAPH)/ \
@@ -440,7 +440,7 @@ intersection_py:
 
 intersection_py_int:
 	$(PYTHON) scripts/freqUsed/fpmetagraph.py $(GRAPH); \
-	$(PYTHON) scripts/freqUsed/fpmetagraphnormalize_int.py $(GRAPH); 
+	./scripts/freqUsed/fpmetagraphnormalize_int $(GRAPH); 
 .PHONY: intersection_py_int
 
 intersection_int_cpp:
@@ -458,7 +458,7 @@ intersection_int_cpp:
 		$$(ls $(GRAPH)/$(GRAPH)_layers -v | grep .cc-layers$$); \
 	mv $(GRAPH)/fpmeta.csv $(GRAPH)/$(GRAPH)-fpmeta.csv; \
 	mv $(GRAPH)/fpmeta.ids $(GRAPH)/$(GRAPH)-fpmeta.ids; \
-	$(PYTHON) scripts/freqUsed/fpmetagraphnormalize_int.py $(GRAPH); 
+	./scripts/freqUsed/fpmetagraphnormalize_int $(GRAPH); 
 .PHONY: intersection_int_cpp
 
 gridmap_py:
@@ -468,7 +468,7 @@ gridmap_py:
 
 gridmap_py_int:
 	$(PYTHON) scripts/freqUsed/getMap6-2.py $(DIR)/ $(GRAPH); \
-	$(PYTHON) scripts/freqUsed/getBuildingBucketFromMap_int.py $(DIR)/ $(GRAPH);
+	./scripts/freqUsed/getBuildingBucketFromMap_int $(DIR)/ $(GRAPH);
 .PHONY: gridmap_py_int
 
 gridmap_cpp:
@@ -488,7 +488,7 @@ gridmap_cpp:
 		$$FPLIST \
 		$$WAVESIZES \
 		$$BUCKETLIST; \
-	$(PYTHON) scripts/freqUsed/getBuildingBucketFromMap_int.py $(DIR)/ $(GRAPH);
+	./scripts/freqUsed/getBuildingBucketFromMap_int $(DIR)/ $(GRAPH);
 .PHONY: gridmap_cpp
 
 lccBuck_cpp:
@@ -643,70 +643,70 @@ frag-buck-compress-touch:
 
 frag-dag-all:
 	mkdir $(DIR)/$(GRAPH)/dag; \
-	$(PYTHON) scripts/freqUsed/dagBat_cpp.py $(GRAPH) frag-dag-all > $(DIR)/dag_$(GRAPH).sh; \
+	./scripts/freqUsed/dagBat_cpp $(GRAPH) frag-dag-all > $(DIR)/dag_$(GRAPH).sh; \
 	chmod +x $(DIR)/dag_$(GRAPH).sh; \
 	./dag_$(GRAPH).sh
 .PHONY:frag-dag-all
 
 frag-dag-touch-all:
 	mkdir $(DIR)/$(GRAPH)/dag; \
-	$(PYTHON) scripts/freqUsed/dagBat_cpp.py $(GRAPH) frag-dag-touch > $(DIR)/dag_$(GRAPH).sh; \
+	./scripts/freqUsed/dagBat_cpp $(GRAPH) frag-dag-touch > $(DIR)/dag_$(GRAPH).sh; \
 	chmod +x $(DIR)/dag_$(GRAPH).sh; \
 	./dag_$(GRAPH).sh
 .PHONY:frag-dag-touch-all
 
 top-src-span-all:
 	mkdir $(DIR)/$(GRAPH)/dag; \
-	$(PYTHON) scripts/freqUsed/dagBat_post_cpp.py $(GRAPH) top-src-span > $(DIR)/dag_$(GRAPH).sh; \
+	./scripts/freqUsed/dagBat_post_cpp $(GRAPH) top-src-span > $(DIR)/dag_$(GRAPH).sh; \
 	chmod +x $(DIR)/dag_$(GRAPH).sh; \
 	./dag_$(GRAPH).sh
 .PHONY:top-src-span-all
 
 top-src-span-touch-all:
 	mkdir $(DIR)/$(GRAPH)/dag; \
-	$(PYTHON) scripts/freqUsed/dagBat_post_cpp.py $(GRAPH) top-src-span-touch > $(DIR)/dag_$(GRAPH).sh; \
+	./scripts/freqUsed/dagBat_post_cpp $(GRAPH) top-src-span-touch > $(DIR)/dag_$(GRAPH).sh; \
 	chmod +x $(DIR)/dag_$(GRAPH).sh; \
 	./dag_$(GRAPH).sh
 .PHONY:top-src-span-touch-all
 
 edge-cut-compress-all:
 	mkdir $(DIR)/$(GRAPH)/dag; \
-	$(PYTHON) scripts/freqUsed/dagBat_post_cpp.py $(GRAPH) edge-cut-compress > $(DIR)/dag_$(GRAPH).sh; \
+	./scripts/freqUsed/dagBat_post_cpp $(GRAPH) edge-cut-compress > $(DIR)/dag_$(GRAPH).sh; \
 	chmod +x $(DIR)/dag_$(GRAPH).sh; \
 	./dag_$(GRAPH).sh
 .PHONY:edge-cut-compress-all
 
 edge-cut-compress-touch-all:
 	mkdir $(DIR)/$(GRAPH)/dag; \
-	$(PYTHON) scripts/freqUsed/dagBat_post_cpp.py $(GRAPH) edge-cut-compress-touch > $(DIR)/dag_$(GRAPH).sh; \
+	./scripts/freqUsed/dagBat_post_cpp $(GRAPH) edge-cut-compress-touch > $(DIR)/dag_$(GRAPH).sh; \
 	chmod +x $(DIR)/dag_$(GRAPH).sh; \
 	./dag_$(GRAPH).sh
 .PHONY:edge-cut-compress-touch-all
 
 wcc-compress-touch-all:
 	mkdir $(DIR)/$(GRAPH)/dag; \
-	$(PYTHON) scripts/freqUsed/dagBat_post_cpp.py $(GRAPH) wcc-compress-touch > $(DIR)/dag_$(GRAPH).sh; \
+	./scripts/freqUsed/dagBat_post_cpp $(GRAPH) wcc-compress-touch > $(DIR)/dag_$(GRAPH).sh; \
 	chmod +x $(DIR)/dag_$(GRAPH).sh; \
 	./dag_$(GRAPH).sh
 .PHONY:wcc-compress-touch-all
 
 wave-frag-compress-all:
 	mkdir $(DIR)/$(GRAPH)/dag; \
-	$(PYTHON) scripts/freqUsed/dagBat_post_cpp.py $(GRAPH) wave-frag-compress > $(DIR)/dag_$(GRAPH).sh; \
+	./scripts/freqUsed/dagBat_post_cpp $(GRAPH) wave-frag-compress > $(DIR)/dag_$(GRAPH).sh; \
 	chmod +x $(DIR)/dag_$(GRAPH).sh; \
 	./dag_$(GRAPH).sh
 .PHONY:wave-frag-compress-all
 
 wave-frag-compress-touch-all:
 	mkdir $(DIR)/$(GRAPH)/dag; \
-	$(PYTHON) scripts/freqUsed/dagBat_post_cpp.py $(GRAPH) wave-frag-compress-touch > $(DIR)/dag_$(GRAPH).sh; \
+	./scripts/freqUsed/dagBat_post_cpp $(GRAPH) wave-frag-compress-touch > $(DIR)/dag_$(GRAPH).sh; \
 	chmod +x $(DIR)/dag_$(GRAPH).sh; \
 	./dag_$(GRAPH).sh
 .PHONY:wave-frag-compress-touch-all
 
 frag-buck-compress-touch-all:
 	mkdir $(DIR)/$(GRAPH)/dag; \
-	$(PYTHON) scripts/freqUsed/dagBat_post_cpp.py $(GRAPH) frag-buck-compress-touch > $(DIR)/dag_$(GRAPH).sh; \
+	./scripts/freqUsed/dagBat_post_cpp $(GRAPH) frag-buck-compress-touch > $(DIR)/dag_$(GRAPH).sh; \
 	chmod +x $(DIR)/dag_$(GRAPH).sh; \
 	./dag_$(GRAPH).sh
 .PHONY:frag-buck-compress-touch-all
@@ -738,10 +738,10 @@ fpViewer_old:
 		$(PYTHON) scripts/freqUsed/wavelayercc.py $(GRAPH) $$FP; \
 	done; \
 	$(PYTHON) scripts/freqUsed/fpmetagraph.py $(GRAPH); \
-	$(PYTHON) scripts/freqUsed/getMap_noWave.py $(DIR)/ $(GRAPH); \
-	$(PYTHON) scripts/freqUsed/getMapDag2-2.py $(DIR)/ $(GRAPH); \
+	./scripts/freqUsed/getMap_noWave $(DIR)/ $(GRAPH); \
+	./scripts/freqUsed/getMapDag2-2 $(DIR)/ $(GRAPH); \
 	$(PYTHON) scripts/freqUsed/getSpanningDag.py $(GRAPH)/$(GRAPH)-layerBucketEdge.s-t-w; \
-	$(PYTHON) scripts/freqUsed/mergeCCLayers.py $(DIR)/ $(GRAPH);
+	./scripts/freqUsed/mergeCCLayers $(DIR)/ $(GRAPH);
 .PHONY: fpViewer_old
 
 fpViewer:
@@ -753,26 +753,26 @@ fpViewer:
 	make GRAPH=$(GRAPH) cc-layers-uf; \
 	make GRAPH=$(GRAPH) wave-layer-cc_direct; \
 	$(PYTHON) scripts/freqUsed/fpmetagraph.py $(GRAPH); \
-	$(PYTHON) scripts/freqUsed/getMap_noWave.py $(DIR)/ $(GRAPH); \
-	$(PYTHON) scripts/freqUsed/getMapDag2-2.py $(DIR)/ $(GRAPH); \
+	./scripts/freqUsed/getMap_noWave $(DIR)/ $(GRAPH); \
+	./scripts/freqUsed/getMapDag2-2 $(DIR)/ $(GRAPH); \
 	$(PYTHON) scripts/freqUsed/getSpanningDag.py $(GRAPH)/$(GRAPH)-layerBucketEdge.s-t-w; \
-	$(PYTHON) scripts/freqUsed/mergeCCLayers.py $(DIR)/ $(GRAPH);
+	./scripts/freqUsed/mergeCCLayers $(DIR)/ $(GRAPH);
 .PHONY: fpViewer
 
 buck2vicinity:
-	$(PYTHON) scripts/test/bucket2city.py $(GRAPH) $(LAYER) $(BUCKET) false;
+	./scripts/test/bucket2city $(GRAPH) $(LAYER) $(BUCKET) false;
 .PHONY: buck2vicinity
 
 buck2vicinity-smp:
-	$(PYTHON) scripts/test/bucket2city.py $(GRAPH) $(LAYER) $(BUCKET) true;
+	./scripts/test/bucket2city $(GRAPH) $(LAYER) $(BUCKET) true;
 .PHONY: buck2vicinity-smp
 
 buck2strata:
-	$(PYTHON) scripts/test/bucket2strata.py $(GRAPH) $(LAYER) $(BUCKET) false;
+	./scripts/test/bucket2strata $(GRAPH) $(LAYER) $(BUCKET) false;
 .PHONY: buck2strata
 
 buck2strata-smp:
-	$(PYTHON) scripts/test/bucket2strata.py $(GRAPH) $(LAYER) $(BUCKET) true;
+	./scripts/test/bucket2strata $(GRAPH) $(LAYER) $(BUCKET) true;
 .PHONY: buck2strata-smp
 
 prepareVicinity:
@@ -784,14 +784,14 @@ prepareVicinity:
 	make GRAPH=$(GRAPH) cc-layers-uf; \
 	make GRAPH=$(GRAPH) wave-layer-cc_direct; \
 	make GRAPH=$(GRAPH) fp-info_int; \
-	$(PYTHON) scripts/test/lcc-json2csv.py $(GRAPH); \
+	./scripts/test/lcc-json2csv $(GRAPH); \
 	make GRAPH=$(GRAPH) bucket_int_linear; \
 	make GRAPH=$(GRAPH) wavemap_cpp; \
 	make GRAPH=$(GRAPH) sculpture_int_cpp; \
 	make GRAPH=$(GRAPH) intersection_int_cpp; \
 	make GRAPH=$(GRAPH) gridmap_cpp; \
 	make GRAPH=$(GRAPH) PARENT=$(PARENT) geom-vicinity; \
-	$(PYTHON) scripts/freqUsed/getCityInfo.py $(GRAPH); \
+	./scripts/freqUsed/getCityInfo $(GRAPH); \
 	$(PYTHON) scripts/test/getBestPlot.py $(GRAPH); \
 	make GRAPH=$(GRAPH) frag-dag-touch-all; \
 	make GRAPH=$(GRAPH) top-src-span-touch-all; \
@@ -801,10 +801,11 @@ prepareVicinity:
 	make GRAPH=$(GRAPH) frag-buck-compress-touch-all; \
 	make GRAPH=$(GRAPH) dag-size; \
 	make GRAPH=$(GRAPH) lccBuck_cpp; \
-	$(PYTHON) scripts/test/addDagInfo.py $(GRAPH); \
-	$(PYTHON) scripts/test/checkLargeNode.py $(GRAPH); \
-	$(PYTHON) scripts/test/addBuckESize.py $(GRAPH); \
-	$(PYTHON) scripts/test/bucket2sample.py $(GRAPH) 16384;
+	./scripts/test/addDagInfo $(GRAPH); \
+	./scripts/test/checkLargeNode $(GRAPH); \
+	./scripts/test/addBuckESize $(GRAPH); \
+	mkdir $(GRAPH)/$(GRAPH)_waves/lccBuck/smp/
+	./scripts/test/bucket2sample $(GRAPH) 16384;
 .PHONY: prepareVicinity
 
 prepareCity:
@@ -816,14 +817,14 @@ prepareCity:
 	make GRAPH=$(GRAPH) cc-layers-uf; \
 	make GRAPH=$(GRAPH) wave-layer-cc_direct; \
 	make GRAPH=$(GRAPH) fp-info_int; \
-	$(PYTHON) scripts/test/lcc-json2csv.py $(GRAPH); \
+	./scripts/test/lcc-json2csv $(GRAPH); \
 	make GRAPH=$(GRAPH) bucket_int; \
 	make GRAPH=$(GRAPH) wavemap_cpp; \
 	make GRAPH=$(GRAPH) sculpture_int_cpp; \
 	make GRAPH=$(GRAPH) intersection_int_cpp; \
 	make GRAPH=$(GRAPH) gridmap_cpp; \
 	make GRAPH=$(GRAPH) geom; \
-	$(PYTHON) scripts/freqUsed/getCityInfo.py $(GRAPH); \
+	./scripts/freqUsed/getCityInfo $(GRAPH); \
 	$(PYTHON) scripts/test/getBestPlot.py $(GRAPH); \
 	$(PYTHON) scripts/test/getLccDist.py $(GRAPH); \
 	make GRAPH=$(GRAPH) frag-dag-touch-all; \
@@ -834,10 +835,11 @@ prepareCity:
 	make GRAPH=$(GRAPH) frag-buck-compress-touch-all; \
 	make GRAPH=$(GRAPH) dag-size; \
 	make GRAPH=$(GRAPH) lccBuck_cpp; \
-	$(PYTHON) scripts/test/addDagInfo.py $(GRAPH); \
-	$(PYTHON) scripts/test/checkLargeNode.py $(GRAPH); \
-	$(PYTHON) scripts/test/addBuckESize.py $(GRAPH); \
-	$(PYTHON) scripts/test/bucket2sample.py $(GRAPH) 16384;
+	./scripts/test/addDagInfo $(GRAPH); \
+	./scripts/test/checkLargeNode $(GRAPH); \
+	./scripts/test/addBuckESize $(GRAPH); \
+	mkdir $(GRAPH)/$(GRAPH)_waves/lccBuck/smp/
+	./scripts/test/bucket2sample $(GRAPH) 16384;
 .PHONY: prepareCity
 
 prepare:
@@ -847,14 +849,14 @@ prepare:
 	make GRAPH=$(GRAPH) cc-layers-uf; \
 	make GRAPH=$(GRAPH) wave-layer-cc_direct; \
 	make GRAPH=$(GRAPH) fp-info_int; \
-	$(PYTHON) scripts/test/lcc-json2csv.py $(GRAPH); \
+	./scripts/test/lcc-json2csv $(GRAPH); \
 	make GRAPH=$(GRAPH) bucket_int; \
 	make GRAPH=$(GRAPH) wavemap_cpp; \
 	make GRAPH=$(GRAPH) sculpture_int_cpp; \
 	make GRAPH=$(GRAPH) intersection_int_cpp; \
 	make GRAPH=$(GRAPH) gridmap_cpp; \
 	make GRAPH=$(GRAPH) geom; \
-	$(PYTHON) scripts/freqUsed/getCityInfo.py $(GRAPH); \
+	./scripts/freqUsed/getCityInfo $(GRAPH); \
 	$(PYTHON) scripts/test/getBestPlot.py $(GRAPH); \
 	$(PYTHON) scripts/test/getLccDist.py $(GRAPH); \
 	make GRAPH=$(GRAPH) frag-dag-touch-all; \
@@ -865,10 +867,11 @@ prepare:
 	make GRAPH=$(GRAPH) frag-buck-compress-touch-all; \
 	make GRAPH=$(GRAPH) dag-size; \
 	make GRAPH=$(GRAPH) lccBuck_cpp; \
-	$(PYTHON) scripts/test/addDagInfo.py $(GRAPH); \
-	$(PYTHON) scripts/test/checkLargeNode.py $(GRAPH); \
-	$(PYTHON) scripts/test/addBuckESize.py $(GRAPH); \
-	$(PYTHON) scripts/test/bucket2sample.py $(GRAPH) 16384;
+	./scripts/test/addDagInfo $(GRAPH); \
+	./scripts/test/checkLargeNode $(GRAPH); \
+	./scripts/test/addBuckESize $(GRAPH); \
+	mkdir $(GRAPH)/$(GRAPH)_waves/lccBuck/smp/
+	./scripts/test/bucket2sample $(GRAPH) 16384;
 .PHONY: prepare
 
 prepareDAG:
@@ -879,14 +882,14 @@ prepareDAG:
 	make GRAPH=$(GRAPH) edge-cut-compress-touch-all; \
 	make GRAPH=$(GRAPH) frag-buck-compress-touch-all; \
 	make GRAPH=$(GRAPH) dag-size; \
-	$(PYTHON) scripts/test/addDagInfo.py $(GRAPH); \
-	$(PYTHON) scripts/test/checkLargeNode.py $(GRAPH); \
-	$(PYTHON) scripts/test/addBuckESize.py $(GRAPH);
+	./scripts/test/addDagInfo $(GRAPH); \
+	./scripts/test/checkLargeNode $(GRAPH); \
+	./scripts/test/addBuckESize $(GRAPH);
 .PHONY: prepareDAG
 
 updateGeom:
 	make GRAPH=$(GRAPH) geom; \
-	$(PYTHON) scripts/test/addDagInfo.py $(GRAPH); \
-	$(PYTHON) scripts/test/checkLargeNode.py $(GRAPH); \
-	$(PYTHON) scripts/test/addBuckESize.py $(GRAPH);
+	./scripts/test/addDagInfo $(GRAPH); \
+	./scripts/test/checkLargeNode $(GRAPH); \
+	./scripts/test/addBuckESize $(GRAPH);
 .PHONY: updateGeom

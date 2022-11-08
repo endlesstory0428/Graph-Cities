@@ -153,7 +153,12 @@ This will create a Graph City work space folder `Graph-Cities`. We refer to this
 ### Compile Graph City Infrastructure
 Before you start creating your own Graph City, you first need to compile "Graph Cities Infrastructure".
 #### Compile `wave-decomposition`
-In this version, we provide compiled binary files that one can directly use them.
+In this version, we provide compiled binary files that one can directly use them after making them executable by the following lines.
+```bash
+chmod +x buffkcore; chmod +x cc-layers-mat; chmod +x DAGMetaNode_touch; chmod +x edgeCutCompress_touch; chmod +x entropy; chmod +x ewave_next; chmod +x fpmetagraph; chmod +x gridmap; chmod +x lccBuck; chmod +x preproc; chmod +x topSrc_touch; chmod +x waveCC_touch; chmod +x waveFragLevel_touch; chmod +x waveFragLevel_touch_bucket; chmod +x wavelayercc_direct; chmod +x wavemaps; chmod +x wavemapsWaveByWave; 
+chmod +x scripts/freqUsed/getBuildingList; chmod +x scripts/freqUsed/mergeCCLayers; chmod +x scripts/freqUsed/getCityInfo; chmod +x scripts/freqUsed/dagBat_cpp; chmod +x scripts/freqUsed/dagBat_post_cpp; chmod +x scripts/freqUsed/numfixedpoints; chmod +x scripts/freqUsed/convert_ve; chmod +x scripts/freqUsed/getBuildingBucketFromMap_int; chmod +x scripts/freqUsed/wavemapsNames; chmod +x scripts/freqUsed/convert; chmod +x scripts/freqUsed/getMap_noWave; chmod +x scripts/freqUsed/getMapDag2-2; chmod +x scripts/freqUsed/fpmetagraphnormalize_int; 
+chmod +x scripts/test/bucket2strata; chmod +x scripts/test/addDagInfo; chmod +x scripts/test/bucket2city; chmod +x scripts/test/addBuckESize; chmod +x scripts/test/checkLargeNode; chmod +x scripts/test/bucket2sample; chmod +x scripts/test/lcc-json2csv; 
+```
 
 ~~Under your Work Space './', type the following commands in your console to compile `.cpp` files.~~
 ```bash
