@@ -4,9 +4,9 @@ DIR := $(shell pwd)
 GRAPH := simplegraph
 
 retrive:
-	ln -s ../wave-decomposition/${GRAPH} ${GRAPH}; \
-	ln -s ../wave-decomposition/${GRAPH}/cityMesh data/${GRAPH}; \
-	ln -s ../wave-decomposition/${GRAPH}/dag data_dags/${GRAPH}; \
+	ln -s $(DIR)/../wave-decomposition/${GRAPH} ${GRAPH}; \
+	ln -s $(DIR)/../wave-decomposition/${GRAPH}/cityMesh data/${GRAPH}; \
+	ln -s $(DIR)/../wave-decomposition/${GRAPH}/dag data_dags/${GRAPH}; \
 	cp wave-decomposition/${GRAPH}/${GRAPH}-summary.json data/; \
 	cp wave-decomposition/${GRAPH}/building2bucket-${GRAPH}.json data_maps/; \
 	cp wave-decomposition/${GRAPH}/${GRAPH}-lccWaves.vBuck.b.p.mm.json data_maps/; \
@@ -39,9 +39,9 @@ retrive:
 	sed -i '120s/.*/const data_list = ["got", "$(GRAPH)", "starwars"]/' scripts/main_$(GRAPH).js;
 
 retrive-vicinity:
-	ln -s ../wave-decomposition/${GRAPH} ${GRAPH}; \
-	ln -s ../wave-decomposition/${GRAPH}/cityMesh data/${GRAPH}; \
-	ln -s ../wave-decomposition/${GRAPH}/dag data_dags/${GRAPH}; \
+	ln -s $(DIR)/../wave-decomposition/${GRAPH} ${GRAPH}; \
+	ln -s $(DIR)/../wave-decomposition/${GRAPH}/cityMesh data/${GRAPH}; \
+	ln -s $(DIR)/../wave-decomposition/${GRAPH}/dag data_dags/${GRAPH}; \
 	cp wave-decomposition/${GRAPH}/${GRAPH}-summary.json data/; \
 	cp wave-decomposition/${GRAPH}/building2bucket-${GRAPH}.json data_maps/; \
 	cp wave-decomposition/${GRAPH}/${GRAPH}-lccWaves.vBuck.b.p.mm.json data_maps/; \
@@ -77,9 +77,9 @@ retrive-vicinity:
 	sed -i '32c let sampleFlag = false' scripts/main_$(GRAPH).js;
 
 retrive-vicinity-smp:
-	ln -s ../wave-decomposition/${GRAPH} ${GRAPH}; \
-	ln -s ../wave-decomposition/${GRAPH}/cityMesh data/${GRAPH}; \
-	ln -s ../wave-decomposition/${GRAPH}/dag data_dags/${GRAPH}; \
+	ln -s $(DIR)/../wave-decomposition/${GRAPH} ${GRAPH}; \
+	ln -s $(DIR)/../wave-decomposition/${GRAPH}/cityMesh data/${GRAPH}; \
+	ln -s $(DIR)/../wave-decomposition/${GRAPH}/dag data_dags/${GRAPH}; \
 	cp wave-decomposition/${GRAPH}/${GRAPH}-summary.json data/; \
 	cp wave-decomposition/${GRAPH}/building2bucket-${GRAPH}.json data_maps/; \
 	cp wave-decomposition/${GRAPH}/${GRAPH}-lccWaves.vBuck.b.p.mm.json data_maps/; \
@@ -115,9 +115,9 @@ retrive-vicinity-smp:
 	sed -i '32c let sampleFlag = true' scripts/main_$(GRAPH).js;
 
 retrive-mall:
-	ln -s ../wave-decomposition/${GRAPH} ${GRAPH}; \
-	ln -s ../wave-decomposition/${GRAPH}/cityMesh data/${GRAPH}; \
-	ln -s ../wave-decomposition/${GRAPH}/dag data_dags/${GRAPH}; \
+	ln -s $(DIR)/../wave-decomposition/${GRAPH} ${GRAPH}; \
+	ln -s $(DIR)/../wave-decomposition/${GRAPH}/cityMesh data/${GRAPH}; \
+	ln -s $(DIR)/../wave-decomposition/${GRAPH}/dag data_dags/${GRAPH}; \
 	cp wave-decomposition/${GRAPH}/${GRAPH}-summary.json data/; \
 	cp wave-decomposition/${GRAPH}/building2bucket-${GRAPH}.json data_maps/; \
 	cp wave-decomposition/${GRAPH}/${GRAPH}-lccWaves.vBuck.b.p.mm.json data_maps/; \
