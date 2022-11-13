@@ -514,9 +514,9 @@ geom:
 	mkdir $(DIR)/$(GRAPH)/cityMesh; \
 	> $(DIR)/$(GRAPH)/cityMesh/bushes.json; \
 	COLOR=$$($(PYTHON) scripts/freqUsed/color.py $(GRAPH)); \
-	$(PYTHON) scripts/freqUsed/cityMesh.py $(DIR)/ $(GRAPH) $$COLOR > $(DIR)/cityMesh.sh; \
-	chmod +x $(DIR)/cityMesh.sh; \
-	$(DIR)/cityMesh.sh;
+	$(PYTHON) scripts/freqUsed/cityMesh.py $(DIR)/ $(GRAPH) $$COLOR > $(DIR)/$(GRAPH)/cityMesh.sh; \
+	chmod +x $(DIR)/$(GRAPH)/cityMesh.sh; \
+	$(DIR)/$(GRAPH)/cityMesh.sh;
 	truncate -s-2 $(DIR)/$(GRAPH)/cityMesh/bushes.json
 	sed -i -e "1 i \{" -e"$$ a\}" $(DIR)/$(GRAPH)/cityMesh/bushes.json
 .PHONY: geom
@@ -525,9 +525,9 @@ geom-vicinity:
 	mkdir $(DIR)/$(GRAPH)/cityMesh; \
 	> $(DIR)/$(GRAPH)/cityMesh/bushes.json; \
 	COLOR=$$($(PYTHON) scripts/freqUsed/color.py $(PARENT)); \
-	$(PYTHON) scripts/freqUsed/cityMesh.py $(DIR)/ $(GRAPH) $$COLOR > $(DIR)/cityMesh.sh; \
-	chmod +x $(DIR)/cityMesh.sh; \
-	$(DIR)/cityMesh.sh;
+	$(PYTHON) scripts/freqUsed/cityMesh.py $(DIR)/ $(GRAPH) $$COLOR > $(DIR)/$(GRAPH)/cityMesh.sh; \
+	chmod +x $(DIR)/$(GRAPH)/cityMesh.sh; \
+	$(DIR)/$(GRAPH)/cityMesh.sh;
 	truncate -s-2 $(DIR)/$(GRAPH)/cityMesh/bushes.json
 	sed -i -e "1 i \{" -e"$$ a\}" $(DIR)/$(GRAPH)/cityMesh/bushes.json
 .PHONY: geom-vicinity
