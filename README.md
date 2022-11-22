@@ -16,7 +16,7 @@ The main 2022 publication is:
 ```
 
 ## Funding
-This is an NSF-funded project (NSF IIS-1563816 and IIS-1563971), led by Prof. [James Abello](mailto:abello@dimacs.rutgers.edu). It is partially funded by Nokia Bell Labs and Simons Research. It constitutes a major part of the incoming Ph.D. thesis of [Haoyang Zhang](mailto:hz333@scarletmail.rutgers.edu).
+This is an NSF-funded project (NSF IIS-1563816 and IIS-1563971), led by Prof. [James Abello](mailto:abello@dimacs.rutgers.edu). It is partially funded by Nokia Bell Labs, Siemens Research, and mgvis.com. It constitutes a major part of the incoming Ph.D. thesis of [Haoyang Zhang](mailto:hz333@scarletmail.rutgers.edu).
 
 ## Credits
 - Overall Project Design and Coordination: [James Abello](mailto:abello@dimacs.rutgers.edu)
