@@ -808,7 +808,9 @@ prepareVicinity:
 	./scripts/test/checkLargeNode $(GRAPH); \
 	./scripts/test/addBuckESize $(GRAPH); \
 	mkdir $(GRAPH)/$(GRAPH)_waves/lccBuck/smp/; \
-	./scripts/test/bucket2sample $(GRAPH) 16384;
+	./scripts/test/bucket2sample $(GRAPH) 16384; \
+	make GRAPH=$(GRAPH) filterLarge-all; \
+	make GRAPH=$(GRAPH) filterSmall-all;
 .PHONY: prepareVicinity
 
 prepareCity:
@@ -842,7 +844,9 @@ prepareCity:
 	./scripts/test/checkLargeNode $(GRAPH); \
 	./scripts/test/addBuckESize $(GRAPH); \
 	mkdir $(GRAPH)/$(GRAPH)_waves/lccBuck/smp/; \
-	./scripts/test/bucket2sample $(GRAPH) 16384;
+	./scripts/test/bucket2sample $(GRAPH) 16384; \
+	make GRAPH=$(GRAPH) filterLarge-all; \
+	make GRAPH=$(GRAPH) filterSmall-all;
 .PHONY: prepareCity
 
 prepare:
@@ -874,7 +878,9 @@ prepare:
 	./scripts/test/checkLargeNode $(GRAPH); \
 	./scripts/test/addBuckESize $(GRAPH); \
 	mkdir $(GRAPH)/$(GRAPH)_waves/lccBuck/smp/; \
-	./scripts/test/bucket2sample $(GRAPH) 16384;
+	./scripts/test/bucket2sample $(GRAPH) 16384; \
+	make GRAPH=$(GRAPH) filterLarge-all; \
+	make GRAPH=$(GRAPH) filterSmall-all;
 .PHONY: prepare
 
 prepareDAG:
