@@ -1169,9 +1169,10 @@ function click2Vicinity(node, sampleFlag) {
       metaNode: nodeID,
       lcc: DATA.lcc,
       wfInfo: wfInfo,
-      metaGraph: tempGraph.graphData(),
-      buildingName: DATA.buildingName,
-      sampleFlag: sampleFlag
+      // metaGraph: tempGraph.graphData(),
+      // buildingName: DATA.buildingName,
+      sampleFlag: sampleFlag,
+      dagType: DATAList[tempGraphIdx].dagType
       // metaType: graphInfoList[tempGraphIdx].metaType
     }), localHost + 'meta-dag-node-vicinity', function(res) {
       console.log(res);
@@ -1184,7 +1185,9 @@ function click2Vicinity(node, sampleFlag) {
 
 function click2fpViewer(node, sampleFlag = false) {
 
-  if ((sampleFlag ? node.sampleSize : node.esize + node.touchESize) > TH_FPVIEWER) {
+  const wfCheck = (DATAList[tempGraphIdx].dagType === 'wf.dag' || DATAList[tempGraphIdx].dagType === 'wf.dag.detail')
+  const wfCondition = ((sampleFlag ? node.sampleSize : node.esize + node.touchESize) > TH_FPVIEWER)
+  if ((wfCheck && wfCondition) || (!wfCheck) && (node.esize > TH_FPVIEWER)) {
     click2Vicinity(node, sampleFlag)
   } else {
     let wfInfo = [];
@@ -1193,10 +1196,22 @@ function click2fpViewer(node, sampleFlag = false) {
     }
     let nodeID;
     if (node.hasOwnProperty('idList')) {
-      nodeID = node.idList;
+      if (!sampleFlag && node.hasOwnProperty('fullIDList')) {
+        nodeID = node.fullIDList;
+        nodeName = node.fullIDList[0];
+      } else {
+        nodeID = node.idList;
+        nodeName = node.idList[0]
+      }
     } else {
       nodeID = node.id;
+      nodeName = node.id;
     }
+    // if (node.hasOwnProperty('idList')) {
+    //   nodeID = node.idList;
+    // } else {
+    //   nodeID = node.id;
+    // }
   
     httpPostAsync(JSON.stringify({
       filename: DATA.filename,
@@ -1213,7 +1228,8 @@ function click2fpViewer(node, sampleFlag = false) {
       tempMetaNode: (DATA.dagType === 'wf.dag' || DATA.dagType === 'wf.dag.detail') ? node.frag + 1 : nodeID,
       desc: ['BLDG', DATAList[1].dagType, DATAList[2].dagType === 'wf.frag' ? DATAList[2].dagType : 'frag.cc'],
       // metaType: graphInfoList[tempGraphIdx].metaType
-      sampleFlag: sampleFlag
+      sampleFlag: sampleFlag,
+      dagType: DATAList[tempGraphIdx].dagType
     }), localHost + 'meta-dag-node-fp-viewer', function(res) {
       console.log(res);
       if (!res.res) {
@@ -1326,7 +1342,8 @@ function click2strata(node, sampleFlag = false) {
       lcc: DATA.lcc,
       wfInfo: wfInfo,
       buildingName: DATA.buildingName,
-      sampleFlag: sampleFlag
+      sampleFlag: sampleFlag,
+      dagType: DATAList[tempGraphIdx].dagType
     }), localHost + 'meta-dag-node', function(res) {
       console.log(res);
       if (!res.res) {
@@ -1443,7 +1460,11 @@ function updateJumpLinkVisibility(showFlag, fullDagFlag = false) {
 document.getElementById('span-only-button-container').onclick = () => {
   if (DATAList[tempGraphIdx].dagType === 'wf.frag' && !graphInfoList[tempGraphIdx].topoSpan) {
     graphInfoList[tempGraphIdx].showJumpLink = !(graphInfoList[tempGraphIdx].showJumpLink)
-    updateJumpLinkVisibility(graphInfoList[tempGraphIdx].showJumpLink)
+    if (!graphInfoList[tempGraphIdx].topoSpan) {
+      updateJumpLinkVisibility(graphInfoList[tempGraphIdx].showJumpLink)
+    } else {
+      captionElem.innerText = 'span frag DAG\ndue to size, we cannot show a full DAG';
+    }
   }
   if (fullDagInfo.hasOwnProperty('topoSpan')){
     if (!fullDagInfo.topoSpan) {
@@ -2514,7 +2535,7 @@ function switchMiniGraph(graphIndex = 1, shapeIdx = 0, iterFlag = false) {
 //   }
 // }
 
-function switchMiniBuilding(showFlag = true, posIdx = 0) {
+function switchMiniBuilding(showFlag = true, posIdx = 0, fpValue = undefined) {
   if(showFlag) {
     // showMiniWaveGraphFlag = true;
     const tempMiniGraphElem = document.getElementById(`mini-building`)
@@ -2548,6 +2569,11 @@ function switchMiniBuilding(showFlag = true, posIdx = 0) {
     tempMiniGraphElem.style.visibility = 'hidden';
     miniBuildingGraph.pauseAnimation();
     // miniBuildingGraph.onNodeHover(() => null)
+  }
+  if (fpValue != undefined) {
+    document.getElementById('mini-building-label').innerText = `BLDG FP${fpValue}`
+  } else {
+    document.getElementById('mini-building-label').innerText = 'BLDG'
   }
 }
 
@@ -2785,7 +2811,7 @@ function loadMetaArray(data, graphIndex = 1) {
   if (metaType === 'dag.full') {
     const buildingName = metaInfo.buildingName.slice(8);
     drawMiniBuilding(metaInfo.dataset, buildingName);
-    switchMiniBuilding(true, 0);
+    switchMiniBuilding(true, 0, metaInfo.layer);
     // requestWaveMetaMini(metaInfo);
     // switchWaveMiniGraph(true);
 
@@ -2825,7 +2851,7 @@ function loadMetaArray(data, graphIndex = 1) {
   } else if (metaType === 'dag.span') {
     const buildingName = metaInfo.buildingName.slice(8);
     drawMiniBuilding(metaInfo.dataset, buildingName);
-    switchMiniBuilding(true, 0);
+    switchMiniBuilding(true, 0, metaInfo.layer);
     // requestWaveMetaMini(metaInfo);
     // switchWaveMiniGraph(true);
 
@@ -2865,7 +2891,7 @@ function loadMetaArray(data, graphIndex = 1) {
   } else if (metaType === 'wcc') {
     const buildingName = metaInfo.buildingName.slice(8);
     drawMiniBuilding(metaInfo.dataset, buildingName);
-    switchMiniBuilding(true, 0);
+    switchMiniBuilding(true, 0, metaInfo.layer);
     const [graphData, graphInfo] = prepareMetaArrayWcc(metaData);
     graphInfo.metaType = metaType
     updateDAGTitle(metaType, graphInfo)
@@ -2889,7 +2915,7 @@ function loadMetaArray(data, graphIndex = 1) {
         addBuildingHighlight(miniBuildingGraph, new Set([node.wave]))
       });
   } else if (metaType === 'wcc.dag' || metaType === 'wcc.dag.full') {
-    switchMiniBuilding(true, 1);
+    switchMiniBuilding(true, 1, metaInfo.layer);
     const [graphData, graphInfo] = prepareMetaArrayDag(metaData);
     graphInfo.metaType = metaType
     graphInfo.parentNode = clicked;
@@ -2921,7 +2947,7 @@ function loadMetaArray(data, graphIndex = 1) {
   } else if (metaType === 'edgeCut') {
     const buildingName = metaInfo.buildingName.slice(8);
     drawMiniBuilding(metaInfo.dataset, buildingName);
-    switchMiniBuilding(true, 0);
+    switchMiniBuilding(true, 0, metaInfo.layer);
     const [graphData, graphInfo] = prepareMetaArrayEdgeCut(metaData);
     graphInfo.metaType = metaType
     updateDAGTitle(metaType, graphInfo)
@@ -2946,7 +2972,7 @@ function loadMetaArray(data, graphIndex = 1) {
         addBuildingHighlight(miniBuildingGraph, new Set([...Array(node.waveMax - node.waveMin + 1).keys()].map(i => i + node.waveMin)))
       });
   } else if (metaType === 'edgeCut.dag') {
-    switchMiniBuilding(true, 1);
+    switchMiniBuilding(true, 1, metaInfo.layer);
     const [graphData, graphInfo] = prepareMetaArrayDag(metaData);
     // update only for edgeCut.dag to git rid of a large number of small seedset cc
     const metaNodeNum = graphData.nodes.length
@@ -2982,7 +3008,7 @@ function loadMetaArray(data, graphIndex = 1) {
     iterFlag = true
     const buildingName = metaInfo.buildingName.slice(8);
     drawMiniBuilding(metaInfo.dataset, buildingName);
-    switchMiniBuilding(true, 0);
+    switchMiniBuilding(true, 0, metaInfo.layer);
     const [graphData, graphInfo] = prepareMetaArrayWave(metaData);
     graphInfo.metaType = metaType
     updateDAGTitle(metaType, graphInfo)
@@ -3007,7 +3033,7 @@ function loadMetaArray(data, graphIndex = 1) {
     iterFlag = true
     // const buildingName = metaInfo.buildingName.slice(8); // TODO
     // drawMiniBuilding(metaInfo.dataset, buildingName); // TODO
-    switchMiniBuilding(true, 1);
+    switchMiniBuilding(true, 1, metaInfo.layer);
     const [graphData, graphInfo] = prepareMetaArrayFrag(metaData);
     graphInfo.metaType = metaType
     graphInfo.parentNode = clicked;
@@ -3036,7 +3062,7 @@ function loadMetaArray(data, graphIndex = 1) {
     iterFlag = true
     // const buildingName = metaInfo.buildingName.slice(8); // TODO
     // drawMiniBuilding(metaInfo.dataset, buildingName); // TODO
-    switchMiniBuilding(true, 1);
+    switchMiniBuilding(true, 1, metaInfo.layer);
     const [graphData, graphInfo] = prepareMetaArrayWFDag(metaData, graphInfoList[1].waveSize);
     graphInfo.metaType = metaType
     graphInfo.parentNode = clicked;
@@ -3069,7 +3095,7 @@ function loadMetaArray(data, graphIndex = 1) {
     iterFlag = true
     // const buildingName = metaInfo.buildingName.slice(8); // TODO
     // drawMiniBuilding(metaInfo.dataset, buildingName); // TODO
-    switchMiniBuilding(true, 1);
+    switchMiniBuilding(true, 1, metaInfo.layer);
     const [graphData, graphInfo] = prepareMetaArrayWFDagDetail(metaData);
     graphInfo.metaType = metaType
     graphInfo.parentNode = clicked;
@@ -3185,7 +3211,7 @@ function prepareMetaArrayDag(data) {
     if (node.density == null || isNaN(node.density)) {
       console.log("error")
     }
-    if (node.esize + node.touchESize >= TH_FPVIEWER && node.density <= 0.95) {
+    if (node.esize >= TH_FPVIEWER && node.density <= 0.95) {
       node.mall = true;
     }
     node.color = getColor(node.density);
@@ -3864,12 +3890,15 @@ function prepareMetaArrayWFDag(data, waveSize, minSizeTH = 3) {
   }
   console.log('finalNodes', finalNodes.length)
 
-  for (const nodes of finalNodes) {
+  for (const node of finalNodes) {
     // console.log(nodes.touchESize)
-    if (nodes.touchESize > 0) {
-      nodes.isSrc = true;
+    if (node.touchESize > 0) {
+      node.isSrc = true;
     } else {
-      nodes.isSrc = false;
+      node.isSrc = false;
+    }
+    if (node.sampleSize >= TH_FPVIEWER) {
+      node.mall = true;
     }
   }
 

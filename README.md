@@ -1,7 +1,7 @@
 # Graph-Cities
 This repository contains code for [*Graph Cities*](https://rutgers.box.com/s/w6goff66f8zl9u5hgo3u3qmbra3yh7ro). Graph Cities are 3D visual representations of partitions of a graph edge set into maximal connected subgraphs each of which is called a fixed point of degree peeling. Each such connected subgraph is visually represented as a Building. A poly-log bucketization of the size distribution of the subgraphs represented by the buildings generates a 2D position for each bucket. The Delaunay triangulation of the bucket building locations determines the street network. We illustrate Graph Cities for the Friendster social network(1.8 billion edges), a co-occurrence keywords network derived from the Internet Movie Database (115 million edges), and a patent citation network(16.5 million edges). Up to 2 billion edges, all the elements of their corresponding Graph Cities are rendered in few minutes (excluding I/O time). The actual Graph Cities computation takes about 2 hours on a 64 GB RAM commodity computer. Our ultimate goal is to provide tools to build humanly interpretable descriptions of any graph, without being constrained by the graph size. It consists of four sub-modules: `wave-decomposition`, `Graph_City_Web`, `fpViewer` and `graph-strata`.
 
-A sample Graph City can be navigated at [imdb-movieMovieKeyword57](http://addressSample:18000/?city=imdb-movieMovieKeyword57). Web interactions are fully tested using Chrome. There are some issues with Safari. Therefore, we recommand for the current version to only use Chrome as a browser. A video illustrating our current interface can be accessed at [here](https://rutgers.box.com/s/53ewby3qi64cdwus6ctbv2x3u6664h68). 
+Web interactions are fully tested using Chrome. There are some issues with Safari. Therefore, we recommand for the current version to only use Chrome as a browser. A video illustrating our current interface can be accessed at [here](https://rutgers.box.com/s/53ewby3qi64cdwus6ctbv2x3u6664h68). 
 
 The main 2022 publication is:
 ```bibtex
@@ -61,7 +61,7 @@ This is an NSF-funded project (NSF IIS-1563816 and IIS-1563971), led by Prof. [J
 | Starwars        | 111   | 444   | 1   | 7  |
 
 ## Sample Findings
-A collection of "interesting" patterns can be accessed at [Graph City Patten Gallery](http://addressSample:18888/patterns/patterns.html).
+A collection of "interesting" patterns can be accessed at [Graph City Patten Gallery](https://graphcities.cs.rutgers.edu/gallery/patterns.html).
 
 ## Papers
 If you use our code, please consider citing our paper.
@@ -156,7 +156,7 @@ Before you start creating your own Graph City, you first need to compile "Graph 
 In this version, we provide compiled binary files that one can directly use them after making them executable by the following lines.
 ```bash
 cd wave-decomposition
-chmod +x buffkcore; chmod +x cc-layers-mat; chmod +x DAGMetaNode_touch; chmod +x edgeCutCompress_touch; chmod +x entropy; chmod +x ewave_next; chmod +x fpmetagraph; chmod +x gridmap; chmod +x lccBuck; chmod +x preproc; chmod +x topSrc_touch; chmod +x waveCC_touch; chmod +x waveFragLevel_touch; chmod +x waveFragLevel_touch_bucket; chmod +x wavelayercc_direct; chmod +x wavemaps; chmod +x wavemapsWaveByWave; 
+chmod +x buffkcore; chmod +x cc-layers-mat; chmod +x DAGMetaNode_touch; chmod +x edgeCutCompress_touch; chmod +x entropy; chmod +x ewave_next; chmod +x fpmetagraph; chmod +x gridmap; chmod +x lccBuck; chmod +x preproc; chmod +x topSrc_touch; chmod +x waveCC_touch; chmod +x waveFragLevel_touch; chmod +x waveFragLevel_touch_bucket; chmod +x wavelayercc_direct; chmod +x wavemaps; chmod +x wavemapsWaveByWave; chmod +x filterBirdHorse; chmod +x filterGorilla;  
 chmod +x scripts/freqUsed/getBuildingList; chmod +x scripts/freqUsed/mergeCCLayers; chmod +x scripts/freqUsed/getCityInfo; chmod +x scripts/freqUsed/dagBat_cpp; chmod +x scripts/freqUsed/dagBat_post_cpp; chmod +x scripts/freqUsed/numfixedpoints; chmod +x scripts/freqUsed/convert_ve; chmod +x scripts/freqUsed/getBuildingBucketFromMap_int; chmod +x scripts/freqUsed/wavemapsNames; chmod +x scripts/freqUsed/convert; chmod +x scripts/freqUsed/getMap_noWave; chmod +x scripts/freqUsed/getMapDag2-2; chmod +x scripts/freqUsed/fpmetagraphnormalize_int; 
 chmod +x scripts/test/bucket2strata; chmod +x scripts/test/addDagInfo; chmod +x scripts/test/bucket2city; chmod +x scripts/test/addBuckESize; chmod +x scripts/test/checkLargeNode; chmod +x scripts/test/bucket2sample; chmod +x scripts/test/lcc-json2csv; 
 ```
@@ -368,6 +368,13 @@ make GRAPH=${GRAPH} lccBuck;
 $(PYTHON) scripts/test/addDagInfo.py ${GRAPH}
 $(PYTHON) scripts/test/checkLargeNode.py ${GRAPH}
 $(PYTHON) scripts/test/addBuckESize.py ${GRAPH}
+```
+
+#### Filter large Meta-nodes for preprocessing of Minicity Rooms
+- The following make program filters wave-fragment decomposition results according to Meta-DAG structure under folder `${DATASET}_waves/`
+```bash
+make GRAPH=${GRAPH} filterLarge-all;
+make GRAPH=${GRAPH} filterSmall-all;
 ```
 # graph_city_web
 ## Directory File Structure

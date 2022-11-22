@@ -1387,6 +1387,23 @@ function summaryFormat(summaryData) {
     } else if (key === 'displayed_con_fixpoints(buildings)') {
       retval.append(createTextSpan(`displayed_con_buildings: ${val} | `))
       vicinitySize = parseInt(val);
+      
+      const cacheInfoElem = document.getElementById('cache-message');
+      const buildingRenderElem = document.createElement('div');
+      buildingRenderElem.id = 'cache-message-building-render';
+      const buildingRenderDescElem = document.createElement('span');
+      buildingRenderDescElem.id = 'cache-message-building-render-desc';
+      buildingRenderDescElem.innerText = '#Buildings to render: '
+      const buildingRenderCntElem = document.createElement('span');
+      buildingRenderCntElem.id = 'cache-message-building-render-cnt';
+      buildingRenderCntElem.innerText = `${val}`
+      const buildingRenderTotalElem = document.createElement('span');
+      buildingRenderTotalElem.id = 'cache-message-building-render-total';
+      buildingRenderTotalElem.innerText = ` / ${val}. Please wait.`
+      buildingRenderElem.appendChild(buildingRenderDescElem);
+      buildingRenderElem.appendChild(buildingRenderCntElem);
+      buildingRenderElem.appendChild(buildingRenderTotalElem);
+      cacheInfoElem.appendChild(buildingRenderElem);
     } else if (key === 'con_fixpoints') {
       const lccSpan = createTextSpan(`${key}: ${val} | `);
       lccSpan.style.zIndex = 8;
@@ -1601,6 +1618,12 @@ function animate_core() {
     flag_objects_new = result.flag;
     glyph_objects = glyph_objects;
     glyphBack_objects = glyphBack_objects;
+
+    const buildingRenderCntElem = document.getElementById('cache-message-building-render-cnt')
+    if (buildingRenderCntElem) {
+      buildingRenderCntElem.innerText = `${city_to_load}`
+    }
+
   } else if (city_to_load == 0 && printTime) {
 
     // console.log(flag_objects_new['wavemap_3_42_1'])
@@ -1795,6 +1818,10 @@ function animate_core() {
 
     initOverlay();
 
+    const buildingRenderElem = document.getElementById('cache-message-building-render');
+    if (buildingRenderElem) {
+      buildingRenderElem.style.display = 'none';
+    }
     checkServerCache();
     
     // let allowToWalkOnPath_FeatureFlag = false;
@@ -3881,7 +3908,7 @@ function goInsideBuilding(buildingName) {
 
   onDagViews = true;
   inner_view_history.push(selected_building);
-  window.scrollTo(0,bottom);
+  // window.scrollTo(0,bottom);
   console.log(inner_view_history);
   LH.updateDropdown(visited_inner_views, inner_view_history);
   visited_inner_views.setValue(inner_view_history[inner_view_history.length-1]);
@@ -3893,6 +3920,7 @@ function goInsideBuilding(buildingName) {
   console.log("Loading: ", file);
   
   if (city_all[selected_building].E < TH_STRATA_FULL) {
+    window.scrollTo(0,bottom);
     console.log('send to strata')
     httpPostAsync(JSON.stringify({
       filename: file,
@@ -3987,43 +4015,74 @@ function goInsideBuilding(buildingName) {
         window.open(res.url);
       }
     }, 'json')
-    window.scrollTo(0,0);
+    // window.scrollTo(0,0);
 
   } else {
     // file = 'data_dags/test/dagmeta_wave_25_16040.json';
     // loadFile2(file, forkView, nameSuffix);
     // loadLayer(paramsL.dataSet, wavemap_ID_ID_freq[1], wavemap_ID_ID_freq[2]);
 
-    console.log(paramsL.dataSet, parseInt(wavemap_ID_ID_freq[1]), parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]))
-    console.log(IP)
-    httpPostAsync(JSON.stringify({
-            filename: file,
-            graphName: paramsL.dataSet,
-            layer: parseInt(wavemap_ID_ID_freq[1]),
-            lcc: parseInt(wavemap_ID_ID_freq[2]),
-            bucket: parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]),
-            maxEdges: IP.max_edges,
-            buildingName: selected_building,
-            smallBuilding: false,
-          }), localHost + 'meta-dag', function(res) {
-            // console.log(res);
-            loadMetaArray(res);
-            document.getElementById('strata-caption').innerText = 'local decomposition of selected pink node'
-            // window.open(res);
-          }, 'json')
+    function loadBuildingInternalDag() {
+      window.scrollTo(0,bottom);
+      console.log(paramsL.dataSet, parseInt(wavemap_ID_ID_freq[1]), parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]))
+      console.log(IP)
+      httpPostAsync(JSON.stringify({
+              filename: file,
+              graphName: paramsL.dataSet,
+              layer: parseInt(wavemap_ID_ID_freq[1]),
+              lcc: parseInt(wavemap_ID_ID_freq[2]),
+              bucket: parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]),
+              maxEdges: IP.max_edges,
+              buildingName: selected_building,
+              smallBuilding: false,
+            }), localHost + 'meta-dag', function(res) {
+              // console.log(res);
+              loadMetaArray(res);
+              document.getElementById('strata-caption').innerText = 'local decomposition of selected pink node'
+              // window.open(res);
+            }, 'json')
+  
+      onDagViews = false;
+      animateStartFlag = false;
+      tempGraph.resumeAnimation();
+    
+      document.getElementById('meta-name').innerText = `${paramsL.dataSet}-${wavemap_ID_ID_freq[1]}-${wavemap_ID_ID_freq[2]}`
+      document.getElementById('meta-size').innerText = `|V|:${city_all[selected_building].V} |E|:${city_all[selected_building].E}`
+    
+      document.getElementById('strata-container').style.display = 'none';
+      document.getElementById('graph-container').style.display = 'block';
+      document.getElementById('graph-container').style.width = '100%';
+      document.getElementById('graph-container').style.display = 'block';
+      document.getElementById('send-to-fpViewer-button-container').style.display = 'none';
+    }
 
-    onDagViews = false;
-    animateStartFlag = false;
-    tempGraph.resumeAnimation();
-  
-    document.getElementById('meta-name').innerText = `${paramsL.dataSet}-${wavemap_ID_ID_freq[1]}-${wavemap_ID_ID_freq[2]}`
-    document.getElementById('meta-size').innerText = `|V|:${city_all[selected_building].V} |E|:${city_all[selected_building].E}`
-  
-    document.getElementById('strata-container').style.display = 'none';
-    document.getElementById('graph-container').style.display = 'block';
-    document.getElementById('graph-container').style.width = '100%';
-    document.getElementById('graph-container').style.display = 'block';
-    document.getElementById('send-to-fpViewer-button-container').style.display = 'none';
+    function checkBuildingCache() {
+      document.getElementById('cache-message-container').style.display = 'block';
+      const buildingRenderElem = document.getElementById('cache-message-building-render');
+      if (buildingRenderElem) {
+        buildingRenderElem.style.display = 'none';
+      }
+      httpPostAsync(JSON.stringify({
+        filename: file,
+        graphName: paramsL.dataSet,
+        layer: parseInt(wavemap_ID_ID_freq[1]),
+        lcc: parseInt(wavemap_ID_ID_freq[2]),
+        bucket: parseInt(city_all.building2BucketPeel[`${wavemap_ID_ID_freq[1]}_${wavemap_ID_ID_freq[2]}`][0][0]),
+        maxEdges: IP.max_edges,
+        buildingName: selected_building,
+      }), localHost + 'checkBuildingCache', function(res) {
+        if (res.res) {
+          console.log(res)
+          // clean overlay, then proceed with go inside
+          document.getElementById('cache-message-container').style.display = 'none';
+          loadBuildingInternalDag();
+        } else {
+          setTimeout(() => checkBuildingCache(), 10 * 1000);
+        }
+      }, 'json')
+    }
+    checkBuildingCache()
+    
   }
 
   // if (true) {
@@ -4097,6 +4156,7 @@ document.getElementById('inner-view').onmouseenter = function stopCityAnimation(
 }
 
 function checkServerCache() {
+  document.getElementById('cache-message').innerText = `Server is preparing. Please wait.`
   httpPostAsync(JSON.stringify({
     graphName: paramsL.dataSet,
   }), localHost + 'best-cache', function(res) {

@@ -11,6 +11,9 @@ SP := 2**16
 LOGSIZE := 100000000
 DAGNAME := simplegraph
 DAGTH := 8192
+VICINITYTH := 131072
+BLDTH := 65536
+SMPTH := 16384
 
 PRODUCT := preproc buffkcore ewave cc-layers-mat
 
@@ -893,3 +896,53 @@ updateGeom:
 	./scripts/test/checkLargeNode $(GRAPH); \
 	./scripts/test/addBuckESize $(GRAPH);
 .PHONY: updateGeom
+
+filterSmall:
+	./filterBirdHorse \
+		$(GRAPH) \
+		$(GRAPH)/ \
+		$(GRAPH)/$(GRAPH)_waves/ \
+		$(GRAPH)/dag/ \
+		$(DAGNAME) \
+		$(LAYER) \
+		$(LCC) \
+		$(BUCKET) \
+		$$(python -c "import sys, json; data=json.load(sys.stdin); print(' '.join(map(str, [data['maxLabel'], data['nodeNum'], data['vertices'], data['edges']])))" < $(GRAPH)/dag/$(DAGNAME)-info.json) \
+		$(VICINITYTH) \
+		$(BLDTH);
+.PHONY: filterSmall
+
+filterSmall-all:
+	$(PYTHON) scripts/test/filterRawEdge.py $(GRAPH); \
+	chmod +x $(DIR)/$(GRAPH)/filter.sh; \
+	./$(GRAPH)/filter.sh; \
+	$(PYTHON) scripts/test/checkMallPreprocess.py $(GRAPH); \
+	chmod +x $(DIR)/$(GRAPH)/minicityRoomPreprocess.sh; \
+	chmod +x $(DIR)/$(GRAPH)/minicityRoomLink.sh; \
+	./$(GRAPH)/minicityRoomPreprocess.sh; \
+	cd ../Graph_City_Web/; \
+	../wave-decomposition/$(GRAPH)/minicityRoomLink.sh
+.PHONY: filterSmall-all
+
+filterLarge:
+	./filterGorilla \
+		$(GRAPH) \
+		$(GRAPH)/ \
+		$(GRAPH)/$(GRAPH)_waves/ \
+		$(GRAPH)/dag/ \
+		$(DAGNAME) \
+		$(LAYER) \
+		$(LCC) \
+		$(BUCKET) \
+		$$(python -c "import sys, json; data=json.load(sys.stdin); print(' '.join(map(str, [data['maxLabel'], data['nodeNum'], data['vertices'], data['edges']])))" < $(GRAPH)/dag/$(DAGNAME)-info.json) \
+		$$(python -c "import sys, json; data=json.load(sys.stdin); print(' '.join(map(str, [data['maxBuckLabel'], data['nodeNum']])))" < $(GRAPH)/dag/$(DAGNAME).buck-info.json) \
+		$(VICINITYTH) \
+		$(BLDTH) \
+		$(SMPTH);
+.PHONY: filterLarge
+
+filterLarge-all:
+	$(PYTHON) scripts/test/filterRawEdge_large.py $(GRAPH); \
+	chmod +x $(DIR)/$(GRAPH)/filter.sh; \
+	./$(GRAPH)/filter.sh
+.PHONY: filterLarge-all

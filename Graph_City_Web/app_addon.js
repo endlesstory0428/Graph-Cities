@@ -164,43 +164,148 @@ app.get('/', (req, res) => {
   // res.sendFile(__dirname + '/index.html');
   if (fs.existsSync(`${__dirname}/index-${city}.html`)) {
     res.sendFile(`${__dirname}/index-${city}.html`);
-    cacheLabel(city);
-    checkMallVicinity(city);
-    cacheBestBuilding(city)
+    // cacheLabel(city);
+    // checkMallVicinity(city);
+    // cacheBestBuilding(city)
   } else {
     res.send('File does not exist');
   }
 });
 
-function cacheLabel(city) {
-  const labelFileName = `${__dirname}/wave-decomposition/${city}/${city}_label.csv`;
-  const labelCacheName = `${city}_label`;
-  if (!fs.existsSync(labelFileName)) {
-    cache.set(labelCacheName, {
-      processingFlag: false, 
-      type: 'label.null', 
-      size: 1,
-      data: {}
-    });
-    return false;
-  } else {
-    const processPromise = csvParseStreamAsSimpleObj(labelFileName, d => d[0], d => d[1], d => 2, false);
-    cache.set(labelCacheName, {
-      processingFlag: true, 
-      processPromise: processPromise,
-      type: 'label', 
-      size: 1,
-      data: {}
-    });
-    processPromise.then(data => {
+function cacheLayerBuckLabel(city, layer, buck, sampleFlag = false) {
+  const labelSplitFile = `${__dirname}/wave-decomposition/${city}/flag/SPLIT_LABEL.cfg`
+  const baseLabelCacheName = `${city}_label`;
+  if (fs.existsSync(labelSplitFile)) {
+    // // consider to store some info in SPLIT_LABEL.cfg
+    console.log('SPLIT_LABEL')
+    const labelCacheName = baseLabelCacheName + `l${layer}b${buck}`;
+    let labelFileName = `${__dirname}/wave-decomposition/${city}/labels/layer-${layer}/buck-${buck}`
+    if (sampleFlag) {
+      labelFileName += '-smp.csv'
+    } else {
+      labelFileName += '.csv'
+    }
+    console.log(labelFileName)
+    if (cache.has(labelCacheName, {updateAgeOnHas: true})) {
+      // already in cache, return directly
+      console.log(labelCacheName, 'in cache')
+      return labelCacheName;
+    }
+    if (!fs.existsSync(labelFileName)) {
+      // no split, something wrong, set null
+      console.log('Error:', labelFileName, 'not exist')
       cache.set(labelCacheName, {
         processingFlag: false, 
-        type: 'label', 
-        size: data[1],
-        data: data[0]
+        type: 'label.null', 
+        size: 1,
+        data: {}
       });
-    })
+      return labelCacheName;
+    } else {
+      const processPromise = csvParseStreamAsSimpleObj(labelFileName, d => d[0], d => d[1], d => 2, false);
+      cache.set(labelCacheName, {
+        processingFlag: true, 
+        processPromise: processPromise,
+        type: 'label', 
+        size: 1,
+        data: {}
+      });
+      processPromise.then(data => {
+        cache.set(labelCacheName, {
+          processingFlag: false, 
+          type: 'label', 
+          size: data[1],
+          data: data[0]
+        });
+      })
+      return labelCacheName;
+    }
+  } else {
+    // not split, check if single label file exist
+    const labelCacheName = baseLabelCacheName;
+    const labelFileName = `${__dirname}/wave-decomposition/${city}/${city}_label.csv`;
+    console.log(labelFileName)
+    if (cache.has(labelCacheName, {updateAgeOnHas: true})) {
+      // already in cache, return directly
+      console.log(labelCacheName, 'in cache')
+      return labelCacheName;
+    }
+    if (!fs.existsSync(labelFileName)) {
+      // no label file, set null
+      console.log(labelFileName, 'not exist')
+      cache.set(labelCacheName, {
+        processingFlag: false, 
+        type: 'label.null', 
+        size: 1,
+        data: {}
+      });
+      return labelCacheName;
+    } else {
+      const processPromise = csvParseStreamAsSimpleObj(labelFileName, d => d[0], d => d[1], d => 2, false);
+      cache.set(labelCacheName, {
+        processingFlag: true, 
+        processPromise: processPromise,
+        type: 'label', 
+        size: 1,
+        data: {}
+      });
+      processPromise.then(data => {
+        cache.set(labelCacheName, {
+          processingFlag: false, 
+          type: 'label', 
+          size: data[1],
+          data: data[0]
+        });
+      })
+      return labelCacheName;
+    }
+  }
+}
+
+function cacheLabel(city) {
+  // return value: is there any cache? if false, just use labels
+  //                                   if true, then check split labels or single label file
+  const labelFileName = `${__dirname}/wave-decomposition/${city}/${city}_label.csv`;
+  const labelCacheName = `${city}_label`;
+  const labelSplitFile = `${__dirname}/wave-decomposition/${city}/flag/SPLIT_LABEL.cfg`;
+  // if (fs.existsSync(labelSplitFile)) {
+  if (false) { // // will be replaced by cacheLayerBuckLabel
+    // consider to store some info in SPLIT_LABEL.cfg, e.g. which fp should be cache in fp level, which fp should be cache in frag level
+    cache.set(labelCacheName, {
+      processingFlag: false, 
+      type: 'label.split', 
+      size: 1,
+      data: {}
+    });
     return true;
+  } else {
+    if (!fs.existsSync(labelFileName)) {
+      cache.set(labelCacheName, {
+        processingFlag: false, 
+        type: 'label.null', 
+        size: 1,
+        data: {}
+      });
+      return false;
+    } else {
+      const processPromise = csvParseStreamAsSimpleObj(labelFileName, d => d[0], d => d[1], d => 2, false);
+      cache.set(labelCacheName, {
+        processingFlag: true, 
+        processPromise: processPromise,
+        type: 'label', 
+        size: 1,
+        data: {}
+      });
+      processPromise.then(data => {
+        cache.set(labelCacheName, {
+          processingFlag: false, 
+          type: 'label', 
+          size: data[1],
+          data: data[0]
+        });
+      })
+      return true;
+    }
   }
 }
 
@@ -210,7 +315,7 @@ async function checkMallVicinity(dataset) {
   console.log(mallVicinityList);
   const vicinityProcessState = {};
   mallVicinityList.forEach((nodeInfo, idx) => {
-    const [layer, lcc, buck, wave, frag, level, nodeID] = nodeInfo;
+    const [layer, lcc, buck, wave, frag, level, nodeID, dagType] = nodeInfo;
     vicinityProcessState[`${layer}-${lcc}-${level}-${nodeID}`] = {
       layer: layer,
       lcc: lcc,
@@ -219,6 +324,7 @@ async function checkMallVicinity(dataset) {
       nodeID: nodeID,
       wave: wave,
       frag: frag,
+      dagType: dagType,
       processed: false,
     }
   })
@@ -255,7 +361,10 @@ async function processMallVicinity(dataset, vicinityProcessState, key) {
   const metaNode = nodeInfo.nodeID;
   const lcc = nodeInfo.lcc;
   const wfInfo = [nodeInfo.wave, nodeInfo.frag];
-  console.log(dataset, layer, lcc, bucket, metaNode, wfInfo)
+  const dagType = nodeInfo.dagType;
+  console.log(dataset, layer, lcc, bucket, metaNode, wfInfo, dagType)
+
+  const addTouchFlag = (dagType === 'wf.dag' || dagType === 'wf.dag.detail')
 
   const strataFilename = Array.isArray(metaNode) ? `${dataset}-${layer}-${lcc}-${metaNode[0]}` : `${dataset}-${layer}-${lcc}-${metaNode}`;
   const vicinityFileName = `${__dirname}/index-${strataFilename}.html`;
@@ -275,7 +384,8 @@ async function processMallVicinity(dataset, vicinityProcessState, key) {
   const dir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
 
   const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
-  const waveFileName = `layer-${layer}-waves-buck${bucket}.csv`;
+  // const waveFileName = `layer-${layer}-waves-buck${bucket}.csv`;
+  const waveFileName = `flt/layer-${layer}-waves-buck${bucket}.csv`;
   let node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
 
   const rawFragMapFileName = `${waveDir}/layer-${layer}-waves-buck${bucket}-fragMap.json`;
@@ -329,7 +439,7 @@ async function processMallVicinity(dataset, vicinityProcessState, key) {
   let vMap = undefined;
   let waveList = undefined;
   if (!cache.has(node2edgeListCacheName, {updateAgeOnHas: true})) {
-    const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, cacheWave, cacheFrag, true);
+    const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, cacheWave, cacheFrag, addTouchFlag);
     console.log('no', filename);
     processPromise.then(async () => {
       const cachedData = cache.get(node2edgeListCacheName);
@@ -338,13 +448,13 @@ async function processMallVicinity(dataset, vicinityProcessState, key) {
         const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
         const nodeVerts = metaNode.map(d => cachedData.data[1][d]).flat(1)
         // console.log(metaNode.map(d => cachedData.data[1][d]))
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         const res = send(strataFilename, nodeEdges, nodeLabels);
         return res;
       } else {
         const nodeEdges = cachedData.data[0][metaNode];
         const nodeVerts = cachedData.data[1][metaNode];
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         const res = send(strataFilename, nodeEdges, nodeLabels);
         return res;
       }
@@ -353,7 +463,7 @@ async function processMallVicinity(dataset, vicinityProcessState, key) {
     const cachedData = cache.get(node2edgeListCacheName);
     if (cachedData.processingFlag) {
       // // still processing
-      console.log('W: still processing data in /meta-dag-node-fp-viewer');
+      console.log('W: still processing data in /meta-dag-node-vicinity');
       cachedData.processPromise.then(async () => {
         const updatedCachedData = cache.get(node2edgeListCacheName);
         if (Array.isArray(metaNode)) {
@@ -361,13 +471,13 @@ async function processMallVicinity(dataset, vicinityProcessState, key) {
           const nodeEdges = metaNode.map(d => updatedCachedData.data[0][d]).flat(1)
           const nodeVerts = metaNode.map(d => updatedCachedData.data[1][d]).flat(1)
           // console.log(metaNode.map(d => updatedCachedData[1][d]))
-          const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+          const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
           const res = send(strataFilename, nodeEdges, nodeLabels);
           return res;
         } else {
           const nodeEdges = updatedCachedData.data[0][metaNode];
           const nodeVerts = updatedCachedData.data[1][metaNode];
-          const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+          const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
           const res = send(strataFilename, nodeEdges, nodeLabels);
           return res;
         }
@@ -377,13 +487,13 @@ async function processMallVicinity(dataset, vicinityProcessState, key) {
       if (Array.isArray(metaNode)) {
         const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
         const nodeVerts = metaNode.map(d => cachedData.data[1][d]).flat(1)
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         const res = send(strataFilename, nodeEdges, nodeLabels);
         return res;
       } else {
         const nodeEdges = cachedData.data[0][metaNode];
         const nodeVerts = cachedData.data[1][metaNode];
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         const res = send(strataFilename, nodeEdges, nodeLabels);
         return res;
       }
@@ -476,13 +586,18 @@ async function cacheBestBuilding(dataset) {
   const bestBuildingFile = fs.readFileSync(bestBuildingFileName)
   const bestBuildingList = JSON.parse(bestBuildingFile);
   for (const bestBuilding of bestBuildingList) {
+    await Promise.all(buildingCachePromises);
+    if (cache.calculatedSize >= cacheMaxSize * 0.75) {
+      break;
+    }
+    // const retValPromises = Promise.all(buildingCachePromises).then(() => cacheBuilding(dataset, bestBuilding))
     const retValPromises = await cacheBuilding(dataset, bestBuilding);
     buildingCachePromises.push(... retValPromises);
   }
   console.log(buildingCachePromises);
   
   Promise.all(buildingCachePromises).then(() => {
-    console.log('resolved all cahce')
+    console.log('resolved all cache')
     cache.set(cacheName, {
       processingFlag: false, 
       type: 'bestbuilding-cache', 
@@ -506,7 +621,7 @@ async function cacheBuilding(dataset, buildingInfo) {
   const dagFilePrefix = `${__dirname}/${filename}`;
   const dagInfoFileName = `${dagFilePrefix}-info.json`;
   const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
-  const waveFileName = `layer-${layer}-waves-buck${bucket}.csv`;
+  const waveFileName = `flt/layer-${layer}-waves-buck${bucket}.csv`;
   const node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
   
   // return a promise that contains all promises for cache building.
@@ -676,56 +791,56 @@ async function cacheBuilding(dataset, buildingInfo) {
             retValPromises.push(processPromise);
           }
         } else {
-          // // use wave-frag version
-          // const waveFragInfoFileName = `${dagFilePrefix}.wf.json`;
-          const waveLinkFile = `${dagFilePrefix}.wf.wave.link`;
-          const waveNodeFile = `${dagFilePrefix}.wf.wave.node`;
-          // // cache wave
-          const cacheName = `${dataset}/${filename}.dag.wave`;
-          const retName = 'wf.wave';
-          if (!cache.has(cacheName, {updateAgeOnHas: true})) {
-            // // not in the cache
-            const processPromise = readWaveNodeLinkStream(cacheName, waveNodeFile, waveLinkFile);
-            retValPromises.push(processPromise);
-            // processPromise.then(() => {
-            //   const cachedData = cache.get(cacheName);
-            //   res.send(JSON.stringify([cachedData.data, retInfo, retName]));
-            // })
-          } else {
-            // // // in the cache
-            // const cachedData = cache.get(cacheName);
-            // if (cachedData.processingFlag) {
-            //   // // still processing
-            //   console.log('W: still processing data in /meta-dag');
-            //   cachedData.processPromise.then(() => {
-            //     const updatedCachedData = cache.get(cacheName);
-            //     res.send(JSON.stringify([updatedCachedData.data, retInfo, retName]));
-            //   })
-            // } else {
-            //   // // processed
-            //   res.send(JSON.stringify([cachedData.data, retInfo, retName]));
-            // }
-          }
-          // // cache frag
-          const fragLinkFile = `${dagFilePrefix}.wf.frag.link`;
-          const fragNodeFile = `${dagFilePrefix}.wf.frag.node`;
-          const wave2fragInfoFile = `${dagFilePrefix}-info.json`;
-          const fragCacheName = `${dataset}/${filename}.dag.frag`;
-          if (!cache.has(fragCacheName, {updateAgeOnHas: true})) {
-            // // not in the cache
-            const processPromise = readFragNodeLinkStream(fragCacheName, fragNodeFile, fragLinkFile, wave2fragInfoFile);
-            retValPromises.push(processPromise);
-          }
-          // // cache raw dag
-          // const dagLinkFile = `${dagFilePrefix}.link`;
-          const dagLinkFile = `${dagFilePrefix}.span.link`;
-          const dagNodeFile = `${dagFilePrefix}.node`;
-          const dagCacheName = `${dataset}/${filename}.dag`;
-          if (!cache.has(dagCacheName, {updateAgeOnHas: true})) {
-            // // not in the cache
-            const processPromise = readDagNodeLinkBySetStream(dagCacheName, dagNodeFile, dagLinkFile, null);
-            retValPromises.push(processPromise);
-          }
+          // // // use wave-frag version
+          // // const waveFragInfoFileName = `${dagFilePrefix}.wf.json`;
+          // const waveLinkFile = `${dagFilePrefix}.wf.wave.link`;
+          // const waveNodeFile = `${dagFilePrefix}.wf.wave.node`;
+          // // // cache wave
+          // const cacheName = `${dataset}/${filename}.dag.wave`;
+          // const retName = 'wf.wave';
+          // if (!cache.has(cacheName, {updateAgeOnHas: true})) {
+          //   // // not in the cache
+          //   const processPromise = readWaveNodeLinkStream(cacheName, waveNodeFile, waveLinkFile);
+          //   retValPromises.push(processPromise);
+          //   // processPromise.then(() => {
+          //   //   const cachedData = cache.get(cacheName);
+          //   //   res.send(JSON.stringify([cachedData.data, retInfo, retName]));
+          //   // })
+          // } else {
+          //   // // // in the cache
+          //   // const cachedData = cache.get(cacheName);
+          //   // if (cachedData.processingFlag) {
+          //   //   // // still processing
+          //   //   console.log('W: still processing data in /meta-dag');
+          //   //   cachedData.processPromise.then(() => {
+          //   //     const updatedCachedData = cache.get(cacheName);
+          //   //     res.send(JSON.stringify([updatedCachedData.data, retInfo, retName]));
+          //   //   })
+          //   // } else {
+          //   //   // // processed
+          //   //   res.send(JSON.stringify([cachedData.data, retInfo, retName]));
+          //   // }
+          // }
+          // // // cache frag
+          // const fragLinkFile = `${dagFilePrefix}.wf.frag.link`;
+          // const fragNodeFile = `${dagFilePrefix}.wf.frag.node`;
+          // const wave2fragInfoFile = `${dagFilePrefix}-info.json`;
+          // const fragCacheName = `${dataset}/${filename}.dag.frag`;
+          // if (!cache.has(fragCacheName, {updateAgeOnHas: true})) {
+          //   // // not in the cache
+          //   const processPromise = readFragNodeLinkStream(fragCacheName, fragNodeFile, fragLinkFile, wave2fragInfoFile);
+          //   retValPromises.push(processPromise);
+          // }
+          // // // cache raw dag
+          // // const dagLinkFile = `${dagFilePrefix}.link`;
+          // const dagLinkFile = `${dagFilePrefix}.span.link`;
+          // const dagNodeFile = `${dagFilePrefix}.node`;
+          // const dagCacheName = `${dataset}/${filename}.dag`;
+          // if (!cache.has(dagCacheName, {updateAgeOnHas: true})) {
+          //   // // not in the cache
+          //   const processPromise = readDagNodeLinkBySetStream(dagCacheName, dagNodeFile, dagLinkFile, null);
+          //   retValPromises.push(processPromise);
+          // }
 
 
           // // process raw edge
@@ -733,6 +848,10 @@ async function cacheBuilding(dataset, buildingInfo) {
           if (rawEdgeCnt > TH_RAWSPLIT) {
             const processPromise = processRawFragMap(rawFragMapFileName)
             retValPromises.push(processPromise);
+            if (!cache.has(node2edgeListCacheName, {updateAgeOnHas: true})) {
+              const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, null, null, true);
+              retValPromises.push(processPromise);
+            }
           } else {
             cache.set(rawFragMapFileName, {
               processingFlag: false, 
@@ -747,14 +866,14 @@ async function cacheBuilding(dataset, buildingInfo) {
             }
           }
 
-          // Promise.all([
-          //   fs.promises.readFile(waveNodeFile),
-          //   fs.promises.readFile(waveLinkFile),
-          //   fs.promises.readFile(fragNodeFile),
-          //   fs.promises.readFile(fragLinkFile),
-          // ]).then(wfDatas => {
-          //   // // process to wf version
-          // })
+          // // Promise.all([
+          // //   fs.promises.readFile(waveNodeFile),
+          // //   fs.promises.readFile(waveLinkFile),
+          // //   fs.promises.readFile(fragNodeFile),
+          // //   fs.promises.readFile(fragLinkFile),
+          // // ]).then(wfDatas => {
+          // //   // // process to wf version
+          // // })
         }
         return retValPromises;
       })
@@ -894,8 +1013,9 @@ app.post('/best-cache', (req, res) => {
   const dataset = req.body.graphName;
   const cacheName = `${dataset}-bestbuilding-cache`;
   if (!cache.has(cacheName, {updateAgeOnHas: true})) {
-    cacheBestBuilding(dataset);
-    res.send(JSON.stringify({res: false, detail: 'no cache'}));
+    // cacheBestBuilding(dataset);
+    // res.send(JSON.stringify({res: false, detail: 'no cache'}));
+    res.send(JSON.stringify({res: true, detail: 'processed'})); // just for testing single building cache
   } else {
     const cachedData = cache.get(cacheName);
     if (cachedData.processingFlag) {
@@ -904,6 +1024,39 @@ app.post('/best-cache', (req, res) => {
       res.send(JSON.stringify({res: true, detail: 'processed'}));
     }
   }
+})
+
+app.post('/checkBuildingCache', async (req, res) => {
+  const filename = req.body.filename;
+  const dataset = req.body.graphName;
+  const layer = req.body.layer;
+  const lcc = req.body.lcc;
+  const bucket = req.body.bucket;
+
+  const buildingInfo = {layer: layer, lcc: lcc, buck: bucket}
+  
+  const processPromise = await cacheBuilding(dataset, buildingInfo);
+
+  console.log(processPromise)
+
+  Promise.all(processPromise).then(() => {
+    res.send(JSON.stringify({res: true, detail: 'processed'}));
+  })
+  
+
+
+  // const cacheName = `${dataset}-bestbuilding-cache`;
+  // if (!cache.has(cacheName, {updateAgeOnHas: true})) {
+  //   cacheBestBuilding(dataset);
+  //   res.send(JSON.stringify({res: false, detail: 'no cache'}));
+  // } else {
+  //   const cachedData = cache.get(cacheName);
+  //   if (cachedData.processingFlag) {
+  //     res.send(JSON.stringify({res: false, detail: 'processing'}));
+  //   } else {
+  //     res.send(JSON.stringify({res: true, detail: 'processed'}));
+  //   }
+  // }
 })
 
 app.post('/meta-dag-wave-mini', (req, res) => {
@@ -989,7 +1142,7 @@ app.post('/meta-dag', (req, res) => {
   const dagInfoFileName = `${dagFilePrefix}-info.json`;
   const dagSpanInfoFileName = `${dagFilePrefix}.span-info.json`;
   const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
-  const waveFileName = `layer-${layer}-waves-buck${bucket}.csv`;
+  const waveFileName = `flt/layer-${layer}-waves-buck${bucket}.csv`;
   const node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
   Promise.all([
     fs.promises.readFile(dagInfoFileName, 'utf8'),
@@ -1262,6 +1415,9 @@ app.post('/meta-dag', (req, res) => {
           const rawFragMapFileName = `${waveDir}/layer-${layer}-waves-buck${bucket}-fragMap.json`;
           if (rawEdgeCnt > TH_RAWSPLIT) {
             processRawFragMap(rawFragMapFileName)
+            if (!cache.has(node2edgeListCacheName, {updateAgeOnHas: true})) {
+              readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, null, null, true);
+            }
           } else {
             cache.set(rawFragMapFileName, {
               processingFlag: false, 
@@ -1638,6 +1794,13 @@ async function csvParseStreamAsSimpleObjAndArrayObj(filename, simpleKeyFunc, sim
       let record;
       while((record = parser.read()) !== null ) {
         const parsedRecord = record.map(d => parseInt(d));
+        // console.log(record, parsedRecord, simpleKeyFunc(parsedRecord), simpleValFunc(parsedRecord))
+        // if (simpleKeyFunc(parsedRecord) == null || simpleKeyFunc(parsedRecord) < 0 || !Number.isInteger(simpleKeyFunc(parsedRecord))) {
+        //   console.log(record, parsedRecord, simpleKeyFunc(parsedRecord), simpleValFunc(parsedRecord))
+        // }
+        // if (retvalSize % 10000 === 0) {
+        //   console.log('finish size: ', retvalSize)
+        // }
         simpleRetval[simpleKeyFunc(parsedRecord)] = simpleValFunc(parsedRecord);
         const recordKey = arrayKeyFunc(parsedRecord);
         if (!arrayRetval.hasOwnProperty(recordKey)) {
@@ -2406,7 +2569,7 @@ function cacheFragBuckNodeLinkStream(filename, nodeFile, linkFile, vmapFile) {
 // }
 
 
-function readWaveAndVMapStream(filename, waveFileName, dir, dataset, wave, frag, addtouching = false) {
+function readWaveAndVMapStream(filename, waveFileName, dir, dataset, wave, frag, addtouching = false, noFilter = false) {
   console.log('wf', wave, frag)
   let cacheName = `${dataset}/${waveFileName}:node2edgeList`;
   if (wave == null || frag == null || wave == undefined || frag == undefined) {
@@ -2414,13 +2577,14 @@ function readWaveAndVMapStream(filename, waveFileName, dir, dataset, wave, frag,
   } else {
     cacheName += `-${wave}-${frag}`;
   } 
-  const processPromise = cacheWaveAndVMapStream(filename, waveFileName, dir, dataset, wave, frag, addtouching);
+  const processPromise = cacheWaveAndVMapStream(filename, waveFileName, dir, dataset, wave, frag, addtouching, noFilter);
   cache.set(cacheName, {processingFlag: true, processPromise: processPromise, type: 'node2edgeList', size: 1, data: undefined});
   return processPromise;
 }
 
-function cacheWaveAndVMapStream(filename, waveFileName, dir, dataset, wave, frag, addtouching = false) {
+function cacheWaveAndVMapStream(filename, waveFileName, dir, dataset, wave, frag, addtouching = false, noFilter = false) {
   let cacheName = `${dataset}/${waveFileName}:node2edgeList`;
+  let vMapName = `${dataset}/${waveFileName}:node2vertList`
   let suffix = ''
   let csvsuffix = '';
   if (wave == null || frag == null || wave == undefined || frag == undefined) {
@@ -2435,12 +2599,14 @@ function cacheWaveAndVMapStream(filename, waveFileName, dir, dataset, wave, frag
     const nodePromise = csvParseStreamAsSimpleObj(`${__dirname}/${filename}.node`, d => d[0], d => [d[1], d[2]], d => 1)
     const vmapPromise = csvParseStreamAsSimpleObjAndArrayObj(`${__dirname}/${filename}.vmap`, d => d[1], d => d[0], d => d[0], d => d[1], d => 1);
     const wavePromise = Promise.all([nodePromise, vmapPromise]).then(data => {
+      console.log('node, vmap done')
       const nodeData = data[0];
       const nodeWF = nodeData[0];
       const vmapData = data[1]
       const vmap = vmapData[0][0];
       // console.log(vmap)
-      return csvParseStreamAsArrayObjWithComplexKey(`${dir}/${waveFileName.slice(0, -4)}${csvsuffix}.csv`, d => [vmap[d[0]], vmap[d[1]]], d => [d[0], d[1]], d => nodeWF[d], d => [d[2], d[4]], d => 2)
+      // return csvParseStreamAsArrayObjWithComplexKey(`${dir}/${waveFileName.slice(0, -4)}${csvsuffix}.csv`, d => [vmap[d[0]], vmap[d[1]]], d => [d[0], d[1]], d => nodeWF[d], d => [d[2], d[4]], d => 2)
+      return csvParseStreamAsArrayObjWithComplexKey(`${dir}/${waveFileName.slice(0, -4)}${csvsuffix}.csv`, d => [vmap[d[0]], vmap[d[1]]], d => [d[0], d[1]], d => nodeWF[d], d => [d[2], d[3]], d => 2)
     })
     const allPromises = [vmapPromise, wavePromise]
     const processPromise = Promise.all(allPromises);
@@ -2454,6 +2620,16 @@ function cacheWaveAndVMapStream(filename, waveFileName, dir, dataset, wave, frag
         type: 'node2edgeList',
         size: node2edgeListLength + node2vListLength,
         data: [node2edgeList, node2vList]
+      });
+    })
+
+    Promise.all([vmapPromise]).then(datas => {
+      const [[v2nodeMap, node2vList], node2vListLength] = datas[0];
+      cache.set(vMapName, {
+        processingFlag: false,
+        type: 'node2vertList',
+        size: node2vListLength,
+        data: [null, node2vList]
       });
     })
 
@@ -2462,7 +2638,11 @@ function cacheWaveAndVMapStream(filename, waveFileName, dir, dataset, wave, frag
     const vmapPromise = csvParseStreamAsSimpleObjAndArrayObj(`${__dirname}/${filename}.vmap`, d => d[1], d => d[0], d => d[0], d => d[1], d => 1);
     const wavePromise = vmapPromise.then(vmapData => {
       const vmap = vmapData[0][0];
-      return csvParseStreamAsArrayObj(`${dir}/${waveFileName.slice(0, -4)}${csvsuffix}.csv`, d => vmap[d[0]], d => [d[0], d[1]], d => vmap[d[0]] === vmap[d[1]], d => 2)
+      if (noFilter) {
+        return csvParseStreamAsArrayObj(`${dir}/${waveFileName.slice(0, -4)}${csvsuffix}.csv`, d => vmap[d[0]], d => [d[0], d[1]], d => true, d => 2)
+      } else {
+        return csvParseStreamAsArrayObj(`${dir}/${waveFileName.slice(0, -4)}${csvsuffix}.csv`, d => vmap[d[0]], d => [d[0], d[1]], d => vmap[d[0]] === vmap[d[1]], d => 2)
+      }
     })
     const allPromises = [vmapPromise, wavePromise]
     const processPromise = Promise.all(allPromises);
@@ -2479,8 +2659,142 @@ function cacheWaveAndVMapStream(filename, waveFileName, dir, dataset, wave, frag
       });
     })
 
+    Promise.all([vmapPromise]).then(datas => {
+      const [[v2nodeMap, node2vList], node2vListLength] = datas[0];
+      cache.set(vMapName, {
+        processingFlag: false,
+        type: 'node2vertList',
+        size: node2vListLength,
+        data: [null, node2vList]
+      });
+    })
+
     return processPromise
   }
+}
+
+function readVMapStream(filename, waveFileName, dir, dataset, wave, frag, addtouching = false, noFilter = false, reverseFlag = false) {
+  console.log('wf', wave, frag)
+  let cacheName = `${dataset}/${waveFileName}:node2vertList`;
+  if (wave == null || frag == null || wave == undefined || frag == undefined) {
+    // nothing to do
+  } else {
+    cacheName += `-${wave}-${frag}`;
+  } 
+  const processPromise = cacheVMapStream(filename, waveFileName, dir, dataset, wave, frag, addtouching, noFilter, reverseFlag);
+  cache.set(cacheName, {processingFlag: true, processPromise: processPromise, type: 'node2vertList', size: 1, data: undefined});
+  return processPromise;
+}
+
+function cacheVMapStream(filename, waveFileName, dir, dataset, wave, frag, addtouching = false, noFilter = false, reverseFlag = false) {
+  let cacheName = `${dataset}/${waveFileName}:node2edgeList`;
+  let vMapName = `${dataset}/${waveFileName}:node2vertList`
+  let suffix = ''
+  let csvsuffix = '';
+  // if (wave == null || frag == null || wave == undefined || frag == undefined) {
+  //   // nothing to do
+  // } else {
+  //   suffix = `-${wave}-${frag}`;
+  //   cacheName += suffix
+  //   csvsuffix = `-wave-${wave}-frag-${frag}`
+  // }
+  // console.log(cacheName)
+  // if (addtouching) {
+  //   // const nodePromise = csvParseStreamAsSimpleObj(`${__dirname}/${filename}.node`, d => d[0], d => [d[1], d[2]], d => 1)
+  //   const vmapPromise = csvParseStreamAsSimpleObjAndArrayObj(`${__dirname}/${filename}.vmap`, d => d[1], d => d[0], d => d[0], d => d[1], d => 1);
+  //   // const wavePromise = Promise.all([nodePromise, vmapPromise]).then(data => {
+  //   //   const nodeData = data[0];
+  //   //   const nodeWF = nodeData[0];
+  //   //   const vmapData = data[1]
+  //   //   const vmap = vmapData[0][0];
+  //   //   // console.log(vmap)
+  //   //   return csvParseStreamAsArrayObjWithComplexKey(`${dir}/${waveFileName.slice(0, -4)}${csvsuffix}.csv`, d => [vmap[d[0]], vmap[d[1]]], d => [d[0], d[1]], d => nodeWF[d], d => [d[2], d[4]], d => 2)
+  //   // })
+  //   // const allPromises = [vmapPromise, wavePromise]
+  //   // const processPromise = Promise.all(allPromises);
+
+  //   // processPromise.then(datas => {
+  //   //   const [[v2nodeMap, node2vList], node2vListLength] = datas[0];
+  //   //   const [node2edgeList, node2edgeListLength] = datas[1];
+
+  //   //   cache.set(cacheName, {
+  //   //     processingFlag: false,
+  //   //     type: 'node2edgeList',
+  //   //     size: node2edgeListLength + node2vListLength,
+  //   //     data: [node2edgeList, node2vList]
+  //   //   });
+  //   // })
+
+  //   const processPromise = Promise.all([vmapPromise])
+    
+  //   processPromise.then(datas => {
+  //     const [[v2nodeMap, node2vList], node2vListLength] = datas[0];
+  //     cache.set(vMapName, {
+  //       processingFlag: false,
+  //       type: 'node2vertList',
+  //       size: node2vListLength,
+  //       data: [null, node2vList]
+  //     });
+  //   })
+
+  //   return processPromise
+  // } else {
+  //   const vmapPromise = csvParseStreamAsSimpleObjAndArrayObj(`${__dirname}/${filename}.vmap`, d => d[1], d => d[0], d => d[0], d => d[1], d => 1);
+  //   const wavePromise = vmapPromise.then(vmapData => {
+  //     const vmap = vmapData[0][0];
+  //     return csvParseStreamAsArrayObj(`${dir}/${waveFileName.slice(0, -4)}${csvsuffix}.csv`, d => vmap[d[0]], d => [d[0], d[1]], d => vmap[d[0]] === vmap[d[1]], d => 2)
+  //   })
+  //   const allPromises = [vmapPromise, wavePromise]
+  //   const processPromise = Promise.all(allPromises);
+
+  //   processPromise.then(datas => {
+  //     const [[v2nodeMap, node2vList], node2vListLength] = datas[0];
+  //     const [node2edgeList, node2edgeListLength] = datas[1];
+
+  //     cache.set(cacheName, {
+  //       processingFlag: false,
+  //       type: 'node2edgeList',
+  //       size: node2edgeListLength + node2vListLength,
+  //       data: [node2edgeList, node2vList]
+  //     });
+  //   })
+
+  //   Promise.all([vmapPromise]).then(datas => {
+  //     const [[v2nodeMap, node2vList], node2vListLength] = datas[0];
+  //     cache.set(vMapName, {
+  //       processingFlag: false,
+  //       type: 'node2vertList',
+  //       size: node2vListLength,
+  //       data: [node2vList]
+  //     });
+  //   })
+
+  //   return processPromise
+  // }
+
+  const vmapPromise = csvParseStreamAsSimpleObjAndArrayObj(`${__dirname}/${filename}.vmap`, d => d[1], d => d[0], d => d[0], d => d[1], d => 1);
+
+  const processPromise = Promise.all([vmapPromise])
+    
+  processPromise.then(datas => {
+    const [[v2nodeMap, node2vList], node2vListLength] = datas[0];
+    if (reverseFlag) {
+      cache.set(vMapName, {
+        processingFlag: false,
+        type: 'node2vertList',
+        size: node2vListLength,
+        data: [null, v2nodeMap]
+      });
+    } else {
+      cache.set(vMapName, {
+        processingFlag: false,
+        type: 'node2vertList',
+        size: node2vListLength,
+        data: [null, node2vList]
+      });
+    }
+  })
+  return processPromise
 }
 
 // function cacheWaveAndVMap(filename, waveFileName, dir, dataset) {
@@ -2762,7 +3076,7 @@ app.post('/meta-dag-wf-frag', (req, res) => {
 
   const dagInfoFileName = `${dagFilePrefix}-info.json`;
   const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
-  const waveFileName = `layer-${layer}-waves-buck${bucket}.csv`;
+  const waveFileName = `flt/layer-${layer}-waves-buck${bucket}.csv`;
   const node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
   const rawFragMapFileName = `${waveDir}/layer-${layer}-waves-buck${bucket}-fragMap.json`;
   Promise.all([
@@ -3203,12 +3517,15 @@ app.post('/meta-dag-node', async (req, res) => {
   const wfInfo = req.body.wfInfo;
   const buildingName = req.body.buildingName;
   const sampleFlag = req.body.sampleFlag;
+  const dagType = req.body.dagType;
+
+  const addTouchFlag = (dagType === 'wf.dag' || dagType === 'wf.dag.detail')
 
   const wavefile = `layer-${layer}-waves-buck${bucket}.csv`;
   const dir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
 
   const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
-  const waveFileName = `layer-${layer}-waves-buck${bucket}.csv`;
+  const waveFileName = `flt/layer-${layer}-waves-buck${bucket}.csv`;
   let node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
 
 
@@ -3252,19 +3569,19 @@ app.post('/meta-dag-node', async (req, res) => {
   let vMap = undefined;
   let waveList = undefined;
   if (!cache.has(node2edgeListCacheName, {updateAgeOnHas: true})) {
-    const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, cacheWave, cacheFrag, true);
+    const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, cacheWave, cacheFrag, addTouchFlag);
     console.log('no', filename);
     processPromise.then(async () => {
       const cachedData = cache.get(node2edgeListCacheName);
       if (Array.isArray(metaNode)) {
         const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1).filter(d => d != null)
         const nodeVerts = metaNode.map(d => cachedData.data[1][d]).flat(1)
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       } else {
         const nodeEdges = cachedData.data[0][metaNode].filter(d => d != null);
         const nodeVerts = cachedData.data[1][metaNode];
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       }
     })
@@ -3278,12 +3595,12 @@ app.post('/meta-dag-node', async (req, res) => {
         if (Array.isArray(metaNode)) {
           const nodeEdges = metaNode.map(d => updatedCachedData.data[0][d]).flat(1).filter(d => d != null)
           const nodeVerts = metaNode.map(d => updatedCachedData.data[1][d]).flat(1)
-          const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+          const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
           send(strataFilename, nodeEdges, nodeLabels);
         } else {
           const nodeEdges = updatedCachedData.data[0][metaNode].filter(d => d != null);
           const nodeVerts = updatedCachedData.data[1][metaNode];
-          const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+          const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
           send(strataFilename, nodeEdges, nodeLabels);
         }
       })
@@ -3292,12 +3609,12 @@ app.post('/meta-dag-node', async (req, res) => {
       if (Array.isArray(metaNode)) {
         const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1).filter(d => d != null)
         const nodeVerts = metaNode.map(d => cachedData.data[1][d]).flat(1)
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       } else {
         const nodeEdges = cachedData.data[0][metaNode].filter(d => d != null);
         const nodeVerts = cachedData.data[1][metaNode];
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       }
     }
@@ -3440,6 +3757,9 @@ app.post('/meta-dag-node-fp-viewer', async (req, res) => {
   const tempMetaNode = req.body.tempMetaNode; // need send from client
   const desc = req.body.desc;
   const sampleFlag = req.body.sampleFlag;
+  const dagType = req.body.dagType;
+
+  const addTouchFlag = (dagType === 'wf.dag' || dagType === 'wf.dag.detail')
 
   console.log(buildingName, prevMetaNode, metaNode)
 
@@ -3462,7 +3782,7 @@ app.post('/meta-dag-node-fp-viewer', async (req, res) => {
   const dir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
 
   const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
-  const waveFileName = `layer-${layer}-waves-buck${bucket}.csv`;
+  const waveFileName = `flt/layer-${layer}-waves-buck${bucket}.csv`;
   let node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
 
   const rawFragMapFileName = `${waveDir}/layer-${layer}-waves-buck${bucket}-fragMap.json`;
@@ -3540,7 +3860,7 @@ app.post('/meta-dag-node-fp-viewer', async (req, res) => {
   let vMap = undefined;
   let waveList = undefined;
   if (!cache.has(node2edgeListCacheName, {updateAgeOnHas: true})) {
-    const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, cacheWave, cacheFrag, true);
+    const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, cacheWave, cacheFrag, addTouchFlag);
     console.log('no', filename);
     processPromise.then(async () => {
       const cachedData = cache.get(node2edgeListCacheName);
@@ -3549,12 +3869,12 @@ app.post('/meta-dag-node-fp-viewer', async (req, res) => {
         const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
         const nodeVerts = metaNode.map(d => cachedData.data[1][d]).flat(1)
         // console.log(metaNode.map(d => cachedData.data[1][d]))
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       } else {
         const nodeEdges = cachedData.data[0][metaNode];
         const nodeVerts = cachedData.data[1][metaNode];
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       }
       // const nodeEdges = cachedData.data[0][metaNode];
@@ -3570,16 +3890,16 @@ app.post('/meta-dag-node-fp-viewer', async (req, res) => {
       cachedData.processPromise.then(async () => {
         const updatedCachedData = cache.get(node2edgeListCacheName);
         if (Array.isArray(metaNode)) {
-          // console.log('metaNode', metaNode)
+          console.log('metaNode', metaNode)
           const nodeEdges = metaNode.map(d => updatedCachedData.data[0][d]).flat(1)
           const nodeVerts = metaNode.map(d => updatedCachedData.data[1][d]).flat(1)
           // console.log(metaNode.map(d => updatedCachedData[1][d]))
-          const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+          const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
           send(strataFilename, nodeEdges, nodeLabels);
         } else {
           const nodeEdges = updatedCachedData.data[0][metaNode];
           const nodeVerts = updatedCachedData.data[1][metaNode];
-          const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+          const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
           send(strataFilename, nodeEdges, nodeLabels);
         }
         // const nodeEdges = updatedCachedData.data[0][metaNode];
@@ -3592,12 +3912,12 @@ app.post('/meta-dag-node-fp-viewer', async (req, res) => {
       if (Array.isArray(metaNode)) {
         const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
         const nodeVerts = metaNode.map(d => cachedData.data[1][d]).flat(1)
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       } else {
         const nodeEdges = cachedData.data[0][metaNode];
         const nodeVerts = cachedData.data[1][metaNode];
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       }
       // const nodeEdges = cachedData.data[0][metaNode];
@@ -3608,6 +3928,7 @@ app.post('/meta-dag-node-fp-viewer', async (req, res) => {
   }
 
   function send(filename, nodeEdges, nodeLabels) {
+    console.log(nodeEdges)
     // const linkJsonList = [];
     // console.log(nodeEdges, nodeLabels)
     // const labelJsonList = [{source: "new_id", target: "name"}];
@@ -3697,36 +4018,117 @@ app.post('/meta-dag-node-vicinity', async (req, res) => {
   const metaNode = req.body.metaNode;
   const lcc = req.body.lcc;
   const wfInfo = req.body.wfInfo;
-  const metaGraph = req.body.metaGraph;
-  const buildingName = req.body.buildingName;
+  // const metaGraph = req.body.metaGraph;
+  // const buildingName = req.body.buildingName;
   const sampleFlag = req.body.sampleFlag;
+  const dagType = req.body.dagType;
 
-  let strataFilename = Array.isArray(metaNode) ? `${dataset}-${layer}-${lcc}-${metaNode[0]}` : `${dataset}-${layer}-${lcc}-${metaNode}`;
-  if (sampleFlag) {
-    strataFilename += '-smp'
+  const addTouchFlag = (dagType === 'wf.dag' || dagType === 'wf.dag.detail')
+  const buckMapFlag = (dagType === 'wf.dag' || dagType === 'wf.dag.detail')
+
+  console.log(dataset, layer, lcc, bucket, metaNode, wfInfo, sampleFlag)
+
+  let strataFilename;
+
+  if (buckMapFlag) {
+    const nodeID = Array.isArray(metaNode) ? metaNode[0] : metaNode;
+    const dagFilePrefix = `${__dirname}/${filename}`;
+    const buckLinkFile = `${dagFilePrefix}.buck.link`;
+    const buckNodeFile = `${dagFilePrefix}.buck.node`;
+    const buckVMapFile = `${dagFilePrefix}.buck.vmap`;
+    const waveNodeBuckName = `dag/${dagFilePrefix}.buck`;
+    const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
+    let cacheWave, cacheFrag;
+    let node2BuckCacheName = `${dataset}/${waveNodeBuckName}:node2vertList`;
+    if (!cache.has(node2BuckCacheName, {updateAgeOnHas: true})) {
+      // const processPromise = readWaveAndVMapStream(filename, waveNodeBuckName, waveDir, dataset, cacheWave, cacheFrag, true);
+      const processPromise = readVMapStream(filename + '.buck', waveNodeBuckName, waveDir, dataset, cacheWave, cacheFrag, true, false, true);
+      console.log('no', filename + '.buck');
+      processPromise.then(async () => {
+        const cachedData = cache.get(node2BuckCacheName);
+        // console.log(cachedData.data[1], nodeID)
+        // const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
+        // const nodeVerts = {};
+        // metaNode.forEach(d => nodeVerts[d] = cachedData.data[1][d])
+        // const nodeLabels = await getImportantNodeLabels(nodeVerts, dataset)
+        // send(nodeLabels);
+        const buckID = cachedData.data[1][nodeID]
+        strataFilename = `${dataset}-${layer}-${lcc}-${buckID}`
+        processVicinity(strataFilename, false);
+      })
+    } else {
+      const cachedData = cache.get(node2BuckCacheName);
+      if (cachedData.processingFlag) {
+        // // still processing
+        console.log('W: still processing data in /meta-dag-node');
+        cachedData.processPromise.then(async () => {
+          const updatedCachedData = cache.get(node2BuckCacheName);
+          // const nodeEdges = metaNode.map(d => updatedCachedData.data[0][d]).flat(1)
+          // const nodeVerts = {};
+          // metaNode.forEach(d => nodeVerts[d] = updatedCachedData.data[1][d])
+          // const nodeLabels = await getImportantNodeLabels(nodeVerts, dataset)
+          // send(nodeLabels);
+          const buckID = updatedCachedData.data[1][nodeID]
+          strataFilename = `${dataset}-${layer}-${lcc}-${buckID}`
+          processVicinity(strataFilename, false);
+        })
+      } else {
+        // // processed
+        // const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
+        // const nodeVerts = {};
+        // metaNode.forEach(d => nodeVerts[d] = cachedData.data[1][d])
+        // const nodeLabels = await getImportantNodeLabels(nodeVerts, dataset)
+        // send(nodeLabels);
+        const buckID = cachedData.data[1][nodeID]
+        strataFilename = `${dataset}-${layer}-${lcc}-${buckID}`
+        processVicinity(strataFilename, false);
+      }
+    }
+  } else {
+    strataFilename = Array.isArray(metaNode) ? `${dataset}-${layer}-${lcc}-${metaNode[0]}` : `${dataset}-${layer}-${lcc}-${metaNode}`;
+    processVicinity(strataFilename);
   }
-  const vicinityFileName = `${__dirname}/index-${strataFilename}.html`;
-  if (fs.existsSync(vicinityFileName)) {
-    console.log(vicinityFileName, 'exists')
-    res.send(JSON.stringify({success: true, detail: 'vicinity exist', name: strataFilename}));
-    return;
-  }
 
-  console.log(wfInfo)
-
-  const wavefile = `layer-${layer}-waves-buck${bucket}.csv`;
-  const dir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
-
-  const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
-  const waveFileName = `layer-${layer}-waves-buck${bucket}.csv`;
-  let node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
-
-  const rawFragMapFileName = `${waveDir}/layer-${layer}-waves-buck${bucket}-fragMap.json`;
-  let cacheWave, cacheFrag;
-  if (fs.existsSync(rawFragMapFileName)) {
-    if (!cache.has(rawFragMapFileName, {updateAgeOnHas: true})) {
-      const processPromise =  processRawFragMap(rawFragMapFileName)
-      processPromise.then(() => {
+  async function processVicinity(strataFilename, addSmpSuffix = true) {
+    if (sampleFlag && addSmpSuffix) {
+      strataFilename += '-smp'
+    }
+    console.log(strataFilename)
+    console.log('start checking vicinity existing or not')
+    const vicinityFileName = `${__dirname}/index-${strataFilename}.html`;
+    if (fs.existsSync(vicinityFileName)) {
+      console.log(vicinityFileName, 'exists')
+      res.send(JSON.stringify({success: true, detail: 'vicinity exist', name: strataFilename}));
+      return;
+    }
+    console.log(vicinityFileName, 'not exists')
+  
+    console.log(wfInfo)
+  
+    const wavefile = `layer-${layer}-waves-buck${bucket}.csv`;
+    const dir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
+  
+    const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
+    const waveFileName = `flt/layer-${layer}-waves-buck${bucket}.csv`;
+    let node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
+  
+    const rawFragMapFileName = `${waveDir}/layer-${layer}-waves-buck${bucket}-fragMap.json`;
+    let cacheWave, cacheFrag;
+    if (fs.existsSync(rawFragMapFileName)) {
+      if (!cache.has(rawFragMapFileName, {updateAgeOnHas: true})) {
+        const processPromise =  processRawFragMap(rawFragMapFileName)
+        processPromise.then(() => {
+          const cachedMap = cache.get(rawFragMapFileName);
+          if (cachedMap.type === 'dagNodeLink.wf.fragMap.null') {
+            // read full
+          } else {
+            const wfName = cachedMap.data[1][wfInfo[0]][wfInfo[1]];
+            node2edgeListCacheName += `-${wfName[0]}-${wfName[1]}`;
+            cacheWave = wfName[0];
+            cacheFrag = wfName[1];
+          }
+        })
+      } else {
         const cachedMap = cache.get(rawFragMapFileName);
         if (cachedMap.type === 'dagNodeLink.wf.fragMap.null') {
           // read full
@@ -3736,188 +4138,178 @@ app.post('/meta-dag-node-vicinity', async (req, res) => {
           cacheWave = wfName[0];
           cacheFrag = wfName[1];
         }
-      })
-    } else {
-      const cachedMap = cache.get(rawFragMapFileName);
-      if (cachedMap.type === 'dagNodeLink.wf.fragMap.null') {
-        // read full
-      } else {
-        const wfName = cachedMap.data[1][wfInfo[0]][wfInfo[1]];
-        node2edgeListCacheName += `-${wfName[0]}-${wfName[1]}`;
-        cacheWave = wfName[0];
-        cacheFrag = wfName[1];
       }
     }
-  }
-
   
-  // if (wfInfo.length === 2) {
-  //   node2edgeListCacheName += `-${wfInfo[0]}-${wfInfo[1]}`;
-  // }
-  console.log(node2edgeListCacheName);
-
-  // fs.writeFile(`${__dirname}/fpViewer/${strataFilename}-metaDag.json`, JSON.stringify(metaGraph), (err) => {
-  //   if (err) {
-  //     console.log(err);
-  //   }
-  // });
-
-  // fs.writeFile(`${__dirname}/fpViewer/${strataFilename}-wfGlobal.json`, JSON.stringify(wfInfo), (err) => {
-  //   if (err) {
-  //     console.log(err);
-  //   }
-  // });
+    
+    // if (wfInfo.length === 2) {
+    //   node2edgeListCacheName += `-${wfInfo[0]}-${wfInfo[1]}`;
+    // }
+    console.log(node2edgeListCacheName);
   
-  let readyFlag = true;
-  let vMap = undefined;
-  let waveList = undefined;
-  if (!cache.has(node2edgeListCacheName, {updateAgeOnHas: true})) {
-    const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, cacheWave, cacheFrag, true);
-    console.log('no', filename);
-    processPromise.then(async () => {
-      const cachedData = cache.get(node2edgeListCacheName);
-      if (Array.isArray(metaNode)) {
-        console.log('metaNode', metaNode)
-        const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
-        const nodeVerts = metaNode.map(d => cachedData.data[1][d]).flat(1)
-        // console.log(metaNode.map(d => cachedData.data[1][d]))
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
-        send(strataFilename, nodeEdges, nodeLabels);
-      } else {
-        const nodeEdges = cachedData.data[0][metaNode];
-        const nodeVerts = cachedData.data[1][metaNode];
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
-        send(strataFilename, nodeEdges, nodeLabels);
-      }
-      // const nodeEdges = cachedData.data[0][metaNode];
-      // const nodeVerts = cachedData.data[1][metaNode];
-      // const nodeLabels = getNodeLabels(nodeVerts)
-      // send(strataFilename, nodeEdges, nodeLabels);
-    })
-  } else {
-    const cachedData = cache.get(node2edgeListCacheName);
-    if (cachedData.processingFlag) {
-      // // still processing
-      console.log('W: still processing data in /meta-dag-node-fp-viewer');
-      cachedData.processPromise.then(async () => {
-        const updatedCachedData = cache.get(node2edgeListCacheName);
+    // fs.writeFile(`${__dirname}/fpViewer/${strataFilename}-metaDag.json`, JSON.stringify(metaGraph), (err) => {
+    //   if (err) {
+    //     console.log(err);
+    //   }
+    // });
+  
+    // fs.writeFile(`${__dirname}/fpViewer/${strataFilename}-wfGlobal.json`, JSON.stringify(wfInfo), (err) => {
+    //   if (err) {
+    //     console.log(err);
+    //   }
+    // });
+    
+    let readyFlag = true;
+    let vMap = undefined;
+    let waveList = undefined;
+    if (!cache.has(node2edgeListCacheName, {updateAgeOnHas: true})) {
+      const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, cacheWave, cacheFrag, addTouchFlag);
+      console.log('no', filename);
+      processPromise.then(async () => {
+        const cachedData = cache.get(node2edgeListCacheName);
         if (Array.isArray(metaNode)) {
-          // console.log('metaNode', metaNode)
-          const nodeEdges = metaNode.map(d => updatedCachedData.data[0][d]).flat(1)
-          const nodeVerts = metaNode.map(d => updatedCachedData.data[1][d]).flat(1)
-          // console.log(metaNode.map(d => updatedCachedData[1][d]))
-          const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+          console.log('metaNode', metaNode)
+          const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
+          const nodeVerts = metaNode.map(d => cachedData.data[1][d]).flat(1)
+          // console.log(metaNode.map(d => cachedData.data[1][d]))
+          const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
           send(strataFilename, nodeEdges, nodeLabels);
         } else {
-          const nodeEdges = updatedCachedData.data[0][metaNode];
-          const nodeVerts = updatedCachedData.data[1][metaNode];
-          const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+          const nodeEdges = cachedData.data[0][metaNode];
+          const nodeVerts = cachedData.data[1][metaNode];
+          const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
           send(strataFilename, nodeEdges, nodeLabels);
         }
-        // const nodeEdges = updatedCachedData.data[0][metaNode];
-        // const nodeVerts = updatedCachedData.data[1][metaNode];
+        // const nodeEdges = cachedData.data[0][metaNode];
+        // const nodeVerts = cachedData.data[1][metaNode];
         // const nodeLabels = getNodeLabels(nodeVerts)
         // send(strataFilename, nodeEdges, nodeLabels);
       })
     } else {
-      // // processed
-      if (Array.isArray(metaNode)) {
-        const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
-        const nodeVerts = metaNode.map(d => cachedData.data[1][d]).flat(1)
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
-        send(strataFilename, nodeEdges, nodeLabels);
-      } else {
-        const nodeEdges = cachedData.data[0][metaNode];
-        const nodeVerts = cachedData.data[1][metaNode];
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
-        send(strataFilename, nodeEdges, nodeLabels);
-      }
-      // const nodeEdges = cachedData.data[0][metaNode];
-      // const nodeVerts = cachedData.data[1][metaNode];
-      // const nodeLabels = getNodeLabels(nodeVerts)
-      // send(strataFilename, nodeEdges, nodeLabels);
-    }
-  }
-
-  function send(filename, nodeEdges, nodeLabels) {
-    // const linkJsonList = [];
-    // console.log(nodeEdges, nodeLabels)
-    // const labelJsonList = [{source: "new_id", target: "name"}];
-    // for (const [src, tgt] of nodeEdges) {
-    //   linkJsonList.push({source: src, target: tgt});
-    // }
-    // for (const [v, label] of nodeLabels) {
-    //   labelJsonList.push({source: v, target: label});
-    // }
-    // console.log(filename);
-    // let content = JSON.stringify({
-    //   filename: filename + ".csv",
-    //   edges: linkJsonList
-    // });
-    const localDir = `${__dirname}/wave-decomposition/${filename}`
-    // const vicinityName = `${dataset}-l${layer}-b${bucket}`
-    const vicinityFileName = `${__dirname}/index-${filename}.html`
-    if (!fs.existsSync(vicinityFileName)) {
-      if (!fs.existsSync(localDir)) {
-        fs.mkdirSync(localDir)
-      }
-      fs.writeFile(`${localDir}/${filename}.txt`, nodeEdges.map(d => `${d[0]}\t${d[1]}`).join('\n'), function (err, data) {
-        if (err) {
-          res.send(JSON.stringify({success: false, detail: 'edge', url: `na`}));
-          return console.log(err);
-        }
-        fs.writeFile(`${localDir}/${filename}_label.csv`, nodeLabels.map(d => `"${d[0]}","${d[1]}"`).join('\n'), function (err, data) {
-          if (err) {
-            res.send(JSON.stringify({success: false, detail: 'label', url: `na`}));
-            return console.log(err);
+      const cachedData = cache.get(node2edgeListCacheName);
+      if (cachedData.processingFlag) {
+        // // still processing
+        console.log('W: still processing data in /meta-dag-node-vicinity');
+        cachedData.processPromise.then(async () => {
+          const updatedCachedData = cache.get(node2edgeListCacheName);
+          if (Array.isArray(metaNode)) {
+            // console.log('metaNode', metaNode)
+            const nodeEdges = metaNode.map(d => updatedCachedData.data[0][d]).flat(1)
+            const nodeVerts = metaNode.map(d => updatedCachedData.data[1][d]).flat(1)
+            // console.log(metaNode.map(d => updatedCachedData[1][d]))
+            const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
+            send(strataFilename, nodeEdges, nodeLabels);
+          } else {
+            const nodeEdges = updatedCachedData.data[0][metaNode];
+            const nodeVerts = updatedCachedData.data[1][metaNode];
+            const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
+            send(strataFilename, nodeEdges, nodeLabels);
           }
+          // const nodeEdges = updatedCachedData.data[0][metaNode];
+          // const nodeVerts = updatedCachedData.data[1][metaNode];
+          // const nodeLabels = getNodeLabels(nodeVerts)
+          // send(strataFilename, nodeEdges, nodeLabels);
         })
-        exec(`cd wave-decomposition; make GRAPH=${filename} PARENT=${dataset} prepareCity`, {maxBuffer: 1024 * 1024 * 50}, (err, stdout, stderr) => {
+      } else {
+        // // processed
+        if (Array.isArray(metaNode)) {
+          const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
+          const nodeVerts = metaNode.map(d => cachedData.data[1][d]).flat(1)
+          const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
+          send(strataFilename, nodeEdges, nodeLabels);
+        } else {
+          const nodeEdges = cachedData.data[0][metaNode];
+          const nodeVerts = cachedData.data[1][metaNode];
+          const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
+          send(strataFilename, nodeEdges, nodeLabels);
+        }
+        // const nodeEdges = cachedData.data[0][metaNode];
+        // const nodeVerts = cachedData.data[1][metaNode];
+        // const nodeLabels = getNodeLabels(nodeVerts)
+        // send(strataFilename, nodeEdges, nodeLabels);
+      }
+    }
+  
+    function send(filename, nodeEdges, nodeLabels) {
+      // const linkJsonList = [];
+      // console.log(nodeEdges, nodeLabels)
+      // const labelJsonList = [{source: "new_id", target: "name"}];
+      // for (const [src, tgt] of nodeEdges) {
+      //   linkJsonList.push({source: src, target: tgt});
+      // }
+      // for (const [v, label] of nodeLabels) {
+      //   labelJsonList.push({source: v, target: label});
+      // }
+      // console.log(filename);
+      // let content = JSON.stringify({
+      //   filename: filename + ".csv",
+      //   edges: linkJsonList
+      // });
+      const localDir = `${__dirname}/wave-decomposition/${filename}`
+      // const vicinityName = `${dataset}-l${layer}-b${bucket}`
+      const vicinityFileName = `${__dirname}/index-${filename}.html`
+      if (!fs.existsSync(vicinityFileName)) {
+        if (!fs.existsSync(localDir)) {
+          fs.mkdirSync(localDir)
+        }
+        fs.writeFile(`${localDir}/${filename}.txt`, nodeEdges.map(d => `${d[0]}\t${d[1]}`).join('\n'), function (err, data) {
           if (err) {
-            res.send(JSON.stringify({success: false, detail: 'prepareVicinity', name: `na`}));
+            res.send(JSON.stringify({success: false, detail: 'edge', url: `na`}));
             return console.log(err);
           }
-          exec(`make GRAPH=${filename} retrive-mall`, {maxBuffer: 1024 * 1024 * 50}, (err, stdout, stderr) => {
+          fs.writeFile(`${localDir}/${filename}_label.csv`, nodeLabels.map(d => `"${d[0]}","${d[1]}"`).join('\n'), function (err, data) {
             if (err) {
-              res.send(JSON.stringify({success: false, detail: 'retrive', name: `na`}));
+              res.send(JSON.stringify({success: false, detail: 'label', url: `na`}));
               return console.log(err);
             }
-            res.send(JSON.stringify({success: true, name: filename}))
+          })
+          exec(`cd wave-decomposition; make GRAPH=${filename} PARENT=${dataset} prepareCity`, {maxBuffer: 1024 * 1024 * 50}, (err, stdout, stderr) => {
+            if (err) {
+              res.send(JSON.stringify({success: false, detail: 'prepareVicinity', name: `na`}));
+              return console.log(err);
+            }
+            exec(`make GRAPH=${filename} retrive-mall`, {maxBuffer: 1024 * 1024 * 50}, (err, stdout, stderr) => {
+              if (err) {
+                res.send(JSON.stringify({success: false, detail: 'retrive', name: `na`}));
+                return console.log(err);
+              }
+              res.send(JSON.stringify({success: true, name: filename}))
+            })
           })
         })
-      })
-    } else {
-      console.log(localDir, 'exists')
-      res.send(JSON.stringify({success: true, detail: 'vicinity exist', name: filename}));
+      } else {
+        console.log(localDir, 'exists')
+        res.send(JSON.stringify({success: true, detail: 'vicinity exist', name: filename}));
+      }
+  
+      // console.log(content);
+      // httpGetAsync(strataAddress + "query?type=setdatadir&file=./temp", function(strataRes) {
+      //   console.log(strataRes);
+      // });
+      // httpPostAsync(content, strataAddress + "save", function(strataRes) {
+      //   console.log(strataRes)
+      //   console.log(strataRes.errno)
+      //   if (strataRes.errno == 0 || strataRes.errno == -17) {
+      //     // // send labels to strata
+      //     content = JSON.stringify({
+      //       filename: filename + "_labels.csv",
+      //       edges: labelJsonList
+      //     });
+      //     httpPostAsync(content, strataAddress + "save", function(strataRes) {
+      //       console.log(strataRes)
+      //       console.log(strataRes.errno)
+      //       if (strataRes.errno == 0 || strataRes.errno == -17) {
+      //         // console.log(true)
+      //         res.send(JSON.stringify({res: true, detail: 'strata'}));
+      //       } else {
+      //         res.send(JSON.stringify({res: false, detail: 'strata'}));
+      //       }
+      //     });
+      //   } else {
+      //     res.send(JSON.stringify({res: false, detail: 'strata'}));
+      //   }
+      // });
     }
-
-    // console.log(content);
-    // httpGetAsync(strataAddress + "query?type=setdatadir&file=./temp", function(strataRes) {
-    //   console.log(strataRes);
-    // });
-    // httpPostAsync(content, strataAddress + "save", function(strataRes) {
-    //   console.log(strataRes)
-    //   console.log(strataRes.errno)
-    //   if (strataRes.errno == 0 || strataRes.errno == -17) {
-    //     // // send labels to strata
-    //     content = JSON.stringify({
-    //       filename: filename + "_labels.csv",
-    //       edges: labelJsonList
-    //     });
-    //     httpPostAsync(content, strataAddress + "save", function(strataRes) {
-    //       console.log(strataRes)
-    //       console.log(strataRes.errno)
-    //       if (strataRes.errno == 0 || strataRes.errno == -17) {
-    //         // console.log(true)
-    //         res.send(JSON.stringify({res: true, detail: 'strata'}));
-    //       } else {
-    //         res.send(JSON.stringify({res: false, detail: 'strata'}));
-    //       }
-    //     });
-    //   } else {
-    //     res.send(JSON.stringify({res: false, detail: 'strata'}));
-    //   }
-    // });
   }
 });
 
@@ -3928,15 +4320,57 @@ app.post('/meta-dag-node-vicinity', async (req, res) => {
 // function getNodeLabels(vSet) {
 //   return [...vSet].map(d => [d, d]);
 // }
-async function getNodeLabels(vList, dataset) {
+async function getNodeLabels(vList, dataset, layer, bucket, sampleFlag = false) {
   // const labelFileName = `${__dirname}/wave-decomposition/${dataset}/${dataset}_label.csv`;
   const labelCacheName = `${dataset}_label`;
-  if (!cache.has(labelCacheName, { updateAgeOnHas: true })) {
-    const res = cacheLabel(dataset)
-    console.log('no', labelCacheName, res)
-    if (res) {
-      // there is a label.csv
-      const cachedData = cache.get(labelCacheName);
+  const labelLayerBuckCacheName = labelCacheName + `l${layer}b${bucket}`;
+
+  if (!cache.has(labelLayerBuckCacheName, { updateAgeOnHas: true })) {
+    // no layer bucket cache
+    if (!cache.has(labelCacheName, { updateAgeOnHas: true })) {
+      // also no full cache
+      console.log('no', labelCacheName, 'no', labelLayerBuckCacheName)
+      const res = cacheLayerBuckLabel(dataset, layer, bucket, sampleFlag) // return a new cache name
+      console.log(res)
+      const cachedData = cache.get(res)
+      if (cachedData.processingFlag) {
+        // // still processing
+        console.log('W: still processing data in /getNodeLables');
+        await cachedData.processPromise;
+        const updatedCachedData = cache.get(res) // get corresponding cache
+        return vList.map(d => [d, updatedCachedData.data[d]]);
+      } else {
+        // // processed
+        if (cachedData.type === 'label.null') {
+          return vList.map(d => [d, d]);
+        } else {
+          return vList.map(d => [d, cachedData.data[d]])
+        }
+      }
+      
+      // if (res) {
+      //   // there is a label.csv
+      //   const cachedData = cache.get(labelCacheName);
+      //   if (cachedData.processingFlag) {
+      //     // // still processing
+      //     console.log('W: still processing data in /getNodeLables');
+      //     await cachedData.processPromise
+      //     const updatedCachedData = cache.get(labelCacheName)
+      //     return vList.map(d => [d, updatedCachedData.data[d]]);
+      //   } else {
+      //     // // processed
+      //     if (cachedData.type === 'label.null') {
+      //       return vList.map(d => [d, d]);
+      //     } else {
+      //       return vList.map(d => [d, cachedData.data[d]])
+      //     }
+      //   }
+      // } else {
+      //   return vList.map(d => [d, d]);
+      // }
+    } else {
+      // no layer bucket cache, but there is a full cache, use full cache
+      const cachedData = cache.get(labelCacheName)
       if (cachedData.processingFlag) {
         // // still processing
         console.log('W: still processing data in /getNodeLables');
@@ -3951,16 +4385,15 @@ async function getNodeLabels(vList, dataset) {
           return vList.map(d => [d, cachedData.data[d]])
         }
       }
-    } else {
-      return vList.map(d => [d, d]);
     }
   } else {
-    const cachedData = cache.get(labelCacheName)
+    // there is a single layer bucket cache, use it
+    const cachedData = cache.get(labelLayerBuckCacheName)
     if (cachedData.processingFlag) {
       // // still processing
       console.log('W: still processing data in /getNodeLables');
       await cachedData.processPromise
-      const updatedCachedData = cache.get(labelCacheName)
+      const updatedCachedData = cache.get(labelLayerBuckCacheName)
       return vList.map(d => [d, updatedCachedData.data[d]]);
     } else {
       // // processed
@@ -3973,20 +4406,25 @@ async function getNodeLabels(vList, dataset) {
   }
 }
 
-async function getImportantNodeLabels(vObj, dataset) {
+async function getImportantNodeLabels(vObj, dataset, layer, bucket, sampleFlag = false) {
   // const labelFileName = `${__dirname}/wave-decomposition/${dataset}/${dataset}_label.csv`;
   const labelCacheName = `${dataset}_label`;
-  if (!cache.has(labelCacheName, { updateAgeOnHas: true })) {
-    const res = cacheLabel(dataset)
-    console.log('no', labelCacheName, res)
-    if (res) {
-      // there is a label.csv
-      const cachedData = cache.get(labelCacheName);
+  const labelLayerBuckCacheName = labelCacheName + `l${layer}b${bucket}`;
+
+  if (!cache.has(labelLayerBuckCacheName, { updateAgeOnHas: true })) {
+    // no layer bucket cache
+    if (!cache.has(labelCacheName, { updateAgeOnHas: true })) {
+      // also no full cache
+      console.log('no', labelCacheName, 'no', labelLayerBuckCacheName)
+      const res = cacheLayerBuckLabel(dataset, layer, bucket, sampleFlag) // return a new cache name
+      console.log(res)
+      const cachedData = cache.get(res)
+
       if (cachedData.processingFlag) {
         // // still processing
-        console.log('W: still processing data in /getNodeLables');
+        console.log('W: still processing data in /getImportantNodeLabels');
         await cachedData.processPromise
-        const updatedCachedData = cache.get(labelCacheName)
+        const updatedCachedData = cache.get(res) // get corresponding cache
         for (const key in vObj) {
           if (vObj.hasOwnProperty(key)) {
             const vList = vObj[key];
@@ -4017,16 +4455,95 @@ async function getImportantNodeLabels(vObj, dataset) {
           return vObj;
         }
       }
+
+      // if (res) {
+      //   // there is a label.csv
+      //   const cachedData = cache.get(labelCacheName);
+      //   if (cachedData.processingFlag) {
+      //     // // still processing
+      //     console.log('W: still processing data in /getNodeLables');
+      //     await cachedData.processPromise
+      //     const updatedCachedData = cache.get(labelCacheName)
+      //     for (const key in vObj) {
+      //       if (vObj.hasOwnProperty(key)) {
+      //         const vList = vObj[key];
+      //         const shorterVList = vList.slice(0, Math.ceil(Math.log2(1 + vList.length)));
+      //         vObj[key] = shorterVList.map(d => updatedCachedData.data[d]);
+      //       }
+      //     }
+      //     return vObj;
+      //   } else {
+      //     // // processed
+      //     if (cachedData.type === 'label.null') {
+      //       for (const key in vObj) {
+      //         if (vObj.hasOwnProperty(key)) {
+      //           const vList = vObj[key];
+      //           const shorterVList = vList.slice(0, Math.ceil(Math.log2(1 + vList.length)));
+      //           vObj[key] = shorterVList
+      //         }
+      //       }
+      //       return vObj;
+      //     } else {
+      //       for (const key in vObj) {
+      //         if (vObj.hasOwnProperty(key)) {
+      //           const vList = vObj[key];
+      //           const shorterVList = vList.slice(0, Math.ceil(Math.log2(1 + vList.length)));
+      //           vObj[key] = shorterVList.map(d => cachedData.data[d]);
+      //         }
+      //       }
+      //       return vObj;
+      //     }
+      //   }
+      // } else {
+      //   return vObj;
+      // }
     } else {
-      return vObj;
+      // no layer bucket cache, but there is a full cache, use full cache
+      const cachedData = cache.get(labelCacheName)
+      if (cachedData.processingFlag) {
+        // // still processing
+        console.log('W: still processing data in /getImportantNodeLabels');
+        await cachedData.processPromise
+        const updatedCachedData = cache.get(labelCacheName)
+          for (const key in vObj) {
+            if (vObj.hasOwnProperty(key)) {
+              const vList = vObj[key];
+              const shorterVList = vList.slice(0, Math.ceil(Math.log2(1 + vList.length)));
+              vObj[key] = shorterVList.map(d => updatedCachedData.data[d]);
+            }
+          }
+          return vObj;
+      } else {
+        // // processed
+        if (cachedData.type === 'label.null') {
+          for (const key in vObj) {
+            if (vObj.hasOwnProperty(key)) {
+              const vList = vObj[key];
+              const shorterVList = vList.slice(0, Math.ceil(Math.log2(1 + vList.length)));
+              vObj[key] = shorterVList
+            }
+          }
+          return vObj;
+        } else {
+          for (const key in vObj) {
+            if (vObj.hasOwnProperty(key)) {
+              const vList = vObj[key];
+              const shorterVList = vList.slice(0, Math.ceil(Math.log2(1 + vList.length)));
+              vObj[key] = shorterVList.map(d => cachedData.data[d]);
+            }
+          }
+          return vObj;
+        }
+      }
     }
   } else {
-    const cachedData = cache.get(labelCacheName)
+    // there is a single layer bucket cache, use it
+    const cachedData = cache.get(labelLayerBuckCacheName)
     if (cachedData.processingFlag) {
       // // still processing
-      console.log('W: still processing data in /getNodeLables');
+      console.log('W: still processing data in /getImportantNodeLabels');
       await cachedData.processPromise
-      const updatedCachedData = cache.get(labelCacheName)
+      const updatedCachedData = cache.get(labelLayerBuckCacheName)
         for (const key in vObj) {
           if (vObj.hasOwnProperty(key)) {
             const vList = vObj[key];
@@ -4057,23 +4574,28 @@ async function getImportantNodeLabels(vObj, dataset) {
         return vObj;
       }
     }
-  }
+  }  
 }
 
-async function getAllNodeLabels(vList, dataset) {
+async function getAllNodeLabels(vList, dataset, layer, bucket, sampleFlag = false) {
   // const labelFileName = `${__dirname}/wave-decomposition/${dataset}/${dataset}_label.csv`;
   const labelCacheName = `${dataset}_label`;
-  if (!cache.has(labelCacheName, { updateAgeOnHas: true })) {
-    const res = cacheLabel(dataset)
-    console.log('no', labelCacheName, res)
-    if (res) {
-      // there is a label.csv
-      const cachedData = cache.get(labelCacheName);
+  const labelLayerBuckCacheName = labelCacheName + `l${layer}b${bucket}`;
+
+  if (!cache.has(labelLayerBuckCacheName, { updateAgeOnHas: true })) {
+    // no layer bucket cache
+    if (!cache.has(labelCacheName, { updateAgeOnHas: true })) {
+      // also no full cache
+      console.log('no', labelCacheName, 'no', labelLayerBuckCacheName)
+      const res = cacheLayerBuckLabel(dataset, layer, bucket, sampleFlag) // return a new cache name
+      console.log(res)
+      const cachedData = cache.get(res)
+
       if (cachedData.processingFlag) {
         // // still processing
-        console.log('W: still processing data in /getNodeLables');
+        console.log('W: still processing data in /getAllNodeLabels');
         await cachedData.processPromise
-        const updatedCachedData = cache.get(labelCacheName)
+        const updatedCachedData = cache.get(res) // get corresponding cache
         return vList.map(d => updatedCachedData.data[d]);
       } else {
         // // processed
@@ -4083,16 +4605,53 @@ async function getAllNodeLabels(vList, dataset) {
           return vList.map(d => cachedData.data[d]);
         }
       }
+
+      // if (res) {
+      //   // there is a label.csv
+      //   const cachedData = cache.get(labelCacheName);
+      //   if (cachedData.processingFlag) {
+      //     // // still processing
+      //     console.log('W: still processing data in /getNodeLables');
+      //     await cachedData.processPromise
+      //     const updatedCachedData = cache.get(labelCacheName)
+      //     return vList.map(d => updatedCachedData.data[d]);
+      //   } else {
+      //     // // processed
+      //     if (cachedData.type === 'label.null') {
+      //       return vList
+      //     } else {
+      //       return vList.map(d => cachedData.data[d]);
+      //     }
+      //   }
+      // } else {
+      //   return vList;
+      // }
     } else {
-      return vList;
+      // no layer bucket cache, but there is a full cache, use full cache
+      const cachedData = cache.get(labelCacheName)
+      if (cachedData.processingFlag) {
+        // // still processing
+        console.log('W: still processing data in /getNodeLables');
+        await cachedData.processPromise
+        const updatedCachedData = cache.get(labelCacheName)
+        return vList.map(d => updatedCachedData.data[d]);
+      } else {
+        // // processed
+        if (cachedData.type === 'label.null') {
+          return vList;
+        } else {
+          return vList.map(d => cachedData.data[d]);
+        }
+      }
     }
   } else {
-    const cachedData = cache.get(labelCacheName)
+    // there is a single layer bucket cache, use it
+    const cachedData = cache.get(labelLayerBuckCacheName)
     if (cachedData.processingFlag) {
       // // still processing
       console.log('W: still processing data in /getNodeLables');
       await cachedData.processPromise
-      const updatedCachedData = cache.get(labelCacheName)
+      const updatedCachedData = cache.get(labelLayerBuckCacheName)
       return vList.map(d => updatedCachedData.data[d]);
     } else {
       // // processed
@@ -4105,22 +4664,26 @@ async function getAllNodeLabels(vList, dataset) {
   }
 }
 
-async function getDagNodeLabels(vList, dataset) {
+async function getDagNodeLabels(vList, dataset, layer, bucket, sampleFlag = false) {
   // const labelFileName = `${__dirname}/wave-decomposition/${dataset}/${dataset}_label.csv`;
   const labelCacheName = `${dataset}_label`;
+  const labelLayerBuckCacheName = labelCacheName + `l${layer}b${bucket}`;
   const vObj = {};
 
-  if (!cache.has(labelCacheName, { updateAgeOnHas: true })) {
-    const res = cacheLabel(dataset)
-    console.log('no', labelCacheName, res)
-    if (res) {
-      // there is a label.csv
-      const cachedData = cache.get(labelCacheName);
+  if (!cache.has(labelLayerBuckCacheName, { updateAgeOnHas: true })) {
+    // no layer bucket cache
+    if (!cache.has(labelCacheName, { updateAgeOnHas: true })) {
+      // also no full cache
+      console.log('no', labelCacheName, 'no', labelLayerBuckCacheName)
+      const res = cacheLayerBuckLabel(dataset, layer, bucket, sampleFlag) // return a new cache name
+      console.log(res)
+      const cachedData = cache.get(res)
+
       if (cachedData.processingFlag) {
         // // still processing
-        console.log('W: still processing data in /getNodeLables');
+        console.log('W: still processing data in /getDagNodeLabels');
         await cachedData.processPromise
-        const updatedCachedData = cache.get(labelCacheName)
+        const updatedCachedData = cache.get(res) // get corresponding cache
         // return vList.map(d => updatedCachedData.data[d]);
         vList.forEach(d => vObj[d] = updatedCachedData.data[d]);
         return vObj;
@@ -4134,17 +4697,61 @@ async function getDagNodeLabels(vList, dataset) {
           return vObj
         }
       }
+
+      // if (res) {
+      //   // there is a label.csv
+      //   const cachedData = cache.get(labelCacheName);
+      //   if (cachedData.processingFlag) {
+      //     // // still processing
+      //     console.log('W: still processing data in /getNodeLables');
+      //     await cachedData.processPromise
+      //     const updatedCachedData = cache.get(labelCacheName)
+      //     // return vList.map(d => updatedCachedData.data[d]);
+      //     vList.forEach(d => vObj[d] = updatedCachedData.data[d]);
+      //     return vObj;
+      //   } else {
+      //     // // processed
+      //     if (cachedData.type === 'label.null') {
+      //       vList.forEach(d => vObj[d] = d);
+      //       return vObj
+      //     } else {
+      //       vList.forEach(d => vObj[d] = cachedData.data[d]);
+      //       return vObj
+      //     }
+      //   }
+      // } else {
+      //   vList.forEach(d => vObj[d] = d);
+      //   return vObj
+      // }
     } else {
-      vList.forEach(d => vObj[d] = d);
-      return vObj
+      // no layer bucket cache, but there is a full cache, use full cache
+      const cachedData = cache.get(labelCacheName)
+      if (cachedData.processingFlag) {
+        // // still processing
+        console.log('W: still processing data in /getDagNodeLabels');
+        await cachedData.processPromise
+        const updatedCachedData = cache.get(labelCacheName)
+        vList.forEach(d => vObj[d] = updatedCachedData.data[d]);
+        return vObj;
+      } else {
+        // // processed
+        if (cachedData.type === 'label.null') {
+          vList.forEach(d => vObj[d] = d);
+          return vObj
+        } else {
+          vList.forEach(d => vObj[d] = cachedData.data[d]);
+          return vObj;
+        }
+      }
     }
   } else {
-    const cachedData = cache.get(labelCacheName)
+    // there is a single layer bucket cache, use it
+    const cachedData = cache.get(labelLayerBuckCacheName)
     if (cachedData.processingFlag) {
       // // still processing
-      console.log('W: still processing data in /getNodeLables');
+      console.log('W: still processing data in /getDagNodeLabels');
       await cachedData.processPromise
-      const updatedCachedData = cache.get(labelCacheName)
+      const updatedCachedData = cache.get(labelLayerBuckCacheName)
       vList.forEach(d => vObj[d] = updatedCachedData.data[d]);
       return vObj;
     } else {
@@ -4158,6 +4765,8 @@ async function getDagNodeLabels(vList, dataset) {
       }
     }
   }
+
+  
 }
 
 // function sendToStrata(filename, links, labels, callback) {
@@ -4388,6 +4997,20 @@ app.post('/city-vicinity', (req, res) => {
     makeName += '-smp'
   }
 
+  let labelFileName;
+  const labelSplitFile = `${__dirname}/wave-decomposition/${dataset}/flag/SPLIT_LABEL.cfg`
+  if (fs.existsSync(labelSplitFile)) {
+    // // consider to store some info in SPLIT_LABEL.cfg
+    console.log('SPLIT_LABEL')
+    if (sample) {
+      labelFileName = `${__dirname}/wave-decomposition/${dataset}/labels/layer-${layer}/buck-${bucket}-smp.csv`
+    } else {
+      labelFileName = `${__dirname}/wave-decomposition/${dataset}/labels/layer-${layer}/buck-${bucket}.csv`
+    }
+  } else {
+    labelFileName = `${__dirname}/wave-decomposition/${dataset}/${dataset}_label.csv`
+  }
+
   const vicinityName = `${dataset}-l${layer}-b${bucket}${smpSuffix}`
   const vicinityFileName = `${__dirname}/index-${vicinityName}.html`
 
@@ -4399,7 +5022,7 @@ app.post('/city-vicinity', (req, res) => {
         res.send(JSON.stringify({success: false, detail: 'buck2vicinity', name: `na`}));
         return console.log(err);
       }
-      exec(`cd wave-decomposition; ln -s ${__dirname}/wave-decomposition/${dataset}/${dataset}_label.csv ${__dirname}/wave-decomposition/${vicinityName}/${vicinityName}_label.csv; make GRAPH=${vicinityName} PARENT=${dataset} prepareVicinity`, {maxBuffer: 1024 * 1024 * 50}, (err, stdout, stderr) => {
+      exec(`cd wave-decomposition; ln -s ${labelFileName} ${__dirname}/wave-decomposition/${vicinityName}/${vicinityName}_label.csv; make GRAPH=${vicinityName} PARENT=${dataset} prepareVicinity`, {maxBuffer: 1024 * 1024 * 50}, (err, stdout, stderr) => {
         if (err) {
           res.send(JSON.stringify({success: false, detail: 'prepareVicinity', name: `na`}));
           return console.log(err);
@@ -4421,9 +5044,24 @@ app.post('/city-vicinity-fpviewer', (req, res) => {
   const layer = req.body.layer;
   const bucket = req.body.bucket;
   const lcc = req.body.lcc;
+  const sample = req.body.sample == null ? false : true;
 
   const vicinityName = `${dataset}-l${layer}-b${bucket}`
   const vicinityFileName = `${__dirname}/fpViewer/index3_${vicinityName}.html`;
+
+  let labelFileName;
+  const labelSplitFile = `${__dirname}/wave-decomposition/${dataset}/flag/SPLIT_LABEL.cfg`
+  if (fs.existsSync(labelSplitFile)) {
+    // // consider to store some info in SPLIT_LABEL.cfg
+    console.log('SPLIT_LABEL')
+    if (sample) {
+      labelFileName = `${__dirname}/wave-decomposition/${dataset}/labels/layer-${layer}/buck-${bucket}-smp.csv`
+    } else {
+      labelFileName = `${__dirname}/wave-decomposition/${dataset}/labels/layer-${layer}/buck-${bucket}.csv`
+    }
+  } else {
+    labelFileName = `${__dirname}/wave-decomposition/${dataset}/${dataset}_label.csv`
+  }
 
   if (fs.existsSync(vicinityFileName)) {
     res.send(JSON.stringify({success: true, name: vicinityName}))
@@ -4433,7 +5071,7 @@ app.post('/city-vicinity-fpviewer', (req, res) => {
         res.send(JSON.stringify({res: false, detail: 'fpViewer', url: `na`}));
         return console.log(err);
       }
-      exec(`cd wave-decomposition; ln -s ${__dirname}/wave-decomposition/${dataset}/${dataset}_label.csv ${__dirname}/wave-decomposition/${vicinityName}/${vicinityName}_label.csv; make GRAPH=${vicinityName} PARENT=${dataset} fpViewer`, (err, stdout, stderr) => {
+      exec(`cd wave-decomposition; ln -s ${labelFileName} ${__dirname}/wave-decomposition/${vicinityName}/${vicinityName}_label.csv; make GRAPH=${vicinityName} PARENT=${dataset} fpViewer`, (err, stdout, stderr) => {
         if (err) {
           res.send(JSON.stringify({res: false, detail: 'fpViewer', url: `na`}));
           return console.log(err);
@@ -4507,19 +5145,19 @@ app.post('/building2strata', async (req, res) => {
 
 
   const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
-  const waveFileName = `layer-${layer}-waves-buck${bucket}.csv`;
+  const waveFileName = `flt/layer-${layer}-waves-buck${bucket}.csv`;
   let node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
 
   const strataFilename = `${dataset}_${layer}-${lcc}`;
 
   if (!cache.has(node2edgeListCacheName, { updateAgeOnHas: true })) {
-    const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, null, null, true);
+    const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, null, null, false, true);
     console.log('no', filename);
     processPromise.then(async () => {
       const cachedData = cache.get(node2edgeListCacheName);
       const nodeEdges = Object.values(cachedData.data[0]).flat(1);
       const nodeVerts = Object.values(cachedData.data[1]).flat(1);
-      const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+      const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
       send(strataFilename, nodeEdges, nodeLabels);
     })
   } else {
@@ -4531,14 +5169,14 @@ app.post('/building2strata', async (req, res) => {
         const updatedCachedData = cache.get(node2edgeListCacheName);
         const nodeEdges = Object.values(updatedCachedData.data[0]).flat(1);
         const nodeVerts = Object.values(updatedCachedData.data[1]).flat(1);
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       })
     } else {
       // // processed
       const nodeEdges = Object.values(cachedData.data[0]).flat(1);
       const nodeVerts = Object.values(cachedData.data[1]).flat(1);
-      const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+      const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
       send(strataFilename, nodeEdges, nodeLabels);
     }
   }
@@ -4604,7 +5242,7 @@ app.post('/building2fpViewer', async (req, res) => {
 
 
   const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
-  const waveFileName = `layer-${layer}-waves-buck${bucket}.csv`;
+  const waveFileName = `flt/layer-${layer}-waves-buck${bucket}.csv`;
   let node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
 
   const strataFilename = `${dataset}_${layer}-${lcc}`;
@@ -4629,13 +5267,13 @@ app.post('/building2fpViewer', async (req, res) => {
 
 
   if (!cache.has(node2edgeListCacheName, { updateAgeOnHas: true })) {
-    const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, null, null, true);
+    const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, null, null, false, true);
     console.log('no', filename);
     processPromise.then(async () => {
       const cachedData = cache.get(node2edgeListCacheName);
       const nodeEdges = Object.values(cachedData.data[0]).flat(1);
       const nodeVerts = Object.values(cachedData.data[1]).flat(1);
-      const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+      const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
       send(strataFilename, nodeEdges, nodeLabels);
     })
   } else {
@@ -4647,14 +5285,14 @@ app.post('/building2fpViewer', async (req, res) => {
         const updatedCachedData = cache.get(node2edgeListCacheName);
         const nodeEdges = Object.values(updatedCachedData.data[0]).flat(1);
         const nodeVerts = Object.values(updatedCachedData.data[1]).flat(1);
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       })
     } else {
       // // processed
       const nodeEdges = Object.values(cachedData.data[0]).flat(1);
       const nodeVerts = Object.values(cachedData.data[1]).flat(1);
-      const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+      const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
       send(strataFilename, nodeEdges, nodeLabels);
     }
   }
@@ -4795,7 +5433,7 @@ app.post('/edgeCut2strata', (req, res) => {
     console.log(nodeIDList);
     console.log(nodeIDList.length);
     const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
-    const waveFileName = `layer-${layer}-waves-buck${bucket}.csv`;
+    const waveFileName = `flt/layer-${layer}-waves-buck${bucket}.csv`;
     let node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
   
     const strataFilename = `${dataset}_${layer}-${lcc}-EC${metaNode}`;
@@ -4813,13 +5451,13 @@ app.post('/edgeCut2strata', (req, res) => {
     // });
   
     if (!cache.has(node2edgeListCacheName, { updateAgeOnHas: true })) {
-      const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, null, null, true);
+      const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, null, null, false, true);
       console.log('no', filename);
       processPromise.then(async () => {
         const cachedData = cache.get(node2edgeListCacheName);
         const nodeEdges = nodeIDList.map(d => cachedData.data[0][d]).flat(1).filter(d => d != null)
         const nodeVerts = nodeIDList.map(d => cachedData.data[1][d]).flat(1).filter(d => d != null)
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       })
     } else {
@@ -4831,14 +5469,14 @@ app.post('/edgeCut2strata', (req, res) => {
           const updatedCachedData = cache.get(node2edgeListCacheName);
           const nodeEdges = nodeIDList.map(d => updatedCachedData.data[0][d]).flat(1).filter(d => d != null)
           const nodeVerts = nodeIDList.map(d => updatedCachedData.data[1][d]).flat(1).filter(d => d != null)
-          const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+          const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
           send(strataFilename, nodeEdges, nodeLabels);
         })
       } else {
         // // processed
         const nodeEdges = nodeIDList.map(d => cachedData.data[0][d]).flat(1).filter(d => d != null)
         const nodeVerts = nodeIDList.map(d => cachedData.data[1][d]).flat(1).filter(d => d != null)
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       }
     }
@@ -4985,19 +5623,19 @@ app.post('/edgeCut2fpviewer', (req, res) => {
 
   async function processNodeIDList(nodeIDList) {
     const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
-    const waveFileName = `layer-${layer}-waves-buck${bucket}.csv`;
+    const waveFileName = `flt/layer-${layer}-waves-buck${bucket}.csv`;
     let node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
   
     const strataFilename = `${dataset}_${layer}-${lcc}-EC${metaNode}`;
   
     if (!cache.has(node2edgeListCacheName, { updateAgeOnHas: true })) {
-      const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, null, null, true);
+      const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, null, null, false, true);
       console.log('no', filename);
       processPromise.then(async () => {
         const cachedData = cache.get(node2edgeListCacheName);
         const nodeEdges = nodeIDList.map(d => cachedData.data[0][d]).flat(1).filter(d => d != null)
         const nodeVerts = nodeIDList.map(d => cachedData.data[1][d]).flat(1).filter(d => d != null)
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       })
     } else {
@@ -5009,14 +5647,14 @@ app.post('/edgeCut2fpviewer', (req, res) => {
           const updatedCachedData = cache.get(node2edgeListCacheName);
           const nodeEdges = nodeIDList.map(d => updatedCachedData.data[0][d]).flat(1).filter(d => d != null)
           const nodeVerts = nodeIDList.map(d => updatedCachedData.data[1][d]).flat(1).filter(d => d != null)
-          const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+          const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
           send(strataFilename, nodeEdges, nodeLabels);
         })
       } else {
         // // processed
         const nodeEdges = nodeIDList.map(d => cachedData.data[0][d]).flat(1).filter(d => d != null)
         const nodeVerts = nodeIDList.map(d => cachedData.data[1][d]).flat(1).filter(d => d != null)
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       }
     }
@@ -5149,7 +5787,7 @@ app.post('/wcc2strata', (req, res) => {
     // console.log(nodeIDList);
     console.log(nodeIDList.length);
     const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
-    const waveFileName = `layer-${layer}-waves-buck${bucket}.csv`;
+    const waveFileName = `flt/layer-${layer}-waves-buck${bucket}.csv`;
     let node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
   
     const strataFilename = `${dataset}_${layer}-${lcc}-wcc${metaNode}`;
@@ -5167,13 +5805,13 @@ app.post('/wcc2strata', (req, res) => {
     });
   
     if (!cache.has(node2edgeListCacheName, { updateAgeOnHas: true })) {
-      const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, null, null, true);
+      const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, null, null, false, true);
       console.log('no', filename);
       processPromise.then(async () => {
         const cachedData = cache.get(node2edgeListCacheName);
         const nodeEdges = nodeIDList.map(d => cachedData.data[0][d]).flat(1).filter(d => d != null)
         const nodeVerts = nodeIDList.map(d => cachedData.data[1][d]).flat(1).filter(d => d != null)
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       })
     } else {
@@ -5185,14 +5823,14 @@ app.post('/wcc2strata', (req, res) => {
           const updatedCachedData = cache.get(node2edgeListCacheName);
           const nodeEdges = nodeIDList.map(d => updatedCachedData.data[0][d]).flat(1).filter(d => d != null)
           const nodeVerts = nodeIDList.map(d => updatedCachedData.data[1][d]).flat(1).filter(d => d != null)
-          const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+          const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
           send(strataFilename, nodeEdges, nodeLabels);
         })
       } else {
         // // processed
         const nodeEdges = nodeIDList.map(d => cachedData.data[0][d]).flat(1).filter(d => d != null)
         const nodeVerts = nodeIDList.map(d => cachedData.data[1][d]).flat(1).filter(d => d != null)
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       }
     }
@@ -5339,19 +5977,19 @@ app.post('/wcc2fpviewer', (req, res) => {
 
   async function processNodeIDList(nodeIDList) {
     const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
-    const waveFileName = `layer-${layer}-waves-buck${bucket}.csv`;
+    const waveFileName = `flt/layer-${layer}-waves-buck${bucket}.csv`;
     let node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
   
     const strataFilename = `${dataset}_${layer}-${lcc}-wcc${metaNode}`;
   
     if (!cache.has(node2edgeListCacheName, { updateAgeOnHas: true })) {
-      const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, null, null, true);
+      const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, null, null, false, true);
       console.log('no', filename);
       processPromise.then(async () => {
         const cachedData = cache.get(node2edgeListCacheName);
         const nodeEdges = nodeIDList.map(d => cachedData.data[0][d]).flat(1).filter(d => d != null)
         const nodeVerts = nodeIDList.map(d => cachedData.data[1][d]).flat(1).filter(d => d != null)
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       })
     } else {
@@ -5363,14 +6001,14 @@ app.post('/wcc2fpviewer', (req, res) => {
           const updatedCachedData = cache.get(node2edgeListCacheName);
           const nodeEdges = nodeIDList.map(d => updatedCachedData.data[0][d]).flat(1).filter(d => d != null)
           const nodeVerts = nodeIDList.map(d => updatedCachedData.data[1][d]).flat(1).filter(d => d != null)
-          const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+          const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
           send(strataFilename, nodeEdges, nodeLabels);
         })
       } else {
         // // processed
         const nodeEdges = nodeIDList.map(d => cachedData.data[0][d]).flat(1).filter(d => d != null)
         const nodeVerts = nodeIDList.map(d => cachedData.data[1][d]).flat(1).filter(d => d != null)
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       }
     }
@@ -5439,54 +6077,56 @@ app.post('/meta-dag-label', async (req, res) => {
 
   const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
   const waveFileName = `layer-${layer}-waves-buck${bucket}.csv`;
-  let node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
+  // let node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
+  let node2edgeListCacheName = `${dataset}/${waveFileName}:node2vertList`;
 
 
 
-  const rawFragMapFileName = `${waveDir}/layer-${layer}-waves-buck${bucket}-fragMap.json`;
-  let cacheWave, cacheFrag;
-  if (fs.existsSync(rawFragMapFileName)) {
-    if (!cache.has(rawFragMapFileName, {updateAgeOnHas: true})) {
-      const processPromise =  processRawFragMap(rawFragMapFileName)
-      processPromise.then(() => {
-        const cachedMap = cache.get(rawFragMapFileName);
-        if (cachedMap.type === 'dagNodeLink.wf.fragMap.null') {
-          // read full
-        } else {
-          const wfName = cachedMap.data[1][wfInfo[0]][wfInfo[1]];
-          node2edgeListCacheName += `-${wfName[0]}-${wfName[1]}`;
-          cacheWave = wfName[0];
-          cacheFrag = wfName[1];
-        }
-      })
-    } else {
-      const cachedMap = cache.get(rawFragMapFileName);
-      if (cachedMap.type === 'dagNodeLink.wf.fragMap.null') {
-        // read full
-      } else {
-        const wfName = cachedMap.data[1][wfInfo[0]][wfInfo[1]];
-        node2edgeListCacheName += `-${wfName[0]}-${wfName[1]}`;
-        cacheWave = wfName[0];
-        cacheFrag = wfName[1];
-      }
-    }
-  }
+  // const rawFragMapFileName = `${waveDir}/layer-${layer}-waves-buck${bucket}-fragMap.json`;
+  // let cacheWave, cacheFrag;
+  // if (fs.existsSync(rawFragMapFileName)) {
+  //   if (!cache.has(rawFragMapFileName, {updateAgeOnHas: true})) {
+  //     const processPromise =  processRawFragMap(rawFragMapFileName)
+  //     processPromise.then(() => {
+  //       const cachedMap = cache.get(rawFragMapFileName);
+  //       if (cachedMap.type === 'dagNodeLink.wf.fragMap.null') {
+  //         // read full
+  //       } else {
+  //         const wfName = cachedMap.data[1][wfInfo[0]][wfInfo[1]];
+  //         node2edgeListCacheName += `-${wfName[0]}-${wfName[1]}`;
+  //         cacheWave = wfName[0];
+  //         cacheFrag = wfName[1];
+  //       }
+  //     })
+  //   } else {
+  //     const cachedMap = cache.get(rawFragMapFileName);
+  //     if (cachedMap.type === 'dagNodeLink.wf.fragMap.null') {
+  //       // read full
+  //     } else {
+  //       const wfName = cachedMap.data[1][wfInfo[0]][wfInfo[1]];
+  //       node2edgeListCacheName += `-${wfName[0]}-${wfName[1]}`;
+  //       cacheWave = wfName[0];
+  //       cacheFrag = wfName[1];
+  //     }
+  //   }
+  // }
   
-
+  let cacheWave, cacheFrag;
   const strataFilename = Array.isArray(metaNode) ? `${dataset}_${layer}-${lcc}_${metaNode[0]}` : `${dataset}_${layer}-${lcc}_${metaNode}`;
   
   let readyFlag = true;
   let vMap = undefined;
   let waveList = undefined;
   if (!cache.has(node2edgeListCacheName, {updateAgeOnHas: true})) {
-    const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, cacheWave, cacheFrag, true);
+    // const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, cacheWave, cacheFrag, true);
+    const processPromise = readVMapStream(filename, waveFileName, waveDir, dataset, cacheWave, cacheFrag, true);
     console.log('no', filename);
     processPromise.then(async () => {
       const cachedData = cache.get(node2edgeListCacheName);
         // const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
         const nodeVerts = {};
         metaNode.forEach(d => nodeVerts[d] = cachedData.data[1][d])
-        const nodeLabels = await getImportantNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getImportantNodeLabels(nodeVerts, dataset, layer, bucket)
         send(nodeLabels);
     })
   } else {
@@ -5499,7 +6139,7 @@ app.post('/meta-dag-label', async (req, res) => {
         // const nodeEdges = metaNode.map(d => updatedCachedData.data[0][d]).flat(1)
         const nodeVerts = {};
         metaNode.forEach(d => nodeVerts[d] = updatedCachedData.data[1][d])
-        const nodeLabels = await getImportantNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getImportantNodeLabels(nodeVerts, dataset, layer, bucket)
         send(nodeLabels);
       })
     } else {
@@ -5507,7 +6147,7 @@ app.post('/meta-dag-label', async (req, res) => {
       // const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
       const nodeVerts = {};
       metaNode.forEach(d => nodeVerts[d] = cachedData.data[1][d])
-      const nodeLabels = await getImportantNodeLabels(nodeVerts, dataset)
+      const nodeLabels = await getImportantNodeLabels(nodeVerts, dataset, layer, bucket)
       send(nodeLabels);
     }
   }
@@ -5542,52 +6182,55 @@ app.post('/meta-dag-bucketed-label', async (req, res) => {
 
   const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
   const waveFileName = `layer-${layer}-waves-buck${bucket}.csv`;
-  let node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
+  // let node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
+  let node2edgeListCacheName = `${dataset}/${waveFileName}:node2vertList`;
 
 
 
-  const rawFragMapFileName = `${waveDir}/layer-${layer}-waves-buck${bucket}-fragMap.json`;
-  let cacheWave, cacheFrag;
-  if (fs.existsSync(rawFragMapFileName)) {
-    if (!cache.has(rawFragMapFileName, {updateAgeOnHas: true})) {
-      const processPromise =  processRawFragMap(rawFragMapFileName)
-      processPromise.then(() => {
-        const cachedMap = cache.get(rawFragMapFileName);
-        if (cachedMap.type === 'dagNodeLink.wf.fragMap.null') {
-          // read full
-        } else {
-          const wfName = cachedMap.data[1][wfInfo[0]][wfInfo[1]];
-          node2edgeListCacheName += `-${wfName[0]}-${wfName[1]}`;
-          cacheWave = wfName[0];
-          cacheFrag = wfName[1];
-        }
-      })
-    } else {
-      const cachedMap = cache.get(rawFragMapFileName);
-      if (cachedMap.type === 'dagNodeLink.wf.fragMap.null') {
-        // read full
-      } else {
-        const wfName = cachedMap.data[1][wfInfo[0]][wfInfo[1]];
-        node2edgeListCacheName += `-${wfName[0]}-${wfName[1]}`;
-        cacheWave = wfName[0];
-        cacheFrag = wfName[1];
-      }
-    }
-  }
+  // const rawFragMapFileName = `${waveDir}/layer-${layer}-waves-buck${bucket}-fragMap.json`;
+  // let cacheWave, cacheFrag;
+  // if (fs.existsSync(rawFragMapFileName)) {
+  //   if (!cache.has(rawFragMapFileName, {updateAgeOnHas: true})) {
+  //     const processPromise =  processRawFragMap(rawFragMapFileName)
+  //     processPromise.then(() => {
+  //       const cachedMap = cache.get(rawFragMapFileName);
+  //       if (cachedMap.type === 'dagNodeLink.wf.fragMap.null') {
+  //         // read full
+  //       } else {
+  //         const wfName = cachedMap.data[1][wfInfo[0]][wfInfo[1]];
+  //         node2edgeListCacheName += `-${wfName[0]}-${wfName[1]}`;
+  //         cacheWave = wfName[0];
+  //         cacheFrag = wfName[1];
+  //       }
+  //     })
+  //   } else {
+  //     const cachedMap = cache.get(rawFragMapFileName);
+  //     if (cachedMap.type === 'dagNodeLink.wf.fragMap.null') {
+  //       // read full
+  //     } else {
+  //       const wfName = cachedMap.data[1][wfInfo[0]][wfInfo[1]];
+  //       node2edgeListCacheName += `-${wfName[0]}-${wfName[1]}`;
+  //       cacheWave = wfName[0];
+  //       cacheFrag = wfName[1];
+  //     }
+  //   }
+  // }
   
   
   let readyFlag = true;
   let vMap = undefined;
   let waveList = undefined;
+  let cacheWave, cacheFrag;
   if (!cache.has(node2edgeListCacheName, {updateAgeOnHas: true})) {
-    const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, cacheWave, cacheFrag, true);
+    // const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, cacheWave, cacheFrag, true);
+    const processPromise = readVMapStream(filename, waveFileName, waveDir, dataset, cacheWave, cacheFrag, true);
     console.log('no', filename);
     processPromise.then(async () => {
       const cachedData = cache.get(node2edgeListCacheName);
         // const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
         const nodeVerts = {};
         Object.keys(metaNode).forEach((key, idx) => nodeVerts[key] = metaNode[key].map(val => cachedData.data[1][val]).flat(1))
-        const nodeLabels = await getImportantNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getImportantNodeLabels(nodeVerts, dataset, layer, bucket)
         send(nodeLabels);
     })
   } else {
@@ -5600,7 +6243,7 @@ app.post('/meta-dag-bucketed-label', async (req, res) => {
         // const nodeEdges = metaNode.map(d => updatedCachedData.data[0][d]).flat(1)
         const nodeVerts = {};
         Object.keys(metaNode).forEach((key, idx) => nodeVerts[key] = metaNode[key].map(val => updatedCachedData.data[1][val]).flat(1))
-        const nodeLabels = await getImportantNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getImportantNodeLabels(nodeVerts, dataset, layer, bucket)
         send(nodeLabels);
       })
     } else {
@@ -5608,7 +6251,7 @@ app.post('/meta-dag-bucketed-label', async (req, res) => {
       // const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
       const nodeVerts = {};
       Object.keys(metaNode).forEach((key, idx) => nodeVerts[key] = metaNode[key].map(val => cachedData.data[1][val]).flat(1))
-      const nodeLabels = await getImportantNodeLabels(nodeVerts, dataset)
+      const nodeLabels = await getImportantNodeLabels(nodeVerts, dataset, layer, bucket)
       send(nodeLabels);
     }
   }
@@ -5645,38 +6288,39 @@ app.post('/meta-dag-node-label', async (req, res) => {
 
   const waveDir = `${__dirname}/wave-decomposition/${dataset}/${dataset}_waves/lccBuck`;
   const waveFileName = `layer-${layer}-waves-buck${bucket}.csv`;
-  let node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
+  // let node2edgeListCacheName = `${dataset}/${waveFileName}:node2edgeList`;
+  let node2edgeListCacheName = `${dataset}/${waveFileName}:node2vertList`;
 
 
 
-  const rawFragMapFileName = `${waveDir}/layer-${layer}-waves-buck${bucket}-fragMap.json`;
-  let cacheWave, cacheFrag;
-  if (fs.existsSync(rawFragMapFileName)) {
-    if (!cache.has(rawFragMapFileName, {updateAgeOnHas: true})) {
-      const processPromise =  processRawFragMap(rawFragMapFileName)
-      processPromise.then(() => {
-        const cachedMap = cache.get(rawFragMapFileName);
-        if (cachedMap.type === 'dagNodeLink.wf.fragMap.null') {
-          // read full
-        } else {
-          const wfName = cachedMap.data[1][wfInfo[0]][wfInfo[1]];
-          node2edgeListCacheName += `-${wfName[0]}-${wfName[1]}`;
-          cacheWave = wfName[0];
-          cacheFrag = wfName[1];
-        }
-      })
-    } else {
-      const cachedMap = cache.get(rawFragMapFileName);
-      if (cachedMap.type === 'dagNodeLink.wf.fragMap.null') {
-        // read full
-      } else {
-        const wfName = cachedMap.data[1][wfInfo[0]][wfInfo[1]];
-        node2edgeListCacheName += `-${wfName[0]}-${wfName[1]}`;
-        cacheWave = wfName[0];
-        cacheFrag = wfName[1];
-      }
-    }
-  }
+  // const rawFragMapFileName = `${waveDir}/layer-${layer}-waves-buck${bucket}-fragMap.json`;
+  // let cacheWave, cacheFrag;
+  // if (fs.existsSync(rawFragMapFileName)) {
+  //   if (!cache.has(rawFragMapFileName, {updateAgeOnHas: true})) {
+  //     const processPromise =  processRawFragMap(rawFragMapFileName)
+  //     processPromise.then(() => {
+  //       const cachedMap = cache.get(rawFragMapFileName);
+  //       if (cachedMap.type === 'dagNodeLink.wf.fragMap.null') {
+  //         // read full
+  //       } else {
+  //         const wfName = cachedMap.data[1][wfInfo[0]][wfInfo[1]];
+  //         node2edgeListCacheName += `-${wfName[0]}-${wfName[1]}`;
+  //         cacheWave = wfName[0];
+  //         cacheFrag = wfName[1];
+  //       }
+  //     })
+  //   } else {
+  //     const cachedMap = cache.get(rawFragMapFileName);
+  //     if (cachedMap.type === 'dagNodeLink.wf.fragMap.null') {
+  //       // read full
+  //     } else {
+  //       const wfName = cachedMap.data[1][wfInfo[0]][wfInfo[1]];
+  //       node2edgeListCacheName += `-${wfName[0]}-${wfName[1]}`;
+  //       cacheWave = wfName[0];
+  //       cacheFrag = wfName[1];
+  //     }
+  //   }
+  // }
   
 
   const strataFilename = Array.isArray(metaNode) ? `${dataset}_${layer}-${lcc}_${metaNode[0]}` : `${dataset}_${layer}-${lcc}_${metaNode}`;
@@ -5684,8 +6328,10 @@ app.post('/meta-dag-node-label', async (req, res) => {
   let readyFlag = true;
   let vMap = undefined;
   let waveList = undefined;
+  let cacheWave, cacheFrag;
   if (!cache.has(node2edgeListCacheName, {updateAgeOnHas: true})) {
-    const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, cacheWave, cacheFrag, true);
+    // const processPromise = readWaveAndVMapStream(filename, waveFileName, waveDir, dataset, cacheWave, cacheFrag, true);
+    const processPromise = readVMapStream(filename, waveFileName, waveDir, dataset, cacheWave, cacheFrag, true);
     console.log('no', filename);
     processPromise.then(async () => {
       const cachedData = cache.get(node2edgeListCacheName);
@@ -5694,12 +6340,12 @@ app.post('/meta-dag-node-label', async (req, res) => {
         // const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
         const nodeVerts = metaNode.map(d => cachedData.data[1][d]).flat(1)
         // console.log(metaNode.map(d => cachedData.data[1][d]))
-        const nodeLabels = await getAllNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getAllNodeLabels(nodeVerts, dataset, layer, bucket)
         send(nodeLabels);
       } else {
         // const nodeEdges = cachedData.data[0][metaNode];
         const nodeVerts = cachedData.data[1][metaNode];
-        const nodeLabels = await getAllNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getAllNodeLabels(nodeVerts, dataset, layer, bucket)
         send(nodeLabels);
       }
       // const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
@@ -5719,12 +6365,12 @@ app.post('/meta-dag-node-label', async (req, res) => {
           // const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
           const nodeVerts = metaNode.map(d => updatedCachedData.data[1][d]).flat(1)
           // console.log(metaNode.map(d => updatedCachedData.data[1][d]))
-          const nodeLabels = await getAllNodeLabels(nodeVerts, dataset)
+          const nodeLabels = await getAllNodeLabels(nodeVerts, dataset, layer, bucket)
           send(nodeLabels);
         } else {
           // const nodeEdges = updatedCachedData.data[0][metaNode];
           const nodeVerts = updatedCachedData.data[1][metaNode];
-          const nodeLabels = await getAllNodeLabels(nodeVerts, dataset)
+          const nodeLabels = await getAllNodeLabels(nodeVerts, dataset, layer, bucket)
           send(nodeLabels);
         }
       })
@@ -5735,12 +6381,12 @@ app.post('/meta-dag-node-label', async (req, res) => {
         // const nodeEdges = metaNode.map(d => cachedData.data[0][d]).flat(1)
         const nodeVerts = metaNode.map(d => cachedData.data[1][d]).flat(1)
         // console.log(metaNode.map(d => cachedData.data[1][d]))
-        const nodeLabels = await getAllNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getAllNodeLabels(nodeVerts, dataset, layer, bucket)
         send(nodeLabels);
       } else {
         // const nodeEdges = cachedData.data[0][metaNode];
         const nodeVerts = cachedData.data[1][metaNode];
-        const nodeLabels = await getAllNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getAllNodeLabels(nodeVerts, dataset, layer, bucket)
         send(nodeLabels);
       }
     }
@@ -5820,7 +6466,7 @@ app.post('/meta-dag-edgeCut-strata', async (req, res) => {
       const nodeEdges = cachedData.data[1][metaNode].map(d => [d[0], d[1]]);
       const nodeVerts = cachedData.data[0][metaNode].map(d => d[0]);
       console.log(nodeVerts)
-      const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+      const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
       send(strataFilename, nodeEdges, nodeLabels);
     })
   } else {
@@ -5840,7 +6486,7 @@ app.post('/meta-dag-edgeCut-strata', async (req, res) => {
         const nodeEdges = updatedCachedData.data[1][metaNode].map(d => [d[0], d[1]]);
         const nodeVerts = updatedCachedData.data[0][metaNode].map(d => d[0]);
         console.log(nodeVerts)
-        const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
         send(strataFilename, nodeEdges, nodeLabels);
       })
     } else {
@@ -5854,7 +6500,7 @@ app.post('/meta-dag-edgeCut-strata', async (req, res) => {
       const nodeEdges = cachedData.data[1][metaNode].map(d => [d[0], d[1]]);
       const nodeVerts = cachedData.data[0][metaNode].map(d => d[0]);
       console.log(nodeVerts)
-      const nodeLabels = await getNodeLabels(nodeVerts, dataset)
+      const nodeLabels = await getNodeLabels(nodeVerts, dataset, layer, bucket)
       send(strataFilename, nodeEdges, nodeLabels);
     }
   }
@@ -5953,7 +6599,7 @@ app.post('/meta-dag-edgeCut-label', async (req, res) => {
       // const nodeEdges = cachedData.data[1][metaNode].map(d => [d[0], d[1]]);
       const nodeVerts = cachedData.data[0][metaNode].map(d => d[0]);
       // console.log(nodeVerts)
-      const nodeLabels = await getDagNodeLabels(nodeVerts, dataset)
+      const nodeLabels = await getDagNodeLabels(nodeVerts, dataset, layer, bucket)
       // send(strataFilename, nodeEdges, nodeLabels);
       send(nodeLabels)
     })
@@ -5974,7 +6620,7 @@ app.post('/meta-dag-edgeCut-label', async (req, res) => {
         // const nodeEdges = updatedCachedData.data[1][metaNode].map(d => [d[0], d[1]]);
         const nodeVerts = updatedCachedData.data[0][metaNode].map(d => d[0]);
         // console.log(nodeVerts)
-        const nodeLabels = await getDagNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getDagNodeLabels(nodeVerts, dataset, layer, bucket)
         // send(strataFilename, nodeEdges, nodeLabels);
         send(nodeLabels)
       })
@@ -5989,7 +6635,7 @@ app.post('/meta-dag-edgeCut-label', async (req, res) => {
       // const nodeEdges = cachedData.data[1][metaNode].map(d => [d[0], d[1]]);
       const nodeVerts = cachedData.data[0][metaNode].map(d => d[0]);
       // console.log(nodeVerts)
-      const nodeLabels = await getDagNodeLabels(nodeVerts, dataset)
+      const nodeLabels = await getDagNodeLabels(nodeVerts, dataset, layer, bucket)
       // send(strataFilename, nodeEdges, nodeLabels);
       send(nodeLabels)
     }
@@ -6046,7 +6692,7 @@ app.post('/meta-dag-wcc-label', async (req, res) => {
       // const nodeEdges = cachedData.data[1][metaNode].map(d => [d[0], d[1]]);
       const nodeVerts = cachedData.data[0][metaNode].map(d => d[0]);
       // console.log(nodeVerts)
-      const nodeLabels = await getDagNodeLabels(nodeVerts, dataset)
+      const nodeLabels = await getDagNodeLabels(nodeVerts, dataset, layer, bucket)
       // send(strataFilename, nodeEdges, nodeLabels);
       send(nodeLabels)
     })
@@ -6067,7 +6713,7 @@ app.post('/meta-dag-wcc-label', async (req, res) => {
         // const nodeEdges = updatedCachedData.data[1][metaNode].map(d => [d[0], d[1]]);
         const nodeVerts = updatedCachedData.data[0][metaNode].map(d => d[0]);
         // console.log(nodeVerts)
-        const nodeLabels = await getDagNodeLabels(nodeVerts, dataset)
+        const nodeLabels = await getDagNodeLabels(nodeVerts, dataset, layer, bucket)
         // send(strataFilename, nodeEdges, nodeLabels);
         send(nodeLabels)
       })
@@ -6082,7 +6728,7 @@ app.post('/meta-dag-wcc-label', async (req, res) => {
       // const nodeEdges = cachedData.data[1][metaNode].map(d => [d[0], d[1]]);
       const nodeVerts = cachedData.data[0][metaNode].map(d => d[0]);
       // console.log(nodeVerts)
-      const nodeLabels = await getDagNodeLabels(nodeVerts, dataset)
+      const nodeLabels = await getDagNodeLabels(nodeVerts, dataset, layer, bucket)
       // send(strataFilename, nodeEdges, nodeLabels);
       send(nodeLabels)
     }
