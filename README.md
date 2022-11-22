@@ -33,25 +33,25 @@ This is an NSF-funded project (NSF IIS-1563816 and IIS-1563971), led by Prof. [J
 
 ## Preprocessed Data Sets
 ### Large
-| name                   | V         | E          | cc  | FP  |
-|------------------------|-----------|------------|-----|-----|
-| com-friendster         | 65608366  | 1806067135 | 1   | 72  |
-| ogbn-papers100M        | 111059956 | 1614062356 | 151 | 159 |
-| movies-tag-cooccurence | 218052    | 115050370  | 38  | 78  |
+| Name                                                                                 | Source                                         | V         | E          | cc  | FP  |
+|--------------------------------------------------------------------------------------|------------------------------------------------|-----------|------------|-----|-----|
+| [com-friendster](https://rutgers.box.com/s/cba30xdoif6l5nv407xls1hn7019zglu)         | [SNAP](https://snap.stanford.edu/data/)        | 65608366  | 1806067135 | 1   | 72  |
+| [ogbn-papers100M](https://rutgers.box.com/s/qmfv6y4encblywv6xllq8f1otxr00n7t)        | [OGB](https://ogb.stanford.edu/docs/nodeprop/) | 111059956 | 1614062356 | 151 | 159 |
+| [movies-tag-cooccurence](https://rutgers.box.com/s/5jeako6zdvwvdcqvjahw6yky7igxjlko) | [IMDb](https://www.imdb.com/interfaces/)       | 218052    | 115050370  | 38  | 78  |
 
 ### Medium
-| name          | V       | E        | cc   | FP  |
-|---------------|---------|----------|------|-----|
-| ogbn-products | 2400608 | 61859012 | 4237 | 102 |
-| ogbn-proteins | 132534  | 39561252 | 1    | 157 |
-| ogbn-mag      | 1134649 | 21090258 | 1    | 64  |
-| cit-Patents   | 3774768 | 16518947 | 3627 | 41  |
+| name          | Source                                         | V       | E        | cc   | FP  |
+|---------------|------------------------------------------------|---------|----------|------|-----|
+| ogbn-products | [OGB](https://ogb.stanford.edu/docs/nodeprop/) | 2400608 | 61859012 | 4237 | 102 |
+| ogbn-proteins | [OGB](https://ogb.stanford.edu/docs/nodeprop/) | 132534  | 39561252 | 1    | 157 |
+| ogbn-mag      | [OGB](https://ogb.stanford.edu/docs/nodeprop/) | 1134649 | 21090258 | 1    | 64  |
+| cit-Patents   | [SNAP](https://snap.stanford.edu/data/)        | 3774768 | 16518947 | 3627 | 41  |
 
 ### Small
-| name           | V       | E       | cc    | FP |
-|----------------|---------|---------|-------|----|
-| Pandora papers | 1968951 | 2832596 | 31347 | 31 |
-| ogbn-arxiv     | 169343  | 1157799 | 1     | 22 |
+| name           | Source                                                                        | V       | E       | cc    | FP |
+|----------------|-------------------------------------------------------------------------------|---------|---------|-------|----|
+| Pandora papers | [ICIJ Offshore Leaks Database](https://offshoreleaks.icij.org/pages/database) | 1968951 | 2832596 | 31347 | 31 |
+| ogbn-arxiv     | [OGB](https://ogb.stanford.edu/docs/nodeprop/)                                | 169343  | 1157799 | 1     | 22 |
 
 ### Tiny
 | name            | V     | E     | cc  | FP |
