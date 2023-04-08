@@ -1675,7 +1675,7 @@ G.addModule("controls",{
 
 		G.showingTooltip=false;
         window.addEventListener("keydown", ev => {
-            if (ev.path[0].id != "textBox") {
+            if (ev.composedPath()[0].id != "textBox") {
                 if (ev.keyCode === 32) {
                 }
                 if (ev.key === 'e') {
@@ -1756,7 +1756,7 @@ G.addModule("controls",{
             //removed moving
         });
 		window.addEventListener("keyup", ev=>{
-            if (ev.path[0].id != "textBox") {
+            if (ev.composedPath()[0].id != "textBox") {
 			if ( ev.keyCode === 32) { //toggles tooltip
 			if(!G.showingTooltip){G.showingTooltip=true;G.toolTipElem.style.opacity="1";}
 			if(G.showingTooltip){G.showingTooltip=false;G.toolTipElem.style.opacity="0.7";}
@@ -1771,7 +1771,7 @@ G.addModule("controls",{
 			//removed moving
 		});
 		window.addEventListener("keyup", ev=>{
-            if (ev.path[0].id != "textBox") {
+            if (ev.composedPath()[0].id != "textBox") {
                 if (ev.key === "`") {
                     if (G.showingControls) {
                         G.showingControls = false;

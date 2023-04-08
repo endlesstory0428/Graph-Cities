@@ -71,7 +71,7 @@ function MyControls( objects, domElement ,G) {//for multi cameras
 	this._extraZoom=.5;
 
 function keydown( event ) {
-if (event.path[0].id != "textBox") {
+if (event.composedPath()[0].id != "textBox") {
     if (_state !== STATE.NONE) {
         return;
     } else if (event.keyCode === 16) {
@@ -101,13 +101,13 @@ if (event.path[0].id != "textBox") {
 }
 }
 function keyup( event ) {
-    if (event.path[0].id != "textBox") {
+    if (event.composedPath()[0].id != "textBox") {
         _state = STATE.NONE;
     }
 }
 
 function mousedown( event ) {
-    if (event.path[0].id != "textBox") {
+    if (event.composedPath()[0].id != "textBox") {
         if (_state === STATE.NONE) {
             _state = event.button;
         }
@@ -131,7 +131,7 @@ function mousedown( event ) {
 }
 
 function mousemove( event ) {
-    if (event.path[0].id != "textBox") {
+    if (event.composedPath()[0].id != "textBox") {
         if (_state === STATE.ROTATE) {
 
             _movePrev.copy(_moveCurr);
@@ -151,14 +151,14 @@ function mousemove( event ) {
 }
 
 function mouseup( event ) {
-    if (event.path[0].id != "textBox") {
+    if (event.composedPath()[0].id != "textBox") {
         _state = STATE.NONE;
     }
 
 }
 
 function mousewheel( event ) {
-    if (event.path[0].id != "textBox") {
+    if (event.composedPath()[0].id != "textBox") {
         event.preventDefault();
         switch (event.deltaMode) {
 
@@ -183,7 +183,7 @@ function mousewheel( event ) {
 }
 
 function touchstart( event ) {
-    if (event.path[0].id != "textBox") {
+    if (event.composedPath()[0].id != "textBox") {
         if (_this.enabled === false) return;
 
         switch (event.touches.length) {
@@ -213,7 +213,7 @@ function touchstart( event ) {
 }
 
 function touchmove( event ) {
-    if (event.path[0].id != "textBox") {
+    if (event.composedPath()[0].id != "textBox") {
         if (_this.enabled === false) return;
 
         event.preventDefault();
@@ -241,7 +241,7 @@ function touchmove( event ) {
 }
 
 function touchend( event ) {
-    if (event.path[0].id != "textBox") {
+    if (event.composedPath()[0].id != "textBox") {
         if (_this.enabled === false) return;
 
         switch (event.touches.length) {
@@ -264,7 +264,7 @@ function touchend( event ) {
 
 
 function contextmenu( event ) {
-    if (event.path[0].id != "textBox") {
+    if (event.composedPath()[0].id != "textBox") {
         event.preventDefault();
     }
 
@@ -699,7 +699,6 @@ function contextmenu( event ) {
 	this.update();
 
 }
-
 
 
 
