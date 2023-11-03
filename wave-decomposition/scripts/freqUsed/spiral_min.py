@@ -146,7 +146,7 @@ for bucket in sorted(datas, reverse = True):
             # x = 0
             # y = 0
 
-        plt.gca().add_patch(plt.Rectangle((x, y - W / 2), L, W, box_theta))
+        plt.gca().add_patch(plt.Rectangle((x, y - W / 2), L, W, angle = box_theta))
         print('.'.join(filename.split('.')[:-1]), x - L / 2, y, box_theta, rad, datas[bucket][filename]['verts'], datas[bucket][filename]['edges'], datas[bucket][filename]['fragNum'], datas[bucket][filename]['fragNeg'], datas[bucket][filename]['fragPos'], datas[bucket][filename]['buckSize'], datas[bucket][filename]['duplicate'])
         print(*datas[bucket][filename]['fragBucket'])
         # print(B * F)

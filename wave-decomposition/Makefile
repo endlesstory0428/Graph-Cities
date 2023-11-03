@@ -913,7 +913,7 @@ filterSmall:
 		$(LAYER) \
 		$(LCC) \
 		$(BUCKET) \
-		$$(python -c "import sys, json; data=json.load(sys.stdin); print(' '.join(map(str, [data['maxLabel'], data['nodeNum'], data['vertices'], data['edges']])))" < $(GRAPH)/dag/$(DAGNAME)-info.json) \
+		$$($(PYTHON) -c "import sys, json; data=json.load(sys.stdin); print(' '.join(map(str, [data['maxLabel'], data['nodeNum'], data['vertices'], data['edges']])))" < $(GRAPH)/dag/$(DAGNAME)-info.json) \
 		$(VICINITYTH) \
 		$(BLDTH);
 .PHONY: filterSmall
@@ -940,8 +940,8 @@ filterLarge:
 		$(LAYER) \
 		$(LCC) \
 		$(BUCKET) \
-		$$(python -c "import sys, json; data=json.load(sys.stdin); print(' '.join(map(str, [data['maxLabel'], data['nodeNum'], data['vertices'], data['edges']])))" < $(GRAPH)/dag/$(DAGNAME)-info.json) \
-		$$(python -c "import sys, json; data=json.load(sys.stdin); print(' '.join(map(str, [data['maxBuckLabel'], data['nodeNum']])))" < $(GRAPH)/dag/$(DAGNAME).buck-info.json) \
+		$$($(PYTHON) -c "import sys, json; data=json.load(sys.stdin); print(' '.join(map(str, [data['maxLabel'], data['nodeNum'], data['vertices'], data['edges']])))" < $(GRAPH)/dag/$(DAGNAME)-info.json) \
+		$$($(PYTHON) -c "import sys, json; data=json.load(sys.stdin); print(' '.join(map(str, [data['maxBuckLabel'], data['nodeNum']])))" < $(GRAPH)/dag/$(DAGNAME).buck-info.json) \
 		$(VICINITYTH) \
 		$(BLDTH) \
 		$(SMPTH);
