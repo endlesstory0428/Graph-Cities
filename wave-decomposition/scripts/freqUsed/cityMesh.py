@@ -26,5 +26,5 @@ for bush in bushList:
 	print(f'python3 scripts/freqUsed/bush.py {path}{graph}/{graph}_waves/{bush} {path}{graph}/cityMesh/bushes.json')
 if not bushList:
 	# add fake result for post process
-	with open(f'{path}/{graph}/cityMesh/bushes.json') as f:
+	with open(f'{path}/{graph}/cityMesh/bushes.json', 'w') as f:
 		f.write('\n\n,')
