@@ -21,7 +21,7 @@ except IndexError:
 
 suffixs = glob.glob(graph_pre + '_layers/*.cc-layers')
 
-df = pd.DataFrame()
+dfs = []
 for cclfile in suffixs:
     print('Reading: ', cclfile)
     with open(cclfile) as f:
@@ -29,8 +29,10 @@ for cclfile in suffixs:
             f, header=None, names=['vertex', 'CC', 'l', 'cc'], usecols=['vertex', 'l', 'cc']
         )
     print('Read: ', cclfile)
-    df = df.append(verts, ignore_index=True)
+    dfs.append(verts)
     print('Appended: ', cclfile)
+
+df = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
 print("Sorting")
 df.sort_values(by=['vertex', 'l', 'cc'], inplace=True)
